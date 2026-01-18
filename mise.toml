@@ -1,0 +1,9 @@
+[tools]
+bats = "1.12"
+node = "24"
+
+[task_config]
+includes = [
+    ".mise/tasks",
+    "vendor/enterprise-tooling-for-symfony/shared-bundle/config/mise/tasks"
+]

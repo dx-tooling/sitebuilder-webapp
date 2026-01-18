@@ -1,0 +1,9 @@
+controller:
+    resource: "../src/**/*Controller.php"
+    type: attribute
+
+shared:
+    resource: "@SharedBundle/config/routes.yaml"
+
+webui:
+    resource: "@WebuiBundle/config/routes.yaml"

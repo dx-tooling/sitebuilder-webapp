@@ -1,0 +1,11 @@
+twig:
+    file_name_pattern: "*.twig"
+
+    paths:
+        "src/Common/Presentation/Resources/templates": "common.presentation"
+        "src/Content/Presentation/Resources/templates": "content.presentation"
+        "src/Account/Presentation/Resources/templates": "account.presentation"
+
+when@test:
+    twig:
+        strict_variables: true

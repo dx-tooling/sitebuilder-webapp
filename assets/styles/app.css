@@ -1,0 +1,5 @@
+@import "tailwindcss";
+
+@import "../../vendor/enterprise-tooling-for-symfony/webui-bundle/assets/styles/webui.css";
+
+@config "../../tailwind.config.js";

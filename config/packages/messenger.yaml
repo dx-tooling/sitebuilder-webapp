@@ -1,0 +1,18 @@
+framework:
+    messenger:
+        transports:
+            immediate:
+                dsn: "%env(MESSENGER_IMMEDIATE_TRANSPORT_DSN)%"
+                options:
+                    auto_setup: false
+                    table_name: messenger_messages
+                    queue_name: immediate
+
+        routing:
+            EnterpriseToolingForSymfony\SharedBundle\WorkerSystem\SymfonyMessage\ImmediateSymfonyMessageInterface: immediate
+
+when@test:
+    framework:
+        messenger:
+            transports:
+                async: "in-memory://"

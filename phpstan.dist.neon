@@ -1,0 +1,15 @@
+includes:
+    - vendor/enterprise-tooling-for-symfony/shared-bundle/config/phpstan.app.dist.neon
+
+parameters:
+    paths:
+        - bin/
+        - config/
+        - public/
+        - src/
+        - tests/
+        - migrations/
+    excludePaths:
+        analyse:
+            - tests/Architecture/*
+            - config/reference.php

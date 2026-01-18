@@ -1,0 +1,72 @@
+{% extends '@common.presentation/base_appshell.html.twig' %}
+
+{% block body %}
+    <h1 class="etfswui-pagetitle mb-10 text-center">Sign in to your account</h1>
+    <div class="etfswui-card max-w-md mx-auto mb-8">
+        <div class="etfswui-card-content">
+            {% for message in app.flashes('error') %}
+                <div class="etfswui-alert etfswui-alert-danger mb-6">
+                    <div class="etfswui-alert-body">
+                        <p class="etfswui-alert-danger-text">{{ message }}</p>
+                    </div>
+                </div>
+            {% endfor %}
+
+            {% for message in app.flashes('success') %}
+                <div class="etfswui-alert etfswui-alert-success mb-6">
+                    <div class="etfswui-alert-body">
+                        <p class="etfswui-alert-success-text">{{ message }}</p>
+                    </div>
+                </div>
+            {% endfor %}
+
+            <form action="{{ path('account.presentation.sign_in') }}" method="post" class="space-y-6">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token('authenticate') }}">
+
+                <div>
+                    <label for="email" class="etfswui-form-label">Email address</label>
+                    <input id="email" name="email" type="email" required
+                           class="etfswui-form-input"
+                           placeholder="Enter your email"
+                           value="{{ last_username }}">
+                </div>
+
+                <div>
+                    <label for="password" class="etfswui-form-label">Password</label>
+                    <input id="password" name="password" type="password" required
+                           class="etfswui-form-input"
+                           placeholder="Enter your password">
+                </div>
+
+                {% if error %}
+                    <div class="etfswui-alert etfswui-alert-danger">
+                        <div class="etfswui-alert-body">
+                            <p class="etfswui-alert-danger-text">
+                                {{ error.messageKey|trans(error.messageData, 'security') }}
+                            </p>
+                        </div>
+                    </div>
+                {% endif %}
+
+                <div class="etfswui-card-actions">
+                    <a href="{{ path('account.presentation.sign_up') }}" class="etfswui-link-as-button-secondary">
+                        Create account
+                    </a>
+                    <button type="submit" class="etfswui-button-default">
+                        Sign in
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="etfswui-alert etfswui-alert-info max-w-md mx-auto">
+        <div class="etfswui-alert-body">
+            <p class="etfswui-alert-info-text font-normal">
+                <strong>Early Access Notice:</strong> This project is in active development with constant improvements and changes. 
+                While safe to try in production environments, it's not yet production-grade and runs on a best-effort basis. 
+                We appreciate your patience and feedback as we build something great together!
+            </p>
+        </div>
+    </div>
+{% endblock %}

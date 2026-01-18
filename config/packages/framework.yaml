@@ -1,0 +1,21 @@
+# see https://symfony.com/doc/current/reference/configuration/framework.html
+framework:
+    secret: "%env(APP_SECRET)%"
+
+    session:
+        cookie_samesite: "none"
+        cookie_secure: true
+        cookie_httponly: true
+        name: PHPSESSID_JA
+        handler_id: Symfony\Component\HttpFoundation\Session\Storage\Handler\PdoSessionHandler
+
+    #esi: true
+    #fragments: true
+
+    trusted_headers: ["x-forwarded-prefix"]
+
+when@test:
+    framework:
+        test: true
+        session:
+            storage_factory_id: session.storage.factory.mock_file
