@@ -11,7 +11,7 @@ readonly class AccountInfoDto
     public function __construct(
         public string            $id,
         public string            $email,
-        /** @var string[] */
+        /** @var list<string> */
         public array             $roles,
         public DateTimeImmutable $createdAt,
     ) {

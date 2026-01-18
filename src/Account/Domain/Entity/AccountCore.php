@@ -80,7 +80,7 @@ class AccountCore implements UserInterface, PasswordAuthenticatedUserInterface
     }
 
     /**
-     * @var string[]
+     * @var list<string>
      */
     #[ORM\Column(
         type: Types::JSON
@@ -88,7 +88,7 @@ class AccountCore implements UserInterface, PasswordAuthenticatedUserInterface
     private array $roles;
 
     /**
-     * @return string[]
+     * @return list<string>
      */
     public function getRoles(): array
     {
@@ -96,7 +96,7 @@ class AccountCore implements UserInterface, PasswordAuthenticatedUserInterface
     }
 
     /**
-     * @param string[] $roles
+     * @param list<string> $roles
      */
     public function setRoles(array $roles): void
     {
