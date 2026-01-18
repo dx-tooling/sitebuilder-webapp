@@ -1,0 +1,50 @@
+# Type Safety and PHPStan
+
+**Reference**: See `phpstan.dist.neon` for PHPStan configuration (level 10).
+
+## PHPStan Level 10
+
+All code must pass PHPStan level 10 analysis. Run `mise quality` to verify.
+
+## Array Types Across Boundaries
+
+**CRITICAL RULE**: When arrays cross class boundaries (method parameters, return types, DTO properties), use `list<T>` for simple indexed arrays, not `array` or `T[]`.
+
+- ✅ **Correct**: `@param list<string> $roles`, `@return list<string>`, `@var list<string>`
+- ❌ **Incorrect**: `@param string[] $roles`, `@param array<string> $roles`, `@return array`
+
+**Rationale**: PHPStan's `noAssociativeArraysAcrossBoundaries` rule enforces this to prevent associative arrays from crossing boundaries. Use DTOs for complex data structures.
+
+## Type Annotations
+
+- Always provide PHPDoc type annotations for arrays, even when native types exist
+- Use `list<T>` for indexed arrays
+- Use specific DTO types for complex data structures
+- Never use `mixed` unless absolutely necessary (and document why)
+
+## Property Types
+
+- Use native property types (PHP 7.4+) whenever possible
+- Combine with PHPDoc annotations for complex types (arrays, generics)
+- Example: `private array $roles;` with `@var list<string>`
+
+## Return Types
+
+- Always declare return types on methods
+- Use `?Type` for nullable returns
+- Use `void` for methods that don't return values
+- Never omit return types
+
+## Parameter Types
+
+- Always type all parameters
+- Use union types (`Type1|Type2`) when appropriate (PHP 8.0+)
+- Use intersection types (`Type1&Type2`) when needed (PHP 8.1+)
+
+## When PHPStan Fails
+
+If PHPStan reports errors:
+1. Read the error message carefully
+2. Fix the type annotation (usually changing `array`/`T[]` to `list<T>`)
+3. Re-run `mise quality` to verify the fix
+4. Never suppress PHPStan errors with `@phpstan-ignore` unless absolutely necessary (and document why)

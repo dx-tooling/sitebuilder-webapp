@@ -1,0 +1,34 @@
+# Frontend Development
+
+**Reference**: See `docs/archbook.md` section on "Client-Side Organization" and `.cursorrules` for TypeScript preferences.
+
+## TypeScript Over JavaScript
+
+- **Always** prefer TypeScript over JavaScript
+- Use TypeScript's type system extensively
+- Generate `.ts` files, not `.js` files
+- Only use JavaScript when TypeScript is not available for a specific library
+
+## Stimulus Controllers
+
+- Stimulus controllers are colocated with verticals: `src/FeatureName/Presentation/Resources/assets/controllers/`
+- Keep frontend code aligned with vertical boundaries
+- Use TypeScript for Stimulus controllers when possible
+
+## Asset Organization
+
+- Frontend assets in `assets/` directory
+- Vendor assets managed through Symfony AssetMapper (importmaps)
+- See `docs/techbook.md` for dependency management details
+
+## Code Quality
+
+- Run `mise quality` to check frontend code (Prettier, ESLint, TypeScript compiler)
+- All frontend code must pass ESLint and TypeScript type checking
+- Format code with Prettier (automatically runs in `mise quality`)
+
+## Building Frontend
+
+- Use `mise run frontend` to build frontend assets (see `docs/devbook.md`)
+- Frontend builds are handled by Symfony AssetMapper and TailwindCSS
+- Don't manually edit built files in `public/assets/`

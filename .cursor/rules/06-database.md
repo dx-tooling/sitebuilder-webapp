@@ -1,0 +1,39 @@
+# Database Access Patterns
+
+**Reference**: See `docs/archbook.md` section on "Database access in Domain" and `docs/devbook.md` for migration workflow.
+
+## Database Access in Domain Layer
+
+- Database access is **allowed** in the Domain layer
+- Use raw SQL for complex queries
+- Use `EntityManager` for simple CRUD operations
+- **Never** hardcode table names; use entity class names and Doctrine's table mapping
+
+## Entity Management
+
+- Model entities in `Domain/Entity/`
+- Use Doctrine ORM attributes for mapping
+- Entities are rich domain objects with behavior
+- Don't expose entities directly across vertical boundaries (use DTOs)
+
+## Migrations
+
+- **Never** write migrations manually
+- Create or edit entities
+- Run `mise run console make:migration` to generate migrations (see `docs/devbook.md`)
+- Migrations are auto-generated from entity changes
+
+## Date and Time
+
+- **Always** use `DateAndTimeService::getDateTimeImmutable()` instead of `new DateTimeImmutable()`
+- This ensures consistent time handling across the application
+- See `docs/archbook.md` for this requirement
+
+## String Handling
+
+- Use `mb_*` functions for multibyte-safe string operations
+- Be aware of encoding when working with user input or database data
+
+## Connection
+
+- Use `mise run db` to connect to the local database (see `docs/devbook.md`)

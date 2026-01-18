@@ -1,0 +1,43 @@
+# Architecture and Vertical Boundaries
+
+**Reference**: See `docs/archbook.md` for complete architecture documentation.
+
+## Vertical Structure
+
+- Each feature is a **vertical** (top-level folder under `src/`)
+- Verticals contain layers: `Domain/`, `Facade/`, `Infrastructure/`, `Api/`, `Presentation/`
+- `Common/` is a shared vertical for cross-cutting concerns (excluded from boundary tests)
+
+## Cross-Vertical Communication
+
+**CRITICAL RULE**: Verticals can only communicate through **Facades**.
+
+- ✅ **Allowed**: `App\Foo\Domain\Service` → uses `App\Bar\Facade\BarFacadeInterface`
+- ❌ **Forbidden**: `App\Foo\Domain\Service` → uses `App\Bar\Domain\Entity`
+- ❌ **Forbidden**: `App\Foo\Presentation\Controller` → uses `App\Bar\Domain\Service`
+
+## Facade Usage
+
+- Facades expose **interfaces** and **DTOs** in `Facade/` namespace
+- Facades are for **cross-vertical** use only
+- Within the same vertical, use Domain services directly
+- Facade implementations are thin orchestrators
+
+## Layer Responsibilities
+
+- **Facade**: Interfaces + DTOs + orchestration for other verticals
+- **Domain**: Entities, enums, value objects, domain services, repositories (pure business logic)
+- **Infrastructure**: External integrations, adapters
+- **Api**: HTTP endpoints, serialization, request/response DTOs
+- **Presentation**: Controllers, UI services, Twig templates, UX components
+
+## When Creating New Features
+
+1. Create a new vertical: `src/FeatureName/`
+2. Add layers as needed (not all verticals need all layers)
+3. Only add a `Facade/` when another vertical needs to access this feature
+4. Keep `Common/` small and for truly cross-cutting concerns only
+
+## Boundary Enforcement
+
+The architecture test (`tests/Architecture/FeatureBoundariesArchTest.php`) enforces these rules. If you violate boundaries, the test will fail.

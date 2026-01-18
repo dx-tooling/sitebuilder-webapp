@@ -1,0 +1,29 @@
+# Rule Acknowledgment
+
+**CRITICAL**: Before starting any task, you MUST explicitly acknowledge which rules from this `.cursor/rules/` folder apply to the current work.
+
+## Required Format
+
+At the start of your response, state:
+
+```
+**Applying rules**: [list of rule file names that are relevant]
+```
+
+Examples:
+- `**Applying rules**: 00-rule-acknowledgment.md, 01-architecture-boundaries.md, 02-code-standards.md`
+- `**Applying rules**: 00-rule-acknowledgment.md, 03-type-safety.md, 05-frontend.md`
+
+## When to Acknowledge
+
+- **Always** acknowledge at least `00-rule-acknowledgment.md` itself
+- Acknowledge all rules that are relevant to the task at hand
+- If unsure, err on the side of acknowledging more rules rather than fewer
+- Re-acknowledge when switching between different types of work (e.g., from backend to frontend)
+
+## Purpose
+
+This rule ensures:
+1. You are aware of the applicable constraints
+2. The user can verify you're following the right guidelines
+3. Rule violations can be traced back to acknowledged rules

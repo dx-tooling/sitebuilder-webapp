@@ -1,0 +1,55 @@
+# DTO Patterns
+
+**Reference**: See `docs/archbook.md` section on "DTO-first data flow".
+
+## When to Use DTOs
+
+- **Always** use DTOs for data transfer across vertical boundaries (via Facades)
+- **Always** use DTOs for data transfer across layers within a vertical
+- **Never** use associative arrays (`array<string, mixed>`) for data transfer
+- **Never** pass entities directly across boundaries
+
+## DTO Structure
+
+DTOs should be:
+- **Readonly classes** when possible (PHP 8.2+)
+- Located in `Facade/Dto/` for facade DTOs
+- Located in appropriate layer folders for internal DTOs (e.g., `Api/Dto/`, `Presentation/Dto/`)
+- Simple data containers with typed properties
+
+## DTO Properties
+
+- All properties must be typed
+- Use PHPDoc annotations for complex types (arrays, generics)
+- Use `list<T>` for array properties (see `03-type-safety.md`)
+- Avoid nested DTOs unless necessary (prefer flat structures when possible)
+
+## Example Pattern
+
+```php
+readonly class AccountInfoDto
+{
+    public function __construct(
+        public string            $id,
+        public string            $email,
+        /** @var list<string> */
+        public array             $roles,
+        public DateTimeImmutable $createdAt,
+    ) {
+    }
+}
+```
+
+## DTO vs Entity
+
+- **Entities** (`Domain/Entity/`): Rich domain objects with behavior, used within Domain layer
+- **DTOs** (`Facade/Dto/`, `Api/Dto/`, etc.): Simple data containers for transfer
+- **Never** return entities from facades; always convert to DTOs
+- **Never** accept entities as parameters in facades; use DTOs or primitives
+
+## Conversion
+
+When converting between entities and DTOs:
+- Create conversion methods in Facade implementations
+- Keep conversion logic simple and explicit
+- Handle null cases appropriately

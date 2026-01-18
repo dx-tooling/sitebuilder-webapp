@@ -1,0 +1,39 @@
+# Code Standards
+
+**Reference**: See `.cursorrules` and `.php-cs-fixer.dist.php` for complete standards.
+
+## PHP Standards
+
+- **Strict typing**: Always use `declare(strict_types=1);` at the top of every PHP file
+- **PHP 8.4 features**: Use modern PHP features when appropriate
+- **Attributes over annotations**: Prefer PHP Attributes; only use annotations if no attribute exists
+- **No named arguments**: Never use named arguments when calling functions/methods
+- **Type system**: Use PHP's type system extensively (return types, parameter types, property types)
+
+## Code Formatting
+
+Follow PHP CS Fixer rules defined in `.php-cs-fixer.dist.php`:
+- Based on `@Symfony` standard
+- Custom rules: `ErickSkrauch/align_multiline_parameters`, `ErickSkrauch/blank_line_before_return`, `ErickSkrauch/multiline_if_statement_braces`
+- Always run `mise quality` before committing to ensure formatting compliance
+
+## SOLID Principles
+
+- **Dependency Injection**: Services injected via container; avoid static/global access
+- **Single Responsibility**: Each class has one clear purpose
+- **Open/Closed**: Extend through interfaces and composition
+- **Liskov Substitution**: Subtypes must be substitutable for their base types
+- **Interface Segregation**: Many specific interfaces over one general interface
+- **Dependency Inversion**: Depend on abstractions, not concretions
+
+## Naming Conventions
+
+- Use descriptive names; longer names are acceptable if they clarify meaning
+- Follow Symfony naming conventions for controllers, services, entities
+- Use clear, intention-revealing names for methods and variables
+
+## Error Handling
+
+- Use Symfony exceptions and validation facilities
+- Use logging for important events and errors
+- Never suppress errors silently
