@@ -91,7 +91,7 @@ readonly class AppNotificationsPresentationService
                 $type,
                 $message,
                 $this->router->generate(
-                    'content.presentation.homepage'
+                    'static_pages.presentation.homepage'
                 )
             )
         };
