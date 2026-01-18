@@ -5,15 +5,18 @@ How do I get a development environment for this application up and running?
 
 ## On macOS
 
-- Ensure that `php --version` resolves to PHP 8.2.x
+- Ensure that Docker Desktop and mise-en-place, from https://mise.jdx.dev, are installed
 - Clone this repository
 - cd into the cloned repo root folder
-- Run `composer install`
-- Run `nvm install`
-- Run `npm install --no-save`
-- Run `php bin/console importmap:install`
-- Run `bash bin/install-git-hooks.sh`
-- Run `php bin/console doctrine:database:create --if-not-exists`
-- Run `php bin/console doctrine:migrations:migrate`
-- Run `bash bin/build-frontend.sh`
-- Run `symfony server:start`
+- Run `mise trust`
+- Run `docker compose up --build -d`
+- Run `docker compose exec -ti app composer install`
+- Run `mise run in-app-container mise trust`
+- Run `mise run in-app-container mise install`
+- Run `mise run npm install --no-save`
+- Run `mise run console doctrine:database:create`
+- Run `mise run console doctrine:migrations:migrate --no-interaction`
+- Run `mise run frontend`
+- Run `mise run quality`
+- Run `mise run tests`
+- Run `mise run browser`

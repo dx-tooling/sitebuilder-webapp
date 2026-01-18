@@ -5,22 +5,22 @@ How do I solve recurring tasks and problems during development?
 
 ## Building the frontend
 
-- `bash bin/build-frontend.sh`
+- `mise run frontend`
 
 
 ## Updating all dependencies
 
-- `composer update --with-dependencies`
-- `nvm use && npm update`
-- `php bin/console importmap:update`
+- `mise run composer update --with-dependencies`
+- `mise run npm update`
+- `mise run console importmap:update`
 
 
 ## Changing the database schema with migrations
 
 - Create new or edit existing entities
-- Run `php bin/console make:migration`
+- Run `mise run console make:migration`
 
 
 ## Connect to the local database
 
-- `bash bin/connect-to-db.sh`
+- `mise run db`
