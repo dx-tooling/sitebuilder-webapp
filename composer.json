@@ -13,6 +13,7 @@
         "doctrine/doctrine-migrations-bundle": "^3.7.0",
         "doctrine/orm": "^3.5.7",
         "enterprise-tooling-for-symfony/shared-bundle": "dev-main",
+        "enterprise-tooling-for-symfony/v4a-fileedit": "dev-main",
         "enterprise-tooling-for-symfony/webui-bundle": "dev-main",
         "googleads/google-ads-php": "^25.0",
         "orhanerday/open-ai": "^5.3",
@@ -108,7 +109,6 @@
             "require": "7.4.*"
         }
     },
-    "require-dev": {},
     "repositories": [
         {
             "type": "vcs",
@@ -117,6 +117,10 @@
         {
             "type": "vcs",
             "url": "https://github.com/dx-tooling/etfs-webui-bundle.git"
+        },
+        {
+            "type": "vcs",
+            "url": "https://github.com/dx-tooling/etfs-v4a-fileedit.git"
         }
     ]
 }
