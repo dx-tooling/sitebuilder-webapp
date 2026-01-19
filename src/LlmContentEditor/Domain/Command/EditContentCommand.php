@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\LlmContentEditor\Domain\Command;
 
 use App\LlmContentEditor\Infrastructure\NeuronAgent\ContentEditorNeuronAgent;
-use App\LlmFileEditing\Facade\LlmFileEditingFacadeInterface;
+use App\WorkspaceTooling\Facade\WorkspaceToolingFacadeInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use EnterpriseToolingForSymfony\SharedBundle\Commandline\Command\EnhancedCommand;
 use EnterpriseToolingForSymfony\SharedBundle\Locking\Service\LockService;
@@ -32,7 +32,7 @@ final class EditContentCommand extends EnhancedCommand
         LoggerInterface                       $logger,
         LockService                           $lockService,
         ParameterBagInterface                 $parameterBag,
-        private LlmFileEditingFacadeInterface $fileEditingFacade
+        private WorkspaceToolingFacadeInterface $fileEditingFacade
     ) {
         parent::__construct(
             $rolloutService,

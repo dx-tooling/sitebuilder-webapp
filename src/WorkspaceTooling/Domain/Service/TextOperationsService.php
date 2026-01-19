@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\LlmFileEditing\Domain\Service;
+namespace App\WorkspaceTooling\Domain\Service;
 
-use App\LlmFileEditing\Infrastructure\Service\FileOperationsServiceInterface;
+use App\WorkspaceTooling\Infrastructure\Service\FileOperationsServiceInterface;
 use V4AFileEdit\ApplyDiff;
 
 final readonly class TextOperationsService

@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\LlmFileEditing\Facade;
+namespace App\WorkspaceTooling\Facade;
 
-use App\LlmFileEditing\Domain\Service\TextOperationsService;
-use App\LlmFileEditing\Infrastructure\Service\FileOperationsServiceInterface;
+use App\WorkspaceTooling\Domain\Service\TextOperationsService;
+use App\WorkspaceTooling\Infrastructure\Service\FileOperationsServiceInterface;
 
-final readonly class LlmFileEditingFacade implements LlmFileEditingFacadeInterface
+final readonly class WorkspaceToolingFacade implements WorkspaceToolingFacadeInterface
 {
     public function __construct(
         private FileOperationsServiceInterface $fileOperationsService,

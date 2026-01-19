@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\LlmFileEditing\Domain\Command;
+namespace App\WorkspaceTooling\Domain\Command;
 
-use App\LlmFileEditing\Domain\Service\TextOperationsService;
-use App\LlmFileEditing\Infrastructure\Service\FileOperationsServiceInterface;
+use App\WorkspaceTooling\Domain\Service\TextOperationsService;
+use App\WorkspaceTooling\Infrastructure\Service\FileOperationsServiceInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use EnterpriseToolingForSymfony\SharedBundle\Commandline\Command\EnhancedCommand;
 use EnterpriseToolingForSymfony\SharedBundle\Locking\Service\LockService;

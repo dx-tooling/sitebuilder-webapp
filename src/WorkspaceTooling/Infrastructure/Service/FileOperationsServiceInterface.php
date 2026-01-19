@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\LlmFileEditing\Infrastructure\Service;
+namespace App\WorkspaceTooling\Infrastructure\Service;
 
 interface FileOperationsServiceInterface
 {

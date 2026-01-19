@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\LlmContentEditor\Infrastructure\NeuronAgent;
 
-use App\LlmFileEditing\Facade\LlmFileEditingFacadeInterface;
+use App\WorkspaceTooling\Facade\WorkspaceToolingFacadeInterface;
 use NeuronAI\Agent;
 use NeuronAI\Providers\AIProviderInterface;
 use NeuronAI\Providers\OpenAI\OpenAI;
@@ -16,7 +16,7 @@ use NeuronAI\Tools\ToolProperty;
 class ContentEditorNeuronAgent extends Agent
 {
     public function __construct(
-        private readonly LlmFileEditingFacadeInterface $fileEditingFacade
+        private readonly WorkspaceToolingFacadeInterface $fileEditingFacade
     ) {
     }
 
