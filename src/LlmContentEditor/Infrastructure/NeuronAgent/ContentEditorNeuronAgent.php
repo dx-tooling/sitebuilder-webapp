@@ -23,7 +23,7 @@ class ContentEditorNeuronAgent extends Agent
     protected function provider(): AIProviderInterface
     {
         return new OpenAI(
-            'YOUR_OPENAI_API_KEY_HERE',
+            $_ENV['LLM_CONTENT_EDITOR_OPENAI_API_KEY'],
             'gpt-4.1',
         );
     }
