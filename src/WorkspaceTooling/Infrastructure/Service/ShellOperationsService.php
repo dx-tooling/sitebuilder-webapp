@@ -20,6 +20,9 @@ final class ShellOperationsService implements ShellOperationsServiceInterface
         $process = Process::fromShellCommandline($command);
         $process->setWorkingDirectory($workingDirectory);
         $process->setTimeout(self::DEFAULT_TIMEOUT);
+        $process->setEnv([
+            'MISE_YES' => '1',
+        ]);
 
         $process->run();
 

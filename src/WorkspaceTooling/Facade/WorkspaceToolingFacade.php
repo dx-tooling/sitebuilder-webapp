@@ -37,16 +37,16 @@ final readonly class WorkspaceToolingFacade implements WorkspaceToolingFacadeInt
 
     public function runQualityChecks(string $pathToFolder): string
     {
-        return $this->shellOperationsService->runCommand($pathToFolder, 'npm run quality');
+        return $this->shellOperationsService->runCommand($pathToFolder, 'mise exec -- npm run quality');
     }
 
     public function runTests(string $pathToFolder): string
     {
-        return $this->shellOperationsService->runCommand($pathToFolder, 'npm run test');
+        return $this->shellOperationsService->runCommand($pathToFolder, 'mise exec -- npm run test');
     }
 
     public function runBuild(string $pathToFolder): string
     {
-        return $this->shellOperationsService->runCommand($pathToFolder, 'npm run build');
+        return $this->shellOperationsService->runCommand($pathToFolder, 'mise exec -- npm run build');
     }
 }
