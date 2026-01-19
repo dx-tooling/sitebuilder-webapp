@@ -7,6 +7,7 @@ namespace App\Account\Facade;
 use App\Account\Domain\Entity\AccountCore;
 use App\Account\Facade\Dto\AccountInfoDto;
 use Doctrine\ORM\EntityManagerInterface;
+use RuntimeException;
 
 final readonly class AccountFacade implements AccountFacadeInterface
 {
@@ -28,5 +29,20 @@ final readonly class AccountFacade implements AccountFacadeInterface
             $account->getRoles(),
             $account->getCreatedAt(),
         );
+    }
+
+    public function getCurrentUser(): ?AccountInfoDto
+    {
+        throw new RuntimeException('Not implemented');
+    }
+
+    public function isAuthenticated(): bool
+    {
+        throw new RuntimeException('Not implemented');
+    }
+
+    public function validateUserExists(string $userId): void
+    {
+        throw new RuntimeException('Not implemented');
     }
 }
