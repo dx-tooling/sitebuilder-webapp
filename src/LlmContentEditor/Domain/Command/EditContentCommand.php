@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\LlmContentEditor\Domain\Command;
 
-use App\LlmContentEditor\Infrastructure\NeuronAgent\ContentEditorNeuronAgent;
+use App\LlmContentEditor\Infrastructure\NeuronAgent\ContentEditorAgent;
 use App\LlmContentEditor\Infrastructure\Observer\ConsoleObserver;
 use App\WorkspaceTooling\Facade\WorkspaceToolingFacadeInterface;
 use Doctrine\ORM\EntityManagerInterface;
@@ -79,7 +79,7 @@ final class EditContentCommand extends EnhancedCommand
         $output->writeln("<info>Instruction:</info> {$instruction}");
         $output->writeln('');
 
-        $agent    = new ContentEditorNeuronAgent($this->fileEditingFacade);
+        $agent    = new ContentEditorAgent($this->fileEditingFacade);
         $observer = new ConsoleObserver($output);
         $agent->attach($observer);
 

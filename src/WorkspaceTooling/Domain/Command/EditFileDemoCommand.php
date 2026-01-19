@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace App\WorkspaceTooling\Domain\Command;
 
-use App\WorkspaceTooling\Domain\Service\TextOperationsService;
-use App\WorkspaceTooling\Infrastructure\Service\FileOperationsServiceInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use EnterpriseToolingForSymfony\SharedBundle\Commandline\Command\EnhancedCommand;
 use EnterpriseToolingForSymfony\SharedBundle\Locking\Service\LockService;
 use EnterpriseToolingForSymfony\SharedBundle\Rollout\Service\RolloutService;
+use EtfsCodingAgent\Service\FileOperationsServiceInterface;
+use EtfsCodingAgent\Service\TextOperationsService;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Input\InputInterface;

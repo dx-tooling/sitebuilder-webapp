@@ -12,6 +12,7 @@
         "doctrine/doctrine-bundle": "^3.0",
         "doctrine/doctrine-migrations-bundle": "^3.7.0",
         "doctrine/orm": "^3.5.7",
+        "enterprise-tooling-for-symfony/coding-agent": "dev-main",
         "enterprise-tooling-for-symfony/shared-bundle": "dev-main",
         "enterprise-tooling-for-symfony/v4a-fileedit": "dev-main",
         "enterprise-tooling-for-symfony/webui-bundle": "dev-main",
@@ -111,6 +112,10 @@
         }
     },
     "repositories": [
+        {
+            "type": "vcs",
+            "url": "https://github.com/dx-tooling/etfs-coding-agent.git"
+        },
         {
             "type": "vcs",
             "url": "https://github.com/dx-tooling/etfs-shared-bundle.git"
