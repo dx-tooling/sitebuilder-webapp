@@ -60,19 +60,21 @@ final class EditContentCommand extends EnhancedCommand
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $folder      = $input->getArgument('folder');
+        /** @var string $folder */
+        $folder = $input->getArgument('folder');
+        /** @var string $instruction */
         $instruction = $input->getArgument('instruction');
 
         if (!is_dir($folder)) {
             throw new RuntimeException("Directory does not exist: {$folder}");
         }
 
-        $folder = realpath($folder);
-        if ($folder === false) {
+        $resolvedFolder = realpath($folder);
+        if ($resolvedFolder === false) {
             throw new RuntimeException('Could not resolve folder path.');
         }
 
-        $output->writeln("<info>Working folder:</info> {$folder}");
+        $output->writeln("<info>Working folder:</info> {$resolvedFolder}");
         $output->writeln("<info>Instruction:</info> {$instruction}");
         $output->writeln('');
 
@@ -81,7 +83,7 @@ final class EditContentCommand extends EnhancedCommand
         $prompt = sprintf(
             'The working folder is: %s' . "\n\n" .
             'Please perform the following task: %s',
-            $folder,
+            $resolvedFolder,
             $instruction
         );
 
@@ -92,7 +94,8 @@ final class EditContentCommand extends EnhancedCommand
         $response = $agent->chat($message);
 
         $output->writeln('<info>Agent response:</info>');
-        $output->writeln($response->getContent());
+        $content = $response->getContent();
+        $output->writeln(is_string($content) ? $content : '');
 
         return self::SUCCESS;
     }

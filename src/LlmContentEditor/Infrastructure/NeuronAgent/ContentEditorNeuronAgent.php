@@ -23,30 +23,33 @@ class ContentEditorNeuronAgent extends Agent
     protected function provider(): AIProviderInterface
     {
         return new OpenAI(
-            key: 'YOUR_OPENAI_API_KEY_HERE',
-            model: 'gpt-4.1',
+            'YOUR_OPENAI_API_KEY_HERE',
+            'gpt-4.1',
         );
     }
 
     public function instructions(): string
     {
         return (string) new SystemPrompt(
-            background: [
+            [
                 'You are a friendly AI Agent that helps the user to edit text files in a folder.',
                 'You have access to tools for listing folder contents, reading files, and applying edits.',
             ],
-            steps: [
+            [
                 '1. First, use get_folder_content to list the files in the specified folder.',
                 '2. Use get_file_content to read the content of files you need to understand or modify.',
                 '3. When you need to edit a file, use apply_diff_to_file with a unified diff in v4a format.',
             ],
-            output: [
+            [
                 'After completing the edit, summarize what changes were made.',
                 'If you encounter any errors, explain what went wrong.',
             ],
         );
     }
 
+    /**
+     * @phpstan-ignore noAssociativeArraysAcrossBoundaries.return
+     */
     protected function tools(): array
     {
         return [
@@ -55,10 +58,10 @@ class ContentEditorNeuronAgent extends Agent
                 'List the files and directories in a folder. Returns a newline-separated list of file names.',
             )->addProperty(
                 new ToolProperty(
-                    name: 'path_to_folder',
-                    type: PropertyType::STRING,
-                    description: 'The absolute path to the folder whose contents shall be listed.',
-                    required: true
+                    'path_to_folder',
+                    PropertyType::STRING,
+                    'The absolute path to the folder whose contents shall be listed.',
+                    true
                 )
             )->setCallable(fn (string $path_to_folder): string => $this->fileEditingFacade->getFolderContent($path_to_folder)),
 
@@ -67,10 +70,10 @@ class ContentEditorNeuronAgent extends Agent
                 'Read and return the full content of a file.',
             )->addProperty(
                 new ToolProperty(
-                    name: 'path_to_file',
-                    type: PropertyType::STRING,
-                    description: 'The absolute path to the file to read.',
-                    required: true
+                    'path_to_file',
+                    PropertyType::STRING,
+                    'The absolute path to the file to read.',
+                    true
                 )
             )->setCallable(fn (string $path_to_file): string => $this->fileEditingFacade->getFileContent($path_to_file)),
 
@@ -79,17 +82,17 @@ class ContentEditorNeuronAgent extends Agent
                 'Apply a unified diff (v4a format) to modify a file. The diff should use the standard unified diff format with @@ line markers, context lines (space prefix), removed lines (- prefix), and added lines (+ prefix). Example: @@ -1,3 +1,4 @@\n line1\n line2\n+new line\n line3',
             )->addProperty(
                 new ToolProperty(
-                    name: 'path_to_file',
-                    type: PropertyType::STRING,
-                    description: 'The absolute path to the file to modify.',
-                    required: true
+                    'path_to_file',
+                    PropertyType::STRING,
+                    'The absolute path to the file to modify.',
+                    true
                 )
             )->addProperty(
                 new ToolProperty(
-                    name: 'diff',
-                    type: PropertyType::STRING,
-                    description: 'The unified diff to apply. Use @@ -start,count +start,count @@ header, space-prefixed context lines, minus-prefixed lines to remove, and plus-prefixed lines to add.',
-                    required: true
+                    'diff',
+                    PropertyType::STRING,
+                    'The unified diff to apply. Use @@ -start,count +start,count @@ header, space-prefixed context lines, minus-prefixed lines to remove, and plus-prefixed lines to add.',
+                    true
                 )
             )->setCallable(fn (string $path_to_file, string $diff): string => $this->fileEditingFacade->applyV4aDiffToFile($path_to_file, $diff)),
         ];
