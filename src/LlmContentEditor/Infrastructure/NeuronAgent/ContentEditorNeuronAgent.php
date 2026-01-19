@@ -46,6 +46,18 @@ class ContentEditorNeuronAgent extends Agent
                 '- Build output goes to dist/ or build/ (generated, do not edit directly)',
                 '- README.md contains project documentation and instructions',
                 '',
+                'EFFICIENT FILE READING:',
+                '- Use get_file_info first to check file size before reading',
+                '- For large files (>100 lines), use search_in_file to find relevant sections',
+                '- Use get_file_lines to read only the lines you need',
+                '- Only use get_file_content for small files or when you need the entire content',
+                '',
+                'EFFICIENT FILE EDITING:',
+                '- Use replace_in_file for simple, targeted edits (preferred for single changes)',
+                '- The old_string must be unique - include surrounding context if needed',
+                '- Use apply_diff_to_file only for complex multi-location edits',
+                '- Always search or read the relevant section before editing to ensure accuracy',
+                '',
                 'DISCOVERY IS KEY:',
                 '- Always explore the workspace structure before making changes',
                 '- Read package.json to understand available scripts and dependencies',
@@ -62,9 +74,9 @@ class ContentEditorNeuronAgent extends Agent
             [
                 '1. EXPLORE: List the workspace root folder to understand its structure.',
                 '2. UNDERSTAND: Read package.json and README.md to learn about the project.',
-                '3. INVESTIGATE: Browse src/ and other relevant folders to find existing patterns.',
+                '3. INVESTIGATE: Use get_file_info + search_in_file to efficiently explore files.',
                 '4. PLAN: Understand what files need to be created or modified.',
-                '5. EDIT: Use apply_diff_to_file with unified diff format for precise changes.',
+                '5. EDIT: Use replace_in_file for targeted edits, apply_diff_to_file for complex changes.',
                 '6. VERIFY: Run run_quality_checks to ensure code standards are met.',
                 '7. TEST: Run run_tests to verify functionality.',
                 '8. BUILD: Run run_build to confirm the project compiles successfully.',
@@ -97,7 +109,7 @@ class ContentEditorNeuronAgent extends Agent
 
             Tool::make(
                 'get_file_content',
-                'Read and return the full content of a file.',
+                'Read and return the full content of a file. For large files, prefer get_file_info + get_file_lines or search_in_file.',
             )->addProperty(
                 new ToolProperty(
                     'path_to_file',
@@ -106,6 +118,96 @@ class ContentEditorNeuronAgent extends Agent
                     true
                 )
             )->setCallable(fn (string $path_to_file): string => $this->fileEditingFacade->getFileContent($path_to_file)),
+
+            Tool::make(
+                'get_file_info',
+                'Get file metadata (line count, size, extension) without reading the full content. Use this first to decide whether to read the whole file or specific lines.',
+            )->addProperty(
+                new ToolProperty(
+                    'path_to_file',
+                    PropertyType::STRING,
+                    'The absolute path to the file.',
+                    true
+                )
+            )->setCallable(fn (string $path_to_file): string => $this->fileEditingFacade->getFileInfo($path_to_file)),
+
+            Tool::make(
+                'get_file_lines',
+                'Read specific lines from a file. Lines are 1-indexed. Returns lines with line numbers prefixed.',
+            )->addProperty(
+                new ToolProperty(
+                    'path_to_file',
+                    PropertyType::STRING,
+                    'The absolute path to the file.',
+                    true
+                )
+            )->addProperty(
+                new ToolProperty(
+                    'start_line',
+                    PropertyType::INTEGER,
+                    'The first line to read (1-indexed).',
+                    true
+                )
+            )->addProperty(
+                new ToolProperty(
+                    'end_line',
+                    PropertyType::INTEGER,
+                    'The last line to read (inclusive).',
+                    true
+                )
+            )->setCallable(fn (string $path_to_file, int $start_line, int $end_line): string => $this->fileEditingFacade->getFileLines($path_to_file, $start_line, $end_line)),
+
+            Tool::make(
+                'search_in_file',
+                'Search for a text pattern in a file. Returns matching lines with surrounding context. Use this to find where to make edits.',
+            )->addProperty(
+                new ToolProperty(
+                    'path_to_file',
+                    PropertyType::STRING,
+                    'The absolute path to the file to search.',
+                    true
+                )
+            )->addProperty(
+                new ToolProperty(
+                    'search_pattern',
+                    PropertyType::STRING,
+                    'The text to search for (case-insensitive).',
+                    true
+                )
+            )->addProperty(
+                new ToolProperty(
+                    'context_lines',
+                    PropertyType::INTEGER,
+                    'Number of lines to show before and after each match (default: 3).',
+                    false
+                )
+            )->setCallable(fn (string $path_to_file, string $search_pattern, int $context_lines = 3): string => $this->fileEditingFacade->searchInFile($path_to_file, $search_pattern, $context_lines)),
+
+            Tool::make(
+                'replace_in_file',
+                'Replace a specific string in a file. The old_string must be unique in the file. Include enough context (surrounding lines) to make it unique. This is simpler than apply_diff_to_file for targeted edits.',
+            )->addProperty(
+                new ToolProperty(
+                    'path_to_file',
+                    PropertyType::STRING,
+                    'The absolute path to the file to modify.',
+                    true
+                )
+            )->addProperty(
+                new ToolProperty(
+                    'old_string',
+                    PropertyType::STRING,
+                    'The exact text to find and replace. Must be unique in the file. Include surrounding lines if needed for uniqueness.',
+                    true
+                )
+            )->addProperty(
+                new ToolProperty(
+                    'new_string',
+                    PropertyType::STRING,
+                    'The text to replace it with.',
+                    true
+                )
+            )->setCallable(fn (string $path_to_file, string $old_string, string $new_string): string => $this->fileEditingFacade->replaceInFile($path_to_file, $old_string, $new_string)),
 
             Tool::make(
                 'apply_diff_to_file',

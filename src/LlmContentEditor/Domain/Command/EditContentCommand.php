@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\LlmContentEditor\Domain\Command;
 
 use App\LlmContentEditor\Infrastructure\NeuronAgent\ContentEditorNeuronAgent;
+use App\LlmContentEditor\Infrastructure\Observer\ConsoleObserver;
 use App\WorkspaceTooling\Facade\WorkspaceToolingFacadeInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use EnterpriseToolingForSymfony\SharedBundle\Commandline\Command\EnhancedCommand;
@@ -78,7 +79,9 @@ final class EditContentCommand extends EnhancedCommand
         $output->writeln("<info>Instruction:</info> {$instruction}");
         $output->writeln('');
 
-        $agent = new ContentEditorNeuronAgent($this->fileEditingFacade);
+        $agent    = new ContentEditorNeuronAgent($this->fileEditingFacade);
+        $observer = new ConsoleObserver($output);
+        $agent->attach($observer);
 
         $prompt = sprintf(
             'The working folder is: %s' . "\n\n" .
@@ -88,14 +91,20 @@ final class EditContentCommand extends EnhancedCommand
         );
 
         $output->writeln('<comment>Starting AI agent...</comment>');
+
+        $message = new UserMessage($prompt);
+        $stream  = $agent->stream($message);
+
         $output->writeln('');
-
-        $message  = new UserMessage($prompt);
-        $response = $agent->chat($message);
-
         $output->writeln('<info>Agent response:</info>');
-        $content = $response->getContent();
-        $output->writeln(is_string($content) ? $content : '');
+
+        foreach ($stream as $chunk) {
+            if (is_string($chunk)) {
+                $output->write($chunk);
+            }
+        }
+
+        $output->writeln('');
 
         return self::SUCCESS;
     }
