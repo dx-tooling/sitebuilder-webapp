@@ -33,12 +33,12 @@ final class FileOperationsService implements FileOperationsServiceInterface
     public function listFolderContent(string $pathToFolder): string
     {
         if (!is_dir($pathToFolder)) {
-            throw new RuntimeException("Directory does not exist: {$pathToFolder}");
+            return "Error: Directory does not exist: {$pathToFolder}. Use create_directory to create it first.";
         }
 
         $files = scandir($pathToFolder);
         if ($files === false) {
-            throw new RuntimeException("Failed to list directory: {$pathToFolder}");
+            return "Error: Failed to list directory: {$pathToFolder}";
         }
 
         return implode("\n", array_filter($files, fn (string $file) => $file !== '.' && $file !== '..'));
@@ -47,12 +47,12 @@ final class FileOperationsService implements FileOperationsServiceInterface
     public function getFileContent(string $pathToFile): string
     {
         if (!file_exists($pathToFile)) {
-            throw new RuntimeException("File does not exist: {$pathToFile}");
+            return "Error: File does not exist: {$pathToFile}";
         }
 
         $content = file_get_contents($pathToFile);
         if ($content === false) {
-            throw new RuntimeException("Failed to read file: {$pathToFile}");
+            return "Error: Failed to read file: {$pathToFile}";
         }
 
         return $content;
@@ -61,12 +61,12 @@ final class FileOperationsService implements FileOperationsServiceInterface
     public function getFileLines(string $pathToFile, int $startLine, int $endLine): string
     {
         if (!file_exists($pathToFile)) {
-            throw new RuntimeException("File does not exist: {$pathToFile}");
+            return "Error: File does not exist: {$pathToFile}";
         }
 
         $content = file_get_contents($pathToFile);
         if ($content === false) {
-            throw new RuntimeException("Failed to read file: {$pathToFile}");
+            return "Error: Failed to read file: {$pathToFile}";
         }
 
         $lines      = explode("\n", $content);
@@ -117,12 +117,12 @@ final class FileOperationsService implements FileOperationsServiceInterface
     public function searchInFile(string $pathToFile, string $searchPattern, int $contextLines = 3): string
     {
         if (!file_exists($pathToFile)) {
-            throw new RuntimeException("File does not exist: {$pathToFile}");
+            return "Error: File does not exist: {$pathToFile}";
         }
 
         $content = file_get_contents($pathToFile);
         if ($content === false) {
-            throw new RuntimeException("Failed to read file: {$pathToFile}");
+            return "Error: Failed to read file: {$pathToFile}";
         }
 
         $lines      = explode("\n", $content);
@@ -199,5 +199,18 @@ final class FileOperationsService implements FileOperationsServiceInterface
         if ($result === false) {
             throw new RuntimeException("Failed to write file: {$pathToFile}");
         }
+    }
+
+    public function createDirectory(string $pathToDirectory): string
+    {
+        if (is_dir($pathToDirectory)) {
+            return "Directory already exists: {$pathToDirectory}";
+        }
+
+        if (!mkdir($pathToDirectory, 0755, true) && !is_dir($pathToDirectory)) {
+            throw new RuntimeException("Failed to create directory: {$pathToDirectory}");
+        }
+
+        return "Successfully created directory: {$pathToDirectory}";
     }
 }

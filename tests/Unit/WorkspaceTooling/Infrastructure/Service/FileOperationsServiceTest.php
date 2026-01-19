@@ -62,6 +62,43 @@ final class FileOperationsServiceTest extends TestCase
     }
 
     #[Test]
+    public function listFolderContentReturnsErrorWhenDirectoryDoesNotExist(): void
+    {
+        $result = $this->service->listFolderContent($this->tempDir . '/nonexistent');
+
+        self::assertStringContainsString('Error:', $result);
+        self::assertStringContainsString('does not exist', $result);
+        self::assertStringContainsString('create_directory', $result);
+    }
+
+    #[Test]
+    public function getFileContentReturnsErrorWhenFileDoesNotExist(): void
+    {
+        $result = $this->service->getFileContent($this->tempDir . '/nonexistent.txt');
+
+        self::assertStringContainsString('Error:', $result);
+        self::assertStringContainsString('does not exist', $result);
+    }
+
+    #[Test]
+    public function getFileLinesReturnsErrorWhenFileDoesNotExist(): void
+    {
+        $result = $this->service->getFileLines($this->tempDir . '/nonexistent.txt', 1, 10);
+
+        self::assertStringContainsString('Error:', $result);
+        self::assertStringContainsString('does not exist', $result);
+    }
+
+    #[Test]
+    public function searchInFileReturnsErrorWhenFileDoesNotExist(): void
+    {
+        $result = $this->service->searchInFile($this->tempDir . '/nonexistent.txt', 'pattern');
+
+        self::assertStringContainsString('Error:', $result);
+        self::assertStringContainsString('does not exist', $result);
+    }
+
+    #[Test]
     public function getFileLinesReturnsSpecificLines(): void
     {
         $content = "Line 1\nLine 2\nLine 3\nLine 4\nLine 5";
@@ -244,5 +281,38 @@ final class FileOperationsServiceTest extends TestCase
 
         $newContent = file_get_contents($path);
         self::assertSame('        double-indented line', $newContent);
+    }
+
+    #[Test]
+    public function createDirectoryCreatesNewDirectory(): void
+    {
+        $dirPath = $this->tempDir . '/new_directory';
+
+        $result = $this->service->createDirectory($dirPath);
+
+        self::assertDirectoryExists($dirPath);
+        self::assertStringContainsString('Successfully created', $result);
+    }
+
+    #[Test]
+    public function createDirectoryCreatesNestedDirectories(): void
+    {
+        $dirPath = $this->tempDir . '/parent/child/grandchild';
+
+        $result = $this->service->createDirectory($dirPath);
+
+        self::assertDirectoryExists($dirPath);
+        self::assertStringContainsString('Successfully created', $result);
+    }
+
+    #[Test]
+    public function createDirectoryReturnsMessageWhenDirectoryExists(): void
+    {
+        $dirPath = $this->tempDir . '/existing_directory';
+        mkdir($dirPath, 0755, true);
+
+        $result = $this->service->createDirectory($dirPath);
+
+        self::assertStringContainsString('already exists', $result);
     }
 }

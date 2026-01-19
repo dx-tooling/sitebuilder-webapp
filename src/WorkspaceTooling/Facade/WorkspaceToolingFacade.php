@@ -69,4 +69,9 @@ final readonly class WorkspaceToolingFacade implements WorkspaceToolingFacadeInt
     {
         return $this->shellOperationsService->runCommand($pathToFolder, 'mise exec -- npm run build');
     }
+
+    public function createDirectory(string $pathToDirectory): string
+    {
+        return $this->fileOperationsService->createDirectory($pathToDirectory);
+    }
 }

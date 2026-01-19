@@ -21,4 +21,6 @@ interface FileOperationsServiceInterface
     public function replaceInFile(string $pathToFile, string $oldString, string $newString): string;
 
     public function writeFileContent(string $pathToFile, string $fileContent): void;
+
+    public function createDirectory(string $pathToDirectory): string;
 }

@@ -25,4 +25,6 @@ interface WorkspaceToolingFacadeInterface
     public function runTests(string $pathToFolder): string;
 
     public function runBuild(string $pathToFolder): string;
+
+    public function createDirectory(string $pathToDirectory): string;
 }
