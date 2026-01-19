@@ -6,12 +6,14 @@ namespace App\WorkspaceTooling\Facade;
 
 use App\WorkspaceTooling\Domain\Service\TextOperationsService;
 use App\WorkspaceTooling\Infrastructure\Service\FileOperationsServiceInterface;
+use App\WorkspaceTooling\Infrastructure\Service\ShellOperationsServiceInterface;
 
 final readonly class WorkspaceToolingFacade implements WorkspaceToolingFacadeInterface
 {
     public function __construct(
-        private FileOperationsServiceInterface $fileOperationsService,
-        private TextOperationsService          $textOperationsService
+        private FileOperationsServiceInterface  $fileOperationsService,
+        private TextOperationsService           $textOperationsService,
+        private ShellOperationsServiceInterface $shellOperationsService
     ) {
     }
 
@@ -31,5 +33,20 @@ final readonly class WorkspaceToolingFacade implements WorkspaceToolingFacadeInt
         $this->fileOperationsService->writeFileContent($pathToFile, $modifiedContent);
 
         return $modifiedContent;
+    }
+
+    public function runQualityChecks(string $pathToFolder): string
+    {
+        return $this->shellOperationsService->runCommand($pathToFolder, 'npm run quality');
+    }
+
+    public function runTests(string $pathToFolder): string
+    {
+        return $this->shellOperationsService->runCommand($pathToFolder, 'npm run test');
+    }
+
+    public function runBuild(string $pathToFolder): string
+    {
+        return $this->shellOperationsService->runCommand($pathToFolder, 'npm run build');
     }
 }

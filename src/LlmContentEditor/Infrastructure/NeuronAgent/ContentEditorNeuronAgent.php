@@ -22,8 +22,11 @@ class ContentEditorNeuronAgent extends Agent
 
     protected function provider(): AIProviderInterface
     {
+        /** @var string $apiKey */
+        $apiKey = $_ENV['LLM_CONTENT_EDITOR_OPENAI_API_KEY'];
+
         return new OpenAI(
-            $_ENV['LLM_CONTENT_EDITOR_OPENAI_API_KEY'],
+            $apiKey,
             'gpt-4.1',
         );
     }
@@ -32,17 +35,37 @@ class ContentEditorNeuronAgent extends Agent
     {
         return (string) new SystemPrompt(
             [
-                'You are a friendly AI Agent that helps the user to edit text files in a folder.',
-                'You have access to tools for listing folder contents, reading files, and applying edits.',
+                'You are a friendly AI Agent that helps the user to work with files in a Node.js web content workspace.',
+                'You have access to tools for exploring folders, reading files, applying edits, and running workspace commands.',
+                '',
+                'WORKSPACE CONVENTIONS:',
+                '- All workspaces are Node.js projects with package.json at the root',
+                '- Source files are in src/ (HTML pages, TypeScript/JavaScript, CSS, assets)',
+                '- Tests are typically in tests/ or src/__tests__/',
+                '- Build output goes to dist/ or build/ (generated, do not edit directly)',
+                '- README.md contains project documentation and instructions',
+                '',
+                'DISCOVERY IS KEY:',
+                '- Always explore the workspace structure before making changes',
+                '- Read package.json to understand available scripts and dependencies',
+                '- Read README.md to understand project conventions and workflows',
+                '- Look for styleguides, examples, or documentation in the workspace',
+                '- Examine existing files to understand patterns before creating new ones',
             ],
             [
-                '1. First, use get_folder_content to list the files in the specified folder.',
-                '2. Use get_file_content to read the content of files you need to understand or modify.',
-                '3. When you need to edit a file, use apply_diff_to_file with a unified diff in v4a format.',
+                '1. EXPLORE: List the workspace root folder to understand its structure.',
+                '2. UNDERSTAND: Read package.json and README.md to learn about the project.',
+                '3. INVESTIGATE: Browse src/ and other relevant folders to find existing patterns.',
+                '4. PLAN: Understand what files need to be created or modified.',
+                '5. EDIT: Use apply_diff_to_file with unified diff format for precise changes.',
+                '6. VERIFY: Run run_quality_checks to ensure code standards are met.',
+                '7. TEST: Run run_tests to verify functionality.',
+                '8. BUILD: Run run_build to confirm the project compiles successfully.',
             ],
             [
-                'After completing the edit, summarize what changes were made.',
-                'If you encounter any errors, explain what went wrong.',
+                'Summarize what changes were made and why.',
+                'If quality checks, tests, or build fail, analyze the errors and fix them.',
+                'Always verify your changes with quality checks, tests, and build before finishing.',
             ],
         );
     }
@@ -95,6 +118,42 @@ class ContentEditorNeuronAgent extends Agent
                     true
                 )
             )->setCallable(fn (string $path_to_file, string $diff): string => $this->fileEditingFacade->applyV4aDiffToFile($path_to_file, $diff)),
+
+            Tool::make(
+                'run_quality_checks',
+                'Run quality checks (npm run quality) in the workspace to verify code standards and linting. Returns the command output.',
+            )->addProperty(
+                new ToolProperty(
+                    'path_to_folder',
+                    PropertyType::STRING,
+                    'The absolute path to the workspace folder where quality checks should run.',
+                    true
+                )
+            )->setCallable(fn (string $path_to_folder): string => $this->fileEditingFacade->runQualityChecks($path_to_folder)),
+
+            Tool::make(
+                'run_tests',
+                'Run the test suite (npm run test) in the workspace to verify functionality. Returns the test output.',
+            )->addProperty(
+                new ToolProperty(
+                    'path_to_folder',
+                    PropertyType::STRING,
+                    'The absolute path to the workspace folder where tests should run.',
+                    true
+                )
+            )->setCallable(fn (string $path_to_folder): string => $this->fileEditingFacade->runTests($path_to_folder)),
+
+            Tool::make(
+                'run_build',
+                'Build the workspace (npm run build) from source. Returns the build output.',
+            )->addProperty(
+                new ToolProperty(
+                    'path_to_folder',
+                    PropertyType::STRING,
+                    'The absolute path to the workspace folder to build.',
+                    true
+                )
+            )->setCallable(fn (string $path_to_folder): string => $this->fileEditingFacade->runBuild($path_to_folder)),
         ];
     }
 }

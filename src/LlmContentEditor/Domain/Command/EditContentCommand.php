@@ -27,11 +27,11 @@ use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
 final class EditContentCommand extends EnhancedCommand
 {
     public function __construct(
-        RolloutService                        $rolloutService,
-        EntityManagerInterface                $entityManager,
-        LoggerInterface                       $logger,
-        LockService                           $lockService,
-        ParameterBagInterface                 $parameterBag,
+        RolloutService                          $rolloutService,
+        EntityManagerInterface                  $entityManager,
+        LoggerInterface                         $logger,
+        LockService                             $lockService,
+        ParameterBagInterface                   $parameterBag,
         private WorkspaceToolingFacadeInterface $fileEditingFacade
     ) {
         parent::__construct(
