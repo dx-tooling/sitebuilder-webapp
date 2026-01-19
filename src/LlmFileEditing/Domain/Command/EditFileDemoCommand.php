@@ -18,7 +18,7 @@ use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
 
 #[AsCommand(
     name: 'app:llm-file-editing:domain:edit-file-demo',
-    description: 'Export homepage as static site for backend-less hosting',
+    description: '',
     aliases: ['edit-file-demo']
 )]
 final class EditFileDemoCommand extends EnhancedCommand

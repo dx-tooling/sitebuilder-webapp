@@ -16,6 +16,7 @@
         "enterprise-tooling-for-symfony/v4a-fileedit": "dev-main",
         "enterprise-tooling-for-symfony/webui-bundle": "dev-main",
         "googleads/google-ads-php": "^25.0",
+        "neuron-core/neuron-ai": "^2.11",
         "orhanerday/open-ai": "^5.3",
         "phpdocumentor/reflection-docblock": "^5.6.4",
         "sensiolabs/minify-bundle": "^0.9.5",
