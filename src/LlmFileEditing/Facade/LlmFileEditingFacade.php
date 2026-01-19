@@ -4,20 +4,32 @@ declare(strict_types=1);
 
 namespace App\LlmFileEditing\Facade;
 
+use App\LlmFileEditing\Domain\Service\TextOperationsService;
+use App\LlmFileEditing\Infrastructure\Service\FileOperationsServiceInterface;
+
 final readonly class LlmFileEditingFacade implements LlmFileEditingFacadeInterface
 {
+    public function __construct(
+        private FileOperationsServiceInterface $fileOperationsService,
+        private TextOperationsService          $textOperationsService
+    ) {
+    }
+
     public function getFolderContent(string $pathToFolder): string
     {
-        return '';
+        return $this->fileOperationsService->listFolderContent($pathToFolder);
     }
 
     public function getFileContent(string $pathToFile): string
     {
-        return '';
+        return $this->fileOperationsService->getFileContent($pathToFile);
     }
 
     public function applyV4aDiffToFile(string $pathToFile, string $v4aDiff): string
     {
-        return '';
+        $modifiedContent = $this->textOperationsService->applyDiffToFile($pathToFile, $v4aDiff);
+        $this->fileOperationsService->writeFileContent($pathToFile, $modifiedContent);
+
+        return $modifiedContent;
     }
 }

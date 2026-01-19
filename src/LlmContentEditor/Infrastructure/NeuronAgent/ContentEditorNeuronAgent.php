@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\LlmContentEditor\Infrastructure\NeuronAgent;
 
+use App\LlmFileEditing\Facade\LlmFileEditingFacadeInterface;
 use NeuronAI\Agent;
 use NeuronAI\Providers\AIProviderInterface;
 use NeuronAI\Providers\OpenAI\OpenAI;
@@ -14,18 +15,35 @@ use NeuronAI\Tools\ToolProperty;
 
 class ContentEditorNeuronAgent extends Agent
 {
+    public function __construct(
+        private readonly LlmFileEditingFacadeInterface $fileEditingFacade
+    ) {
+    }
+
     protected function provider(): AIProviderInterface
     {
         return new OpenAI(
             key: 'YOUR_OPENAI_API_KEY_HERE',
-            model: 'gpt-5.1',
+            model: 'gpt-4.1',
         );
     }
 
     public function instructions(): string
     {
         return (string) new SystemPrompt(
-            background: ['You are a friendly AI Agent that helps the user to edit text files in a folder.'],
+            background: [
+                'You are a friendly AI Agent that helps the user to edit text files in a folder.',
+                'You have access to tools for listing folder contents, reading files, and applying edits.',
+            ],
+            steps: [
+                '1. First, use get_folder_content to list the files in the specified folder.',
+                '2. Use get_file_content to read the content of files you need to understand or modify.',
+                '3. When you need to edit a file, use apply_diff_to_file with a unified diff in v4a format.',
+            ],
+            output: [
+                'After completing the edit, summarize what changes were made.',
+                'If you encounter any errors, explain what went wrong.',
+            ],
         );
     }
 
@@ -34,17 +52,46 @@ class ContentEditorNeuronAgent extends Agent
         return [
             Tool::make(
                 'get_folder_content',
-                'Get the content of a folder on a computer filesystem.',
+                'List the files and directories in a folder. Returns a newline-separated list of file names.',
             )->addProperty(
                 new ToolProperty(
                     name: 'path_to_folder',
                     type: PropertyType::STRING,
-                    description: 'The folder whose contents shall be returned.',
+                    description: 'The absolute path to the folder whose contents shall be listed.',
                     required: true
                 )
-            )->setCallable(function (string $pathToFolder) {
-                return 'Folder content';
-            })
+            )->setCallable(fn (string $path_to_folder): string => $this->fileEditingFacade->getFolderContent($path_to_folder)),
+
+            Tool::make(
+                'get_file_content',
+                'Read and return the full content of a file.',
+            )->addProperty(
+                new ToolProperty(
+                    name: 'path_to_file',
+                    type: PropertyType::STRING,
+                    description: 'The absolute path to the file to read.',
+                    required: true
+                )
+            )->setCallable(fn (string $path_to_file): string => $this->fileEditingFacade->getFileContent($path_to_file)),
+
+            Tool::make(
+                'apply_diff_to_file',
+                'Apply a unified diff (v4a format) to modify a file. The diff should use the standard unified diff format with @@ line markers, context lines (space prefix), removed lines (- prefix), and added lines (+ prefix). Example: @@ -1,3 +1,4 @@\n line1\n line2\n+new line\n line3',
+            )->addProperty(
+                new ToolProperty(
+                    name: 'path_to_file',
+                    type: PropertyType::STRING,
+                    description: 'The absolute path to the file to modify.',
+                    required: true
+                )
+            )->addProperty(
+                new ToolProperty(
+                    name: 'diff',
+                    type: PropertyType::STRING,
+                    description: 'The unified diff to apply. Use @@ -start,count +start,count @@ header, space-prefixed context lines, minus-prefixed lines to remove, and plus-prefixed lines to add.',
+                    required: true
+                )
+            )->setCallable(fn (string $path_to_file, string $diff): string => $this->fileEditingFacade->applyV4aDiffToFile($path_to_file, $diff)),
         ];
     }
 }
