@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\LlmContentEditor\Infrastructure\NeuronAgent;
+namespace App\LlmContentEditor\Domain\Agent;
 
 use App\WorkspaceTooling\Facade\WorkspaceToolingFacadeInterface;
 use EtfsCodingAgent\Agent\BaseCodingAgent;
@@ -11,6 +11,7 @@ use NeuronAI\Providers\OpenAI\OpenAI;
 use NeuronAI\Tools\PropertyType;
 use NeuronAI\Tools\Tool;
 use NeuronAI\Tools\ToolProperty;
+
 
 class ContentEditorAgent extends BaseCodingAgent
 {

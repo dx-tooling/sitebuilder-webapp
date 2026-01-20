@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\LlmContentEditor\Domain\Command;
 
-use App\LlmContentEditor\Infrastructure\NeuronAgent\ContentEditorAgent;
+use App\LlmContentEditor\Domain\Agent\ContentEditorAgent;
 use App\LlmContentEditor\Infrastructure\Observer\ConsoleObserver;
 use App\WorkspaceTooling\Facade\WorkspaceToolingFacadeInterface;
 use Doctrine\ORM\EntityManagerInterface;
@@ -19,6 +19,7 @@ use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
+
 
 #[AsCommand(
     name       : 'app:llm-content-editor:domain:edit-content',

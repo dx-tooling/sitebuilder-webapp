@@ -18,10 +18,10 @@ use function is_object;
 use function mb_strlen;
 use function mb_substr;
 
-final class ConsoleObserver implements SplObserver
+final readonly class ConsoleObserver implements SplObserver
 {
     public function __construct(
-        private readonly OutputInterface $output
+        private OutputInterface $output
     ) {
     }
 
@@ -43,12 +43,12 @@ final class ConsoleObserver implements SplObserver
 
     private function onInferenceStart(InferenceStart $data): void
     {
-        $this->output->writeln('<comment>  → Sending to LLM...</comment>');
+        $this->output->writeln('<comment>→ Sending to LLM...</comment>');
     }
 
     private function onInferenceStop(): void
     {
-        $this->output->writeln('<comment>  ← LLM response received</comment>');
+        $this->output->writeln('<comment>← LLM response received</comment>');
     }
 
     private function onToolCalling(ToolCalling $data): void
@@ -57,7 +57,7 @@ final class ConsoleObserver implements SplObserver
         $inputs   = $data->tool->getInputs();
 
         $this->output->writeln('');
-        $this->output->writeln("<info>  ▶ Calling tool:</info> <fg=cyan>{$toolName}</>");
+        $this->output->writeln("<info>▶ Calling tool:</info> <fg=cyan>{$toolName}</>");
 
         foreach ($inputs as $key => $value) {
             $displayValue = $this->truncateValue($value);
@@ -71,13 +71,13 @@ final class ConsoleObserver implements SplObserver
         $result   = $data->tool->getResult();
 
         $displayResult = $this->truncateValue($result, 200);
-        $this->output->writeln("<info>  ◀ Tool result:</info> {$displayResult}");
+        $this->output->writeln("<info>◀ Tool result:</info> {$displayResult}");
     }
 
     private function onAgentError(AgentError $data): void
     {
         $this->output->writeln('');
-        $this->output->writeln("<error>  ✖ Agent error: {$data->exception->getMessage()}</error>");
+        $this->output->writeln("<error>✖ Agent error: {$data->exception->getMessage()}</error>");
     }
 
     private function truncateValue(mixed $value, int $maxLength = 100): string
