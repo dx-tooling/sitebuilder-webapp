@@ -126,8 +126,8 @@ final class FakeAIProvider implements AIProviderInterface
     }
 
     /**
-     * @param list<Message>|string                             $messages
-     * @param callable(ToolCallMessage): ToolCallResultMessage $executeToolsCallback
+     * @param list<Message>|string                                 $messages
+     * @param callable(ToolCallMessage): Generator<string|Message> $executeToolsCallback
      *
      * @return Generator<string|Message>
      */
@@ -137,10 +137,13 @@ final class FakeAIProvider implements AIProviderInterface
         $lastMessage  = $this->getLastUserMessage($messageArray);
 
         if ($lastMessage === null) {
-            yield new AssistantMessage('No user message found');
-
+            // No user message - just return empty (yield nothing)
             return;
         }
+
+        // Check if this is a post-tool call (recursive stream after tool execution).
+        // In this case, we should respond with text, not trigger another tool call.
+        $isPostToolCall = $this->hasToolCallResult($messageArray);
 
         // Check for errors first
         $errorPattern = $this->findMatchingRule($lastMessage, $this->errorRules);
@@ -148,53 +151,54 @@ final class FakeAIProvider implements AIProviderInterface
             throw $this->errorRules[$errorPattern];
         }
 
-        // Check for tool calls
-        $toolCallPattern = $this->findMatchingRule($lastMessage, $this->toolCallRules);
-        if ($toolCallPattern !== null) {
-            $rule = $this->toolCallRules[$toolCallPattern];
-            $tool = $this->findToolByName($rule['tool']);
+        // Check for tool calls (only if not already in post-tool state)
+        if (!$isPostToolCall) {
+            $toolCallPattern = $this->findMatchingRule($lastMessage, $this->toolCallRules);
+            if ($toolCallPattern !== null) {
+                $rule = $this->toolCallRules[$toolCallPattern];
+                $tool = $this->findToolByName($rule['tool']);
 
-            if ($tool === null) {
-                yield new AssistantMessage("Tool '{$rule['tool']}' not found");
+                if ($tool === null) {
+                    // Tool not found - yield error message as string chunks
+                    $errorMsg = "Tool '{$rule['tool']}' not found. Available tools: " . implode(', ', array_map(fn (ToolInterface $t) => $t->getName(), $this->tools));
+                    foreach (mb_str_split($errorMsg) as $char) {
+                        yield $char;
+                    }
+
+                    return;
+                }
+
+                // Use the actual tool instance (which has the callable) and set inputs on it
+                $tool->setInputs($rule['inputs']);
+
+                $toolCallMessage = new ToolCallMessage(null, [$tool]);
+
+                // The callback is a Generator that handles tool execution and recursive streaming.
+                // We yield from it to delegate control, just like the OpenAI provider does.
+                yield from $executeToolsCallback($toolCallMessage);
 
                 return;
             }
+        }
 
-            $toolWithInputs = Tool::make($tool->getName(), $tool->getDescription())
-                ->setInputs($rule['inputs']);
-
-            $toolCallMessage = new ToolCallMessage(null, [$toolWithInputs]);
-
-            // Yield the tool call message - this will trigger real tool execution
-            yield $toolCallMessage;
-
-            // Execute the real tool via callback
-            $toolResult = $executeToolsCallback($toolCallMessage);
-
-            // Check for post-tool response rules
-            $toolResultContent = $this->extractToolResultContent($toolResult);
-            if ($toolResultContent !== null) {
-                $postToolPattern = $this->findMatchingRule($toolResultContent, $this->postToolResponseRules);
+        // Check for post-tool response rules (matches against tool result content)
+        if ($isPostToolCall) {
+            $toolResult = $this->getLastToolResult($messageArray);
+            if ($toolResult !== null) {
+                $postToolPattern = $this->findMatchingRule($toolResult, $this->postToolResponseRules);
                 if ($postToolPattern !== null) {
                     $response = $this->postToolResponseRules[$postToolPattern];
-
-                    // Yield as chunks if it's a string response
                     if (is_string($response)) {
-                        $chars = mb_str_split($response);
-                        foreach ($chars as $char) {
+                        foreach (mb_str_split($response) as $char) {
                             yield $char;
                         }
-                    } else {
-                        yield $response;
                     }
 
                     return;
                 }
             }
 
-            // Default: empty response after tool execution
-            yield new AssistantMessage('');
-
+            // Default post-tool response: empty (tool execution is complete)
             return;
         }
 
@@ -210,15 +214,12 @@ final class FakeAIProvider implements AIProviderInterface
                 foreach ($chars as $char) {
                     yield $char;
                 }
-            } else {
-                yield $response;
             }
 
             return;
         }
 
-        // Default: empty response
-        yield new AssistantMessage('');
+        // Default: empty response (yield nothing)
     }
 
     /**
@@ -313,12 +314,18 @@ final class FakeAIProvider implements AIProviderInterface
 
     /**
      * Extract the last user message content for pattern matching.
+     * Skips ToolCallResultMessage which extends UserMessage but has different content.
      *
      * @param list<Message> $messages
      */
     private function getLastUserMessage(array $messages): ?string
     {
         foreach (array_reverse($messages) as $message) {
+            // Skip ToolCallResultMessage - it extends UserMessage but doesn't contain user text
+            if ($message instanceof ToolCallResultMessage) {
+                continue;
+            }
+
             if ($message instanceof UserMessage) {
                 $content = $message->getContent();
 
@@ -378,13 +385,35 @@ final class FakeAIProvider implements AIProviderInterface
     }
 
     /**
-     * Extract tool result content for pattern matching.
+     * Check if the message array contains a ToolCallResultMessage (post-tool state).
+     *
+     * @param list<Message> $messages
      */
-    private function extractToolResultContent(ToolCallResultMessage $message): ?string
+    private function hasToolCallResult(array $messages): bool
     {
-        foreach ($message->getTools() as $tool) {
-            if ($tool instanceof Tool) {
-                return $tool->getResult();
+        foreach ($messages as $message) {
+            if ($message instanceof ToolCallResultMessage) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Get the content of the last tool result for pattern matching.
+     *
+     * @param list<Message> $messages
+     */
+    private function getLastToolResult(array $messages): ?string
+    {
+        foreach (array_reverse($messages) as $message) {
+            if ($message instanceof ToolCallResultMessage) {
+                foreach ($message->getTools() as $tool) {
+                    if ($tool instanceof Tool) {
+                        return $tool->getResult();
+                    }
+                }
             }
         }
 
