@@ -24,3 +24,11 @@ How do I solve recurring tasks and problems during development?
 ## Connect to the local database
 
 - `mise run db`
+
+
+## Chat-based content editor
+
+The chat-based content editor needs a workspace root path for file edits.
+
+- Set `CHAT_EDITOR_WORKSPACE_ROOT` in `.env` to an absolute directory path (e.g. `/path/to/your/content-project`). The path must exist. If unset, the run endpoint will require a workspace path in the form.
+- The path chosen (from the env or the form) must be under `CHAT_EDITOR_WORKSPACE_ROOT` when that variable is set; otherwise any existing directory is allowed.

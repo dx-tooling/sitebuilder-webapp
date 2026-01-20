@@ -9,3 +9,4 @@ framework:
             - submit
             - authenticate
             - logout
+            - chat_based_content_editor_run

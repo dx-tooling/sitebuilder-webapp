@@ -3,10 +3,13 @@ framework:
         # The paths to make available to the asset mapper.
         paths:
             - assets/
+            - src/ChatBasedContentEditor/Presentation/Resources/assets/controllers/
         missing_import_mode: strict
 
 sensiolabs_typescript:
-    source_dir: ["%kernel.project_dir%/assets/"]
+    source_dir:
+        - "%kernel.project_dir%/assets/"
+        - "%kernel.project_dir%/src/ChatBasedContentEditor/Presentation/Resources/assets/controllers/"
 
 when@prod:
     framework:

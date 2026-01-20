@@ -1,0 +1,49 @@
+{% extends '@Webui/base_appshell.html.twig' %}
+
+{% block title %}Chat-based content editor{% endblock %}
+
+{% block body %}
+    <div class="space-y-6"
+         {{ stimulus_controller('chat-based-content-editor', {
+             runUrl: runUrl,
+             workspacePath: defaultWorkspacePath|default('')
+         }) }}>
+        <h1 class="text-2xl font-semibold text-dark-900 dark:text-dark-100">Chat-based content editor</h1>
+        <p class="text-dark-600 dark:text-dark-400">Give instructions in natural language; the AI will edit files in the workspace and show what it does step by step.</p>
+
+        <div {{ stimulus_target('chat-based-content-editor', 'messages') }}
+             class="rounded-lg border border-dark-200 dark:border-dark-700 bg-white dark:bg-dark-800 p-4 min-h-[320px] max-h-[500px] overflow-y-auto space-y-4">
+            <p class="text-dark-500 dark:text-dark-400 text-sm">Messages will appear here. Enter an instruction below and submit.</p>
+        </div>
+
+        <form {{ stimulus_action('chat-based-content-editor', 'handleSubmit', 'submit') }}
+              class="space-y-4">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token('chat_based_content_editor_run') }}">
+            <div>
+                <label for="workspace_path" class="block text-sm font-medium text-dark-700 dark:text-dark-300 mb-1">Workspace path (optional)</label>
+                <input type="text"
+                       {{ stimulus_target('chat-based-content-editor', 'workspacePath') }}
+                       name="workspace_path"
+                       id="workspace_path"
+                       value="{{ defaultWorkspacePath|default('') }}"
+                       placeholder="/path/to/workspace"
+                       class="w-full px-3 py-2 border border-dark-300 dark:border-dark-600 rounded-md bg-white dark:bg-dark-800 text-dark-900 dark:text-dark-100 text-sm">
+            </div>
+            <div>
+                <label for="instruction" class="block text-sm font-medium text-dark-700 dark:text-dark-300 mb-1">Instruction</label>
+                <textarea {{ stimulus_target('chat-based-content-editor', 'instruction') }}
+                          name="instruction"
+                          id="instruction"
+                          rows="3"
+                          required
+                          placeholder="e.g. Add a contact section to the homepage"
+                          class="w-full px-3 py-2 border border-dark-300 dark:border-dark-600 rounded-md bg-white dark:bg-dark-800 text-dark-900 dark:text-dark-100 text-sm"></textarea>
+            </div>
+            <button type="submit"
+                    {{ stimulus_target('chat-based-content-editor', 'submit') }}
+                    class="px-4 py-2 rounded-md bg-primary-600 text-white text-sm font-medium hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:focus:ring-offset-dark-900 disabled:opacity-50 disabled:cursor-not-allowed">
+                Run
+            </button>
+        </form>
+    </div>
+{% endblock %}

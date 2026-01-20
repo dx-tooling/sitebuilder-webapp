@@ -110,7 +110,11 @@ readonly class MainNavigationPresentationService extends AbstractMainNavigationS
             $this->generateEntry(
                 'Living Styleguide',
                 'webui.living_styleguide.show',
-            )
+            ),
+            $this->generateEntry(
+                'Chat-based content editor',
+                'chat_based_content_editor.presentation.index',
+            ),
         ];
 
         return $entries;

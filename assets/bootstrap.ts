@@ -2,9 +2,10 @@
 import { startStimulusApp } from "@symfony/stimulus-bundle";
 // @ts-expect-error "@enterprise-tooling-for-symfony/webui is JS code without a types definition"
 import { webuiBootstrap } from "@enterprise-tooling-for-symfony/webui";
+import ChatBasedContentEditorController from "../src/ChatBasedContentEditor/Presentation/Resources/assets/controllers/chat_based_content_editor_controller.ts";
 
 const app = startStimulusApp();
-// register any custom, 3rd party controllers here
-// app.register('some_controller_name', SomeImportedController);
+
+app.register("chat-based-content-editor", ChatBasedContentEditorController);
 
 webuiBootstrap(app);
