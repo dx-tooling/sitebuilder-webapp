@@ -26,3 +26,22 @@ services:
 
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones
+
+    # etfs-coding-agent library services
+    EtfsCodingAgent\Service\FileOperationsServiceInterface:
+        class: EtfsCodingAgent\Service\FileOperationsService
+
+    EtfsCodingAgent\Service\ShellOperationsServiceInterface:
+        class: EtfsCodingAgent\Service\ShellOperationsService
+
+    EtfsCodingAgent\Service\TextOperationsService:
+        arguments:
+            - "@EtfsCodingAgent\\Service\\FileOperationsServiceInterface"
+
+    # Sitebuilder-specific workspace tooling facade
+    App\WorkspaceTooling\Facade\WorkspaceToolingFacadeInterface:
+        class: App\WorkspaceTooling\Facade\WorkspaceToolingFacade
+        arguments:
+            - "@EtfsCodingAgent\\Service\\FileOperationsServiceInterface"
+            - "@EtfsCodingAgent\\Service\\TextOperationsService"
+            - "@EtfsCodingAgent\\Service\\ShellOperationsServiceInterface"
