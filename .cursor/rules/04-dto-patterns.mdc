@@ -1,4 +1,5 @@
 ---
+description: "DTOs for data transfer across verticals and layers: readonly DTOs, list<T>, no entities or associative arrays at boundaries. Use when creating or changing DTOs (Facade, Api, Presentation) or passing data between layers or verticals."
 alwaysApply: false
 ---
 

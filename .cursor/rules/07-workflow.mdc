@@ -1,7 +1,7 @@
 ---
+description: "Development workflow: mise quality, common commands (frontend, migrations, db, tests), and pre-commit steps. Use when running builds, migrations, tests, or preparing to commit."
 alwaysApply: false
 ---
-
 # Development Workflow
 
 **Reference**: See `docs/devbook.md` for common development tasks.
