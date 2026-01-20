@@ -96,11 +96,13 @@ final class ChatBasedContentEditorController extends AbstractController
             return $this->redirectToRoute('chat_based_content_editor.presentation.index');
         }
 
-        // Load past conversations for the sidebar
+        // Load past conversations for the sidebar (excluding current)
         /** @var list<Conversation> $conversations */
         $conversations = $this->entityManager->createQueryBuilder()
             ->select('c')
             ->from(Conversation::class, 'c')
+            ->where('c.id != :currentId')
+            ->setParameter('currentId', $conversationId)
             ->orderBy('c.createdAt', 'DESC')
             ->setMaxResults(20)
             ->getQuery()
@@ -118,7 +120,6 @@ final class ChatBasedContentEditorController extends AbstractController
                 'createdAt'    => $conv->getCreatedAt()->format('Y-m-d H:i'),
                 'preview'      => $preview,
                 'messageCount' => $conv->getEditSessions()->count(),
-                'isCurrent'    => $conv->getId() === $conversationId,
             ];
         }
 
