@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\LlmContentEditor\Domain\Command;
 
 use App\LlmContentEditor\Domain\Agent\ContentEditorAgent;
+use App\LlmContentEditor\Domain\Enum\LlmModelName;
 use App\LlmContentEditor\Infrastructure\Observer\ConsoleObserver;
 use App\WorkspaceTooling\Facade\WorkspaceToolingServiceInterface;
 use Doctrine\ORM\EntityManagerInterface;
@@ -79,7 +80,7 @@ final class EditContentCommand extends EnhancedCommand
         $output->writeln("<info>Instruction:</info> {$instruction}");
         $output->writeln('');
 
-        $agent    = new ContentEditorAgent($this->fileEditingFacade);
+        $agent    = new ContentEditorAgent($this->fileEditingFacade, LlmModelName::defaultForContentEditor());
         $observer = new ConsoleObserver($output);
         $agent->attach($observer);
 

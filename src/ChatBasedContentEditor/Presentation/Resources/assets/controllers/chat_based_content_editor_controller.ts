@@ -18,6 +18,13 @@ interface PollResponse {
     chunks: PollChunk[];
     lastId: number;
     status: string;
+    contextUsage?: ContextUsageData;
+}
+
+interface ContextUsageData {
+    usedTokens: number;
+    maxTokens: number;
+    modelName: string;
 }
 
 interface RunResponse {
@@ -30,13 +37,26 @@ export default class extends Controller {
         runUrl: String,
         pollUrlTemplate: String,
         conversationId: String,
+        contextUsageUrl: String,
+        contextUsage: Object,
     };
 
-    static targets = ["messages", "instruction", "submit", "autoScroll", "submitOnEnter"];
+    static targets = [
+        "messages",
+        "instruction",
+        "submit",
+        "autoScroll",
+        "submitOnEnter",
+        "contextUsage",
+        "contextUsageText",
+        "contextUsageBar",
+    ];
 
     declare readonly runUrlValue: string;
     declare readonly pollUrlTemplateValue: string;
     declare readonly conversationIdValue: string;
+    declare readonly contextUsageUrlValue: string;
+    declare readonly contextUsageValue: ContextUsageData;
 
     declare readonly hasMessagesTarget: boolean;
     declare readonly messagesTarget: HTMLElement;
@@ -48,13 +68,66 @@ export default class extends Controller {
     declare readonly autoScrollTarget: HTMLInputElement;
     declare readonly hasSubmitOnEnterTarget: boolean;
     declare readonly submitOnEnterTarget: HTMLInputElement;
+    declare readonly hasContextUsageTarget: boolean;
+    declare readonly contextUsageTarget: HTMLElement;
+    declare readonly hasContextUsageTextTarget: boolean;
+    declare readonly contextUsageTextTarget: HTMLElement;
+    declare readonly hasContextUsageBarTarget: boolean;
+    declare readonly contextUsageBarTarget: HTMLElement;
 
     private pollingIntervalId: ReturnType<typeof setInterval> | null = null;
+    private contextUsageIntervalId: ReturnType<typeof setInterval> | null = null;
     private autoScrollEnabled: boolean = true;
     private submitOnEnterEnabled: boolean = true;
 
+    connect(): void {
+        const cu = this.contextUsageValue as ContextUsageData | undefined;
+        if (cu && typeof cu.usedTokens === "number" && typeof cu.maxTokens === "number") {
+            this.updateContextBar(cu);
+        }
+        this.startContextUsagePolling();
+    }
+
     disconnect(): void {
         this.stopPolling();
+        this.stopContextUsagePolling();
+    }
+
+    private startContextUsagePolling(): void {
+        const url = this.contextUsageUrlValue;
+        if (!url) {
+            return;
+        }
+        const poll = async (): Promise<void> => {
+            try {
+                const res = await fetch(url, { headers: { "X-Requested-With": "XMLHttpRequest" } });
+                if (res.ok) {
+                    const data = (await res.json()) as ContextUsageData;
+                    this.updateContextBar(data);
+                }
+            } catch {
+                // ignore
+            }
+        };
+        poll();
+        this.contextUsageIntervalId = setInterval(poll, 2500);
+    }
+
+    private stopContextUsagePolling(): void {
+        if (this.contextUsageIntervalId !== null) {
+            clearInterval(this.contextUsageIntervalId);
+            this.contextUsageIntervalId = null;
+        }
+    }
+
+    private updateContextBar(usage: ContextUsageData): void {
+        if (this.hasContextUsageTextTarget) {
+            this.contextUsageTextTarget.textContent = `${formatInt(usage.usedTokens)} of ${formatInt(usage.maxTokens)} tokens used`;
+        }
+        if (this.hasContextUsageBarTarget) {
+            const pct = usage.maxTokens > 0 ? Math.min(100, (100 * usage.usedTokens) / usage.maxTokens) : 0;
+            this.contextUsageBarTarget.style.width = `${pct}%`;
+        }
     }
 
     toggleAutoScroll(): void {
@@ -186,6 +259,10 @@ export default class extends Controller {
                 }
 
                 lastId = data.lastId;
+
+                if (data.contextUsage) {
+                    this.updateContextBar(data.contextUsage);
+                }
 
                 if (data.status === "completed" || data.status === "failed") {
                     this.stopPolling();
@@ -322,4 +399,8 @@ function escapeHtml(s: string): string {
     div.textContent = s;
 
     return div.innerHTML;
+}
+
+function formatInt(n: number): string {
+    return n.toLocaleString("en-US", { maximumFractionDigits: 0 });
 }

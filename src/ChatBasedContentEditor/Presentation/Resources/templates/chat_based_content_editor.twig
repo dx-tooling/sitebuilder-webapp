@@ -7,7 +7,9 @@
          {{ stimulus_controller('chat-based-content-editor', {
              runUrl: runUrl,
              pollUrlTemplate: pollUrlTemplate,
-             conversationId: conversation.id
+             conversationId: conversation.id,
+             contextUsage: contextUsage,
+             contextUsageUrl: contextUsageUrl
          }) }}>
         <div class="flex items-center justify-between">
             <div>
@@ -45,6 +47,17 @@
                            class="rounded border-dark-300 dark:border-dark-600 text-primary-600 focus:ring-primary-500 dark:focus:ring-offset-dark-800 w-3.5 h-3.5">
                     <span>Auto-scroll</span>
                 </label>
+            </div>
+        </div>
+
+        <div {{ stimulus_target('chat-based-content-editor', 'contextUsage') }} class="space-y-1">
+            <div class="flex items-center justify-between text-xs text-dark-600 dark:text-dark-400">
+                <span {{ stimulus_target('chat-based-content-editor', 'contextUsageText') }}>{{ contextUsage.usedTokens|number_format(0, '', ',') }} of {{ contextUsage.maxTokens|number_format(0, '', ',') }} tokens used</span>
+            </div>
+            <div class="h-1.5 w-full rounded-full bg-dark-200 dark:bg-dark-600 overflow-hidden">
+                <div {{ stimulus_target('chat-based-content-editor', 'contextUsageBar') }}
+                     class="h-full rounded-full bg-primary-500 dark:bg-primary-400 transition-[width] duration-300"
+                     style="width: {{ contextUsage.maxTokens > 0 ? min(100 * contextUsage.usedTokens / contextUsage.maxTokens, 100) : 0 }}%"></div>
             </div>
         </div>
 

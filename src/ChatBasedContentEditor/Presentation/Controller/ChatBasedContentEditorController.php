@@ -8,6 +8,7 @@ use App\ChatBasedContentEditor\Domain\Entity\Conversation;
 use App\ChatBasedContentEditor\Domain\Entity\EditSession;
 use App\ChatBasedContentEditor\Domain\Entity\EditSessionChunk;
 use App\ChatBasedContentEditor\Infrastructure\Message\RunEditSessionMessage;
+use App\ChatBasedContentEditor\Presentation\Service\ConversationContextUsageService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
@@ -26,9 +27,10 @@ final class ChatBasedContentEditorController extends AbstractController
 {
     public function __construct(
         #[Autowire(param: 'chat_based_content_editor.workspace_root')]
-        private readonly string                 $workspaceRoot,
-        private readonly EntityManagerInterface $entityManager,
-        private readonly MessageBusInterface    $messageBus,
+        private readonly string                          $workspaceRoot,
+        private readonly EntityManagerInterface          $entityManager,
+        private readonly MessageBusInterface             $messageBus,
+        private readonly ConversationContextUsageService $contextUsageService,
     ) {
     }
 
@@ -139,12 +141,42 @@ final class ChatBasedContentEditorController extends AbstractController
             ];
         }
 
+        $contextUsage = $this->contextUsageService->getContextUsage($conversation);
+
         return $this->render('@chat_based_content_editor.presentation/chat_based_content_editor.twig', [
             'conversation'      => $conversation,
             'turns'             => $turns,
             'pastConversations' => $pastConversations,
             'runUrl'            => $this->generateUrl('chat_based_content_editor.presentation.run'),
             'pollUrlTemplate'   => $this->generateUrl('chat_based_content_editor.presentation.poll', ['sessionId' => '__SESSION_ID__']),
+            'contextUsage'      => [
+                'usedTokens' => $contextUsage->usedTokens,
+                'maxTokens'  => $contextUsage->maxTokens,
+                'modelName'  => $contextUsage->modelName,
+            ],
+            'contextUsageUrl' => $this->generateUrl('chat_based_content_editor.presentation.context_usage', ['conversationId' => $conversation->getId()]),
+        ]);
+    }
+
+    #[Route(
+        path: '/chat-based-content-editor/{conversationId}/context-usage',
+        name: 'chat_based_content_editor.presentation.context_usage',
+        methods: [Request::METHOD_GET],
+        requirements: ['conversationId' => '[a-f0-9-]{36}']
+    )]
+    public function contextUsage(string $conversationId): Response
+    {
+        $conversation = $this->entityManager->find(Conversation::class, $conversationId);
+        if ($conversation === null) {
+            return $this->json(['error' => 'Conversation not found.'], Response::HTTP_NOT_FOUND);
+        }
+
+        $dto = $this->contextUsageService->getContextUsage($conversation);
+
+        return $this->json([
+            'usedTokens' => $dto->usedTokens,
+            'maxTokens'  => $dto->maxTokens,
+            'modelName'  => $dto->modelName,
         ]);
     }
 
@@ -232,10 +264,18 @@ final class ChatBasedContentEditorController extends AbstractController
             ];
         }
 
+        $conversation = $session->getConversation();
+        $contextUsage = $this->contextUsageService->getContextUsage($conversation);
+
         return $this->json([
-            'chunks' => $chunkData,
-            'lastId' => $lastId,
-            'status' => $session->getStatus()->value,
+            'chunks'       => $chunkData,
+            'lastId'       => $lastId,
+            'status'       => $session->getStatus()->value,
+            'contextUsage' => [
+                'usedTokens' => $contextUsage->usedTokens,
+                'maxTokens'  => $contextUsage->maxTokens,
+                'modelName'  => $contextUsage->modelName,
+            ],
         ]);
     }
 }
