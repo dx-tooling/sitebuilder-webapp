@@ -6,7 +6,7 @@ namespace App\LlmContentEditor\Domain\Command;
 
 use App\LlmContentEditor\Domain\Agent\ContentEditorAgent;
 use App\LlmContentEditor\Infrastructure\Observer\ConsoleObserver;
-use App\WorkspaceTooling\Facade\WorkspaceToolingFacadeInterface;
+use App\WorkspaceTooling\Facade\WorkspaceToolingServiceInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use EnterpriseToolingForSymfony\SharedBundle\Commandline\Command\EnhancedCommand;
 use EnterpriseToolingForSymfony\SharedBundle\Locking\Service\LockService;
@@ -20,7 +20,6 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
 
-
 #[AsCommand(
     name       : 'app:llm-content-editor:domain:edit-content',
     description: 'Edit files in a folder using natural language instructions via an AI agent.',
@@ -29,12 +28,12 @@ use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
 final class EditContentCommand extends EnhancedCommand
 {
     public function __construct(
-        RolloutService                          $rolloutService,
-        EntityManagerInterface                  $entityManager,
-        LoggerInterface                         $logger,
-        LockService                             $lockService,
-        ParameterBagInterface                   $parameterBag,
-        private WorkspaceToolingFacadeInterface $fileEditingFacade
+        RolloutService                           $rolloutService,
+        EntityManagerInterface                   $entityManager,
+        LoggerInterface                          $logger,
+        LockService                              $lockService,
+        ParameterBagInterface                    $parameterBag,
+        private WorkspaceToolingServiceInterface $fileEditingFacade
     ) {
         parent::__construct(
             $rolloutService,

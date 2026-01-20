@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\WorkspaceTooling\Facade;
 
-use EtfsCodingAgent\Facade\WorkspaceToolingFacadeInterface as BaseWorkspaceToolingFacadeInterface;
+use EtfsCodingAgent\Service\WorkspaceToolingServiceInterface as BaseWorkspaceToolingFacadeInterface;
 
-interface WorkspaceToolingFacadeInterface extends BaseWorkspaceToolingFacadeInterface
+interface WorkspaceToolingServiceInterface extends BaseWorkspaceToolingFacadeInterface
 {
     public function runQualityChecks(string $pathToFolder): string;
 

@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace App\WorkspaceTooling\Facade;
 
-use EtfsCodingAgent\Facade\WorkspaceToolingFacade as BaseWorkspaceToolingFacade;
 use EtfsCodingAgent\Service\FileOperationsServiceInterface;
 use EtfsCodingAgent\Service\ShellOperationsServiceInterface;
 use EtfsCodingAgent\Service\TextOperationsService;
+use EtfsCodingAgent\Service\WorkspaceToolingService as BaseWorkspaceToolingFacade;
 
-final class WorkspaceToolingFacade extends BaseWorkspaceToolingFacade implements WorkspaceToolingFacadeInterface
+final class WorkspaceToolingFacade extends BaseWorkspaceToolingFacade implements WorkspaceToolingServiceInterface
 {
     public function __construct(
         FileOperationsServiceInterface  $fileOperationsService,

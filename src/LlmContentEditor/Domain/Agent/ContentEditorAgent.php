@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\LlmContentEditor\Domain\Agent;
 
-use App\WorkspaceTooling\Facade\WorkspaceToolingFacadeInterface;
+use App\WorkspaceTooling\Facade\WorkspaceToolingServiceInterface;
 use EtfsCodingAgent\Agent\BaseCodingAgent;
 use NeuronAI\Providers\AIProviderInterface;
 use NeuronAI\Providers\OpenAI\OpenAI;
@@ -12,11 +12,10 @@ use NeuronAI\Tools\PropertyType;
 use NeuronAI\Tools\Tool;
 use NeuronAI\Tools\ToolProperty;
 
-
 class ContentEditorAgent extends BaseCodingAgent
 {
     public function __construct(
-        private readonly WorkspaceToolingFacadeInterface $sitebuilderFacade
+        private readonly WorkspaceToolingServiceInterface $sitebuilderFacade
     ) {
         parent::__construct($sitebuilderFacade);
     }
