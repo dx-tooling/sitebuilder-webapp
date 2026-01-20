@@ -16,21 +16,34 @@ final class WorkspaceToolingFacade extends BaseWorkspaceToolingFacade implements
         TextOperationsService           $textOperationsService,
         ShellOperationsServiceInterface $shellOperationsService
     ) {
-        parent::__construct($fileOperationsService, $textOperationsService, $shellOperationsService);
+        parent::__construct(
+            $fileOperationsService,
+            $textOperationsService,
+            $shellOperationsService
+        );
     }
 
     public function runQualityChecks(string $pathToFolder): string
     {
-        return $this->shellOperationsService->runCommand($pathToFolder, 'mise exec -- npm run quality');
+        return $this->shellOperationsService->runCommand(
+            $pathToFolder,
+            'mise exec -- npm run quality'
+        );
     }
 
     public function runTests(string $pathToFolder): string
     {
-        return $this->shellOperationsService->runCommand($pathToFolder, 'mise exec -- npm run test');
+        return $this->shellOperationsService->runCommand(
+            $pathToFolder,
+            'mise exec -- npm run test'
+        );
     }
 
     public function runBuild(string $pathToFolder): string
     {
-        return $this->shellOperationsService->runCommand($pathToFolder, 'mise exec -- npm run build');
+        return $this->shellOperationsService->runCommand(
+            $pathToFolder,
+            'mise exec -- npm run build'
+        );
     }
 }
