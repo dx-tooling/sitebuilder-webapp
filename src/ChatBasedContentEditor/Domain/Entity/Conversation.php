@@ -25,6 +25,7 @@ class Conversation
         $this->workspacePath = $workspacePath;
         $this->createdAt     = DateAndTimeService::getDateTimeImmutable();
         $this->editSessions  = new ArrayCollection();
+        $this->messages      = new ArrayCollection();
     }
 
     #[ORM\Id]
@@ -82,5 +83,42 @@ class Conversation
     public function getEditSessions(): Collection
     {
         return $this->editSessions;
+    }
+
+    /**
+     * @var Collection<int, ConversationMessage>
+     */
+    #[ORM\OneToMany(
+        targetEntity: ConversationMessage::class,
+        mappedBy: 'conversation',
+        cascade: ['persist', 'remove'],
+        orphanRemoval: true
+    )]
+    #[ORM\OrderBy(['sequence' => 'ASC'])]
+    private Collection $messages;
+
+    /**
+     * @return Collection<int, ConversationMessage>
+     */
+    public function getMessages(): Collection
+    {
+        return $this->messages;
+    }
+
+    public function addMessage(ConversationMessage $message): void
+    {
+        if (!$this->messages->contains($message)) {
+            $this->messages->add($message);
+        }
+    }
+
+    public function getNextMessageSequence(): int
+    {
+        $lastMessage = $this->messages->last();
+        if ($lastMessage === false) {
+            return 1;
+        }
+
+        return $lastMessage->getSequence() + 1;
     }
 }

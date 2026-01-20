@@ -56,6 +56,11 @@ class EditSession
     )]
     private readonly Conversation $conversation;
 
+    public function getConversation(): Conversation
+    {
+        return $this->conversation;
+    }
+
     public function getWorkspacePath(): string
     {
         return $this->conversation->getWorkspacePath();
