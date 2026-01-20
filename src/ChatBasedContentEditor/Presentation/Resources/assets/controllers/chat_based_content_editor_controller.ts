@@ -8,23 +8,34 @@ interface AgentEvent {
     errorMessage?: string | null;
 }
 
-interface StreamChunk {
-    chunkType: "text" | "event" | "done";
-    content?: string;
-    event?: AgentEvent;
-    success?: boolean;
-    errorMessage?: string | null;
+interface PollChunk {
+    id: number;
+    chunkType: string;
+    payload: string;
+}
+
+interface PollResponse {
+    chunks: PollChunk[];
+    lastId: number;
+    status: string;
+}
+
+interface RunResponse {
+    sessionId?: string;
+    error?: string;
 }
 
 export default class extends Controller {
     static values = {
         runUrl: String,
+        pollUrlTemplate: String,
         workspacePath: { type: String, default: "" },
     };
 
-    static targets = ["messages", "instruction", "workspacePath", "submit"];
+    static targets = ["messages", "instruction", "workspacePath", "submit", "autoScroll"];
 
     declare readonly runUrlValue: string;
+    declare readonly pollUrlTemplateValue: string;
     declare readonly workspacePathValue: string;
 
     declare readonly hasMessagesTarget: boolean;
@@ -35,6 +46,25 @@ export default class extends Controller {
     declare readonly workspacePathTarget: HTMLInputElement;
     declare readonly hasSubmitTarget: boolean;
     declare readonly submitTarget: HTMLButtonElement;
+    declare readonly hasAutoScrollTarget: boolean;
+    declare readonly autoScrollTarget: HTMLInputElement;
+
+    private pollingIntervalId: ReturnType<typeof setInterval> | null = null;
+    private autoScrollEnabled: boolean = true;
+
+    disconnect(): void {
+        this.stopPolling();
+    }
+
+    toggleAutoScroll(): void {
+        this.autoScrollEnabled = this.hasAutoScrollTarget ? this.autoScrollTarget.checked : true;
+    }
+
+    private scrollToBottom(): void {
+        if (this.autoScrollEnabled && this.hasMessagesTarget) {
+            this.messagesTarget.scrollTop = this.messagesTarget.scrollHeight;
+        }
+    }
 
     async handleSubmit(event: Event): Promise<void> {
         event.preventDefault();
@@ -64,8 +94,9 @@ export default class extends Controller {
         userEl.className = "flex justify-end";
         userEl.innerHTML = `<div class="max-w-[85%] rounded-lg px-4 py-2 bg-primary-100 dark:bg-primary-900/30 text-dark-900 dark:text-dark-100 text-sm">${escapeHtml(instruction)}</div>`;
         this.messagesTarget.appendChild(userEl);
+        this.scrollToBottom();
 
-        // Assistant placeholder (events + text will be streamed here)
+        // Assistant placeholder (events + text will be polled here)
         const assistantEl = document.createElement("div");
         assistantEl.className = "flex justify-start flex-col gap-2";
         assistantEl.dataset.assistantTurn = "1";
@@ -74,6 +105,7 @@ export default class extends Controller {
             "max-w-[85%] rounded-lg px-4 py-2 bg-dark-100 dark:bg-dark-700/50 text-dark-800 dark:text-dark-200 text-sm space-y-2";
         assistantEl.appendChild(inner);
         this.messagesTarget.appendChild(assistantEl);
+        this.scrollToBottom();
 
         this.submitTarget.disabled = true;
         this.submitTarget.textContent = "Working…";
@@ -95,77 +127,136 @@ export default class extends Controller {
                 body: formData,
             });
 
-            if (!response.ok) {
-                const data = await response.json().catch(() => ({}));
-                const msg = (data as { error?: string }).error || `Request failed: ${response.status}`;
+            const data = (await response.json()) as RunResponse;
+
+            if (!response.ok || !data.sessionId) {
+                const msg = data.error || `Request failed: ${response.status}`;
                 this.appendError(inner, msg);
+                this.resetSubmitButton();
                 return;
             }
 
-            const reader = response.body?.getReader();
-            if (!reader) {
-                this.appendError(inner, "No response body.");
-                return;
-            }
-
-            const decoder = new TextDecoder();
-            let buffer = "";
-            let seenDone = false;
-
-            while (true) {
-                const { done, value } = await reader.read();
-                if (done) break;
-                buffer += decoder.decode(value, { stream: true });
-                const lines = buffer.split("\n");
-                buffer = lines.pop() ?? "";
-                for (const line of lines) {
-                    if (!line.trim()) continue;
-                    try {
-                        const chunk = JSON.parse(line) as StreamChunk;
-                        if (this.handleChunk(chunk, inner)) {
-                            seenDone = true;
-                            break;
-                        }
-                    } catch {
-                        // skip malformed lines
-                    }
-                }
-                if (seenDone) break;
-            }
-            // process remaining buffer
-            if (buffer.trim()) {
-                try {
-                    const chunk = JSON.parse(buffer) as StreamChunk;
-                    this.handleChunk(chunk, inner);
-                } catch {
-                    // skip
-                }
-            }
+            // Start polling for chunks
+            this.startPolling(data.sessionId, inner);
         } catch (err) {
-            const msg = err instanceof Error ? err.message : "Network or stream error.";
+            const msg = err instanceof Error ? err.message : "Network error.";
             this.appendError(inner, msg);
-        } finally {
-            this.submitTarget.disabled = false;
-            this.submitTarget.textContent = "Run";
+            this.resetSubmitButton();
         }
     }
 
-    /** Returns true when chunkType is done (caller should stop reading). */
-    private handleChunk(chunk: StreamChunk, container: HTMLElement): boolean {
-        if (chunk.chunkType === "text" && chunk.content) {
-            const wrap = document.createElement("div");
-            wrap.className = "whitespace-pre-wrap";
-            wrap.textContent = chunk.content;
-            container.appendChild(wrap);
-        } else if (chunk.chunkType === "event" && chunk.event) {
-            container.appendChild(this.renderEvent(chunk.event));
-        } else if (chunk.chunkType === "done") {
-            if (chunk.success === false && chunk.errorMessage) {
-                this.appendError(container, chunk.errorMessage);
+    private startPolling(sessionId: string, container: HTMLElement): void {
+        let lastId = 0;
+        const pollUrl = this.pollUrlTemplateValue.replace("__SESSION_ID__", sessionId);
+
+        const poll = async (): Promise<void> => {
+            try {
+                const response = await fetch(`${pollUrl}?after=${lastId}`, {
+                    headers: { "X-Requested-With": "XMLHttpRequest" },
+                });
+
+                if (!response.ok) {
+                    this.appendError(container, `Poll failed: ${response.status}`);
+                    this.stopPolling();
+                    this.resetSubmitButton();
+                    return;
+                }
+
+                const data = (await response.json()) as PollResponse;
+
+                for (const chunk of data.chunks) {
+                    if (this.handleChunk(chunk, container)) {
+                        this.stopPolling();
+                        this.resetSubmitButton();
+                        return;
+                    }
+                }
+
+                lastId = data.lastId;
+
+                // Stop polling if session completed or failed
+                if (data.status === "completed" || data.status === "failed") {
+                    this.stopPolling();
+                    this.resetSubmitButton();
+                }
+            } catch (err) {
+                const msg = err instanceof Error ? err.message : "Polling error.";
+                this.appendError(container, msg);
+                this.stopPolling();
+                this.resetSubmitButton();
             }
+        };
+
+        // Initial poll immediately, then every 500ms
+        poll();
+        this.pollingIntervalId = setInterval(poll, 500);
+    }
+
+    private stopPolling(): void {
+        if (this.pollingIntervalId !== null) {
+            clearInterval(this.pollingIntervalId);
+            this.pollingIntervalId = null;
+        }
+    }
+
+    private resetSubmitButton(): void {
+        this.submitTarget.disabled = false;
+        this.submitTarget.textContent = "Run";
+    }
+
+    /** Returns true when chunkType is done (caller should stop polling). */
+    private handleChunk(chunk: PollChunk, container: HTMLElement): boolean {
+        const payload = JSON.parse(chunk.payload) as {
+            content?: string;
+            kind?: string;
+            toolName?: string;
+            toolInputs?: Array<{ key: string; value: string }>;
+            toolResult?: string;
+            errorMessage?: string;
+            success?: boolean;
+        };
+
+        if (chunk.chunkType === "text" && payload.content) {
+            // Accumulate text into the current text element, or create one if needed
+            const textEl = this.getOrCreateTextElement(container);
+            textEl.textContent += payload.content;
+            this.scrollToBottom();
+        } else if (chunk.chunkType === "event") {
+            const event: AgentEvent = {
+                kind: payload.kind ?? "unknown",
+                toolName: payload.toolName,
+                toolInputs: payload.toolInputs,
+                toolResult: payload.toolResult,
+                errorMessage: payload.errorMessage,
+            };
+            container.appendChild(this.renderEvent(event));
+            this.scrollToBottom();
+        } else if (chunk.chunkType === "done") {
+            if (payload.success === false && payload.errorMessage) {
+                this.appendError(container, payload.errorMessage);
+            }
+            this.scrollToBottom();
             return true;
         }
         return false;
+    }
+
+    /**
+     * Gets the current text element (last child with data-text-stream attribute),
+     * or creates a new one if the last child is not a text element.
+     */
+    private getOrCreateTextElement(container: HTMLElement): HTMLElement {
+        const lastChild = container.lastElementChild;
+        if (lastChild instanceof HTMLElement && lastChild.dataset.textStream === "1") {
+            return lastChild;
+        }
+
+        const textEl = document.createElement("div");
+        textEl.className = "whitespace-pre-wrap";
+        textEl.dataset.textStream = "1";
+        container.appendChild(textEl);
+
+        return textEl;
     }
 
     private renderEvent(e: AgentEvent): HTMLElement {
@@ -215,6 +306,7 @@ export default class extends Controller {
         div.className = "text-red-600 dark:text-red-400 text-sm";
         div.textContent = `✖ ${message}`;
         container.appendChild(div);
+        this.scrollToBottom();
     }
 }
 

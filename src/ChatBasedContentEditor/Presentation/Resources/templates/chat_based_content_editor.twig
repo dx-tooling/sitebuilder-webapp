@@ -6,14 +6,27 @@
     <div class="space-y-6"
          {{ stimulus_controller('chat-based-content-editor', {
              runUrl: runUrl,
+             pollUrlTemplate: pollUrlTemplate,
              workspacePath: defaultWorkspacePath|default('')
          }) }}>
         <h1 class="text-2xl font-semibold text-dark-900 dark:text-dark-100">Chat-based content editor</h1>
         <p class="text-dark-600 dark:text-dark-400">Give instructions in natural language; the AI will edit files in the workspace and show what it does step by step.</p>
 
-        <div {{ stimulus_target('chat-based-content-editor', 'messages') }}
-             class="rounded-lg border border-dark-200 dark:border-dark-700 bg-white dark:bg-dark-800 p-4 min-h-[320px] max-h-[500px] overflow-y-auto space-y-4">
-            <p class="text-dark-500 dark:text-dark-400 text-sm">Messages will appear here. Enter an instruction below and submit.</p>
+        <div class="relative">
+            <div {{ stimulus_target('chat-based-content-editor', 'messages') }}
+                 class="rounded-lg border border-dark-200 dark:border-dark-700 bg-white dark:bg-dark-800 p-4 min-h-[320px] max-h-[500px] overflow-y-auto space-y-4">
+                <p class="text-dark-500 dark:text-dark-400 text-sm">Messages will appear here. Enter an instruction below and submit.</p>
+            </div>
+            <div class="absolute bottom-2 right-2">
+                <label class="inline-flex items-center gap-1.5 px-2 py-1 rounded bg-dark-100/80 dark:bg-dark-700/80 backdrop-blur-sm text-xs text-dark-600 dark:text-dark-300 cursor-pointer select-none">
+                    <input type="checkbox"
+                           {{ stimulus_target('chat-based-content-editor', 'autoScroll') }}
+                           {{ stimulus_action('chat-based-content-editor', 'toggleAutoScroll', 'change') }}
+                           checked
+                           class="rounded border-dark-300 dark:border-dark-600 text-primary-600 focus:ring-primary-500 dark:focus:ring-offset-dark-800 w-3.5 h-3.5">
+                    <span>Auto-scroll</span>
+                </label>
+            </div>
         </div>
 
         <form {{ stimulus_action('chat-based-content-editor', 'handleSubmit', 'submit') }}

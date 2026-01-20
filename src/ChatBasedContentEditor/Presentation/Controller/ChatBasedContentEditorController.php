@@ -4,26 +4,26 @@ declare(strict_types=1);
 
 namespace App\ChatBasedContentEditor\Presentation\Controller;
 
-use App\LlmContentEditor\Facade\Dto\AgentEventDto;
-use App\LlmContentEditor\Facade\Dto\EditStreamChunkDto;
-use App\LlmContentEditor\Facade\Dto\ToolInputEntryDto;
-use App\LlmContentEditor\Facade\LlmContentEditorFacadeInterface;
+use App\ChatBasedContentEditor\Domain\Entity\EditSession;
+use App\ChatBasedContentEditor\Domain\Entity\EditSessionChunk;
+use App\ChatBasedContentEditor\Infrastructure\Message\RunEditSessionMessage;
+use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\HttpFoundation\StreamedResponse;
+use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\Routing\Attribute\Route;
 
 use const DIRECTORY_SEPARATOR;
-use const JSON_THROW_ON_ERROR;
 
 final class ChatBasedContentEditorController extends AbstractController
 {
     public function __construct(
-        private readonly LlmContentEditorFacadeInterface $facade,
         #[Autowire(param: 'chat_based_content_editor.workspace_root')]
-        private readonly string                          $workspaceRoot,
+        private readonly string                 $workspaceRoot,
+        private readonly EntityManagerInterface $entityManager,
+        private readonly MessageBusInterface    $messageBus,
     ) {
     }
 
@@ -36,6 +36,7 @@ final class ChatBasedContentEditorController extends AbstractController
     {
         return $this->render('@chat_based_content_editor.presentation/chat_based_content_editor.twig', [
             'runUrl'               => $this->generateUrl('chat_based_content_editor.presentation.run'),
+            'pollUrlTemplate'      => $this->generateUrl('chat_based_content_editor.presentation.poll', ['sessionId' => '__SESSION_ID__']),
             'defaultWorkspacePath' => $this->workspaceRoot,
         ]);
     }
@@ -51,95 +52,109 @@ final class ChatBasedContentEditorController extends AbstractController
         $workspacePath = $request->request->getString('workspace_path');
 
         if ($instruction === '') {
-            return $this->json(['error' => 'Instruction is required.'], 400);
+            return $this->json(['error' => 'Instruction is required.'], Response::HTTP_BAD_REQUEST);
         }
 
         $resolved = $workspacePath !== '' ? $workspacePath : $this->workspaceRoot;
         if ($resolved === '') {
-            return $this->json(['error' => 'Workspace path is required. Set CHAT_EDITOR_WORKSPACE_ROOT or provide it in the form.'], 400);
+            return $this->json(
+                ['error' => 'Workspace path is required. Set CHAT_EDITOR_WORKSPACE_ROOT or provide it in the form.'],
+                Response::HTTP_BAD_REQUEST
+            );
         }
 
         $real = realpath($resolved);
         if ($real === false || !is_dir($real)) {
-            return $this->json(['error' => 'Workspace path does not exist or is not a directory.'], 400);
+            return $this->json(
+                ['error' => 'Workspace path does not exist or is not a directory.'],
+                Response::HTTP_BAD_REQUEST
+            );
         }
 
         if ($this->workspaceRoot !== '') {
             $allowed = realpath($this->workspaceRoot);
             if ($allowed === false) {
-                return $this->json(['error' => 'Configured workspace root does not exist.'], 400);
+                return $this->json(
+                    ['error' => 'Configured workspace root does not exist.'],
+                    Response::HTTP_BAD_REQUEST
+                );
             }
             $prefix = $allowed . DIRECTORY_SEPARATOR;
             if ($real !== $allowed && !str_starts_with($real . DIRECTORY_SEPARATOR, $prefix)) {
-                return $this->json(['error' => 'Workspace path is not under the allowed root.'], 400);
+                return $this->json(
+                    ['error' => 'Workspace path is not under the allowed root.'],
+                    Response::HTTP_BAD_REQUEST
+                );
             }
         }
 
         if (!$this->isCsrfTokenValid('chat_based_content_editor_run', $request->request->getString('_csrf_token'))) {
-            return $this->json(['error' => 'Invalid CSRF token.'], 403);
+            return $this->json(['error' => 'Invalid CSRF token.'], Response::HTTP_FORBIDDEN);
         }
 
-        $response = new StreamedResponse();
-        $response->headers->set('Content-Type', 'application/x-ndjson');
-        $response->headers->set('Cache-Control', 'no-store');
-        $response->setCallback(function () use ($real, $instruction): void {
-            $generator = $this->facade->streamEdit($real, $instruction);
-            foreach ($generator as $chunk) {
-                echo json_encode($this->chunkToArray($chunk), JSON_THROW_ON_ERROR) . "\n";
-                if (ob_get_level()) {
-                    ob_flush();
-                }
-                flush();
+        $session = new EditSession($real, $instruction);
+        $this->entityManager->persist($session);
+        $this->entityManager->flush();
+
+        $sessionId = $session->getId();
+        if ($sessionId === null) {
+            return $this->json(['error' => 'Failed to create session.'], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+
+        $this->messageBus->dispatch(new RunEditSessionMessage($sessionId));
+
+        return $this->json(['sessionId' => $sessionId]);
+    }
+
+    #[Route(
+        path: '/chat-based-content-editor/poll/{sessionId}',
+        name: 'chat_based_content_editor.presentation.poll',
+        methods: [Request::METHOD_GET]
+    )]
+    public function poll(string $sessionId, Request $request): Response
+    {
+        $session = $this->entityManager->find(EditSession::class, $sessionId);
+
+        if ($session === null) {
+            return $this->json(['error' => 'Session not found.'], Response::HTTP_NOT_FOUND);
+        }
+
+        $after = $request->query->getInt('after', 0);
+        $limit = 100;
+
+        /** @var list<EditSessionChunk> $chunks */
+        $chunks = $this->entityManager->createQueryBuilder()
+            ->select('c')
+            ->from(EditSessionChunk::class, 'c')
+            ->where('c.session = :session')
+            ->andWhere('c.id > :after')
+            ->setParameter('session', $session)
+            ->setParameter('after', $after)
+            ->orderBy('c.id', 'ASC')
+            ->setMaxResults($limit)
+            ->getQuery()
+            ->getResult();
+
+        $lastId    = $after;
+        $chunkData = [];
+
+        foreach ($chunks as $chunk) {
+            $chunkId = $chunk->getId();
+            if ($chunkId !== null && $chunkId > $lastId) {
+                $lastId = $chunkId;
             }
-        });
 
-        return $response;
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    private function chunkToArray(EditStreamChunkDto $chunk): array
-    {
-        $arr = ['chunkType' => $chunk->chunkType];
-        if ($chunk->content !== null) {
-            $arr['content'] = $chunk->content;
-        }
-        if ($chunk->event !== null) {
-            $arr['event'] = $this->eventToArray($chunk->event);
-        }
-        if ($chunk->success !== null) {
-            $arr['success'] = $chunk->success;
-        }
-        if ($chunk->errorMessage !== null) {
-            $arr['errorMessage'] = $chunk->errorMessage;
+            $chunkData[] = [
+                'id'        => $chunkId,
+                'chunkType' => $chunk->getChunkType()->value,
+                'payload'   => $chunk->getPayloadJson(),
+            ];
         }
 
-        return $arr;
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    private function eventToArray(AgentEventDto $e): array
-    {
-        $arr = ['kind' => $e->kind];
-        if ($e->toolName !== null) {
-            $arr['toolName'] = $e->toolName;
-        }
-        if ($e->toolInputs !== null) {
-            $arr['toolInputs'] = array_map(
-                static fn (ToolInputEntryDto $t) => ['key' => $t->key, 'value' => $t->value],
-                $e->toolInputs
-            );
-        }
-        if ($e->toolResult !== null) {
-            $arr['toolResult'] = $e->toolResult;
-        }
-        if ($e->errorMessage !== null) {
-            $arr['errorMessage'] = $e->errorMessage;
-        }
-
-        return $arr;
+        return $this->json([
+            'chunks' => $chunkData,
+            'lastId' => $lastId,
+            'status' => $session->getStatus()->value,
+        ]);
     }
 }
