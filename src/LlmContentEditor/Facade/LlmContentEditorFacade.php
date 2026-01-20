@@ -13,10 +13,15 @@ use App\LlmContentEditor\Infrastructure\ChatHistory\MessageSerializer;
 use App\LlmContentEditor\Infrastructure\Observer\AgentEventCollectingObserver;
 use App\WorkspaceTooling\Facade\WorkspaceToolingServiceInterface;
 use Generator;
+use NeuronAI\Chat\Messages\AssistantMessage;
 use NeuronAI\Chat\Messages\Message;
+use NeuronAI\Chat\Messages\ToolCallMessage;
+use NeuronAI\Chat\Messages\ToolCallResultMessage;
 use NeuronAI\Chat\Messages\UserMessage;
 use SplQueue;
 use Throwable;
+
+use function is_string;
 
 final class LlmContentEditorFacade implements LlmContentEditorFacadeInterface
 {
@@ -81,6 +86,22 @@ final class LlmContentEditorFacade implements LlmContentEditorFacadeInterface
         // Create chat history with previous messages and a callback for new ones
         $chatHistory = new CallbackChatHistory($initialMessages);
         $chatHistory->setOnNewMessageCallback(function (Message $message) use ($messageQueue): void {
+            // Only persist user and assistant messages for conversation history.
+            // Tool call/result messages are internal to a single turn and cause
+            // OpenAI API format issues when replayed (400 Bad Request).
+            //
+            // Additionally, only save messages with actual content to avoid
+            // empty or intermediate messages during tool usage flows.
+            $shouldSave = match (true) {
+                $message instanceof UserMessage      && !$message instanceof ToolCallResultMessage => true,
+                $message instanceof AssistantMessage && !$message instanceof ToolCallMessage  => $this->hasNonEmptyContent($message),
+                default                                                                       => false,
+            };
+
+            if (!$shouldSave) {
+                return;
+            }
+
             try {
                 $dto = $this->messageSerializer->toDto($message);
                 $messageQueue->enqueue($dto);
@@ -126,5 +147,24 @@ final class LlmContentEditorFacade implements LlmContentEditorFacadeInterface
         } catch (Throwable $e) {
             yield new EditStreamChunkDto('done', null, null, false, $e->getMessage());
         }
+    }
+
+    /**
+     * Check if a message has non-empty content worth persisting.
+     */
+    private function hasNonEmptyContent(Message $message): bool
+    {
+        $content = $message->getContent();
+
+        if ($content === null) {
+            return false;
+        }
+
+        if (is_string($content)) {
+            return trim($content) !== '';
+        }
+
+        // Arrays or other types - consider them as having content
+        return true;
     }
 }

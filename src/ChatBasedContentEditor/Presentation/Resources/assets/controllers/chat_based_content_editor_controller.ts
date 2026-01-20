@@ -40,6 +40,7 @@ export default class extends Controller {
         "workspacePathContainer",
         "submit",
         "autoScroll",
+        "submitOnEnter",
         "conversationId",
         "newConversation",
     ];
@@ -60,6 +61,8 @@ export default class extends Controller {
     declare readonly submitTarget: HTMLButtonElement;
     declare readonly hasAutoScrollTarget: boolean;
     declare readonly autoScrollTarget: HTMLInputElement;
+    declare readonly hasSubmitOnEnterTarget: boolean;
+    declare readonly submitOnEnterTarget: HTMLInputElement;
     declare readonly hasConversationIdTarget: boolean;
     declare readonly conversationIdTarget: HTMLInputElement;
     declare readonly hasNewConversationTarget: boolean;
@@ -67,6 +70,7 @@ export default class extends Controller {
 
     private pollingIntervalId: ReturnType<typeof setInterval> | null = null;
     private autoScrollEnabled: boolean = true;
+    private submitOnEnterEnabled: boolean = true;
     private currentConversationId: string | null = null;
 
     disconnect(): void {
@@ -75,6 +79,31 @@ export default class extends Controller {
 
     toggleAutoScroll(): void {
         this.autoScrollEnabled = this.hasAutoScrollTarget ? this.autoScrollTarget.checked : true;
+    }
+
+    toggleSubmitOnEnter(): void {
+        this.submitOnEnterEnabled = this.hasSubmitOnEnterTarget ? this.submitOnEnterTarget.checked : true;
+    }
+
+    /**
+     * Handle keydown on the instruction textarea.
+     * Submit on Enter (without Shift) if the option is enabled.
+     */
+    handleKeydown(event: KeyboardEvent): void {
+        if (event.key === "Enter" && !event.shiftKey && this.submitOnEnterEnabled) {
+            event.preventDefault();
+
+            // Don't submit if the button is disabled (already processing)
+            if (this.hasSubmitTarget && this.submitTarget.disabled) {
+                return;
+            }
+
+            // Trigger form submission
+            const form = this.instructionTarget.closest("form");
+            if (form) {
+                form.requestSubmit();
+            }
+        }
     }
 
     /**
