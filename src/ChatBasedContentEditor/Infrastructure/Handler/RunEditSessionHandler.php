@@ -4,11 +4,15 @@ declare(strict_types=1);
 
 namespace App\ChatBasedContentEditor\Infrastructure\Handler;
 
+use App\ChatBasedContentEditor\Domain\Entity\Conversation;
+use App\ChatBasedContentEditor\Domain\Entity\ConversationMessage;
 use App\ChatBasedContentEditor\Domain\Entity\EditSession;
 use App\ChatBasedContentEditor\Domain\Entity\EditSessionChunk;
+use App\ChatBasedContentEditor\Domain\Enum\ConversationMessageRole;
 use App\ChatBasedContentEditor\Domain\Enum\EditSessionStatus;
 use App\ChatBasedContentEditor\Infrastructure\Message\RunEditSessionMessage;
 use App\LlmContentEditor\Facade\Dto\AgentEventDto;
+use App\LlmContentEditor\Facade\Dto\ConversationMessageDto;
 use App\LlmContentEditor\Facade\Dto\ToolInputEntryDto;
 use App\LlmContentEditor\Facade\LlmContentEditorFacadeInterface;
 use Doctrine\ORM\EntityManagerInterface;
@@ -42,9 +46,14 @@ final readonly class RunEditSessionHandler
         $this->entityManager->flush();
 
         try {
-            $generator = $this->facade->streamEdit(
+            // Load previous messages from conversation
+            $previousMessages = $this->loadPreviousMessages($session);
+            $conversation     = $session->getConversation();
+
+            $generator = $this->facade->streamEditWithHistory(
                 $session->getWorkspacePath(),
-                $session->getInstruction()
+                $session->getInstruction(),
+                $previousMessages
             );
 
             foreach ($generator as $chunk) {
@@ -53,6 +62,9 @@ final readonly class RunEditSessionHandler
                 } elseif ($chunk->chunkType === 'event' && $chunk->event !== null) {
                     $eventJson = $this->serializeEvent($chunk->event);
                     EditSessionChunk::createEventChunk($session, $eventJson);
+                } elseif ($chunk->chunkType === 'message' && $chunk->message !== null) {
+                    // Persist new conversation messages
+                    $this->persistConversationMessage($conversation, $chunk->message);
                 } elseif ($chunk->chunkType === 'done') {
                     EditSessionChunk::createDoneChunk(
                         $session,
@@ -76,6 +88,37 @@ final readonly class RunEditSessionHandler
         }
 
         $this->entityManager->flush();
+    }
+
+    /**
+     * Load previous messages from the conversation.
+     *
+     * @return list<ConversationMessageDto>
+     */
+    private function loadPreviousMessages(EditSession $session): array
+    {
+        $conversation = $session->getConversation();
+
+        $messages = [];
+        foreach ($conversation->getMessages() as $message) {
+            $messages[] = new ConversationMessageDto(
+                $message->getRole()->value,
+                $message->getContentJson()
+            );
+        }
+
+        return $messages;
+    }
+
+    /**
+     * Persist a new message to the conversation.
+     */
+    private function persistConversationMessage(Conversation $conversation, ConversationMessageDto $dto): void
+    {
+        // The DTO role is constrained to valid values, so from() should always succeed
+        $role = ConversationMessageRole::from($dto->role);
+
+        new ConversationMessage($conversation, $role, $dto->contentJson);
     }
 
     private function serializeEvent(AgentEventDto $event): string
