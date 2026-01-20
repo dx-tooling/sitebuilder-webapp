@@ -22,14 +22,14 @@ class EditSession
      * @throws Exception
      */
     public function __construct(
-        string $workspacePath,
-        string $instruction
+        Conversation $conversation,
+        string       $instruction
     ) {
-        $this->workspacePath = $workspacePath;
-        $this->instruction   = $instruction;
-        $this->status        = EditSessionStatus::Pending;
-        $this->createdAt     = DateAndTimeService::getDateTimeImmutable();
-        $this->chunks        = new ArrayCollection();
+        $this->conversation = $conversation;
+        $this->instruction  = $instruction;
+        $this->status       = EditSessionStatus::Pending;
+        $this->createdAt    = DateAndTimeService::getDateTimeImmutable();
+        $this->chunks       = new ArrayCollection();
     }
 
     #[ORM\Id]
@@ -46,16 +46,24 @@ class EditSession
         return $this->id;
     }
 
-    #[ORM\Column(
-        type: Types::STRING,
-        length: 4096,
-        nullable: false
+    #[ORM\ManyToOne(
+        targetEntity: Conversation::class,
+        inversedBy: 'editSessions'
     )]
-    private readonly string $workspacePath;
+    #[ORM\JoinColumn(
+        nullable: false,
+        onDelete: 'CASCADE'
+    )]
+    private readonly Conversation $conversation;
+
+    public function getConversation(): Conversation
+    {
+        return $this->conversation;
+    }
 
     public function getWorkspacePath(): string
     {
-        return $this->workspacePath;
+        return $this->conversation->getWorkspacePath();
     }
 
     #[ORM\Column(
