@@ -22,6 +22,7 @@ interface PollResponse {
 
 interface RunResponse {
     sessionId?: string;
+    conversationId?: string;
     error?: string;
 }
 
@@ -32,7 +33,16 @@ export default class extends Controller {
         workspacePath: { type: String, default: "" },
     };
 
-    static targets = ["messages", "instruction", "workspacePath", "submit", "autoScroll"];
+    static targets = [
+        "messages",
+        "instruction",
+        "workspacePath",
+        "workspacePathContainer",
+        "submit",
+        "autoScroll",
+        "conversationId",
+        "newConversation",
+    ];
 
     declare readonly runUrlValue: string;
     declare readonly pollUrlTemplateValue: string;
@@ -44,13 +54,20 @@ export default class extends Controller {
     declare readonly instructionTarget: HTMLTextAreaElement;
     declare readonly hasWorkspacePathTarget: boolean;
     declare readonly workspacePathTarget: HTMLInputElement;
+    declare readonly hasWorkspacePathContainerTarget: boolean;
+    declare readonly workspacePathContainerTarget: HTMLElement;
     declare readonly hasSubmitTarget: boolean;
     declare readonly submitTarget: HTMLButtonElement;
     declare readonly hasAutoScrollTarget: boolean;
     declare readonly autoScrollTarget: HTMLInputElement;
+    declare readonly hasConversationIdTarget: boolean;
+    declare readonly conversationIdTarget: HTMLInputElement;
+    declare readonly hasNewConversationTarget: boolean;
+    declare readonly newConversationTarget: HTMLButtonElement;
 
     private pollingIntervalId: ReturnType<typeof setInterval> | null = null;
     private autoScrollEnabled: boolean = true;
+    private currentConversationId: string | null = null;
 
     disconnect(): void {
         this.stopPolling();
@@ -58,6 +75,40 @@ export default class extends Controller {
 
     toggleAutoScroll(): void {
         this.autoScrollEnabled = this.hasAutoScrollTarget ? this.autoScrollTarget.checked : true;
+    }
+
+    /**
+     * Start a new conversation, clearing the current state.
+     */
+    startNewConversation(): void {
+        this.currentConversationId = null;
+
+        // Clear the hidden conversation_id field
+        if (this.hasConversationIdTarget) {
+            this.conversationIdTarget.value = "";
+        }
+
+        // Clear the messages area
+        if (this.hasMessagesTarget) {
+            this.messagesTarget.innerHTML =
+                '<p class="text-dark-500 dark:text-dark-400 text-sm">Messages will appear here. Enter an instruction below and submit.</p>';
+        }
+
+        // Show workspace path input again
+        if (this.hasWorkspacePathContainerTarget) {
+            this.workspacePathContainerTarget.classList.remove("hidden");
+        }
+
+        // Hide the "New Conversation" button
+        if (this.hasNewConversationTarget) {
+            this.newConversationTarget.classList.add("hidden");
+        }
+
+        // Clear the instruction field
+        if (this.hasInstructionTarget) {
+            this.instructionTarget.value = "";
+            this.instructionTarget.focus();
+        }
     }
 
     private scrollToBottom(): void {
@@ -96,6 +147,9 @@ export default class extends Controller {
         this.messagesTarget.appendChild(userEl);
         this.scrollToBottom();
 
+        // Clear instruction field after submission
+        this.instructionTarget.value = "";
+
         // Assistant placeholder (events + text will be polled here)
         const assistantEl = document.createElement("div");
         assistantEl.className = "flex justify-start flex-col gap-2";
@@ -120,6 +174,11 @@ export default class extends Controller {
             formData.append("_csrf_token", csrfInput.value);
         }
 
+        // Include conversation_id if we have one (for follow-up messages)
+        if (this.currentConversationId) {
+            formData.append("conversation_id", this.currentConversationId);
+        }
+
         try {
             const response = await fetch(runUrl, {
                 method: "POST",
@@ -134,6 +193,22 @@ export default class extends Controller {
                 this.appendError(inner, msg);
                 this.resetSubmitButton();
                 return;
+            }
+
+            // Store the conversation ID for subsequent messages
+            if (data.conversationId) {
+                this.currentConversationId = data.conversationId;
+                if (this.hasConversationIdTarget) {
+                    this.conversationIdTarget.value = data.conversationId;
+                }
+
+                // Hide workspace path (can't change mid-conversation) and show "New Conversation" button
+                if (this.hasWorkspacePathContainerTarget) {
+                    this.workspacePathContainerTarget.classList.add("hidden");
+                }
+                if (this.hasNewConversationTarget) {
+                    this.newConversationTarget.classList.remove("hidden");
+                }
             }
 
             // Start polling for chunks

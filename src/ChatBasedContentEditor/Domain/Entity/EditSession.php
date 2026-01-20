@@ -19,6 +19,24 @@ use Symfony\Bridge\Doctrine\IdGenerator\UuidGenerator;
 class EditSession
 {
     /**
+     * Creates an EditSession within a conversation.
+     *
+     * @throws Exception
+     */
+    public static function createWithConversation(
+        Conversation $conversation,
+        string       $instruction
+    ): self {
+        $session               = new self($conversation->getWorkspacePath(), $instruction);
+        $session->conversation = $conversation;
+        $conversation->addEditSession($session);
+
+        return $session;
+    }
+
+    /**
+     * @deprecated Use createWithConversation() for new sessions
+     *
      * @throws Exception
      */
     public function __construct(
@@ -44,6 +62,21 @@ class EditSession
     public function getId(): ?string
     {
         return $this->id;
+    }
+
+    #[ORM\ManyToOne(
+        targetEntity: Conversation::class,
+        inversedBy: 'editSessions'
+    )]
+    #[ORM\JoinColumn(
+        nullable: true,
+        onDelete: 'CASCADE'
+    )]
+    private ?Conversation $conversation = null;
+
+    public function getConversation(): ?Conversation
+    {
+        return $this->conversation;
     }
 
     #[ORM\Column(
