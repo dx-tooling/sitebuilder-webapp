@@ -48,6 +48,12 @@ class ContentEditorAgent extends BaseCodingAgent
             '- Build output goes to dist/ or build/ (generated, do not edit directly)',
             '- README.md contains project documentation and instructions',
             '',
+            'PATH RULES (critical):',
+            '- The working folder path is given in the user\'s message. Use it for ALL path-based tools (get_folder_content, get_file_content, get_file_lines, replace_in_file, apply_diff_to_file, run_quality_checks, run_tests, run_build).',
+            '- "Workspace root" and "working folder" are the same. Both mean the path from the user\'s message.',
+            '- Never use /workspace or any path not under the working folder unless the user explicitly gave you that path.',
+            '- If a tool returns "Directory does not exist" or "File does not exist", the path you used is wrong. Do not retry the same path. Re-read the user\'s message for the correct working folder and use paths under it.',
+            '',
             'EFFICIENT FILE READING:',
             '- Use get_file_info first to check file size before reading',
             '- For large files (>100 lines), use search_in_file to find relevant sections',
@@ -81,7 +87,7 @@ class ContentEditorAgent extends BaseCodingAgent
     protected function getStepInstructions(): array
     {
         return [
-            '1. EXPLORE: List the workspace root folder to understand its structure.',
+            '1. EXPLORE: List the working folder (the path from the user\'s message) to understand its structure.',
             '2. UNDERSTAND: Read package.json and README.md to learn about the project.',
             '3. INVESTIGATE: Use get_file_info + search_in_file to efficiently explore files.',
             '4. PLAN: Understand what files need to be created or modified.',

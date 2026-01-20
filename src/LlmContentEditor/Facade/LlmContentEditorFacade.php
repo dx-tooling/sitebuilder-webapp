@@ -25,6 +25,8 @@ final class LlmContentEditorFacade implements LlmContentEditorFacadeInterface
      */
     public function streamEdit(string $workspacePath, string $instruction): Generator
     {
+        // Always include the working folder so the agent uses it for all path-based tools.
+        // Omitting it led to the agent guessing /workspace and retrying get_folder_content in a loop.
         $prompt = sprintf(
             'The working folder is: %s' . "\n\n" . 'Please perform the following task: %s',
             $workspacePath,

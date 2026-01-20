@@ -46,4 +46,13 @@ final class WorkspaceToolingFacade extends BaseWorkspaceToolingFacade implements
             'mise exec -- npm run build'
         );
     }
+
+    public function applyV4aDiffToFile(string $pathToFile, string $v4aDiff): string
+    {
+        $modifiedContent = $this->textOperationsService->applyDiffToFile($pathToFile, $v4aDiff);
+        $this->fileOperationsService->writeFileContent($pathToFile, $modifiedContent);
+        $lineCount = substr_count($modifiedContent, "\n") + 1;
+
+        return "Applied. File now has {$lineCount} lines.";
+    }
 }
