@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\LlmContentEditor\Infrastructure\Provider;
 
+use App\LlmContentEditor\Infrastructure\Provider\Dto\ToolInputsDto;
 use NeuronAI\Chat\Messages\AssistantMessage;
 use NeuronAI\Providers\AIProviderInterface;
 use Throwable;
@@ -47,12 +48,23 @@ final class FakeAIProviderFactory implements AIProviderFactoryInterface
     /**
      * Seed a tool call rule that triggers when message content contains the pattern.
      * The real tool will be executed.
-     *
-     * @phpstan-ignore-next-line - toolInputs is an associative array (tool parameter map)
      */
-    public function seedToolCall(string $messagePattern, string $toolName, array $toolInputs): void
+    public function seedToolCall(string $messagePattern, string $toolName, ToolInputsDto $toolInputs): void
     {
         $this->getFakeProvider()->seedToolCall($messagePattern, $toolName, $toolInputs);
+    }
+
+    /**
+     * Seed a tool call rule using an associative array (convenience method).
+     * The real tool will be executed.
+     *
+     * @param array<string, mixed> $toolInputs
+     *
+     * @phpstan-ignore-next-line - Convenience method that converts array to DTO internally
+     */
+    public function seedToolCallFromArray(string $messagePattern, string $toolName, array $toolInputs): void
+    {
+        $this->seedToolCall($messagePattern, $toolName, ToolInputsDto::fromArray($toolInputs));
     }
 
     /**

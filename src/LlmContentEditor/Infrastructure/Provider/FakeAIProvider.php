@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\LlmContentEditor\Infrastructure\Provider;
 
+use App\LlmContentEditor\Infrastructure\Provider\Dto\ToolInputsDto;
 use Generator;
 use GuzzleHttp\Client;
 use GuzzleHttp\Promise\FulfilledPromise;
@@ -273,16 +274,12 @@ final class FakeAIProvider implements AIProviderInterface
     /**
      * Seed a tool call rule that triggers when message content contains the pattern.
      * The real tool will be executed.
-     *
-     * @phpstan-ignore-next-line - toolInputs is an associative array (tool parameter map)
      */
-    public function seedToolCall(string $messagePattern, string $toolName, array $toolInputs): void
+    public function seedToolCall(string $messagePattern, string $toolName, ToolInputsDto $toolInputs): void
     {
-        /** @var array<string, mixed> $inputs */
-        $inputs                               = $toolInputs;
         $this->toolCallRules[$messagePattern] = [
             'tool'   => $toolName,
-            'inputs' => $inputs,
+            'inputs' => $toolInputs->toArray(),
         ];
     }
 
