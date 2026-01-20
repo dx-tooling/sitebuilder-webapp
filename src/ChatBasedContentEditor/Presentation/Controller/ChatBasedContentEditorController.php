@@ -16,7 +16,11 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\Routing\Attribute\Route;
 
-use const DIRECTORY_SEPARATOR;
+use function array_key_exists;
+use function is_array;
+use function is_string;
+use function json_decode;
+use function mb_substr;
 
 final class ChatBasedContentEditorController extends AbstractController
 {
@@ -35,10 +39,115 @@ final class ChatBasedContentEditorController extends AbstractController
     )]
     public function index(): Response
     {
+        // Find the most recent conversation
+        /** @var Conversation|null $latestConversation */
+        $latestConversation = $this->entityManager->createQueryBuilder()
+            ->select('c')
+            ->from(Conversation::class, 'c')
+            ->orderBy('c.createdAt', 'DESC')
+            ->setMaxResults(1)
+            ->getQuery()
+            ->getOneOrNullResult();
+
+        if ($latestConversation !== null) {
+            return $this->redirectToRoute('chat_based_content_editor.presentation.show', [
+                'conversationId' => $latestConversation->getId(),
+            ]);
+        }
+
+        // No conversations exist - create one with the default workspace path
+        $workspacePath = $this->workspaceRoot !== '' ? $this->workspaceRoot : '/tmp';
+        $conversation  = new Conversation($workspacePath);
+        $this->entityManager->persist($conversation);
+        $this->entityManager->flush();
+
+        return $this->redirectToRoute('chat_based_content_editor.presentation.show', [
+            'conversationId' => $conversation->getId(),
+        ]);
+    }
+
+    #[Route(
+        path: '/chat-based-content-editor/new',
+        name: 'chat_based_content_editor.presentation.new',
+        methods: [Request::METHOD_GET]
+    )]
+    public function newConversation(): Response
+    {
+        $workspacePath = $this->workspaceRoot !== '' ? $this->workspaceRoot : '/tmp';
+        $conversation  = new Conversation($workspacePath);
+        $this->entityManager->persist($conversation);
+        $this->entityManager->flush();
+
+        return $this->redirectToRoute('chat_based_content_editor.presentation.show', [
+            'conversationId' => $conversation->getId(),
+        ]);
+    }
+
+    #[Route(
+        path: '/chat-based-content-editor/{conversationId}',
+        name: 'chat_based_content_editor.presentation.show',
+        methods: [Request::METHOD_GET],
+        requirements: ['conversationId' => '[a-f0-9-]{36}']
+    )]
+    public function show(string $conversationId): Response
+    {
+        $conversation = $this->entityManager->find(Conversation::class, $conversationId);
+        if ($conversation === null) {
+            return $this->redirectToRoute('chat_based_content_editor.presentation.index');
+        }
+
+        // Load past conversations for the sidebar
+        /** @var list<Conversation> $conversations */
+        $conversations = $this->entityManager->createQueryBuilder()
+            ->select('c')
+            ->from(Conversation::class, 'c')
+            ->orderBy('c.createdAt', 'DESC')
+            ->setMaxResults(20)
+            ->getQuery()
+            ->getResult();
+
+        $pastConversations = [];
+        foreach ($conversations as $conv) {
+            $firstSession = $conv->getEditSessions()->first();
+            $preview      = $firstSession instanceof EditSession
+                ? mb_substr($firstSession->getInstruction(), 0, 100)
+                : '';
+
+            $pastConversations[] = [
+                'id'           => $conv->getId(),
+                'createdAt'    => $conv->getCreatedAt()->format('Y-m-d H:i'),
+                'preview'      => $preview,
+                'messageCount' => $conv->getEditSessions()->count(),
+                'isCurrent'    => $conv->getId() === $conversationId,
+            ];
+        }
+
+        // Load conversation history for display
+        $turns = [];
+        foreach ($conversation->getEditSessions() as $session) {
+            $assistantResponse = '';
+            foreach ($session->getChunks() as $chunk) {
+                if ($chunk->getChunkType()->value === 'text') {
+                    $payload = json_decode($chunk->getPayloadJson(), true);
+                    if (is_array($payload) && array_key_exists('content', $payload) && is_string($payload['content'])) {
+                        $assistantResponse .= $payload['content'];
+                    }
+                }
+            }
+
+            $turns[] = [
+                'instruction' => $session->getInstruction(),
+                'response'    => $assistantResponse,
+                'status'      => $session->getStatus()->value,
+            ];
+        }
+
         return $this->render('@chat_based_content_editor.presentation/chat_based_content_editor.twig', [
-            'runUrl'               => $this->generateUrl('chat_based_content_editor.presentation.run'),
-            'pollUrlTemplate'      => $this->generateUrl('chat_based_content_editor.presentation.poll', ['sessionId' => '__SESSION_ID__']),
-            'defaultWorkspacePath' => $this->workspaceRoot,
+            'conversation'      => $conversation,
+            'turns'             => $turns,
+            'pastConversations' => $pastConversations,
+            'runUrl'            => $this->generateUrl('chat_based_content_editor.presentation.run'),
+            'pollUrlTemplate'   => $this->generateUrl('chat_based_content_editor.presentation.poll', ['sessionId' => '__SESSION_ID__']),
         ]);
     }
 
@@ -50,7 +159,6 @@ final class ChatBasedContentEditorController extends AbstractController
     public function run(Request $request): Response
     {
         $instruction    = $request->request->getString('instruction');
-        $workspacePath  = $request->request->getString('workspace_path');
         $conversationId = $request->request->getString('conversation_id');
 
         if ($instruction === '') {
@@ -61,53 +169,9 @@ final class ChatBasedContentEditorController extends AbstractController
             return $this->json(['error' => 'Invalid CSRF token.'], Response::HTTP_FORBIDDEN);
         }
 
-        // Load existing conversation or validate workspace path for new one
-        $conversation = null;
-        if ($conversationId !== '') {
-            $conversation = $this->entityManager->find(Conversation::class, $conversationId);
-            if ($conversation === null) {
-                return $this->json(['error' => 'Conversation not found.'], Response::HTTP_NOT_FOUND);
-            }
-            // Use the conversation's workspace path
-            $real = $conversation->getWorkspacePath();
-        } else {
-            // New conversation - validate workspace path
-            $resolved = $workspacePath !== '' ? $workspacePath : $this->workspaceRoot;
-            if ($resolved === '') {
-                return $this->json(
-                    ['error' => 'Workspace path is required. Set CHAT_EDITOR_WORKSPACE_ROOT or provide it in the form.'],
-                    Response::HTTP_BAD_REQUEST
-                );
-            }
-
-            $real = realpath($resolved);
-            if ($real === false || !is_dir($real)) {
-                return $this->json(
-                    ['error' => 'Workspace path does not exist or is not a directory.'],
-                    Response::HTTP_BAD_REQUEST
-                );
-            }
-
-            if ($this->workspaceRoot !== '') {
-                $allowed = realpath($this->workspaceRoot);
-                if ($allowed === false) {
-                    return $this->json(
-                        ['error' => 'Configured workspace root does not exist.'],
-                        Response::HTTP_BAD_REQUEST
-                    );
-                }
-                $prefix = $allowed . DIRECTORY_SEPARATOR;
-                if ($real !== $allowed && !str_starts_with($real . DIRECTORY_SEPARATOR, $prefix)) {
-                    return $this->json(
-                        ['error' => 'Workspace path is not under the allowed root.'],
-                        Response::HTTP_BAD_REQUEST
-                    );
-                }
-            }
-
-            // Create new conversation
-            $conversation = new Conversation($real);
-            $this->entityManager->persist($conversation);
+        $conversation = $this->entityManager->find(Conversation::class, $conversationId);
+        if ($conversation === null) {
+            return $this->json(['error' => 'Conversation not found.'], Response::HTTP_NOT_FOUND);
         }
 
         // Create session within conversation
@@ -123,8 +187,7 @@ final class ChatBasedContentEditorController extends AbstractController
         $this->messageBus->dispatch(new RunEditSessionMessage($sessionId));
 
         return $this->json([
-            'sessionId'      => $sessionId,
-            'conversationId' => $conversation->getId(),
+            'sessionId' => $sessionId,
         ]);
     }
 
