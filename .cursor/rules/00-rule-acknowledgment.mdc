@@ -1,4 +1,5 @@
 ---
+description: "Meta-rule: always state which rules from .cursor/rules apply at the start of each task. Relevant for every task."
 alwaysApply: true
 ---
 
