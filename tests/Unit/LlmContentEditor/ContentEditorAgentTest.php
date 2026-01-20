@@ -13,7 +13,7 @@ final class ContentEditorAgentTest extends TestCase
 {
     public function testGetBackgroundInstructionsContainsPathRules(): void
     {
-        $agent = new ContentEditorAgent($this->createMockWorkspaceTooling());
+        $agent = new ContentEditorAgent($this->createMockWorkspaceTooling(), null);
         $ref   = new ReflectionMethod(ContentEditorAgent::class, 'getBackgroundInstructions');
         $ref->setAccessible(true);
 
@@ -29,7 +29,7 @@ final class ContentEditorAgentTest extends TestCase
 
     public function testGetStepInstructionsExploreStepRefersToWorkingFolderFromUserMessage(): void
     {
-        $agent = new ContentEditorAgent($this->createMockWorkspaceTooling());
+        $agent = new ContentEditorAgent($this->createMockWorkspaceTooling(), null);
         $ref   = new ReflectionMethod(ContentEditorAgent::class, 'getStepInstructions');
         $ref->setAccessible(true);
 

@@ -47,3 +47,18 @@ services:
             - "@EtfsCodingAgent\\Service\\FileOperationsServiceInterface"
             - "@EtfsCodingAgent\\Service\\TextOperationsService"
             - "@EtfsCodingAgent\\Service\\ShellOperationsServiceInterface"
+
+    # AI Provider Factory (production uses OpenAI)
+    App\LlmContentEditor\Infrastructure\Provider\AIProviderFactoryInterface:
+        class: App\LlmContentEditor\Infrastructure\Provider\OpenAIProviderFactory
+
+    # ContentEditorAgent with provider factory injection
+    App\LlmContentEditor\Domain\Agent\ContentEditorAgent:
+        arguments:
+            $providerFactory: '@App\LlmContentEditor\Infrastructure\Provider\AIProviderFactoryInterface'
+
+when@test:
+    services:
+        # Use FakeAIProviderFactory in test environment
+        App\LlmContentEditor\Infrastructure\Provider\AIProviderFactoryInterface:
+            class: App\LlmContentEditor\Infrastructure\Provider\FakeAIProviderFactory

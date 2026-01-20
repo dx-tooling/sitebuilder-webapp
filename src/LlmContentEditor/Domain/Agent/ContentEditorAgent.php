@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\LlmContentEditor\Domain\Agent;
 
+use App\LlmContentEditor\Infrastructure\Provider\AIProviderFactoryInterface;
 use App\WorkspaceTooling\Facade\WorkspaceToolingServiceInterface;
 use EtfsCodingAgent\Agent\BaseCodingAgent;
 use NeuronAI\Providers\AIProviderInterface;
@@ -15,15 +16,21 @@ use NeuronAI\Tools\ToolProperty;
 class ContentEditorAgent extends BaseCodingAgent
 {
     public function __construct(
-        private readonly WorkspaceToolingServiceInterface $sitebuilderFacade
+        private readonly WorkspaceToolingServiceInterface $sitebuilderFacade,
+        private readonly ?AIProviderFactoryInterface      $providerFactory = null
     ) {
         parent::__construct($sitebuilderFacade);
     }
 
     protected function provider(): AIProviderInterface
     {
+        if ($this->providerFactory !== null) {
+            return $this->providerFactory->createProvider();
+        }
+
+        // Fallback for backward compatibility
         /** @var string $apiKey */
-        $apiKey = $_ENV['LLM_CONTENT_EDITOR_OPENAI_API_KEY'];
+        $apiKey = $_ENV['LLM_CONTENT_EDITOR_OPENAI_API_KEY'] ?? '';
 
         return new OpenAI(
             $apiKey,

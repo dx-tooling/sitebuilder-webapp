@@ -6,6 +6,7 @@ namespace App\LlmContentEditor\Domain\Command;
 
 use App\LlmContentEditor\Domain\Agent\ContentEditorAgent;
 use App\LlmContentEditor\Infrastructure\Observer\ConsoleObserver;
+use App\LlmContentEditor\Infrastructure\Provider\AIProviderFactoryInterface;
 use App\WorkspaceTooling\Facade\WorkspaceToolingServiceInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use EnterpriseToolingForSymfony\SharedBundle\Commandline\Command\EnhancedCommand;
@@ -33,7 +34,8 @@ final class EditContentCommand extends EnhancedCommand
         LoggerInterface                          $logger,
         LockService                              $lockService,
         ParameterBagInterface                    $parameterBag,
-        private WorkspaceToolingServiceInterface $fileEditingFacade
+        private WorkspaceToolingServiceInterface $fileEditingFacade,
+        private AIProviderFactoryInterface       $providerFactory
     ) {
         parent::__construct(
             $rolloutService,
@@ -79,7 +81,7 @@ final class EditContentCommand extends EnhancedCommand
         $output->writeln("<info>Instruction:</info> {$instruction}");
         $output->writeln('');
 
-        $agent    = new ContentEditorAgent($this->fileEditingFacade);
+        $agent    = new ContentEditorAgent($this->fileEditingFacade, $this->providerFactory);
         $observer = new ConsoleObserver($output);
         $agent->attach($observer);
 

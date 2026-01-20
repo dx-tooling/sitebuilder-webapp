@@ -11,6 +11,7 @@ use App\LlmContentEditor\Infrastructure\AgentEventQueue;
 use App\LlmContentEditor\Infrastructure\ChatHistory\CallbackChatHistory;
 use App\LlmContentEditor\Infrastructure\ChatHistory\MessageSerializer;
 use App\LlmContentEditor\Infrastructure\Observer\AgentEventCollectingObserver;
+use App\LlmContentEditor\Infrastructure\Provider\AIProviderFactoryInterface;
 use App\WorkspaceTooling\Facade\WorkspaceToolingServiceInterface;
 use Generator;
 use NeuronAI\Chat\Messages\AssistantMessage;
@@ -28,7 +29,8 @@ final class LlmContentEditorFacade implements LlmContentEditorFacadeInterface
     private readonly MessageSerializer $messageSerializer;
 
     public function __construct(
-        private readonly WorkspaceToolingServiceInterface $workspaceTooling
+        private readonly WorkspaceToolingServiceInterface $workspaceTooling,
+        private readonly AIProviderFactoryInterface       $providerFactory
     ) {
         $this->messageSerializer = new MessageSerializer();
     }
@@ -110,7 +112,7 @@ final class LlmContentEditorFacade implements LlmContentEditorFacadeInterface
             }
         });
 
-        $agent = new ContentEditorAgent($this->workspaceTooling);
+        $agent = new ContentEditorAgent($this->workspaceTooling, $this->providerFactory);
         $agent->withChatHistory($chatHistory);
 
         $queue = new AgentEventQueue();
