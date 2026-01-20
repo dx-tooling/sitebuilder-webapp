@@ -1,7 +1,7 @@
 {
     "type": "project",
     "license": "proprietary",
-    "minimum-stability": "beta",
+    "minimum-stability": "dev",
     "prefer-stable": true,
     "require": {
         "php-64bit": "^8.4",
@@ -14,7 +14,6 @@
         "doctrine/orm": "^3.5.7",
         "enterprise-tooling-for-symfony/coding-agent": "dev-main",
         "enterprise-tooling-for-symfony/shared-bundle": "dev-main",
-        "enterprise-tooling-for-symfony/v4a-fileedit": "dev-main",
         "enterprise-tooling-for-symfony/webui-bundle": "dev-main",
         "googleads/google-ads-php": "^25.0",
         "neuron-core/neuron-ai": "^2.11",

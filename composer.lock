@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "75d144376576dff7773a4b92b49d9bf7",
+    "content-hash": "945fdcc9c259efcf2ade0851427969de",
     "packages": [
         {
             "name": "aws/aws-crt-php",
@@ -1778,12 +1778,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/dx-tooling/etfs-coding-agent.git",
-                "reference": "2c42db2e79abc87014e1d6fff5c18cf522ead48c"
+                "reference": "72d979d14962e111a13c835ec4ffb9e01439e274"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/dx-tooling/etfs-coding-agent/zipball/2c42db2e79abc87014e1d6fff5c18cf522ead48c",
-                "reference": "2c42db2e79abc87014e1d6fff5c18cf522ead48c",
+                "url": "https://api.github.com/repos/dx-tooling/etfs-coding-agent/zipball/72d979d14962e111a13c835ec4ffb9e01439e274",
+                "reference": "72d979d14962e111a13c835ec4ffb9e01439e274",
                 "shasum": ""
             },
             "require": {
@@ -1822,7 +1822,7 @@
                 "source": "https://github.com/dx-tooling/etfs-coding-agent/tree/main",
                 "issues": "https://github.com/dx-tooling/etfs-coding-agent/issues"
             },
-            "time": "2026-01-20T06:49:20+00:00"
+            "time": "2026-01-20T07:11:49+00:00"
         },
         {
             "name": "enterprise-tooling-for-symfony/shared-bundle",
@@ -1918,12 +1918,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/dx-tooling/etfs-v4a-fileedit.git",
-                "reference": "4194e9cd9add6b86e9c69903bfea7aa0da2c9920"
+                "reference": "e179c133469e4424f48ae9a2aeefab0a4c7478a8"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/dx-tooling/etfs-v4a-fileedit/zipball/4194e9cd9add6b86e9c69903bfea7aa0da2c9920",
-                "reference": "4194e9cd9add6b86e9c69903bfea7aa0da2c9920",
+                "url": "https://api.github.com/repos/dx-tooling/etfs-v4a-fileedit/zipball/e179c133469e4424f48ae9a2aeefab0a4c7478a8",
+                "reference": "e179c133469e4424f48ae9a2aeefab0a4c7478a8",
                 "shasum": ""
             },
             "require": {
@@ -1959,7 +1959,7 @@
                 "source": "https://github.com/dx-tooling/etfs-v4a-fileedit/tree/main",
                 "issues": "https://github.com/dx-tooling/etfs-v4a-fileedit/issues"
             },
-            "time": "2026-01-19T17:31:12+00:00"
+            "time": "2026-01-20T07:11:49+00:00"
         },
         {
             "name": "enterprise-tooling-for-symfony/webui-bundle",
@@ -15104,11 +15104,10 @@
     ],
     "packages-dev": [],
     "aliases": [],
-    "minimum-stability": "beta",
+    "minimum-stability": "dev",
     "stability-flags": {
         "enterprise-tooling-for-symfony/coding-agent": 20,
         "enterprise-tooling-for-symfony/shared-bundle": 20,
-        "enterprise-tooling-for-symfony/v4a-fileedit": 20,
         "enterprise-tooling-for-symfony/webui-bundle": 20
     },
     "prefer-stable": true,
