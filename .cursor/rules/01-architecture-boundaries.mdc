@@ -1,3 +1,9 @@
+---
+description: "Vertical slices (src/FeatureName/), facades for cross-vertical communication, and layer boundaries. Use when adding features or touching src/ structure."
+globs: ["src/**/*.php", "tests/Architecture/**/*.php"]
+alwaysApply: false
+---
+
 # Architecture and Vertical Boundaries
 
 **Reference**: See `docs/archbook.md` for complete architecture documentation.

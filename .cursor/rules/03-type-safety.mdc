@@ -1,3 +1,9 @@
+---
+description: "PHPStan level 10, list<T> for arrays across boundaries, no mixed. Use when fixing types or PHPStan errors."
+globs: ["src/**/*.php", "tests/**/*.php"]
+alwaysApply: false
+---
+
 # Type Safety and PHPStan
 
 **Reference**: See `phpstan.dist.neon` for PHPStan configuration (level 10).

@@ -27,6 +27,12 @@ doctrine:
                 dir: "%kernel.project_dir%/src/Account/Domain/Entity"
                 prefix: 'App\Account\Domain\Entity'
 
+            App\ChatBasedContentEditor\Domain\Entity:
+                type: attribute
+                is_bundle: false
+                dir: "%kernel.project_dir%/src/ChatBasedContentEditor/Domain/Entity"
+                prefix: 'App\ChatBasedContentEditor\Domain\Entity'
+
         controller_resolver:
             auto_mapping: false
 

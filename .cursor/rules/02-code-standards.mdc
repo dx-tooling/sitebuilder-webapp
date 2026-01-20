@@ -1,3 +1,9 @@
+---
+description: "PHP standards: strict typing, PHP 8.4, PHP CS Fixer, SOLID, naming. Use when writing or modifying PHP."
+globs: []
+alwaysApply: true
+---
+
 # Code Standards
 
 **Reference**: See `.cursorrules` and `.php-cs-fixer.dist.php` for complete standards.

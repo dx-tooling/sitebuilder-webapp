@@ -1,3 +1,7 @@
+---
+alwaysApply: false
+---
+
 # DTO Patterns
 
 **Reference**: See `docs/archbook.md` section on "DTO-first data flow".
