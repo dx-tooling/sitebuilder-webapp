@@ -1,6 +1,12 @@
+---
+description: "TypeScript over JS, Stimulus controllers, assets, Tailwind, mise quality for frontend. Use when editing TS/JS/CSS or Twig."
+globs: ["assets/**/*.ts", "assets/**/*.js", "assets/**/*.css", "src/**/Resources/**/*.twig", "tailwind.config.js", "tsconfig.json"]
+alwaysApply: false
+---
+
 # Frontend Development
 
-**Reference**: See `docs/archbook.md` section on "Client-Side Organization" and `.cursorrules` for TypeScript preferences.
+**Reference**: See `docs/archbook.md` section on "Client-Side Organization", `docs/frontendbook.md` for Stimulus (build, integration, controller structure).
 
 ## TypeScript Over JavaScript
 

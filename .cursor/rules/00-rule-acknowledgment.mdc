@@ -1,3 +1,7 @@
+---
+alwaysApply: true
+---
+
 # Rule Acknowledgment
 
 **CRITICAL**: Before starting any task, you MUST explicitly acknowledge which rules from this `.cursor/rules/` folder apply to the current work.

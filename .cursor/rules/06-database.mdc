@@ -1,3 +1,9 @@
+---
+description: "Doctrine entities, migrations (make:migration only), DateAndTimeService, mb_* strings. Use when editing entities or migrations."
+globs: ["src/**/Entity/*.php", "src/**/Domain/**/*.php", "migrations/*.php", "config/packages/doctrine*.yaml"]
+alwaysApply: false
+---
+
 # Database Access Patterns
 
 **Reference**: See `docs/archbook.md` section on "Database access in Domain" and `docs/devbook.md` for migration workflow.
