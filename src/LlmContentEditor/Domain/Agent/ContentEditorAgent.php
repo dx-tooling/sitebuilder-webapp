@@ -105,7 +105,7 @@ class ContentEditorAgent extends BaseCodingAgent
     }
 
     /**
-     * @phpstan-ignore noAssociativeArraysAcrossBoundaries.return
+     * @return list<\NeuronAI\Tools\ToolInterface>
      */
     protected function tools(): array
     {
