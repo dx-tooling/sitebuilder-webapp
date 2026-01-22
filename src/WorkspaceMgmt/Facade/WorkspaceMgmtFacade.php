@@ -8,13 +8,14 @@ use App\ProjectMgmt\Facade\ProjectMgmtFacadeInterface;
 use App\WorkspaceMgmt\Domain\Entity\Workspace;
 use App\WorkspaceMgmt\Domain\Service\WorkspaceGitService;
 use App\WorkspaceMgmt\Domain\Service\WorkspaceService;
-use App\WorkspaceMgmt\Domain\Service\WorkspaceSetupService;
 use App\WorkspaceMgmt\Domain\Service\WorkspaceStatusGuard;
 use App\WorkspaceMgmt\Facade\Dto\WorkspaceInfoDto;
 use App\WorkspaceMgmt\Facade\Enum\WorkspaceStatus;
+use App\WorkspaceMgmt\Infrastructure\Message\SetupWorkspaceMessage;
 use Doctrine\ORM\EntityManagerInterface;
 use RuntimeException;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
+use Symfony\Component\Messenger\MessageBusInterface;
 use Throwable;
 
 /**
@@ -27,11 +28,11 @@ final class WorkspaceMgmtFacade implements WorkspaceMgmtFacadeInterface
         #[Autowire(param: 'workspace_mgmt.workspace_root')]
         private readonly string                     $workspaceRoot,
         private readonly WorkspaceService           $workspaceService,
-        private readonly WorkspaceSetupService      $setupService,
         private readonly WorkspaceGitService        $gitService,
         private readonly WorkspaceStatusGuard       $statusGuard,
         private readonly ProjectMgmtFacadeInterface $projectMgmtFacade,
         private readonly EntityManagerInterface     $entityManager,
+        private readonly MessageBusInterface        $messageBus,
     ) {
     }
 
@@ -57,9 +58,9 @@ final class WorkspaceMgmtFacade implements WorkspaceMgmtFacadeInterface
         return $this->toDto($workspace);
     }
 
-    public function ensureWorkspaceReadyForConversation(string $projectId): WorkspaceInfoDto
+    public function dispatchSetupIfNeeded(string $projectId): WorkspaceInfoDto
     {
-        // Use pessimistic locking to prevent race conditions
+        // Use transaction to prevent race conditions when creating workspace
         $this->entityManager->beginTransaction();
 
         try {
@@ -70,22 +71,22 @@ final class WorkspaceMgmtFacade implements WorkspaceMgmtFacadeInterface
                 $workspace = $this->workspaceService->create($projectId);
             }
 
-            $status = $workspace->getStatus();
-
-            // If needs setup, run setup
-            if ($this->statusGuard->needsSetup($status)) {
-                $this->setupService->setup($workspace);
+            $workspaceId = $workspace->getId();
+            if ($workspaceId === null) {
+                throw new RuntimeException('Workspace ID cannot be null');
             }
 
-            // Verify workspace is now available for conversation
-            $currentStatus = $workspace->getStatus();
-            if ($currentStatus !== WorkspaceStatus::AVAILABLE_FOR_CONVERSATION) {
-                throw new RuntimeException(
-                    sprintf(
-                        'Workspace is not available for conversation. Current status: %s',
-                        $currentStatus->name
-                    )
-                );
+            $status = $workspace->getStatus();
+
+            // If workspace needs setup and is not already in setup, start async setup
+            if ($this->statusGuard->needsSetup($status)) {
+                // Transition to IN_SETUP to prevent duplicate setup attempts
+                $this->statusGuard->validateTransition($status, WorkspaceStatus::IN_SETUP);
+                $workspace->setStatus(WorkspaceStatus::IN_SETUP);
+                $this->entityManager->flush();
+
+                // Dispatch async setup message
+                $this->messageBus->dispatch(new SetupWorkspaceMessage($workspaceId));
             }
 
             $this->entityManager->commit();

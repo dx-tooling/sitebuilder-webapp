@@ -4,10 +4,12 @@ import { startStimulusApp } from "@symfony/stimulus-bundle";
 import { webuiBootstrap } from "@enterprise-tooling-for-symfony/webui";
 import ChatBasedContentEditorController from "../src/ChatBasedContentEditor/Presentation/Resources/assets/controllers/chat_based_content_editor_controller.ts";
 import DistFilesController from "../src/ChatBasedContentEditor/Presentation/Resources/assets/controllers/dist_files_controller.ts";
+import WorkspaceSetupController from "../src/ChatBasedContentEditor/Presentation/Resources/assets/controllers/workspace_setup_controller.ts";
 
 const app = startStimulusApp();
 
 app.register("chat-based-content-editor", ChatBasedContentEditorController);
 app.register("dist-files", DistFilesController);
+app.register("workspace-setup", WorkspaceSetupController);
 
 webuiBootstrap(app);

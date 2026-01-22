@@ -47,7 +47,10 @@ final class WorkspaceSetupService
 
     /**
      * Set up a workspace for a conversation.
-     * This transitions the workspace from AVAILABLE_FOR_SETUP/MERGED to AVAILABLE_FOR_CONVERSATION.
+     * This transitions the workspace from AVAILABLE_FOR_SETUP/MERGED/IN_SETUP to AVAILABLE_FOR_CONVERSATION.
+     *
+     * Can be called when workspace is already IN_SETUP (async flow where facade
+     * already transitioned the status before dispatching the setup message).
      */
     public function setup(Workspace $workspace): void
     {
@@ -58,17 +61,20 @@ final class WorkspaceSetupService
 
         $currentStatus = $workspace->getStatus();
 
-        // Validate we can start setup
-        if (!$this->statusGuard->needsSetup($currentStatus)) {
-            throw new Exception(
-                sprintf('Cannot set up workspace in status %s', $currentStatus->name)
-            );
-        }
+        // If already IN_SETUP (async flow), proceed directly to setup
+        // Otherwise validate we can start setup and transition to IN_SETUP
+        if ($currentStatus !== WorkspaceStatus::IN_SETUP) {
+            if (!$this->statusGuard->needsSetup($currentStatus)) {
+                throw new Exception(
+                    sprintf('Cannot set up workspace in status %s', $currentStatus->name)
+                );
+            }
 
-        // Transition to IN_SETUP
-        $this->statusGuard->validateTransition($currentStatus, WorkspaceStatus::IN_SETUP);
-        $workspace->setStatus(WorkspaceStatus::IN_SETUP);
-        $this->entityManager->flush();
+            // Transition to IN_SETUP
+            $this->statusGuard->validateTransition($currentStatus, WorkspaceStatus::IN_SETUP);
+            $workspace->setStatus(WorkspaceStatus::IN_SETUP);
+            $this->entityManager->flush();
+        }
 
         try {
             $this->performSetup($workspace);

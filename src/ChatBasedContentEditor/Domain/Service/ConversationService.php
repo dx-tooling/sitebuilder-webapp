@@ -27,23 +27,24 @@ final class ConversationService
 
     /**
      * Start a new conversation or return existing ongoing one.
+     * Assumes workspace is already set up (AVAILABLE_FOR_CONVERSATION status).
+     * The controller handles async setup before calling this method.
      */
     public function startOrResumeConversation(string $projectId, string $userId): ConversationInfoDto
     {
-        // First check if user already has an ongoing conversation for this project
-        // This handles the case where user navigated away and came back
-        $existingWorkspace = $this->workspaceMgmtFacade->getWorkspaceForProject($projectId);
+        // Get workspace - it must exist and be ready at this point
+        $workspaceInfo = $this->workspaceMgmtFacade->getWorkspaceForProject($projectId);
 
-        if ($existingWorkspace !== null) {
-            $existingConversation = $this->findOngoingConversation($existingWorkspace->id, $userId);
-
-            if ($existingConversation !== null) {
-                return $this->toDto($existingConversation);
-            }
+        if ($workspaceInfo === null) {
+            throw new RuntimeException('Workspace not found for project: ' . $projectId);
         }
 
-        // No existing conversation - ensure workspace is ready for a new one
-        $workspaceInfo = $this->workspaceMgmtFacade->ensureWorkspaceReadyForConversation($projectId);
+        // Check if user already has an ongoing conversation
+        $existingConversation = $this->findOngoingConversation($workspaceInfo->id, $userId);
+
+        if ($existingConversation !== null) {
+            return $this->toDto($existingConversation);
+        }
 
         // Transition workspace to IN_CONVERSATION
         $this->workspaceMgmtFacade->transitionToInConversation($workspaceInfo->id);

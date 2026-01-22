@@ -189,7 +189,7 @@ final class ConversationServiceTest extends TestCase
     {
         // Scenario: User navigated away from a conversation and came back.
         // The workspace is still IN_CONVERSATION and user has an ongoing conversation.
-        // The service should return the existing conversation without calling ensureWorkspaceReadyForConversation.
+        // The service should return the existing conversation without creating a new one.
 
         $existingConversation = $this->createConversation(
             'existing-conv-id',
@@ -231,9 +231,9 @@ final class ConversationServiceTest extends TestCase
             ->with('project-1')
             ->willReturn($workspaceInfo);
 
-        // This is the key assertion: ensureWorkspaceReadyForConversation should NOT be called
+        // Key assertion: transitionToInConversation should NOT be called
         // because we found an existing conversation for this user
-        $workspaceFacade->expects($this->never())->method('ensureWorkspaceReadyForConversation');
+        $workspaceFacade->expects($this->never())->method('transitionToInConversation');
 
         $accountFacade = $this->createMock(AccountFacadeInterface::class);
 

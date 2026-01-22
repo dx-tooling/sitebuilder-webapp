@@ -23,11 +23,13 @@ interface WorkspaceMgmtFacadeInterface
     public function getWorkspaceForProject(string $projectId): ?WorkspaceInfoDto;
 
     /**
-     * Ensure a workspace exists and is ready for a conversation.
-     * Creates workspace if missing, runs setup if needed.
-     * This is the main entry point for ChatBasedContentEditor.
+     * Ensure a workspace exists and dispatch async setup if needed.
+     * Returns immediately with workspace info. Check workspace status
+     * to determine if setup is in progress.
+     *
+     * @return WorkspaceInfoDto workspace info (status may be IN_SETUP if setup was dispatched)
      */
-    public function ensureWorkspaceReadyForConversation(string $projectId): WorkspaceInfoDto;
+    public function dispatchSetupIfNeeded(string $projectId): WorkspaceInfoDto;
 
     /**
      * Transition workspace to IN_CONVERSATION status.

@@ -77,6 +77,7 @@ final class ChatBasedContentEditorController extends AbstractController
         #[CurrentUser] UserInterface $user
     ): Response {
         $accountInfo = $this->getAccountInfo($user);
+        $project     = $this->projectMgmtFacade->getProjectInfo($projectId);
 
         // Check workspace status before starting
         $workspace = $this->workspaceMgmtFacade->getWorkspaceForProject($projectId);
@@ -92,7 +93,17 @@ final class ChatBasedContentEditorController extends AbstractController
             if ($workspace->status === WorkspaceStatus::PROBLEM) {
                 return $this->render('@chat_based_content_editor.presentation/workspace_problem.twig', [
                     'workspace' => $workspace,
-                    'project'   => $this->projectMgmtFacade->getProjectInfo($projectId),
+                    'project'   => $project,
+                ]);
+            }
+
+            // If workspace is setting up, show the setup waiting page
+            if ($workspace->status === WorkspaceStatus::IN_SETUP) {
+                return $this->render('@chat_based_content_editor.presentation/workspace_setup.twig', [
+                    'workspace'   => $workspace,
+                    'project'     => $project,
+                    'pollUrl'     => $this->generateUrl('chat_based_content_editor.presentation.poll_workspace_status', ['workspaceId' => $workspace->id]),
+                    'redirectUrl' => $this->generateUrl('chat_based_content_editor.presentation.start', ['projectId' => $projectId]),
                 ]);
             }
 
@@ -112,6 +123,20 @@ final class ChatBasedContentEditorController extends AbstractController
         }
 
         try {
+            // Dispatch async setup if needed - this will start setup in background
+            $workspace = $this->workspaceMgmtFacade->dispatchSetupIfNeeded($projectId);
+
+            // If setup was dispatched (workspace is now IN_SETUP), show waiting page
+            if ($workspace->status === WorkspaceStatus::IN_SETUP) {
+                return $this->render('@chat_based_content_editor.presentation/workspace_setup.twig', [
+                    'workspace'   => $workspace,
+                    'project'     => $project,
+                    'pollUrl'     => $this->generateUrl('chat_based_content_editor.presentation.poll_workspace_status', ['workspaceId' => $workspace->id]),
+                    'redirectUrl' => $this->generateUrl('chat_based_content_editor.presentation.start', ['projectId' => $projectId]),
+                ]);
+            }
+
+            // Workspace is ready - start or resume conversation
             $conversationInfo = $this->conversationService->startOrResumeConversation($projectId, $accountInfo->id);
 
             return $this->redirectToRoute('chat_based_content_editor.presentation.show', [
@@ -122,6 +147,27 @@ final class ChatBasedContentEditorController extends AbstractController
 
             return $this->redirectToRoute('project_mgmt.presentation.list');
         }
+    }
+
+    #[Route(
+        path: '/workspace/{workspaceId}/status',
+        name: 'chat_based_content_editor.presentation.poll_workspace_status',
+        methods: [Request::METHOD_GET],
+        requirements: ['workspaceId' => '[a-f0-9-]{36}']
+    )]
+    public function pollWorkspaceStatus(string $workspaceId): Response
+    {
+        $workspace = $this->workspaceMgmtFacade->getWorkspaceById($workspaceId);
+
+        if ($workspace === null) {
+            return $this->json(['error' => 'Workspace not found.'], Response::HTTP_NOT_FOUND);
+        }
+
+        return $this->json([
+            'status' => $workspace->status->name,
+            'ready'  => $workspace->status === WorkspaceStatus::AVAILABLE_FOR_CONVERSATION,
+            'error'  => $workspace->status === WorkspaceStatus::PROBLEM,
+        ]);
     }
 
     #[Route(
