@@ -97,3 +97,68 @@ No branch or workspace cleanup is required. The next conversation attempt will r
 | IN_REVIEW | Reviewer sets merged | MERGED | Review completed and merged |
 | IN_REVIEW | Reviewer unlocks | AVAILABLE_FOR_CONVERSATION | Continue work without new setup |
 | PROBLEM | Reset by user | AVAILABLE_FOR_SETUP | Re-run setup |
+
+## Implementation plan
+
+This plan reflects the current facade skeletons in `WorkspaceMgmt`, `ProjectMgmt`, and `ChatBasedContentEditor`, plus the existing conversation/edit-session flow in `ChatBasedContentEditor` and the tooling/LLM integration in `LlmContentEditor`/`WorkspaceTooling`.
+
+1. **Align data model with the workflow**
+   - Add `PROBLEM` to `WorkspaceStatus`.
+   - Introduce `Project` and `Workspace` entities in their verticals:
+     - `Project`: `id`, `name`, `gitUrl`, `githubToken`.
+     - `Workspace`: `id`, `projectId`, `status`, `branchName`, `workspacePath`, timestamps.
+   - Extend `ChatBasedContentEditor\Domain\Entity\Conversation` to reference `workspaceId` and `userId`, and persist a conversation status (`ONGOING`/`FINISHED`) instead of only keeping sessions.
+   - Add Doctrine migrations for new tables/columns and required indexes (workspace status, conversation workspace+user, etc.).
+
+2. **Update facade DTOs and interfaces (domain-centric)**
+   - `WorkspaceInfoDto` should expose `id`, `projectId`, `status`, and `branchName` (and `workspacePath` only if needed in other verticals).
+   - Add `ConversationInfoDto` in `ChatBasedContentEditor\Facade\Dto` with `id`, `workspaceId`, `userId`, `status`.
+   - `WorkspaceMgmtFacadeInterface` should expose:
+     - `getCurrentWorkspace(string $projectId): ?WorkspaceInfoDto`
+     - `isConversationPossible(string $workspaceId): bool`
+     - `resetWorkspaceToAvailableForSetup(string $workspaceId): bool`
+   - `ChatBasedContentEditorFacadeInterface` should expose:
+     - `startConversation(string $workspaceId, string $userId): ConversationInfoDto`
+     - `finishConversation(string $conversationId): void` (forces final commit + push)
+     - `sendToReview(string $conversationId): void`
+     - `getOpenConversationForUser(string $workspaceId, string $userId): ?ConversationInfoDto`
+
+3. **Workspace management services**
+   - Add a `WorkspaceSetupService` in `WorkspaceMgmt\Domain\Service` that performs setup and transitions `AVAILABLE_FOR_SETUP|MERGED -> IN_SETUP -> AVAILABLE_FOR_CONVERSATION` or `PROBLEM`.
+   - Add a `WorkspaceStatusGuard` to enforce the transition table (used by all façade methods).
+   - Provide a `WorkspaceConversationGuard` to ensure single active conversation per workspace.
+
+4. **Infrastructure services for “dirty work”**
+   - Create three `WorkspaceMgmt\Infrastructure` services with plain PHP and direct process execution (no agent involvement):
+     - **LocalFilesystemService**: remove/create workspace folder; filesystem ops; execute shell commands inside the workspace root.
+     - **GitWorkspaceService**: clone, checkout, create branch, status, commit, push (via git CLI or a PHP git library).
+     - **GitHubService**: find or create PRs using project `githubToken` (via GitHub API).
+   - Wire these into `WorkspaceSetupService` and conversation completion hooks.
+
+5. **Controller + facade integration**
+   - Replace the direct `EntityManager` usage in `ChatBasedContentEditorController` with the new facades.
+   - Conversation start:
+     - Fetch or create workspace for project.
+     - If status is `AVAILABLE_FOR_SETUP` or `MERGED`, trigger setup.
+     - If `AVAILABLE_FOR_CONVERSATION`, create a new conversation and set `IN_CONVERSATION`.
+     - If `IN_CONVERSATION`, resume the existing ongoing conversation for the same user.
+     - If `IN_REVIEW` or `PROBLEM`, deny start and surface a user message (and allow reset for `PROBLEM`).
+   - Add endpoints/actions to finish conversation and send to review.
+
+6. **Git operations + status updates**
+   - In `RunEditSessionHandler`, after a successful edit session, use `GitWorkspaceService` to check for changes and commit/push; on failure, set workspace to `PROBLEM` and finish the conversation.
+   - On `finishConversation`, force a final commit/push even if there was no recent edit session.
+   - On `sendToReview`, ensure a PR exists (GitHub service) and move workspace to `IN_REVIEW`.
+
+7. **Config + paths**
+   - The current `chat_based_content_editor.workspace_root` parameter should move to `WorkspaceMgmt` as the workspace root setting used by setup and tooling services.
+   - `Conversation` should derive workspace path from its `Workspace` relation rather than storing a path as a standalone string.
+
+8. **Concurrency, security, and roles**
+   - Use DB transactions or locks to enforce “single active conversation per workspace”.
+   - Ensure only the conversation owner can finish or send to review.
+   - Allow any authenticated user to reset a `PROBLEM` workspace to `AVAILABLE_FOR_SETUP` (per requirement).
+
+9. **Tests**
+   - Unit tests for state transitions and guards (`PROBLEM`, reset, review exits).
+   - Integration tests for conversation start/finish/review and setup success/failure paths.
