@@ -9,6 +9,7 @@ use App\Account\Facade\Dto\AccountInfoDto;
 use App\ChatBasedContentEditor\Domain\Entity\Conversation;
 use App\ChatBasedContentEditor\Domain\Enum\ConversationStatus;
 use App\ChatBasedContentEditor\Domain\Service\ConversationService;
+use App\ChatBasedContentEditor\Infrastructure\Service\ConversationUrlServiceInterface;
 use App\WorkspaceMgmt\Facade\WorkspaceMgmtFacadeInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use EnterpriseToolingForSymfony\SharedBundle\DateAndTime\Service\DateAndTimeService;
@@ -28,6 +29,15 @@ final class ConversationServiceTest extends TestCase
         return $accountFacade;
     }
 
+    private function createConversationUrlService(): ConversationUrlServiceInterface
+    {
+        $urlService = $this->createMock(ConversationUrlServiceInterface::class);
+        $urlService->method('getConversationUrl')
+            ->willReturnCallback(static fn (string $id): string => 'https://sitebuilder.example.com/conversation/' . $id);
+
+        return $urlService;
+    }
+
     public function testFinishConversationThrowsWhenConversationNotFound(): void
     {
         $entityManager = $this->createMock(EntityManagerInterface::class);
@@ -35,8 +45,9 @@ final class ConversationServiceTest extends TestCase
 
         $workspaceFacade = $this->createMock(WorkspaceMgmtFacadeInterface::class);
         $accountFacade   = $this->createMock(AccountFacadeInterface::class);
+        $urlService      = $this->createConversationUrlService();
 
-        $service = new ConversationService($entityManager, $workspaceFacade, $accountFacade);
+        $service = new ConversationService($entityManager, $workspaceFacade, $accountFacade, $urlService);
 
         $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('Conversation not found');
@@ -53,8 +64,9 @@ final class ConversationServiceTest extends TestCase
 
         $workspaceFacade = $this->createMock(WorkspaceMgmtFacadeInterface::class);
         $accountFacade   = $this->createMock(AccountFacadeInterface::class);
+        $urlService      = $this->createConversationUrlService();
 
-        $service = new ConversationService($entityManager, $workspaceFacade, $accountFacade);
+        $service = new ConversationService($entityManager, $workspaceFacade, $accountFacade, $urlService);
 
         $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('Only the conversation owner can perform this action');
@@ -71,8 +83,9 @@ final class ConversationServiceTest extends TestCase
 
         $workspaceFacade = $this->createMock(WorkspaceMgmtFacadeInterface::class);
         $accountFacade   = $this->createMock(AccountFacadeInterface::class);
+        $urlService      = $this->createConversationUrlService();
 
-        $service = new ConversationService($entityManager, $workspaceFacade, $accountFacade);
+        $service = new ConversationService($entityManager, $workspaceFacade, $accountFacade, $urlService);
 
         $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('Conversation is not ongoing');
@@ -91,14 +104,15 @@ final class ConversationServiceTest extends TestCase
         $workspaceFacade = $this->createMock(WorkspaceMgmtFacadeInterface::class);
         $workspaceFacade->expects($this->once())
             ->method('commitAndPush')
-            ->with('workspace-1', 'Auto-commit on conversation finish', 'user@example.com');
+            ->with('workspace-1', 'Auto-commit on conversation finish', 'user@example.com', 'conv-1', 'https://sitebuilder.example.com/conversation/conv-1');
         $workspaceFacade->expects($this->once())
             ->method('transitionToAvailableForConversation')
             ->with('workspace-1');
 
         $accountFacade = $this->createAccountFacade('user-123', 'user@example.com');
+        $urlService    = $this->createConversationUrlService();
 
-        $service = new ConversationService($entityManager, $workspaceFacade, $accountFacade);
+        $service = new ConversationService($entityManager, $workspaceFacade, $accountFacade, $urlService);
         $service->finishConversation('conv-1', 'user-123');
 
         self::assertSame(ConversationStatus::FINISHED, $conversation->getStatus());
@@ -111,8 +125,9 @@ final class ConversationServiceTest extends TestCase
 
         $workspaceFacade = $this->createMock(WorkspaceMgmtFacadeInterface::class);
         $accountFacade   = $this->createMock(AccountFacadeInterface::class);
+        $urlService      = $this->createConversationUrlService();
 
-        $service = new ConversationService($entityManager, $workspaceFacade, $accountFacade);
+        $service = new ConversationService($entityManager, $workspaceFacade, $accountFacade, $urlService);
 
         $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('Conversation not found');
@@ -129,8 +144,9 @@ final class ConversationServiceTest extends TestCase
 
         $workspaceFacade = $this->createMock(WorkspaceMgmtFacadeInterface::class);
         $accountFacade   = $this->createMock(AccountFacadeInterface::class);
+        $urlService      = $this->createConversationUrlService();
 
-        $service = new ConversationService($entityManager, $workspaceFacade, $accountFacade);
+        $service = new ConversationService($entityManager, $workspaceFacade, $accountFacade, $urlService);
 
         $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('Only the conversation owner can perform this action');
@@ -147,8 +163,9 @@ final class ConversationServiceTest extends TestCase
 
         $workspaceFacade = $this->createMock(WorkspaceMgmtFacadeInterface::class);
         $accountFacade   = $this->createMock(AccountFacadeInterface::class);
+        $urlService      = $this->createConversationUrlService();
 
-        $service = new ConversationService($entityManager, $workspaceFacade, $accountFacade);
+        $service = new ConversationService($entityManager, $workspaceFacade, $accountFacade, $urlService);
 
         $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('Conversation is not ongoing');
@@ -167,18 +184,19 @@ final class ConversationServiceTest extends TestCase
         $workspaceFacade = $this->createMock(WorkspaceMgmtFacadeInterface::class);
         $workspaceFacade->expects($this->once())
             ->method('commitAndPush')
-            ->with('workspace-1', 'Auto-commit before review', 'user@example.com');
+            ->with('workspace-1', 'Auto-commit before review', 'user@example.com', 'conv-1', 'https://sitebuilder.example.com/conversation/conv-1');
         $workspaceFacade->expects($this->once())
             ->method('transitionToInReview')
             ->with('workspace-1');
         $workspaceFacade->expects($this->once())
             ->method('ensurePullRequest')
-            ->with('workspace-1')
+            ->with('workspace-1', 'conv-1', 'https://sitebuilder.example.com/conversation/conv-1', 'user@example.com')
             ->willReturn('https://github.com/org/repo/pull/123');
 
         $accountFacade = $this->createAccountFacade('user-123', 'user@example.com');
+        $urlService    = $this->createConversationUrlService();
 
-        $service = new ConversationService($entityManager, $workspaceFacade, $accountFacade);
+        $service = new ConversationService($entityManager, $workspaceFacade, $accountFacade, $urlService);
         $prUrl   = $service->sendToReview('conv-1', 'user-123');
 
         self::assertSame(ConversationStatus::FINISHED, $conversation->getStatus());
@@ -204,7 +222,9 @@ final class ConversationServiceTest extends TestCase
             'Test Project',
             \App\WorkspaceMgmt\Facade\Enum\WorkspaceStatus::IN_CONVERSATION,
             'feature-branch',
-            '/path/to/workspace'
+            '/path/to/workspace',
+            'https://github.com/org/repo/tree/feature-branch',
+            null
         );
 
         // Mock QueryBuilder chain for findOngoingConversation
@@ -236,8 +256,9 @@ final class ConversationServiceTest extends TestCase
         $workspaceFacade->expects($this->never())->method('transitionToInConversation');
 
         $accountFacade = $this->createMock(AccountFacadeInterface::class);
+        $urlService    = $this->createConversationUrlService();
 
-        $service = new ConversationService($entityManager, $workspaceFacade, $accountFacade);
+        $service = new ConversationService($entityManager, $workspaceFacade, $accountFacade, $urlService);
         $result  = $service->startOrResumeConversation('project-1', 'user-123');
 
         self::assertSame('existing-conv-id', $result->id);

@@ -12,6 +12,7 @@ use App\WorkspaceMgmt\Domain\Service\WorkspaceStatusGuard;
 use App\WorkspaceMgmt\Facade\Dto\WorkspaceInfoDto;
 use App\WorkspaceMgmt\Facade\Enum\WorkspaceStatus;
 use App\WorkspaceMgmt\Infrastructure\Message\SetupWorkspaceMessage;
+use App\WorkspaceMgmt\Infrastructure\Service\GitHubUrlServiceInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use RuntimeException;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
@@ -33,6 +34,7 @@ final class WorkspaceMgmtFacade implements WorkspaceMgmtFacadeInterface
         private readonly ProjectMgmtFacadeInterface $projectMgmtFacade,
         private readonly EntityManagerInterface     $entityManager,
         private readonly MessageBusInterface        $messageBus,
+        private readonly GitHubUrlServiceInterface  $gitHubUrlService,
     ) {
     }
 
@@ -136,12 +138,17 @@ final class WorkspaceMgmtFacade implements WorkspaceMgmtFacadeInterface
         $this->workspaceService->setStatus($workspace, WorkspaceStatus::AVAILABLE_FOR_SETUP);
     }
 
-    public function commitAndPush(string $workspaceId, string $message, string $authorEmail): void
-    {
+    public function commitAndPush(
+        string  $workspaceId,
+        string  $message,
+        string  $authorEmail,
+        ?string $conversationId = null,
+        ?string $conversationUrl = null
+    ): void {
         $workspace = $this->getWorkspaceOrFail($workspaceId);
 
         try {
-            $this->gitService->commitAndPush($workspace, $message, $authorEmail);
+            $this->gitService->commitAndPush($workspace, $message, $authorEmail, $conversationId, $conversationUrl);
         } catch (Throwable $e) {
             // On git failure, set workspace to PROBLEM
             $this->workspaceService->setStatus($workspace, WorkspaceStatus::PROBLEM);
@@ -150,11 +157,15 @@ final class WorkspaceMgmtFacade implements WorkspaceMgmtFacadeInterface
         }
     }
 
-    public function ensurePullRequest(string $workspaceId): string
-    {
+    public function ensurePullRequest(
+        string  $workspaceId,
+        ?string $conversationId = null,
+        ?string $conversationUrl = null,
+        ?string $userEmail = null
+    ): string {
         $workspace = $this->getWorkspaceOrFail($workspaceId);
 
-        return $this->gitService->ensurePullRequest($workspace);
+        return $this->gitService->ensurePullRequest($workspace, $conversationId, $conversationUrl, $userEmail);
     }
 
     private function getWorkspaceOrFail(string $workspaceId): Workspace
@@ -177,13 +188,31 @@ final class WorkspaceMgmtFacade implements WorkspaceMgmtFacadeInterface
 
         $projectInfo = $this->projectMgmtFacade->getProjectInfo($workspace->getProjectId());
 
+        $branchName      = $workspace->getBranchName();
+        $githubBranchUrl = null;
+        $githubPrUrl     = null;
+
+        if ($branchName !== null) {
+            $githubBranchUrl = $this->gitHubUrlService->getBranchUrl($projectInfo->gitUrl, $branchName);
+
+            // Try to find existing PR URL (this is best-effort, may be null if PR doesn't exist yet)
+            try {
+                $githubPrUrl = $this->gitService->findPullRequestUrl($workspace);
+            } catch (Throwable) {
+                // PR might not exist yet, that's okay
+                $githubPrUrl = null;
+            }
+        }
+
         return new WorkspaceInfoDto(
             $id,
             $workspace->getProjectId(),
             $projectInfo->name,
             $workspace->getStatus(),
-            $workspace->getBranchName(),
+            $branchName,
             $this->workspaceRoot . '/' . $id,
+            $githubBranchUrl,
+            $githubPrUrl,
         );
     }
 }

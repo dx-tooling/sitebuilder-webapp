@@ -12,6 +12,7 @@ use App\ChatBasedContentEditor\Domain\Entity\EditSessionChunk;
 use App\ChatBasedContentEditor\Domain\Enum\ConversationMessageRole;
 use App\ChatBasedContentEditor\Domain\Enum\EditSessionStatus;
 use App\ChatBasedContentEditor\Infrastructure\Message\RunEditSessionMessage;
+use App\ChatBasedContentEditor\Infrastructure\Service\ConversationUrlServiceInterface;
 use App\LlmContentEditor\Facade\Dto\AgentEventDto;
 use App\LlmContentEditor\Facade\Dto\ConversationMessageDto;
 use App\LlmContentEditor\Facade\Dto\ToolInputEntryDto;
@@ -36,6 +37,7 @@ final readonly class RunEditSessionHandler
         private LoggerInterface                 $logger,
         private WorkspaceMgmtFacadeInterface    $workspaceMgmtFacade,
         private AccountFacadeInterface          $accountFacade,
+        private ConversationUrlServiceInterface $conversationUrlService,
     ) {
     }
 
@@ -175,10 +177,16 @@ final readonly class RunEditSessionHandler
 
             $commitMessage = 'Edit session: ' . $this->truncateMessage($session->getInstruction(), 50);
 
+            // Generate conversation URL for linking
+            $conversationId  = $conversation->getId();
+            $conversationUrl = $conversationId !== null ? $this->conversationUrlService->getConversationUrl($conversationId) : null;
+
             $this->workspaceMgmtFacade->commitAndPush(
                 $conversation->getWorkspaceId(),
                 $commitMessage,
-                $accountInfo->email
+                $accountInfo->email,
+                $conversationId,
+                $conversationUrl
             );
 
             $this->logger->debug('Committed and pushed changes after edit session', [
