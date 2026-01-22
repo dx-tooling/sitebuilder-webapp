@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\WorkspaceMgmt\Infrastructure\Adapter;
 
-use RuntimeException;
 use Symfony\Component\Process\Exception\ProcessFailedException;
 use Symfony\Component\Process\Process;
 
@@ -17,10 +16,17 @@ final class GitCliAdapter implements GitAdapterInterface
 
     public function clone(string $repoUrl, string $targetPath, string $token): void
     {
-        // Inject token into URL for authentication
-        $authenticatedUrl = $this->injectTokenIntoUrl($repoUrl, $token);
+        // Use inline credential helper to provide authentication
+        // This avoids URL parsing issues with embedded credentials
+        $credentialHelper = $this->buildCredentialHelper($token);
 
-        $process = new Process(['git', 'clone', $authenticatedUrl, $targetPath]);
+        $process = new Process([
+            'git',
+            '-c', 'credential.helper=' . $credentialHelper,
+            'clone',
+            $repoUrl,
+            $targetPath,
+        ]);
         $process->setTimeout(self::TIMEOUT_SECONDS);
 
         $this->runProcess($process, 'Failed to clone repository');
@@ -73,49 +79,61 @@ final class GitCliAdapter implements GitAdapterInterface
 
     public function push(string $workspacePath, string $branchName, string $token): void
     {
-        // Get the remote URL and inject token
+        // Ensure remote URL is clean (no embedded credentials)
+        $this->ensureCleanRemoteUrl($workspacePath);
+
+        // Use inline credential helper to provide authentication
+        $credentialHelper = $this->buildCredentialHelper($token);
+
+        $pushProcess = new Process([
+            'git',
+            '-c', 'credential.helper=' . $credentialHelper,
+            'push',
+            '-u',
+            'origin',
+            $branchName,
+        ]);
+        $pushProcess->setWorkingDirectory($workspacePath);
+        $pushProcess->setTimeout(self::TIMEOUT_SECONDS);
+        $this->runProcess($pushProcess, 'Failed to push branch');
+    }
+
+    /**
+     * Build an inline credential helper that provides the token.
+     * Uses a shell function that outputs git credential protocol format.
+     */
+    private function buildCredentialHelper(string $token): string
+    {
+        // Escape single quotes in token (though GitHub tokens shouldn't contain them)
+        $escapedToken = str_replace("'", "'\\''", $token);
+
+        // Git credential helper that outputs username and password
+        // The '!' prefix tells git to execute this as a shell command
+        return "!f() { echo \"username=x-access-token\"; echo \"password={$escapedToken}\"; }; f";
+    }
+
+    /**
+     * Ensure the remote URL doesn't contain embedded credentials.
+     * This cleans up URLs that might have been set with tokens embedded.
+     */
+    private function ensureCleanRemoteUrl(string $workspacePath): void
+    {
         $remoteUrlProcess = new Process(['git', 'remote', 'get-url', 'origin']);
         $remoteUrlProcess->setWorkingDirectory($workspacePath);
         $remoteUrlProcess->setTimeout(self::TIMEOUT_SECONDS);
         $this->runProcess($remoteUrlProcess, 'Failed to get remote URL');
 
-        $remoteUrl        = trim($remoteUrlProcess->getOutput());
-        $authenticatedUrl = $this->injectTokenIntoUrl($remoteUrl, $token);
+        $remoteUrl = trim($remoteUrlProcess->getOutput());
 
-        // Set the authenticated URL temporarily
-        $setUrlProcess = new Process(['git', 'remote', 'set-url', 'origin', $authenticatedUrl]);
-        $setUrlProcess->setWorkingDirectory($workspacePath);
-        $setUrlProcess->setTimeout(self::TIMEOUT_SECONDS);
-        $this->runProcess($setUrlProcess, 'Failed to set remote URL');
+        // If URL contains credentials (has @ before github.com), clean it
+        if (preg_match('#^https://[^@]+@(.+)$#', $remoteUrl, $matches)) {
+            $cleanUrl = 'https://' . $matches[1];
 
-        try {
-            // Push the branch
-            $pushProcess = new Process(['git', 'push', '-u', 'origin', $branchName]);
-            $pushProcess->setWorkingDirectory($workspacePath);
-            $pushProcess->setTimeout(self::TIMEOUT_SECONDS);
-            $this->runProcess($pushProcess, 'Failed to push branch');
-        } finally {
-            // Restore the original URL (without token) for security
-            $restoreUrlProcess = new Process(['git', 'remote', 'set-url', 'origin', $remoteUrl]);
-            $restoreUrlProcess->setWorkingDirectory($workspacePath);
-            $restoreUrlProcess->setTimeout(self::TIMEOUT_SECONDS);
-            $restoreUrlProcess->run();
+            $setUrlProcess = new Process(['git', 'remote', 'set-url', 'origin', $cleanUrl]);
+            $setUrlProcess->setWorkingDirectory($workspacePath);
+            $setUrlProcess->setTimeout(self::TIMEOUT_SECONDS);
+            $this->runProcess($setUrlProcess, 'Failed to clean remote URL');
         }
-    }
-
-    private function injectTokenIntoUrl(string $url, string $token): string
-    {
-        // Handle HTTPS URLs: https://github.com/... -> https://token@github.com/...
-        if (str_starts_with($url, 'https://')) {
-            return 'https://' . $token . '@' . mb_substr($url, 8);
-        }
-
-        // Handle URLs that might already have a token/user
-        if (preg_match('#^https://[^@]+@#', $url)) {
-            return (string) preg_replace('#^https://[^@]+@#', 'https://' . $token . '@', $url);
-        }
-
-        throw new RuntimeException('Unsupported git URL format: ' . $url);
     }
 
     private function runProcess(Process $process, string $errorMessage): void
