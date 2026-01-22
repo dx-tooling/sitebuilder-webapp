@@ -1830,12 +1830,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/dx-tooling/etfs-shared-bundle.git",
-                "reference": "21d69f1bb7c6fbb0affb87c04684d7ba39bb4ea6"
+                "reference": "50d5bfaab13a069d013f65a875d07145945bc4cb"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/dx-tooling/etfs-shared-bundle/zipball/21d69f1bb7c6fbb0affb87c04684d7ba39bb4ea6",
-                "reference": "21d69f1bb7c6fbb0affb87c04684d7ba39bb4ea6",
+                "url": "https://api.github.com/repos/dx-tooling/etfs-shared-bundle/zipball/50d5bfaab13a069d013f65a875d07145945bc4cb",
+                "reference": "50d5bfaab13a069d013f65a875d07145945bc4cb",
                 "shasum": ""
             },
             "require": {
@@ -1910,7 +1910,7 @@
                 "source": "https://github.com/dx-tooling/etfs-shared-bundle/tree/main",
                 "issues": "https://github.com/dx-tooling/etfs-shared-bundle/issues"
             },
-            "time": "2025-11-12T10:02:02+00:00"
+            "time": "2026-01-22T14:38:39+00:00"
         },
         {
             "name": "enterprise-tooling-for-symfony/v4a-fileedit",
