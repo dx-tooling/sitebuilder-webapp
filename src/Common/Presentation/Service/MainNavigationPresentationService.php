@@ -111,11 +111,21 @@ readonly class MainNavigationPresentationService extends AbstractMainNavigationS
                 'Living Styleguide',
                 'webui.living_styleguide.show',
             ),
-            $this->generateEntry(
-                'Chat-based content editor',
-                'chat_based_content_editor.presentation.index',
-            ),
         ];
+
+        if ($this->security->isGranted('ROLE_USER')) {
+            $entries[] = $this->generateEntry(
+                'Projects',
+                'project_mgmt.presentation.list',
+            );
+        }
+
+        if ($this->security->isGranted('ROLE_REVIEWER')) {
+            $entries[] = $this->generateEntry(
+                'Reviewer Dashboard',
+                'workspace_mgmt.presentation.review_list',
+            );
+        }
 
         return $entries;
     }
