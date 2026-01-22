@@ -127,6 +127,14 @@ final class WorkspaceMgmtFacade implements WorkspaceMgmtFacadeInterface
         $this->workspaceService->transitionTo($workspace, WorkspaceStatus::AVAILABLE_FOR_SETUP);
     }
 
+    public function resetWorkspaceForSetup(string $workspaceId): void
+    {
+        $workspace = $this->getWorkspaceOrFail($workspaceId);
+
+        // Use setStatus to bypass transition validation since we're doing a reset
+        $this->workspaceService->setStatus($workspace, WorkspaceStatus::AVAILABLE_FOR_SETUP);
+    }
+
     public function commitAndPush(string $workspaceId, string $message): void
     {
         $workspace = $this->getWorkspaceOrFail($workspaceId);

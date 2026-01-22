@@ -53,6 +53,12 @@ interface WorkspaceMgmtFacadeInterface
     public function resetProblemWorkspace(string $workspaceId): void;
 
     /**
+     * Reset any workspace to AVAILABLE_FOR_SETUP.
+     * Used when user wants to start fresh with a new clone.
+     */
+    public function resetWorkspaceForSetup(string $workspaceId): void;
+
+    /**
      * Commit all changes and push to remote.
      * Called after edit sessions complete.
      */

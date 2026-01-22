@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\ProjectMgmt\Presentation\Controller;
 
+use App\ChatBasedContentEditor\Facade\ChatBasedContentEditorFacadeInterface;
 use App\ProjectMgmt\Domain\Service\ProjectService;
 use App\WorkspaceMgmt\Facade\WorkspaceMgmtFacadeInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -11,6 +12,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
+use Throwable;
 
 /**
  * Controller for project management.
@@ -20,8 +22,9 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 final class ProjectController extends AbstractController
 {
     public function __construct(
-        private readonly ProjectService               $projectService,
-        private readonly WorkspaceMgmtFacadeInterface $workspaceMgmtFacade,
+        private readonly ProjectService                        $projectService,
+        private readonly WorkspaceMgmtFacadeInterface          $workspaceMgmtFacade,
+        private readonly ChatBasedContentEditorFacadeInterface $chatBasedContentEditorFacade,
     ) {
     }
 
@@ -146,6 +149,55 @@ final class ProjectController extends AbstractController
 
         $this->projectService->update($project, $name, $gitUrl, $githubToken);
         $this->addFlash('success', 'Project updated successfully.');
+
+        return $this->redirectToRoute('project_mgmt.presentation.list');
+    }
+
+    #[Route(
+        path: '/projects/{id}/reset-workspace',
+        name: 'project_mgmt.presentation.reset_workspace',
+        methods: [Request::METHOD_POST],
+        requirements: ['id' => '[a-f0-9-]{36}']
+    )]
+    public function resetWorkspace(string $id, Request $request): Response
+    {
+        $project = $this->projectService->findById($id);
+
+        if ($project === null) {
+            throw $this->createNotFoundException('Project not found.');
+        }
+
+        if (!$this->isCsrfTokenValid('reset_workspace_' . $id, $request->request->getString('_csrf_token'))) {
+            $this->addFlash('error', 'Invalid CSRF token.');
+
+            return $this->redirectToRoute('project_mgmt.presentation.list');
+        }
+
+        $workspace = $this->workspaceMgmtFacade->getWorkspaceForProject($id);
+
+        if ($workspace === null) {
+            $this->addFlash('warning', 'No workspace exists for this project.');
+
+            return $this->redirectToRoute('project_mgmt.presentation.list');
+        }
+
+        try {
+            // Finish all ongoing conversations
+            $finishedCount = $this->chatBasedContentEditorFacade->finishAllOngoingConversationsForWorkspace(
+                $workspace->id
+            );
+
+            // Reset workspace to AVAILABLE_FOR_SETUP
+            $this->workspaceMgmtFacade->resetWorkspaceForSetup($workspace->id);
+
+            $message = 'Workspace reset successfully.';
+            if ($finishedCount > 0) {
+                $message .= sprintf(' %d conversation(s) were finished.', $finishedCount);
+            }
+            $this->addFlash('success', $message);
+        } catch (Throwable $e) {
+            $this->addFlash('error', 'Failed to reset workspace: ' . $e->getMessage());
+        }
 
         return $this->redirectToRoute('project_mgmt.presentation.list');
     }

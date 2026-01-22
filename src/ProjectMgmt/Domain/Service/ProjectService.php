@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\ProjectMgmt\Domain\Service;
 
 use App\ProjectMgmt\Domain\Entity\Project;
+use App\ProjectMgmt\Facade\Enum\ProjectType;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**
@@ -18,20 +19,30 @@ final class ProjectService
     ) {
     }
 
-    public function create(string $name, string $gitUrl, string $githubToken): Project
-    {
-        $project = new Project($name, $gitUrl, $githubToken);
+    public function create(
+        string      $name,
+        string      $gitUrl,
+        string      $githubToken,
+        ProjectType $projectType = ProjectType::DEFAULT
+    ): Project {
+        $project = new Project($name, $gitUrl, $githubToken, $projectType);
         $this->entityManager->persist($project);
         $this->entityManager->flush();
 
         return $project;
     }
 
-    public function update(Project $project, string $name, string $gitUrl, string $githubToken): void
-    {
+    public function update(
+        Project     $project,
+        string      $name,
+        string      $gitUrl,
+        string      $githubToken,
+        ProjectType $projectType = ProjectType::DEFAULT
+    ): void {
         $project->setName($name);
         $project->setGitUrl($gitUrl);
         $project->setGithubToken($githubToken);
+        $project->setProjectType($projectType);
         $this->entityManager->flush();
     }
 

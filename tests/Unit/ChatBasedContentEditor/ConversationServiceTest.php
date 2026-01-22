@@ -162,8 +162,68 @@ final class ConversationServiceTest extends TestCase
         self::assertSame('https://github.com/org/repo/pull/123', $prUrl);
     }
 
-    // Note: startOrResumeConversation is better tested via integration tests
-    // due to the complex Doctrine QueryBuilder interactions involved.
+    public function testStartOrResumeConversationReturnsExistingConversationWhenWorkspaceInConversation(): void
+    {
+        // Scenario: User navigated away from a conversation and came back.
+        // The workspace is still IN_CONVERSATION and user has an ongoing conversation.
+        // The service should return the existing conversation without calling ensureWorkspaceReadyForConversation.
+
+        $existingConversation = $this->createConversation(
+            'existing-conv-id',
+            'workspace-1',
+            'user-123',
+            ConversationStatus::ONGOING
+        );
+
+        $workspaceInfo = new \App\WorkspaceMgmt\Facade\Dto\WorkspaceInfoDto(
+            'workspace-1',
+            'project-1',
+            'Test Project',
+            \App\WorkspaceMgmt\Facade\Enum\WorkspaceStatus::IN_CONVERSATION,
+            'feature-branch',
+            '/path/to/workspace'
+        );
+
+        // Mock QueryBuilder chain for findOngoingConversation
+        $query = $this->getMockBuilder(\Doctrine\ORM\Query::class)
+            ->disableOriginalConstructor()
+            ->onlyMethods(['getOneOrNullResult'])
+            ->getMock();
+        $query->method('getOneOrNullResult')->willReturn($existingConversation);
+
+        $queryBuilder = $this->createMock(\Doctrine\ORM\QueryBuilder::class);
+        $queryBuilder->method('select')->willReturnSelf();
+        $queryBuilder->method('from')->willReturnSelf();
+        $queryBuilder->method('where')->willReturnSelf();
+        $queryBuilder->method('andWhere')->willReturnSelf();
+        $queryBuilder->method('setParameter')->willReturnSelf();
+        $queryBuilder->method('setMaxResults')->willReturnSelf();
+        $queryBuilder->method('getQuery')->willReturn($query);
+
+        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager->method('createQueryBuilder')->willReturn($queryBuilder);
+
+        $workspaceFacade = $this->createMock(WorkspaceMgmtFacadeInterface::class);
+        $workspaceFacade->method('getWorkspaceForProject')
+            ->with('project-1')
+            ->willReturn($workspaceInfo);
+
+        // This is the key assertion: ensureWorkspaceReadyForConversation should NOT be called
+        // because we found an existing conversation for this user
+        $workspaceFacade->expects($this->never())->method('ensureWorkspaceReadyForConversation');
+
+        $service = new ConversationService($entityManager, $workspaceFacade);
+        $result  = $service->startOrResumeConversation('project-1', 'user-123');
+
+        self::assertSame('existing-conv-id', $result->id);
+        self::assertSame('workspace-1', $result->workspaceId);
+        self::assertSame('user-123', $result->userId);
+        self::assertSame(ConversationStatus::ONGOING, $result->status);
+    }
+
+    // Note: Testing new conversation creation requires integration tests due to
+    // Doctrine ID generation. The test above covers the critical fix for resuming
+    // existing conversations when workspace is IN_CONVERSATION.
 
     /**
      * Helper to create a Conversation with reflection to set the ID.
