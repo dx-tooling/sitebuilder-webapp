@@ -307,7 +307,11 @@ final class ChatBasedContentEditorController extends AbstractController
 
         try {
             $prUrl = $this->conversationService->sendToReview($conversationId, $accountInfo->id);
-            $this->addFlash('success', 'Conversation sent to review. Pull request: ' . $prUrl);
+            if ($prUrl === '') {
+                $this->addFlash('success', 'Conversation finished. No changes to review.');
+            } else {
+                $this->addFlash('success', 'Conversation sent to review. Pull request: ' . $prUrl);
+            }
         } catch (Throwable $e) {
             $this->addFlash('error', 'Failed to send to review: ' . $e->getMessage());
         }
