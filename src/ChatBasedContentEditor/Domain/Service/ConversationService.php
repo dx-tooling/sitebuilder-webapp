@@ -104,6 +104,9 @@ final class ConversationService
 
     /**
      * Send conversation to review (finish and create PR).
+     * If there are no changes/commits, finishes the conversation and makes workspace available instead.
+     *
+     * @return string the PR URL, or empty string if no changes (conversation finished, workspace available)
      */
     public function sendToReview(string $conversationId, string $userId): string
     {
@@ -135,16 +138,31 @@ final class ConversationService
         $conversation->setStatus(ConversationStatus::FINISHED);
         $this->entityManager->flush();
 
-        // Transition workspace to review
-        $this->workspaceMgmtFacade->transitionToInReview($conversation->getWorkspaceId());
+        // Try to create PR, but if there are no changes, just finish the conversation
+        try {
+            // Transition workspace to review
+            $this->workspaceMgmtFacade->transitionToInReview($conversation->getWorkspaceId());
 
-        // Ensure PR exists and return URL
-        return $this->workspaceMgmtFacade->ensurePullRequest(
-            $conversation->getWorkspaceId(),
-            $conversationId,
-            $conversationUrl,
-            $authorEmail
-        );
+            // Ensure PR exists and return URL
+            return $this->workspaceMgmtFacade->ensurePullRequest(
+                $conversation->getWorkspaceId(),
+                $conversationId,
+                $conversationUrl,
+                $authorEmail
+            );
+        } catch (RuntimeException $e) {
+            // If PR creation fails because there are no changes, finish conversation and make workspace available
+            if (str_contains($e->getMessage(), 'branch has no commits or changes')) {
+                $this->workspaceMgmtFacade->transitionToAvailableForConversation(
+                    $conversation->getWorkspaceId()
+                );
+
+                return '';
+            }
+
+            // Re-throw other exceptions
+            throw $e;
+        }
     }
 
     public function findById(string $id): ?ConversationInfoDto

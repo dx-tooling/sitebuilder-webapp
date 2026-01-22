@@ -203,6 +203,39 @@ final class ConversationServiceTest extends TestCase
         self::assertSame('https://github.com/org/repo/pull/123', $prUrl);
     }
 
+    public function testSendToReviewFinishesConversationWhenBranchHasNoDifferences(): void
+    {
+        $conversation = $this->createConversation('conv-1', 'workspace-1', 'user-123', ConversationStatus::ONGOING);
+
+        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager->method('find')->willReturn($conversation);
+        $entityManager->expects($this->once())->method('flush');
+
+        $workspaceFacade = $this->createMock(WorkspaceMgmtFacadeInterface::class);
+        $workspaceFacade->expects($this->once())
+            ->method('commitAndPush')
+            ->with('workspace-1', 'Auto-commit before review', 'user@example.com', 'conv-1', 'https://sitebuilder.example.com/conversation/conv-1');
+        $workspaceFacade->expects($this->once())
+            ->method('transitionToInReview')
+            ->with('workspace-1');
+        $workspaceFacade->expects($this->once())
+            ->method('ensurePullRequest')
+            ->with('workspace-1', 'conv-1', 'https://sitebuilder.example.com/conversation/conv-1', 'user@example.com')
+            ->willThrowException(new RuntimeException('Cannot create pull request: branch has no commits or changes compared to main branch'));
+        $workspaceFacade->expects($this->once())
+            ->method('transitionToAvailableForConversation')
+            ->with('workspace-1');
+
+        $accountFacade = $this->createAccountFacade('user-123', 'user@example.com');
+        $urlService    = $this->createConversationUrlService();
+
+        $service = new ConversationService($entityManager, $workspaceFacade, $accountFacade, $urlService);
+        $prUrl   = $service->sendToReview('conv-1', 'user-123');
+
+        self::assertSame(ConversationStatus::FINISHED, $conversation->getStatus());
+        self::assertSame('', $prUrl);
+    }
+
     public function testStartOrResumeConversationReturnsExistingConversationWhenWorkspaceInConversation(): void
     {
         // Scenario: User navigated away from a conversation and came back.

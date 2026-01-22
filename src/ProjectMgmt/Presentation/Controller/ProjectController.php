@@ -26,7 +26,7 @@ final class ProjectController extends AbstractController
 {
     public function __construct(
         private readonly ProjectService                        $projectService,
-        private readonly ProjectMgmtFacadeInterface           $projectMgmtFacade,
+        private readonly ProjectMgmtFacadeInterface            $projectMgmtFacade,
         private readonly WorkspaceMgmtFacadeInterface          $workspaceMgmtFacade,
         private readonly ChatBasedContentEditorFacadeInterface $chatBasedContentEditorFacade,
         private readonly AccountFacadeInterface                $accountFacade,

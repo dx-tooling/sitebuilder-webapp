@@ -158,6 +158,17 @@ final class WorkspaceGitService
             return $existingPrUrl;
         }
 
+        // Check if branch has any differences from main before attempting to create PR
+        $workspacePath = $this->getWorkspacePath($workspace);
+        if (!$this->gitAdapter->hasBranchDifferences($workspacePath, $branchName, 'main')) {
+            $this->logger->warning('Cannot create PR: branch has no differences from main', [
+                'workspaceId' => $workspace->getId(),
+                'branchName'  => $branchName,
+            ]);
+
+            throw new RuntimeException('Cannot create pull request: branch has no commits or changes compared to main branch');
+        }
+
         // Create new PR with enhanced title and body
         $title = $this->buildPrTitle($workspace, $projectInfo->name);
         $body  = $this->buildPrBody($workspace, $conversationId, $conversationUrl, $userEmail);

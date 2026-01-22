@@ -59,4 +59,15 @@ interface GitAdapterInterface
      * @param string $token         the authentication token
      */
     public function push(string $workspacePath, string $branchName, string $token): void;
+
+    /**
+     * Check if the branch has commits that differ from the base branch.
+     *
+     * @param string $workspacePath the workspace directory
+     * @param string $branchName    the branch to check
+     * @param string $baseBranch    the base branch to compare against (default: 'main')
+     *
+     * @return bool true if the branch has commits that differ from the base branch, false otherwise
+     */
+    public function hasBranchDifferences(string $workspacePath, string $branchName, string $baseBranch = 'main'): bool;
 }

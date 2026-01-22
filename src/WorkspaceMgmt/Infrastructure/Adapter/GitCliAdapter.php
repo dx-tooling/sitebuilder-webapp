@@ -98,6 +98,88 @@ final class GitCliAdapter implements GitAdapterInterface
         $this->runProcess($pushProcess, 'Failed to push branch');
     }
 
+    public function hasBranchDifferences(string $workspacePath, string $branchName, string $baseBranch = 'main'): bool
+    {
+        // Fetch latest refs to ensure we're comparing with remote state
+        $fetchProcess = new Process(['git', 'fetch', 'origin', $baseBranch . ':' . $baseBranch, '--quiet']);
+        $fetchProcess->setWorkingDirectory($workspacePath);
+        $fetchProcess->setTimeout(self::TIMEOUT_SECONDS);
+        // Don't fail if fetch fails - branch might not exist remotely yet
+        $fetchProcess->run();
+
+        // Check if branch exists locally
+        $branchExistsProcess = new Process(['git', 'rev-parse', '--verify', $branchName]);
+        $branchExistsProcess->setWorkingDirectory($workspacePath);
+        $branchExistsProcess->setTimeout(self::TIMEOUT_SECONDS);
+        $branchExistsProcess->run();
+
+        if (!$branchExistsProcess->isSuccessful()) {
+            // Branch doesn't exist, so no differences
+            return false;
+        }
+
+        // Check if base branch exists remotely
+        $baseExistsProcess = new Process(['git', 'rev-parse', '--verify', 'origin/' . $baseBranch]);
+        $baseExistsProcess->setWorkingDirectory($workspacePath);
+        $baseExistsProcess->setTimeout(self::TIMEOUT_SECONDS);
+        $baseExistsProcess->run();
+
+        if (!$baseExistsProcess->isSuccessful()) {
+            // Base branch doesn't exist remotely, check locally
+            $localBaseProcess = new Process(['git', 'rev-parse', '--verify', $baseBranch]);
+            $localBaseProcess->setWorkingDirectory($workspacePath);
+            $localBaseProcess->setTimeout(self::TIMEOUT_SECONDS);
+            $localBaseProcess->run();
+
+            if (!$localBaseProcess->isSuccessful()) {
+                // Base branch doesn't exist at all, consider branch as having differences
+                // (it's a new branch with commits)
+                return true;
+            }
+
+            // Use rev-list to check if branch has commits not in base branch
+            // This is more reliable than diff for checking if branches differ
+            $revListProcess = new Process(['git', 'rev-list', '--count', $baseBranch . '..' . $branchName]);
+            $revListProcess->setWorkingDirectory($workspacePath);
+            $revListProcess->setTimeout(self::TIMEOUT_SECONDS);
+            $revListProcess->run();
+
+            if (!$revListProcess->isSuccessful()) {
+                // If rev-list fails, fall back to diff check
+                $diffProcess = new Process(['git', 'diff', '--quiet', $baseBranch . '..' . $branchName]);
+                $diffProcess->setWorkingDirectory($workspacePath);
+                $diffProcess->setTimeout(self::TIMEOUT_SECONDS);
+                $diffProcess->run();
+
+                return !$diffProcess->isSuccessful();
+            }
+
+            $commitCount = (int) trim($revListProcess->getOutput());
+
+            return $commitCount > 0;
+        }
+
+        // Use rev-list to check if branch has commits not in remote base branch
+        $revListProcess = new Process(['git', 'rev-list', '--count', 'origin/' . $baseBranch . '..' . $branchName]);
+        $revListProcess->setWorkingDirectory($workspacePath);
+        $revListProcess->setTimeout(self::TIMEOUT_SECONDS);
+        $revListProcess->run();
+
+        if (!$revListProcess->isSuccessful()) {
+            // If rev-list fails, fall back to diff check
+            $diffProcess = new Process(['git', 'diff', '--quiet', 'origin/' . $baseBranch . '..' . $branchName]);
+            $diffProcess->setWorkingDirectory($workspacePath);
+            $diffProcess->setTimeout(self::TIMEOUT_SECONDS);
+            $diffProcess->run();
+
+            return !$diffProcess->isSuccessful();
+        }
+
+        $commitCount = (int) trim($revListProcess->getOutput());
+
+        return $commitCount > 0;
+    }
+
     /**
      * Build an inline credential helper that provides the token.
      * Uses a shell function that outputs git credential protocol format.
