@@ -158,6 +158,26 @@ final class ConversationService
         return $conversation;
     }
 
+    /**
+     * Find any ongoing conversation for a workspace (regardless of user).
+     */
+    public function findAnyOngoingConversationForWorkspace(string $workspaceId): ?Conversation
+    {
+        /** @var Conversation|null $conversation */
+        $conversation = $this->entityManager->createQueryBuilder()
+            ->select('c')
+            ->from(Conversation::class, 'c')
+            ->where('c.workspaceId = :workspaceId')
+            ->andWhere('c.status = :status')
+            ->setParameter('workspaceId', $workspaceId)
+            ->setParameter('status', ConversationStatus::ONGOING)
+            ->setMaxResults(1)
+            ->getQuery()
+            ->getOneOrNullResult();
+
+        return $conversation;
+    }
+
     private function getConversationOrFail(string $id): Conversation
     {
         $conversation = $this->entityManager->find(Conversation::class, $id);

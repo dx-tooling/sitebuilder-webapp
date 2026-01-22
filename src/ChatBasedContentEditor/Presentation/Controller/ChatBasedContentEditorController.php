@@ -115,7 +115,18 @@ final class ChatBasedContentEditorController extends AbstractController
                 );
 
                 if ($existingConversation === null) {
-                    $this->addFlash('warning', 'Another user is currently working on this workspace.');
+                    // Find who is working on it
+                    $otherConversation = $this->conversationService->findAnyOngoingConversationForWorkspace($workspace->id);
+                    $otherUserEmail    = 'another user';
+
+                    if ($otherConversation !== null) {
+                        $otherAccount = $this->accountFacade->getAccountInfoById($otherConversation->getUserId());
+                        if ($otherAccount !== null) {
+                            $otherUserEmail = $otherAccount->email;
+                        }
+                    }
+
+                    $this->addFlash('warning', sprintf('%s is currently working on this workspace.', $otherUserEmail));
 
                     return $this->redirectToRoute('project_mgmt.presentation.list');
                 }
