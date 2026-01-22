@@ -10,6 +10,11 @@ readonly class ContextUsageDto
         public int    $usedTokens,
         public int    $maxTokens,
         public string $modelName,
+        public int    $inputTokens,
+        public int    $outputTokens,
+        public float  $inputCost,
+        public float  $outputCost,
+        public float  $totalCost,
     ) {
     }
 }

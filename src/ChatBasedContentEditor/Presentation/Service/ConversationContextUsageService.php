@@ -34,11 +34,37 @@ final readonly class ConversationContextUsageService
             ->setParameter('event', 'event')
             ->getSingleScalarResult();
 
-        $usedBytes  = $messagesBytes + $eventChunksBytes;
-        $usedTokens = (int) round($usedBytes / $this->bytesPerTokenEstimate);
-        $model      = LlmModelName::defaultForContentEditor();
-        $maxTokens  = $model->maxContextTokens();
+        $textChunksBytes = (int) $this->entityManager->createQuery(
+            'SELECT COALESCE(SUM(LENGTH(ch.payloadJson)), 0) FROM App\ChatBasedContentEditor\Domain\Entity\EditSessionChunk ch JOIN ch.session s WHERE s.conversation = :c AND ch.chunkType = :text'
+        )
+            ->setParameter('c', $conversation)
+            ->setParameter('text', 'text')
+            ->getSingleScalarResult();
 
-        return new ContextUsageDto($usedTokens, $maxTokens, $model->value);
+        $inputBytes   = $messagesBytes + $eventChunksBytes;
+        $inputTokens  = (int) round($inputBytes / $this->bytesPerTokenEstimate);
+        $outputBytes  = $textChunksBytes;
+        $outputTokens = (int) round($outputBytes / $this->bytesPerTokenEstimate);
+        $usedTokens   = $inputTokens + $outputTokens;
+
+        $model     = LlmModelName::defaultForContentEditor();
+        $maxTokens = $model->maxContextTokens();
+
+        $inputCostPer1M  = $model->inputCostPer1M();
+        $outputCostPer1M = $model->outputCostPer1M();
+        $inputCost       = ($inputTokens / 1_000_000)  * $inputCostPer1M;
+        $outputCost      = ($outputTokens / 1_000_000) * $outputCostPer1M;
+        $totalCost       = $inputCost + $outputCost;
+
+        return new ContextUsageDto(
+            $usedTokens,
+            $maxTokens,
+            $model->value,
+            $inputTokens,
+            $outputTokens,
+            $inputCost,
+            $outputCost,
+            $totalCost
+        );
     }
 }

@@ -25,6 +25,11 @@ interface ContextUsageData {
     usedTokens: number;
     maxTokens: number;
     modelName: string;
+    inputTokens: number;
+    outputTokens: number;
+    inputCost: number;
+    outputCost: number;
+    totalCost: number;
 }
 
 interface RunResponse {
@@ -50,6 +55,7 @@ export default class extends Controller {
         "contextUsage",
         "contextUsageText",
         "contextUsageBar",
+        "contextUsageCost",
     ];
 
     declare readonly runUrlValue: string;
@@ -74,6 +80,8 @@ export default class extends Controller {
     declare readonly contextUsageTextTarget: HTMLElement;
     declare readonly hasContextUsageBarTarget: boolean;
     declare readonly contextUsageBarTarget: HTMLElement;
+    declare readonly hasContextUsageCostTarget: boolean;
+    declare readonly contextUsageCostTarget: HTMLElement;
 
     private pollingIntervalId: ReturnType<typeof setInterval> | null = null;
     private contextUsageIntervalId: ReturnType<typeof setInterval> | null = null;
@@ -127,6 +135,9 @@ export default class extends Controller {
         if (this.hasContextUsageBarTarget) {
             const pct = usage.maxTokens > 0 ? Math.min(100, (100 * usage.usedTokens) / usage.maxTokens) : 0;
             this.contextUsageBarTarget.style.width = `${pct}%`;
+        }
+        if (this.hasContextUsageCostTarget) {
+            this.contextUsageCostTarget.textContent = `$${usage.totalCost.toFixed(4)}`;
         }
     }
 

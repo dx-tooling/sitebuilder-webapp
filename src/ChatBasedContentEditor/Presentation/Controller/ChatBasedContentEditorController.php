@@ -255,9 +255,14 @@ final class ChatBasedContentEditorController extends AbstractController
             'runUrl'          => $this->generateUrl('chat_based_content_editor.presentation.run'),
             'pollUrlTemplate' => $this->generateUrl('chat_based_content_editor.presentation.poll', ['sessionId' => '__SESSION_ID__']),
             'contextUsage'    => [
-                'usedTokens' => $contextUsage->usedTokens,
-                'maxTokens'  => $contextUsage->maxTokens,
-                'modelName'  => $contextUsage->modelName,
+                'usedTokens'   => $contextUsage->usedTokens,
+                'maxTokens'    => $contextUsage->maxTokens,
+                'modelName'    => $contextUsage->modelName,
+                'inputTokens'  => $contextUsage->inputTokens,
+                'outputTokens' => $contextUsage->outputTokens,
+                'inputCost'    => $contextUsage->inputCost,
+                'outputCost'   => $contextUsage->outputCost,
+                'totalCost'    => $contextUsage->totalCost,
             ],
             'contextUsageUrl' => $this->generateUrl('chat_based_content_editor.presentation.context_usage', ['conversationId' => $conversation->getId()]),
         ]);
@@ -279,9 +284,14 @@ final class ChatBasedContentEditorController extends AbstractController
         $dto = $this->contextUsageService->getContextUsage($conversation);
 
         return $this->json([
-            'usedTokens' => $dto->usedTokens,
-            'maxTokens'  => $dto->maxTokens,
-            'modelName'  => $dto->modelName,
+            'usedTokens'   => $dto->usedTokens,
+            'maxTokens'    => $dto->maxTokens,
+            'modelName'    => $dto->modelName,
+            'inputTokens'  => $dto->inputTokens,
+            'outputTokens' => $dto->outputTokens,
+            'inputCost'    => $dto->inputCost,
+            'outputCost'   => $dto->outputCost,
+            'totalCost'    => $dto->totalCost,
         ]);
     }
 
@@ -480,9 +490,14 @@ final class ChatBasedContentEditorController extends AbstractController
             'lastId'       => $lastId,
             'status'       => $session->getStatus()->value,
             'contextUsage' => [
-                'usedTokens' => $contextUsage->usedTokens,
-                'maxTokens'  => $contextUsage->maxTokens,
-                'modelName'  => $contextUsage->modelName,
+                'usedTokens'   => $contextUsage->usedTokens,
+                'maxTokens'    => $contextUsage->maxTokens,
+                'modelName'    => $contextUsage->modelName,
+                'inputTokens'  => $contextUsage->inputTokens,
+                'outputTokens' => $contextUsage->outputTokens,
+                'inputCost'    => $contextUsage->inputCost,
+                'outputCost'   => $contextUsage->outputCost,
+                'totalCost'    => $contextUsage->totalCost,
             ],
         ]);
     }
