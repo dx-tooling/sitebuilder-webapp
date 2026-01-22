@@ -6,6 +6,15 @@ services:
         container_name: etfs_${ETFS_PROJECT_NAME}_app
         volumes:
             - .:/var/www
+        environment:
+            # Redirect cache and config directories to /tmp to avoid polluting the mounted project directory
+            HOME: /tmp/container-home
+            XDG_CACHE_HOME: /tmp/container-home/.cache
+            XDG_CONFIG_HOME: /tmp/container-home/.config
+            XDG_DATA_HOME: /tmp/container-home/.local/share
+            XDG_STATE_HOME: /tmp/container-home/.local/state
+            NPM_CONFIG_CACHE: /tmp/container-home/.npm
+            GNUPGHOME: /tmp/container-home/.gnupg
         networks:
             - default
         depends_on:

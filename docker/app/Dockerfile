@@ -57,3 +57,15 @@ EXPOSE 9000
 RUN mkdir -p ~/.local/state/mise/trusted-configs
 RUN ln -s /var/www ~/.local/state/mise/trusted-configs/
 RUN echo 'eval "$(/usr/bin/env mise activate zsh)"' >> ~/.zshrc
+
+# Create container home directory structure for runtime cache/config directories
+# This prevents polluting the mounted /var/www directory
+RUN mkdir -p /tmp/container-home/.local/state/mise/tracked-configs \
+    /tmp/container-home/.local/state/mise/trusted-configs \
+    /tmp/container-home/.cache \
+    /tmp/container-home/.config \
+    /tmp/container-home/.local/share \
+    /tmp/container-home/.gnupg \
+    /tmp/container-home/.npm && \
+    chmod -R 777 /tmp/container-home && \
+    ln -s /var/www /tmp/container-home/.local/state/mise/trusted-configs/

@@ -63,6 +63,20 @@ readonly class MainNavigationPresentationService extends AbstractMainNavigationS
             ];
         }
 
+        if ($this->security->isGranted('ROLE_USER')) {
+            $entries[] = $this->generateEntry(
+                'Projects',
+                'project_mgmt.presentation.list',
+            );
+        }
+
+        if ($this->security->isGranted('ROLE_REVIEWER')) {
+            $entries[] = $this->generateEntry(
+                'Reviewer Dashboard',
+                'workspace_mgmt.presentation.review_list',
+            );
+        }
+
         return $entries;
     }
 
@@ -112,20 +126,6 @@ readonly class MainNavigationPresentationService extends AbstractMainNavigationS
                 'webui.living_styleguide.show',
             ),
         ];
-
-        if ($this->security->isGranted('ROLE_USER')) {
-            $entries[] = $this->generateEntry(
-                'Projects',
-                'project_mgmt.presentation.list',
-            );
-        }
-
-        if ($this->security->isGranted('ROLE_REVIEWER')) {
-            $entries[] = $this->generateEntry(
-                'Reviewer Dashboard',
-                'workspace_mgmt.presentation.review_list',
-            );
-        }
 
         return $entries;
     }
