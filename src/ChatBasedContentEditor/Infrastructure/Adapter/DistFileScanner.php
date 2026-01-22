@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\ChatBasedContentEditor\Infrastructure\Adapter;
 
+use App\ChatBasedContentEditor\Infrastructure\Dto\DistFileDto;
 use Symfony\Component\Finder\Finder;
 
 use function is_dir;
@@ -28,10 +29,10 @@ final class DistFileScanner implements DistFileScannerInterface
         $files = [];
         foreach ($finder as $file) {
             $relativePath = str_replace($distPath . '/', '', $file->getPathname());
-            $files[]      = [
-                'path' => $relativePath,
-                'url'  => '/workspaces/' . $workspaceId . '/dist/' . $relativePath,
-            ];
+            $files[]      = new DistFileDto(
+                $relativePath,
+                '/workspaces/' . $workspaceId . '/dist/' . $relativePath,
+            );
         }
 
         return $files;

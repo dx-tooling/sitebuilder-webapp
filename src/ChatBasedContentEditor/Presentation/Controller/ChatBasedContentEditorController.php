@@ -199,11 +199,6 @@ final class ChatBasedContentEditorController extends AbstractController
         $canEdit     = $conversation->getUserId() === $accountInfo->id
             && $conversation->getStatus()         === ConversationStatus::ONGOING;
 
-        // Get dist HTML files for the workspace
-        $distHtmlFiles = $workspace !== null
-            ? $this->distFileScanner->scanDistHtmlFiles($workspace->id, $workspace->workspacePath)
-            : [];
-
         return $this->render('@chat_based_content_editor.presentation/chat_based_content_editor.twig', [
             'conversation'      => $conversation,
             'workspace'         => $workspace,
@@ -211,7 +206,6 @@ final class ChatBasedContentEditorController extends AbstractController
             'turns'             => $turns,
             'pastConversations' => $pastConversations,
             'canEdit'           => $canEdit,
-            'distHtmlFiles'     => $distHtmlFiles,
             'runUrl'            => $this->generateUrl('chat_based_content_editor.presentation.run'),
             'pollUrlTemplate'   => $this->generateUrl('chat_based_content_editor.presentation.poll', ['sessionId' => '__SESSION_ID__']),
         ]);
@@ -405,5 +399,32 @@ final class ChatBasedContentEditorController extends AbstractController
             'lastId' => $lastId,
             'status' => $session->getStatus()->value,
         ]);
+    }
+
+    #[Route(
+        path: '/workspace/{workspaceId}/dist-files',
+        name: 'chat_based_content_editor.presentation.dist_files',
+        methods: [Request::METHOD_GET],
+        requirements: ['workspaceId' => '[a-f0-9-]{36}']
+    )]
+    public function distFiles(string $workspaceId): Response
+    {
+        $workspace = $this->workspaceMgmtFacade->getWorkspaceById($workspaceId);
+
+        if ($workspace === null) {
+            return $this->json(['error' => 'Workspace not found.'], Response::HTTP_NOT_FOUND);
+        }
+
+        $distFiles = $this->distFileScanner->scanDistHtmlFiles($workspace->id, $workspace->workspacePath);
+
+        $files = [];
+        foreach ($distFiles as $distFile) {
+            $files[] = [
+                'path' => $distFile->path,
+                'url'  => $distFile->url,
+            ];
+        }
+
+        return $this->json(['files' => $files]);
     }
 }
