@@ -115,6 +115,11 @@ export default class extends Controller {
         inner.className =
             "max-w-[85%] rounded-lg px-4 py-2 bg-dark-100 dark:bg-dark-700/50 text-dark-800 dark:text-dark-200 text-sm space-y-2";
         assistantEl.appendChild(inner);
+
+        // Create technical messages container for this assistant response
+        const technicalContainer = this.createTechnicalMessagesContainer();
+        inner.appendChild(technicalContainer);
+
         this.messagesTarget.appendChild(assistantEl);
         this.scrollToBottom();
 
@@ -238,7 +243,7 @@ export default class extends Controller {
                 toolResult: payload.toolResult,
                 errorMessage: payload.errorMessage,
             };
-            container.appendChild(this.renderEvent(event));
+            this.appendTechnicalEvent(container, event);
             this.scrollToBottom();
         } else if (chunk.chunkType === "done") {
             if (payload.success === false && payload.errorMessage) {
@@ -266,46 +271,204 @@ export default class extends Controller {
         return textEl;
     }
 
-    private renderEvent(e: AgentEvent): HTMLElement {
+    private createTechnicalMessagesContainer(): HTMLElement {
+        const container = document.createElement("div");
+        container.className = "technical-messages-container";
+        container.dataset.technicalMessages = "1";
+
+        const header = document.createElement("button");
+        header.type = "button";
+        header.className =
+            "flex items-center gap-2 w-full text-left py-1.5 px-2 rounded hover:bg-dark-50 dark:hover:bg-dark-800/50 transition-colors";
+        header.dataset.header = "1";
+        header.addEventListener("click", () => {
+            this.toggleTechnicalMessages(container);
+        });
+
+        const indicator = document.createElement("div");
+        indicator.className =
+            "technical-indicator w-2 h-2 rounded-full bg-blue-400/50 dark:bg-blue-500/50 flex-shrink-0";
+        indicator.dataset.indicator = "1";
+
+        const label = document.createElement("span");
+        label.className = "text-[11px] text-dark-600 dark:text-dark-300 font-medium";
+        label.textContent = "Working...";
+        label.dataset.label = "1";
+
+        const count = document.createElement("span");
+        count.className = "text-[10px] text-dark-400 dark:text-dark-500 ml-auto";
+        count.dataset.count = "1";
+        count.textContent = "0";
+
+        const chevron = document.createElement("svg");
+        chevron.className = "w-3 h-3 text-dark-400 dark:text-dark-500 transition-transform";
+        chevron.dataset.chevron = "1";
+        chevron.innerHTML = '<path fill="currentColor" d="M6 9l6 6 6-6H6z"/>';
+        chevron.setAttribute("viewBox", "0 0 24 24");
+
+        header.appendChild(indicator);
+        header.appendChild(label);
+        header.appendChild(count);
+        header.appendChild(chevron);
+
+        const messagesList = document.createElement("div");
+        messagesList.className = "technical-messages-list max-h-[120px] overflow-y-auto space-y-1 px-2 py-1 hidden";
+        messagesList.dataset.messagesList = "1";
+
+        container.appendChild(header);
+        container.appendChild(messagesList);
+
+        return container;
+    }
+
+    private getTechnicalMessagesContainer(container: HTMLElement): HTMLElement | null {
+        return container.querySelector<HTMLElement>('[data-technical-messages="1"]');
+    }
+
+    private appendTechnicalEvent(container: HTMLElement, event: AgentEvent): void {
+        const technicalContainer = this.getTechnicalMessagesContainer(container);
+        if (!technicalContainer) {
+            return;
+        }
+
+        const messagesList = technicalContainer.querySelector<HTMLElement>('[data-messages-list="1"]');
+        const countEl = technicalContainer.querySelector<HTMLElement>('[data-count="1"]');
+
+        if (!messagesList || !countEl) {
+            return;
+        }
+
+        const eventEl = this.renderTechnicalEvent(event);
+        messagesList.appendChild(eventEl);
+
+        const currentCount = parseInt(countEl.textContent || "0", 10);
+        countEl.textContent = String(currentCount + 1);
+
+        // Auto-scroll within the technical messages list if expanded
+        if (!messagesList.classList.contains("hidden")) {
+            messagesList.scrollTop = messagesList.scrollHeight;
+        }
+
+        // Update pulsing indicator based on activity
+        this.updateTechnicalIndicator(technicalContainer, event);
+    }
+
+    private renderTechnicalEvent(e: AgentEvent): HTMLElement {
         const wrap = document.createElement("div");
-        wrap.className = "text-xs font-mono";
+        wrap.className = "text-[10px] font-mono leading-relaxed";
 
         switch (e.kind) {
             case "inference_start":
                 wrap.textContent = "→ Sending to LLM…";
-                wrap.classList.add("text-amber-600", "dark:text-amber-400");
+                wrap.classList.add("text-amber-600/70", "dark:text-amber-400/70");
                 break;
             case "inference_stop":
                 wrap.textContent = "← LLM response received";
-                wrap.classList.add("text-amber-600", "dark:text-amber-400");
+                wrap.classList.add("text-amber-600/70", "dark:text-amber-400/70");
                 break;
             case "tool_calling":
-                wrap.innerHTML = `▶ Calling: <span class="font-semibold">${escapeHtml(e.toolName ?? "?")}</span>`;
+                wrap.innerHTML = `▶ <span class="font-medium">${escapeHtml(e.toolName ?? "?")}</span>`;
                 if (e.toolInputs && e.toolInputs.length > 0) {
                     const ul = document.createElement("ul");
-                    ul.className = "mt-1 ml-2 list-disc";
+                    ul.className = "mt-0.5 ml-3 list-disc space-y-0.5";
                     for (const t of e.toolInputs) {
                         const li = document.createElement("li");
-                        li.textContent = `${t.key}: ${t.value}`;
+                        li.className = "text-[9px]";
+                        const displayValue = t.value.length > 50 ? t.value.slice(0, 50) + "…" : t.value;
+                        li.textContent = `${t.key}: ${displayValue}`;
                         ul.appendChild(li);
                     }
                     wrap.appendChild(ul);
                 }
-                wrap.classList.add("text-blue-700", "dark:text-blue-300");
+                wrap.classList.add("text-blue-600/70", "dark:text-blue-400/70");
                 break;
-            case "tool_called":
-                wrap.innerHTML = `◀ Result: ${escapeHtml((e.toolResult ?? "").slice(0, 200))}${(e.toolResult?.length ?? 0) > 200 ? "…" : ""}`;
-                wrap.classList.add("text-green-700", "dark:text-green-300");
+            case "tool_called": {
+                const result = (e.toolResult ?? "").slice(0, 100);
+                wrap.innerHTML = `◀ ${escapeHtml(result)}${(e.toolResult?.length ?? 0) > 100 ? "…" : ""}`;
+                wrap.classList.add("text-green-600/70", "dark:text-green-400/70");
                 break;
+            }
             case "agent_error":
                 wrap.textContent = `✖ ${e.errorMessage ?? "Unknown error"}`;
-                wrap.classList.add("text-red-600", "dark:text-red-400");
+                wrap.classList.add("text-red-600/70", "dark:text-red-400/70");
                 break;
             default:
                 wrap.textContent = `[${e.kind}]`;
+                wrap.classList.add("text-dark-400", "dark:text-dark-500");
         }
 
         return wrap;
+    }
+
+    private toggleTechnicalMessages(container: HTMLElement): void {
+        const messagesList = container.querySelector<HTMLElement>('[data-messages-list="1"]');
+        const chevron = container.querySelector<SVGElement>('[data-chevron="1"]');
+
+        if (!messagesList || !chevron) {
+            return;
+        }
+
+        const isHidden = messagesList.classList.contains("hidden");
+
+        if (isHidden) {
+            messagesList.classList.remove("hidden");
+            chevron.classList.add("rotate-180");
+        } else {
+            messagesList.classList.add("hidden");
+            chevron.classList.remove("rotate-180");
+        }
+    }
+
+    private updateTechnicalIndicator(container: HTMLElement, event: AgentEvent): void {
+        const indicator = container.querySelector<HTMLElement>('[data-indicator="1"]');
+        const label = container.querySelector<HTMLElement>('[data-label="1"]');
+        const header = container.querySelector<HTMLElement>('[data-header="1"]');
+        if (!indicator) {
+            return;
+        }
+
+        // Pulse for active tool calls and inference - make it more prominent
+        if (event.kind === "tool_calling" || event.kind === "inference_start") {
+            indicator.classList.add("animate-pulse");
+            indicator.classList.remove("bg-blue-400/50", "dark:bg-blue-500/50");
+            indicator.classList.add(
+                "bg-blue-500",
+                "dark:bg-blue-400",
+                "ring-2",
+                "ring-blue-500/30",
+                "dark:ring-blue-400/30",
+            );
+            // Pulse the text too
+            if (label) {
+                label.classList.add("animate-pulse", "text-blue-600", "dark:text-blue-400");
+            }
+            // Make header more prominent when active
+            if (header) {
+                header.classList.add("bg-blue-50/50", "dark:bg-blue-900/20");
+            }
+        } else if (event.kind === "tool_called" || event.kind === "inference_stop") {
+            // Fade out pulse when tool completes, but keep it visible
+            setTimeout(() => {
+                if (indicator) {
+                    indicator.classList.remove(
+                        "animate-pulse",
+                        "bg-blue-500",
+                        "dark:bg-blue-400",
+                        "ring-2",
+                        "ring-blue-500/30",
+                        "dark:ring-blue-400/30",
+                    );
+                    indicator.classList.add("bg-blue-400/70", "dark:bg-blue-500/70");
+                }
+                if (label) {
+                    label.classList.remove("animate-pulse", "text-blue-600", "dark:text-blue-400");
+                    label.classList.add("text-dark-600", "dark:text-dark-300");
+                }
+                if (header) {
+                    header.classList.remove("bg-blue-50/50", "dark:bg-blue-900/20");
+                }
+            }, 800);
+        }
     }
 
     private appendError(container: HTMLElement, message: string): void {
