@@ -9,15 +9,112 @@
              pollUrlTemplate: pollUrlTemplate,
              conversationId: conversation.id
          }) }}>
+
+        {# Flash messages #}
+        {% for message in app.flashes('success') %}
+            <div class="rounded-md bg-green-50 dark:bg-green-900/20 p-4">
+                <p class="text-sm text-green-700 dark:text-green-400">{{ message }}</p>
+            </div>
+        {% endfor %}
+
+        {% for message in app.flashes('error') %}
+            <div class="rounded-md bg-red-50 dark:bg-red-900/20 p-4">
+                <p class="text-sm text-red-700 dark:text-red-400">{{ message }}</p>
+            </div>
+        {% endfor %}
+
+        {# Workspace status banners #}
+        {% if workspace and workspace.status.name == 'PROBLEM' %}
+            <div class="rounded-md bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-4">
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <svg class="h-5 w-5 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                    </div>
+                    <div class="ml-3">
+                        <h3 class="text-sm font-medium text-red-800 dark:text-red-200">Workspace Problem</h3>
+                        <p class="mt-1 text-sm text-red-700 dark:text-red-300">The workspace encountered a problem. You can reset it to try again.</p>
+                        <form method="POST" action="{{ path('chat_based_content_editor.presentation.reset_workspace', { workspaceId: workspace.id }) }}" class="mt-2">
+                            <input type="hidden" name="_csrf_token" value="{{ csrf_token('workspace_reset') }}">
+                            <button type="submit" class="text-sm font-medium text-red-800 dark:text-red-200 hover:text-red-700 dark:hover:text-red-100 underline">
+                                Reset Workspace
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+
+        {% if workspace and workspace.status.name == 'IN_REVIEW' %}
+            <div class="rounded-md bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 p-4">
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <svg class="h-5 w-5 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                    </div>
+                    <div class="ml-3">
+                        <h3 class="text-sm font-medium text-purple-800 dark:text-purple-200">In Review</h3>
+                        <p class="mt-1 text-sm text-purple-700 dark:text-purple-300">This workspace is currently in review. No new conversations can be started until the review is complete.</p>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+
+        {# Header with project context #}
         <div class="flex items-center justify-between">
             <div>
-                <h1 class="text-2xl font-semibold text-dark-900 dark:text-dark-100">Chat-based content editor</h1>
-                <p class="text-dark-600 dark:text-dark-400 mt-1">Give instructions in natural language; the AI will edit files in the workspace and show what it does step by step.</p>
+                <div class="flex items-center gap-2">
+                    <h1 class="text-2xl font-semibold text-dark-900 dark:text-dark-100">Chat-based content editor</h1>
+                    {% if workspace %}
+                        {% set statusColors = {
+                            'AVAILABLE_FOR_SETUP': 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200',
+                            'IN_SETUP': 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
+                            'AVAILABLE_FOR_CONVERSATION': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+                            'IN_CONVERSATION': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
+                            'IN_REVIEW': 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
+                            'MERGED': 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200',
+                            'PROBLEM': 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                        } %}
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium {{ statusColors[workspace.status.name] ?? 'bg-gray-100 text-gray-800' }}">
+                            {{ workspace.status.name | replace({'_': ' '}) | lower | capitalize }}
+                        </span>
+                    {% endif %}
+                </div>
+                {% if project %}
+                    <p class="text-dark-600 dark:text-dark-400 mt-1">
+                        Working on <strong>{{ project.name }}</strong>
+                        {% if workspace and workspace.branchName %}
+                            on branch <code class="px-1 py-0.5 bg-dark-100 dark:bg-dark-700 rounded text-xs">{{ workspace.branchName }}</code>
+                        {% endif %}
+                    </p>
+                {% else %}
+                    <p class="text-dark-600 dark:text-dark-400 mt-1">Give instructions in natural language; the AI will edit files in the workspace and show what it does step by step.</p>
+                {% endif %}
             </div>
-            <a href="{{ path('chat_based_content_editor.presentation.new') }}"
-               class="px-3 py-1.5 rounded-md border border-dark-300 dark:border-dark-600 text-dark-700 dark:text-dark-300 text-sm font-medium hover:bg-dark-100 dark:hover:bg-dark-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:focus:ring-offset-dark-900">
-                New Conversation
-            </a>
+            <div class="flex items-center gap-2">
+                {% if canEdit %}
+                    <form method="POST" action="{{ path('chat_based_content_editor.presentation.finish', { conversationId: conversation.id }) }}" class="inline">
+                        <input type="hidden" name="_csrf_token" value="{{ csrf_token('conversation_finish') }}">
+                        <button type="submit"
+                                class="px-3 py-1.5 rounded-md border border-dark-300 dark:border-dark-600 text-dark-700 dark:text-dark-300 text-sm font-medium hover:bg-dark-100 dark:hover:bg-dark-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:focus:ring-offset-dark-900">
+                            Finish Conversation
+                        </button>
+                    </form>
+                    <form method="POST" action="{{ path('chat_based_content_editor.presentation.send_to_review', { conversationId: conversation.id }) }}" class="inline">
+                        <input type="hidden" name="_csrf_token" value="{{ csrf_token('conversation_review') }}">
+                        <button type="submit"
+                                class="px-3 py-1.5 rounded-md bg-primary-600 text-white text-sm font-medium hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:focus:ring-offset-dark-900">
+                            Send to Review
+                        </button>
+                    </form>
+                {% endif %}
+                <a href="{{ path('project_mgmt.presentation.list') }}"
+                   class="px-3 py-1.5 rounded-md border border-dark-300 dark:border-dark-600 text-dark-700 dark:text-dark-300 text-sm font-medium hover:bg-dark-100 dark:hover:bg-dark-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:focus:ring-offset-dark-900">
+                    Back to Projects
+                </a>
+            </div>
         </div>
 
         <div class="relative">
@@ -48,36 +145,48 @@
             </div>
         </div>
 
-        <form {{ stimulus_action('chat-based-content-editor', 'handleSubmit', 'submit') }}
-              class="space-y-4">
-            <input type="hidden" name="_csrf_token" value="{{ csrf_token('chat_based_content_editor_run') }}">
-            <div>
-                <label for="instruction" class="block text-sm font-medium text-dark-700 dark:text-dark-300 mb-1">Instruction</label>
-                <textarea {{ stimulus_target('chat-based-content-editor', 'instruction') }}
-                          {{ stimulus_action('chat-based-content-editor', 'handleKeydown', 'keydown') }}
-                          name="instruction"
-                          id="instruction"
-                          rows="3"
-                          required
-                          placeholder="e.g. Add a contact section to the homepage"
-                          class="w-full px-3 py-2 border border-dark-300 dark:border-dark-600 rounded-md bg-white dark:bg-dark-800 text-dark-900 dark:text-dark-100 text-sm"></textarea>
+        {% if canEdit %}
+            <form {{ stimulus_action('chat-based-content-editor', 'handleSubmit', 'submit') }}
+                  class="space-y-4">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token('chat_based_content_editor_run') }}">
+                <div>
+                    <label for="instruction" class="block text-sm font-medium text-dark-700 dark:text-dark-300 mb-1">Instruction</label>
+                    <textarea {{ stimulus_target('chat-based-content-editor', 'instruction') }}
+                              {{ stimulus_action('chat-based-content-editor', 'handleKeydown', 'keydown') }}
+                              name="instruction"
+                              id="instruction"
+                              rows="3"
+                              required
+                              placeholder="e.g. Add a contact section to the homepage"
+                              class="w-full px-3 py-2 border border-dark-300 dark:border-dark-600 rounded-md bg-white dark:bg-dark-800 text-dark-900 dark:text-dark-100 text-sm"></textarea>
+                </div>
+                <div class="flex items-center gap-4">
+                    <button type="submit"
+                            {{ stimulus_target('chat-based-content-editor', 'submit') }}
+                            class="px-4 py-2 rounded-md bg-primary-600 text-white text-sm font-medium hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:focus:ring-offset-dark-900 disabled:opacity-50 disabled:cursor-not-allowed">
+                        Run
+                    </button>
+                    <label class="inline-flex items-center gap-1.5 text-sm text-dark-600 dark:text-dark-400 cursor-pointer select-none">
+                        <input type="checkbox"
+                               {{ stimulus_target('chat-based-content-editor', 'submitOnEnter') }}
+                               {{ stimulus_action('chat-based-content-editor', 'toggleSubmitOnEnter', 'change') }}
+                               checked
+                               class="rounded border-dark-300 dark:border-dark-600 text-primary-600 focus:ring-primary-500 dark:focus:ring-offset-dark-800">
+                        <span>Enter to send</span>
+                    </label>
+                </div>
+            </form>
+        {% else %}
+            <div class="rounded-md bg-dark-100 dark:bg-dark-700/50 p-4">
+                <p class="text-sm text-dark-600 dark:text-dark-400">
+                    {% if conversation.status.value == 'finished' %}
+                        This conversation has been finished. You can view the history above.
+                    {% else %}
+                        You cannot edit this conversation.
+                    {% endif %}
+                </p>
             </div>
-            <div class="flex items-center gap-4">
-                <button type="submit"
-                        {{ stimulus_target('chat-based-content-editor', 'submit') }}
-                        class="px-4 py-2 rounded-md bg-primary-600 text-white text-sm font-medium hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:focus:ring-offset-dark-900 disabled:opacity-50 disabled:cursor-not-allowed">
-                    Run
-                </button>
-                <label class="inline-flex items-center gap-1.5 text-sm text-dark-600 dark:text-dark-400 cursor-pointer select-none">
-                    <input type="checkbox"
-                           {{ stimulus_target('chat-based-content-editor', 'submitOnEnter') }}
-                           {{ stimulus_action('chat-based-content-editor', 'toggleSubmitOnEnter', 'change') }}
-                           checked
-                           class="rounded border-dark-300 dark:border-dark-600 text-primary-600 focus:ring-primary-500 dark:focus:ring-offset-dark-800">
-                    <span>Enter to send</span>
-                </label>
-            </div>
-        </form>
+        {% endif %}
 
         <div class="border-t border-dark-200 dark:border-dark-700 pt-6">
             <h2 class="text-lg font-medium text-dark-900 dark:text-dark-100 mb-3">Past Conversations</h2>

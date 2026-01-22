@@ -6,16 +6,15 @@ namespace App\WorkspaceMgmt\Facade\Dto;
 
 use App\WorkspaceMgmt\Facade\Enum\WorkspaceStatus;
 
-
 final readonly class WorkspaceInfoDto
 {
     public function __construct(
         public string          $id,
         public string          $projectId,
-        public WorkspaceStatus $status
-    )
-    {
-
+        public string          $projectName,
+        public WorkspaceStatus $status,
+        public ?string         $branchName,
+        public string          $workspacePath,
+    ) {
     }
-
 }

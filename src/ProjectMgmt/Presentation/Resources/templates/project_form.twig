@@ -1,0 +1,70 @@
+{% extends '@Webui/base_appshell.html.twig' %}
+
+{% block title %}{{ project ? 'Edit Project' : 'New Project' }}{% endblock %}
+
+{% block body %}
+    <div class="max-w-2xl mx-auto space-y-6">
+        <div>
+            <h1 class="text-2xl font-semibold text-dark-900 dark:text-dark-100">{{ project ? 'Edit Project' : 'New Project' }}</h1>
+            <p class="text-dark-600 dark:text-dark-400 mt-1">{{ project ? 'Update the project details below.' : 'Create a new content project by filling in the details below.' }}</p>
+        </div>
+
+        {% for message in app.flashes('error') %}
+            <div class="rounded-md bg-red-50 dark:bg-red-900/20 p-4">
+                <p class="text-sm text-red-700 dark:text-red-400">{{ message }}</p>
+            </div>
+        {% endfor %}
+
+        <form method="POST"
+              action="{{ project ? path('project_mgmt.presentation.update', { id: project.id }) : path('project_mgmt.presentation.create') }}"
+              class="space-y-6 bg-white dark:bg-dark-800 rounded-lg border border-dark-200 dark:border-dark-700 p-6">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token(project ? 'project_update' : 'project_create') }}">
+
+            <div>
+                <label for="name" class="block text-sm font-medium text-dark-700 dark:text-dark-300 mb-1">Project Name</label>
+                <input type="text"
+                       name="name"
+                       id="name"
+                       value="{{ project ? project.name : '' }}"
+                       required
+                       placeholder="My Website"
+                       class="w-full px-3 py-2 border border-dark-300 dark:border-dark-600 rounded-md bg-white dark:bg-dark-800 text-dark-900 dark:text-dark-100 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
+            </div>
+
+            <div>
+                <label for="git_url" class="block text-sm font-medium text-dark-700 dark:text-dark-300 mb-1">Git URL</label>
+                <input type="url"
+                       name="git_url"
+                       id="git_url"
+                       value="{{ project ? project.gitUrl : '' }}"
+                       required
+                       placeholder="https://github.com/org/repo.git"
+                       class="w-full px-3 py-2 border border-dark-300 dark:border-dark-600 rounded-md bg-white dark:bg-dark-800 text-dark-900 dark:text-dark-100 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
+                <p class="mt-1 text-xs text-dark-500 dark:text-dark-400">The HTTPS URL of the git repository.</p>
+            </div>
+
+            <div>
+                <label for="github_token" class="block text-sm font-medium text-dark-700 dark:text-dark-300 mb-1">GitHub Token</label>
+                <input type="password"
+                       name="github_token"
+                       id="github_token"
+                       value="{{ project ? project.githubToken : '' }}"
+                       required
+                       placeholder="ghp_xxxxxxxxxxxx"
+                       class="w-full px-3 py-2 border border-dark-300 dark:border-dark-600 rounded-md bg-white dark:bg-dark-800 text-dark-900 dark:text-dark-100 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
+                <p class="mt-1 text-xs text-dark-500 dark:text-dark-400">A personal access token with repo permissions.</p>
+            </div>
+
+            <div class="flex items-center justify-end gap-3 pt-4 border-t border-dark-200 dark:border-dark-700">
+                <a href="{{ path('project_mgmt.presentation.list') }}"
+                   class="px-4 py-2 rounded-md border border-dark-300 dark:border-dark-600 text-dark-700 dark:text-dark-300 text-sm font-medium hover:bg-dark-100 dark:hover:bg-dark-700 focus:outline-none focus:ring-2 focus:ring-primary-500">
+                    Cancel
+                </a>
+                <button type="submit"
+                        class="px-4 py-2 rounded-md bg-primary-600 text-white text-sm font-medium hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:focus:ring-offset-dark-900">
+                    {{ project ? 'Update Project' : 'Create Project' }}
+                </button>
+            </div>
+        </form>
+    </div>
+{% endblock %}

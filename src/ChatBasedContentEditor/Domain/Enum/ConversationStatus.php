@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\ChatBasedContentEditor\Facade\Dto;
+namespace App\ChatBasedContentEditor\Domain\Enum;
 
 enum ConversationStatus: string
 {

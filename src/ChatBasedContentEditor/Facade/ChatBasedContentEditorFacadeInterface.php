@@ -6,5 +6,4 @@ namespace App\ChatBasedContentEditor\Facade;
 
 interface ChatBasedContentEditorFacadeInterface
 {
-
 }

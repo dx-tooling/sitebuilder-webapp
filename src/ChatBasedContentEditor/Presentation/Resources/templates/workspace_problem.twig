@@ -1,0 +1,71 @@
+{% extends '@Webui/base_appshell.html.twig' %}
+
+{% block title %}Workspace Problem{% endblock %}
+
+{% block body %}
+    <div class="max-w-2xl mx-auto space-y-6">
+        <div class="bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800 p-6">
+            <div class="flex">
+                <div class="flex-shrink-0">
+                    <svg class="h-6 w-6 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                </div>
+                <div class="ml-3">
+                    <h3 class="text-lg font-medium text-red-800 dark:text-red-200">Workspace Problem</h3>
+                    <div class="mt-2 text-sm text-red-700 dark:text-red-300">
+                        <p>There was a problem with the workspace for project <strong>{{ project.name }}</strong>.</p>
+                        <p class="mt-2">This typically happens when:</p>
+                        <ul class="list-disc list-inside mt-1 space-y-1">
+                            <li>Git clone failed (network issue or invalid credentials)</li>
+                            <li>Branch creation failed</li>
+                            <li>Push operation failed</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white dark:bg-dark-800 rounded-lg border border-dark-200 dark:border-dark-700 p-6">
+            <h4 class="text-sm font-medium text-dark-900 dark:text-dark-100 mb-4">What would you like to do?</h4>
+
+            <div class="space-y-4">
+                <form method="POST" action="{{ path('chat_based_content_editor.presentation.reset_workspace', { workspaceId: workspace.id }) }}">
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token('workspace_reset') }}">
+                    <button type="submit"
+                            class="w-full flex items-center justify-center px-4 py-3 rounded-md bg-primary-600 text-white text-sm font-medium hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:focus:ring-offset-dark-900">
+                        <svg class="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                        Reset Workspace and Try Again
+                    </button>
+                </form>
+
+                <a href="{{ path('project_mgmt.presentation.list') }}"
+                   class="w-full flex items-center justify-center px-4 py-3 rounded-md border border-dark-300 dark:border-dark-600 text-dark-700 dark:text-dark-300 text-sm font-medium hover:bg-dark-100 dark:hover:bg-dark-700">
+                    Back to Projects
+                </a>
+            </div>
+        </div>
+
+        <div class="bg-dark-50 dark:bg-dark-800/50 rounded-lg border border-dark-200 dark:border-dark-700 p-4">
+            <h4 class="text-xs font-medium text-dark-500 dark:text-dark-400 uppercase tracking-wider mb-2">Workspace Details</h4>
+            <dl class="text-sm space-y-1">
+                <div class="flex justify-between">
+                    <dt class="text-dark-500 dark:text-dark-400">Workspace ID:</dt>
+                    <dd class="text-dark-900 dark:text-dark-100 font-mono text-xs">{{ workspace.id }}</dd>
+                </div>
+                <div class="flex justify-between">
+                    <dt class="text-dark-500 dark:text-dark-400">Project:</dt>
+                    <dd class="text-dark-900 dark:text-dark-100">{{ project.name }}</dd>
+                </div>
+                {% if workspace.branchName %}
+                    <div class="flex justify-between">
+                        <dt class="text-dark-500 dark:text-dark-400">Branch:</dt>
+                        <dd class="text-dark-900 dark:text-dark-100 font-mono text-xs">{{ workspace.branchName }}</dd>
+                    </div>
+                {% endif %}
+            </dl>
+        </div>
+    </div>
+{% endblock %}

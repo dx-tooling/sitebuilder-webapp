@@ -4,26 +4,42 @@ security:
         Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface: "auto"
     # https://symfony.com/doc/current/security.html#loading-the-user-the-user-provider
     providers:
-        users_in_memory: { memory: null }
+        app_user_provider:
+            entity:
+                class: App\Account\Domain\Entity\AccountCore
+                property: email
     firewalls:
         dev:
             pattern: ^/(_(profiler|wdt)|css|images|js)/
             security: false
         main:
             lazy: true
-            provider: users_in_memory
-
-            # activate different ways to authenticate
-            # https://symfony.com/doc/current/security.html#the-firewall
+            provider: app_user_provider
+            form_login:
+                login_path: account.presentation.sign_in
+                check_path: account.presentation.sign_in
+                default_target_path: project_mgmt.presentation.list
+            logout:
+                path: account.presentation.sign_out
+                target: account.presentation.sign_in
 
             # https://symfony.com/doc/current/security/impersonating_user.html
             # switch_user: true
 
+    # Role hierarchy
+    role_hierarchy:
+        ROLE_REVIEWER: ROLE_USER
+        ROLE_ADMIN: [ROLE_USER, ROLE_REVIEWER]
+
     # Easy way to control access for large sections of your site
     # Note: Only the *first* access control that matches will be used
     access_control:
-        # - { path: ^/admin, roles: ROLE_ADMIN }
-        # - { path: ^/profile, roles: ROLE_USER }
+        - { path: ^/sign-in, roles: PUBLIC_ACCESS }
+        - { path: ^/sign-up, roles: PUBLIC_ACCESS }
+        - { path: ^/review, roles: ROLE_REVIEWER }
+        - { path: ^/projects, roles: ROLE_USER }
+        - { path: ^/conversation, roles: ROLE_USER }
+        - { path: ^/workspace, roles: ROLE_USER }
 
 when@test:
     security:

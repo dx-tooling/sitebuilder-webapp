@@ -1,0 +1,179 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\ChatBasedContentEditor\Domain\Service;
+
+use App\ChatBasedContentEditor\Domain\Dto\ConversationInfoDto;
+use App\ChatBasedContentEditor\Domain\Entity\Conversation;
+use App\ChatBasedContentEditor\Domain\Enum\ConversationStatus;
+use App\WorkspaceMgmt\Facade\WorkspaceMgmtFacadeInterface;
+use Doctrine\ORM\EntityManagerInterface;
+use RuntimeException;
+
+/**
+ * Internal domain service for conversation operations.
+ * Used by ChatBasedContentEditorController within the same vertical.
+ */
+final class ConversationService
+{
+    public function __construct(
+        private readonly EntityManagerInterface       $entityManager,
+        private readonly WorkspaceMgmtFacadeInterface $workspaceMgmtFacade,
+    ) {
+    }
+
+    /**
+     * Start a new conversation or return existing ongoing one.
+     */
+    public function startOrResumeConversation(string $projectId, string $userId): ConversationInfoDto
+    {
+        // Ensure workspace is ready
+        $workspaceInfo = $this->workspaceMgmtFacade->ensureWorkspaceReadyForConversation($projectId);
+
+        // Check for existing ongoing conversation for this user
+        $existingConversation = $this->findOngoingConversation($workspaceInfo->id, $userId);
+
+        if ($existingConversation !== null) {
+            return $this->toDto($existingConversation);
+        }
+
+        // Transition workspace to IN_CONVERSATION
+        $this->workspaceMgmtFacade->transitionToInConversation($workspaceInfo->id);
+
+        // Create new conversation
+        $conversation = new Conversation(
+            $workspaceInfo->id,
+            $userId,
+            $workspaceInfo->workspacePath
+        );
+        $this->entityManager->persist($conversation);
+        $this->entityManager->flush();
+
+        return $this->toDto($conversation);
+    }
+
+    /**
+     * Finish a conversation and make workspace available.
+     */
+    public function finishConversation(string $conversationId, string $userId): void
+    {
+        $conversation = $this->getConversationOrFail($conversationId);
+
+        $this->validateConversationOwner($conversation, $userId);
+
+        if ($conversation->getStatus() !== ConversationStatus::ONGOING) {
+            throw new RuntimeException('Conversation is not ongoing');
+        }
+
+        // Commit any pending changes
+        $this->workspaceMgmtFacade->commitAndPush(
+            $conversation->getWorkspaceId(),
+            'Auto-commit on conversation finish'
+        );
+
+        // Mark conversation as finished
+        $conversation->setStatus(ConversationStatus::FINISHED);
+        $this->entityManager->flush();
+
+        // Make workspace available for new conversations
+        $this->workspaceMgmtFacade->transitionToAvailableForConversation(
+            $conversation->getWorkspaceId()
+        );
+    }
+
+    /**
+     * Send conversation to review (finish and create PR).
+     */
+    public function sendToReview(string $conversationId, string $userId): string
+    {
+        $conversation = $this->getConversationOrFail($conversationId);
+
+        $this->validateConversationOwner($conversation, $userId);
+
+        if ($conversation->getStatus() !== ConversationStatus::ONGOING) {
+            throw new RuntimeException('Conversation is not ongoing');
+        }
+
+        // Commit any pending changes
+        $this->workspaceMgmtFacade->commitAndPush(
+            $conversation->getWorkspaceId(),
+            'Auto-commit before review'
+        );
+
+        // Mark conversation as finished
+        $conversation->setStatus(ConversationStatus::FINISHED);
+        $this->entityManager->flush();
+
+        // Transition workspace to review
+        $this->workspaceMgmtFacade->transitionToInReview($conversation->getWorkspaceId());
+
+        // Ensure PR exists and return URL
+        return $this->workspaceMgmtFacade->ensurePullRequest($conversation->getWorkspaceId());
+    }
+
+    public function findById(string $id): ?ConversationInfoDto
+    {
+        $conversation = $this->entityManager->find(Conversation::class, $id);
+
+        if ($conversation === null) {
+            return null;
+        }
+
+        return $this->toDto($conversation);
+    }
+
+    public function findOngoingConversation(string $workspaceId, string $userId): ?Conversation
+    {
+        /** @var Conversation|null $conversation */
+        $conversation = $this->entityManager->createQueryBuilder()
+            ->select('c')
+            ->from(Conversation::class, 'c')
+            ->where('c.workspaceId = :workspaceId')
+            ->andWhere('c.userId = :userId')
+            ->andWhere('c.status = :status')
+            ->setParameter('workspaceId', $workspaceId)
+            ->setParameter('userId', $userId)
+            ->setParameter('status', ConversationStatus::ONGOING)
+            ->setMaxResults(1)
+            ->getQuery()
+            ->getOneOrNullResult();
+
+        return $conversation;
+    }
+
+    private function getConversationOrFail(string $id): Conversation
+    {
+        $conversation = $this->entityManager->find(Conversation::class, $id);
+
+        if ($conversation === null) {
+            throw new RuntimeException('Conversation not found: ' . $id);
+        }
+
+        return $conversation;
+    }
+
+    private function validateConversationOwner(Conversation $conversation, string $userId): void
+    {
+        if ($conversation->getUserId() !== $userId) {
+            throw new RuntimeException('Only the conversation owner can perform this action');
+        }
+    }
+
+    private function toDto(Conversation $conversation): ConversationInfoDto
+    {
+        $id = $conversation->getId();
+        if ($id === null) {
+            throw new RuntimeException('Conversation ID cannot be null');
+        }
+
+        return new ConversationInfoDto(
+            $id,
+            $conversation->getWorkspaceId(),
+            $conversation->getUserId(),
+            $conversation->getStatus(),
+            $conversation->getWorkspacePath(),
+            $conversation->getCreatedAt(),
+        );
+    }
+}

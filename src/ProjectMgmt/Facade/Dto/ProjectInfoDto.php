@@ -11,8 +11,6 @@ final readonly class ProjectInfoDto
         public string $name,
         public string $gitUrl,
         public string $githubToken,
-    )
-    {
-
+    ) {
     }
 }
