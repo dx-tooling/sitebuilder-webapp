@@ -8,7 +8,7 @@ use App\ProjectMgmt\Facade\Enum\ProjectType;
 
 /**
  * Provides setup steps for the DEFAULT project type.
- * Runs npm install and npm build.
+ * Trusts mise configuration, then runs npm install and npm build via mise exec.
  */
 final class DefaultProjectSetupStepsProvider implements ProjectSetupStepsProviderInterface
 {
@@ -26,15 +26,21 @@ final class DefaultProjectSetupStepsProvider implements ProjectSetupStepsProvide
     {
         return [
             new SetupStep(
+                'Trust mise configuration',
+                'mise',
+                ['trust'],
+                10
+            ),
+            new SetupStep(
                 'Install npm dependencies',
-                'npm',
-                ['install', '--no-save'],
+                'mise',
+                ['exec', '--', 'npm', 'install', '--no-save'],
                 300 // 5 minutes
             ),
             new SetupStep(
                 'Build project',
-                'npm',
-                ['run', 'build'],
+                'mise',
+                ['exec', '--', 'npm', 'run', 'build'],
                 300 // 5 minutes
             ),
         ];
