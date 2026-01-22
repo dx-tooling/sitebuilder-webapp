@@ -123,19 +123,32 @@ This plan reflects the current facade skeletons in `WorkspaceMgmt`, `ProjectMgmt
      - `sendToReview(string $conversationId): void`
      - `getOpenConversationForUser(string $workspaceId, string $userId): ?ConversationInfoDto`
 
-3. **Workspace management services**
+3. **User-facing UI and use cases**
+   - **Authentication required**: all workspace/project actions require a logged-in account session.
+   - **Project management UI**:
+     - Create project (name, git URL, GitHub token).
+     - Edit project attributes (update token, URL, name).
+     - List projects and show current workspace status.
+   - **Workspace conversation UI**:
+     - Start or resume conversation for a selected project.
+     - Show status banners for `IN_REVIEW` and `PROBLEM`, with reset action for `PROBLEM`.
+     - Finish conversation and send to review actions.
+   - **Reviewer use case**:
+     - Simple review actions to set workspace to `MERGED` or `AVAILABLE_FOR_CONVERSATION`.
+
+4. **Workspace management services**
    - Add a `WorkspaceSetupService` in `WorkspaceMgmt\Domain\Service` that performs setup and transitions `AVAILABLE_FOR_SETUP|MERGED -> IN_SETUP -> AVAILABLE_FOR_CONVERSATION` or `PROBLEM`.
    - Add a `WorkspaceStatusGuard` to enforce the transition table (used by all façade methods).
    - Provide a `WorkspaceConversationGuard` to ensure single active conversation per workspace.
 
-4. **Infrastructure services for “dirty work”**
+5. **Infrastructure services for “dirty work”**
    - Create three `WorkspaceMgmt\Infrastructure` services with plain PHP and direct process execution (no agent involvement):
      - **LocalFilesystemService**: remove/create workspace folder; filesystem ops; execute shell commands inside the workspace root.
      - **GitWorkspaceService**: clone, checkout, create branch, status, commit, push (via git CLI or a PHP git library).
      - **GitHubService**: find or create PRs using project `githubToken` (via GitHub API).
    - Wire these into `WorkspaceSetupService` and conversation completion hooks.
 
-5. **Controller + facade integration**
+6. **Controller + facade integration**
    - Replace the direct `EntityManager` usage in `ChatBasedContentEditorController` with the new facades.
    - Conversation start:
      - Fetch or create workspace for project.
@@ -145,20 +158,32 @@ This plan reflects the current facade skeletons in `WorkspaceMgmt`, `ProjectMgmt
      - If `IN_REVIEW` or `PROBLEM`, deny start and surface a user message (and allow reset for `PROBLEM`).
    - Add endpoints/actions to finish conversation and send to review.
 
-6. **Git operations + status updates**
+7. **Git operations + status updates**
    - In `RunEditSessionHandler`, after a successful edit session, use `GitWorkspaceService` to check for changes and commit/push; on failure, set workspace to `PROBLEM` and finish the conversation.
    - On `finishConversation`, force a final commit/push even if there was no recent edit session.
    - On `sendToReview`, ensure a PR exists (GitHub service) and move workspace to `IN_REVIEW`.
 
-7. **Config + paths**
+8. **Config + paths**
    - The current `chat_based_content_editor.workspace_root` parameter should move to `WorkspaceMgmt` as the workspace root setting used by setup and tooling services.
    - `Conversation` should derive workspace path from its `Workspace` relation rather than storing a path as a standalone string.
 
-8. **Concurrency, security, and roles**
+9. **Concurrency, security, and roles**
    - Use DB transactions or locks to enforce “single active conversation per workspace”.
    - Ensure only the conversation owner can finish or send to review.
    - Allow any authenticated user to reset a `PROBLEM` workspace to `AVAILABLE_FOR_SETUP` (per requirement).
 
-9. **Tests**
+10. **Testing strategy and reducing brittleness**
+   - Keep pure workflow logic in small services (guards, orchestration, status transitions) and unit-test those with no IO.
+   - Introduce adapter interfaces for external dependencies:
+     - `FilesystemAdapterInterface`, `CommandRunnerInterface`, `GitAdapterInterface`, `GitHubAdapterInterface`.
+   - Provide **local stand-ins** for tests:
+     - In-memory or temp-directory filesystem adapter that records operations.
+     - Fake command runner that returns scripted outputs for git commands.
+     - Fake GitHub adapter that stores PRs in memory.
+   - In production, wire real implementations (native filesystem + `Process` for commands, GitHub API client).
+   - Add a thin integration test suite that runs against the real adapters only when explicitly enabled (env flag), so CI remains fast and deterministic.
+
+11. **Tests**
    - Unit tests for state transitions and guards (`PROBLEM`, reset, review exits).
-   - Integration tests for conversation start/finish/review and setup success/failure paths.
+   - Unit tests for orchestration with fake adapters (success and failure paths).
+   - Integration tests for conversation start/finish/review flows using fakes, plus optional live tests for real git/GitHub adapters.
