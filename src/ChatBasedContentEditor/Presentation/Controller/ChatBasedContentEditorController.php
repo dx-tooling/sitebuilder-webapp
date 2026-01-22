@@ -32,7 +32,6 @@ use function array_key_exists;
 use function is_array;
 use function is_string;
 use function json_decode;
-use function mb_substr;
 
 /**
  * Controller for chat-based content editing.
@@ -140,39 +139,27 @@ final class ChatBasedContentEditorController extends AbstractController
             throw $this->createNotFoundException('Conversation not found.');
         }
 
+        $accountInfo = $this->getAccountInfo($user);
+
+        // Authorization: Only the conversation owner can view it
+        if ($conversation->getUserId() !== $accountInfo->id) {
+            throw $this->createAccessDeniedException('You do not have access to this conversation.');
+        }
+
+        // Authorization: Only ONGOING conversations can be viewed
+        // Finished conversations should not be accessible - users should start new conversations instead
+        if ($conversation->getStatus() !== ConversationStatus::ONGOING) {
+            $this->addFlash('info', 'This conversation has been finished. Please start a new conversation to continue working.');
+
+            return $this->redirectToRoute('project_mgmt.presentation.list');
+        }
+
         // Get workspace info for status display
         $workspace   = $this->workspaceMgmtFacade->getWorkspaceById($conversation->getWorkspaceId());
         $projectInfo = null;
 
         if ($workspace !== null) {
             $projectInfo = $this->projectMgmtFacade->getProjectInfo($workspace->projectId);
-        }
-
-        // Build past conversations for sidebar
-        /** @var list<Conversation> $conversations */
-        $conversations = $this->entityManager->createQueryBuilder()
-            ->select('c')
-            ->from(Conversation::class, 'c')
-            ->where('c.id != :currentId')
-            ->setParameter('currentId', $conversationId)
-            ->orderBy('c.createdAt', 'DESC')
-            ->setMaxResults(20)
-            ->getQuery()
-            ->getResult();
-
-        $pastConversations = [];
-        foreach ($conversations as $conv) {
-            $firstSession = $conv->getEditSessions()->first();
-            $preview      = $firstSession instanceof EditSession
-                ? mb_substr($firstSession->getInstruction(), 0, 100)
-                : '';
-
-            $pastConversations[] = [
-                'id'           => $conv->getId(),
-                'createdAt'    => $conv->getCreatedAt()->format('Y-m-d H:i'),
-                'preview'      => $preview,
-                'messageCount' => $conv->getEditSessions()->count(),
-            ];
         }
 
         // Build turns from edit sessions
@@ -195,19 +182,17 @@ final class ChatBasedContentEditorController extends AbstractController
             ];
         }
 
-        $accountInfo = $this->getAccountInfo($user);
-        $canEdit     = $conversation->getUserId() === $accountInfo->id
-            && $conversation->getStatus()         === ConversationStatus::ONGOING;
+        // Since we already verified ownership and status above, canEdit is always true here
+        $canEdit = true;
 
         return $this->render('@chat_based_content_editor.presentation/chat_based_content_editor.twig', [
-            'conversation'      => $conversation,
-            'workspace'         => $workspace,
-            'project'           => $projectInfo,
-            'turns'             => $turns,
-            'pastConversations' => $pastConversations,
-            'canEdit'           => $canEdit,
-            'runUrl'            => $this->generateUrl('chat_based_content_editor.presentation.run'),
-            'pollUrlTemplate'   => $this->generateUrl('chat_based_content_editor.presentation.poll', ['sessionId' => '__SESSION_ID__']),
+            'conversation'    => $conversation,
+            'workspace'       => $workspace,
+            'project'         => $projectInfo,
+            'turns'           => $turns,
+            'canEdit'         => $canEdit,
+            'runUrl'          => $this->generateUrl('chat_based_content_editor.presentation.run'),
+            'pollUrlTemplate' => $this->generateUrl('chat_based_content_editor.presentation.poll', ['sessionId' => '__SESSION_ID__']),
         ]);
     }
 

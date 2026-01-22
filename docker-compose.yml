@@ -21,6 +21,36 @@ services:
             - mariadb
         restart: unless-stopped
 
+    messenger:
+        build:
+            context: .
+            dockerfile: docker/app/Dockerfile
+        container_name: etfs_${ETFS_PROJECT_NAME}_messenger
+        volumes:
+            - .:/var/www
+        environment:
+            HOME: /tmp/container-home
+            XDG_CACHE_HOME: /tmp/container-home/.cache
+            XDG_CONFIG_HOME: /tmp/container-home/.config
+            XDG_DATA_HOME: /tmp/container-home/.local/share
+            XDG_STATE_HOME: /tmp/container-home/.local/state
+            NPM_CONFIG_CACHE: /tmp/container-home/.npm
+            GNUPGHOME: /tmp/container-home/.gnupg
+        networks:
+            - default
+        depends_on:
+            - mariadb
+        restart: unless-stopped
+        command:
+            [
+                "php",
+                "bin/console",
+                "messenger:consume",
+                "immediate",
+                "--time-limit=3600",
+                "--memory-limit=128M",
+            ]
+
     nginx:
         image: nginx:latest
         container_name: etfs_${ETFS_PROJECT_NAME}_nginx

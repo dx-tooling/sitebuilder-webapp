@@ -199,25 +199,5 @@
                 <ul {{ stimulus_target('dist-files', 'list') }} class="space-y-1"></ul>
             </div>
         {% endif %}
-
-        <div class="border-t border-dark-200 dark:border-dark-700 pt-6">
-            <h2 class="text-lg font-medium text-dark-900 dark:text-dark-100 mb-3">Past Conversations</h2>
-            <div class="space-y-2">
-                {% if pastConversations is empty %}
-                    <p class="text-dark-500 dark:text-dark-400 text-sm">No past conversations yet.</p>
-                {% else %}
-                    {% for conv in pastConversations %}
-                        <a href="{{ path('chat_based_content_editor.presentation.show', { conversationId: conv.id }) }}"
-                           class="block w-full text-left p-3 rounded-lg border border-dark-200 dark:border-dark-700 hover:bg-dark-50 dark:hover:bg-dark-700/50 transition-colors">
-                            <div class="flex justify-between items-start gap-2">
-                                <span class="text-sm text-dark-900 dark:text-dark-100 line-clamp-2">{{ conv.preview ?: '(Empty conversation)' }}</span>
-                                <span class="text-xs text-dark-500 dark:text-dark-400 whitespace-nowrap">{{ conv.createdAt }}</span>
-                            </div>
-                            <div class="text-xs text-dark-500 dark:text-dark-400 mt-1">{{ conv.messageCount }} message{{ conv.messageCount != 1 ? 's' : '' }}</div>
-                        </a>
-                    {% endfor %}
-                {% endif %}
-            </div>
-        </div>
     </div>
 {% endblock %}
