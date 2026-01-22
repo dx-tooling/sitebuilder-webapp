@@ -52,10 +52,11 @@ final class ChatBasedContentEditorController extends AbstractController
 
     /**
      * Resolve security user to domain AccountInfoDto via facade.
+     * Uses getUserIdentifier() which returns the email for our AccountCore entity.
      */
     private function getAccountInfo(UserInterface $user): AccountInfoDto
     {
-        $accountInfo = $this->accountFacade->getAccountInfoById($user->getUserIdentifier());
+        $accountInfo = $this->accountFacade->getAccountInfoByEmail($user->getUserIdentifier());
 
         if ($accountInfo === null) {
             throw new RuntimeException('Account not found for authenticated user');

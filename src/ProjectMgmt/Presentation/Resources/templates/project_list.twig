@@ -33,6 +33,34 @@
             </div>
         {% endfor %}
 
+        <details class="rounded-lg border border-dark-200 dark:border-dark-700 bg-dark-50 dark:bg-dark-800">
+            <summary class="px-4 py-3 cursor-pointer text-sm font-medium text-dark-700 dark:text-dark-300 hover:bg-dark-100 dark:hover:bg-dark-700 rounded-lg select-none">
+                <span class="ml-1">GitHub Token Requirements</span>
+            </summary>
+            <div class="px-4 pb-4 text-sm text-dark-600 dark:text-dark-400 space-y-3">
+                <p>
+                    Each project requires a <strong>GitHub Personal Access Token (PAT)</strong> with the following permissions
+                    to clone private repositories, push changes, and create pull requests:
+                </p>
+                <div class="bg-white dark:bg-dark-900 rounded-md p-3 border border-dark-200 dark:border-dark-600">
+                    <p class="font-medium text-dark-800 dark:text-dark-200 mb-2">Required Permissions (Fine-grained PAT):</p>
+                    <ul class="list-disc list-inside space-y-1 text-dark-600 dark:text-dark-400">
+                        <li><strong>Contents</strong>: Read and write (to clone and push code)</li>
+                        <li><strong>Pull requests</strong>: Read and write (to create PRs for review)</li>
+                    </ul>
+                </div>
+                <div class="bg-white dark:bg-dark-900 rounded-md p-3 border border-dark-200 dark:border-dark-600">
+                    <p class="font-medium text-dark-800 dark:text-dark-200 mb-2">Alternative: Classic PAT</p>
+                    <ul class="list-disc list-inside space-y-1 text-dark-600 dark:text-dark-400">
+                        <li>Select the <strong>repo</strong> scope (full control of private repositories)</li>
+                    </ul>
+                </div>
+                <p class="text-xs text-dark-500 dark:text-dark-500">
+                    Create tokens at: <a href="https://github.com/settings/tokens" target="_blank" rel="noopener noreferrer" class="text-primary-600 dark:text-primary-400 hover:underline">github.com/settings/tokens</a>
+                </p>
+            </div>
+        </details>
+
         {% if projectsWithStatus is empty %}
             <div class="text-center py-12">
                 <svg class="mx-auto h-12 w-12 text-dark-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">

@@ -22,6 +22,22 @@ final readonly class AccountFacade implements AccountFacadeInterface
             return null;
         }
 
+        return $this->toDto($account);
+    }
+
+    public function getAccountInfoByEmail(string $email): ?AccountInfoDto
+    {
+        $repo    = $this->entityManager->getRepository(AccountCore::class);
+        $account = $repo->findOneBy(['email' => $email]);
+        if (!$account instanceof AccountCore) {
+            return null;
+        }
+
+        return $this->toDto($account);
+    }
+
+    private function toDto(AccountCore $account): AccountInfoDto
+    {
         return new AccountInfoDto(
             $account->getId() ?? '',
             $account->getEmail(),
