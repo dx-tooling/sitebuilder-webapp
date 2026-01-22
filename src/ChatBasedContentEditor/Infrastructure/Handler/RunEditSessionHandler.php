@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\ChatBasedContentEditor\Infrastructure\Handler;
 
+use App\Account\Facade\AccountFacadeInterface;
 use App\ChatBasedContentEditor\Domain\Entity\Conversation;
 use App\ChatBasedContentEditor\Domain\Entity\ConversationMessage;
 use App\ChatBasedContentEditor\Domain\Entity\EditSession;
@@ -11,14 +12,19 @@ use App\ChatBasedContentEditor\Domain\Entity\EditSessionChunk;
 use App\ChatBasedContentEditor\Domain\Enum\ConversationMessageRole;
 use App\ChatBasedContentEditor\Domain\Enum\EditSessionStatus;
 use App\ChatBasedContentEditor\Infrastructure\Message\RunEditSessionMessage;
+use App\ChatBasedContentEditor\Infrastructure\Service\ConversationUrlServiceInterface;
 use App\LlmContentEditor\Facade\Dto\AgentEventDto;
 use App\LlmContentEditor\Facade\Dto\ConversationMessageDto;
 use App\LlmContentEditor\Facade\Dto\ToolInputEntryDto;
 use App\LlmContentEditor\Facade\LlmContentEditorFacadeInterface;
+use App\WorkspaceMgmt\Facade\WorkspaceMgmtFacadeInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Throwable;
+
+use function mb_strlen;
+use function mb_substr;
 
 use const JSON_THROW_ON_ERROR;
 
@@ -29,6 +35,9 @@ final readonly class RunEditSessionHandler
         private EntityManagerInterface          $entityManager,
         private LlmContentEditorFacadeInterface $facade,
         private LoggerInterface                 $logger,
+        private WorkspaceMgmtFacadeInterface    $workspaceMgmtFacade,
+        private AccountFacadeInterface          $accountFacade,
+        private ConversationUrlServiceInterface $conversationUrlService,
     ) {
     }
 
@@ -77,6 +86,10 @@ final readonly class RunEditSessionHandler
             }
 
             $session->setStatus(EditSessionStatus::Completed);
+            $this->entityManager->flush();
+
+            // Commit and push changes after successful edit session
+            $this->commitChangesAfterEdit($conversation, $session);
         } catch (Throwable $e) {
             $this->logger->error('EditSession failed', [
                 'sessionId' => $message->sessionId,
@@ -85,9 +98,8 @@ final readonly class RunEditSessionHandler
 
             EditSessionChunk::createDoneChunk($session, false, 'An error occurred during processing.');
             $session->setStatus(EditSessionStatus::Failed);
+            $this->entityManager->flush();
         }
-
-        $this->entityManager->flush();
     }
 
     /**
@@ -145,5 +157,59 @@ final readonly class RunEditSessionHandler
         }
 
         return json_encode($data, JSON_THROW_ON_ERROR);
+    }
+
+    /**
+     * Commit and push changes after a successful edit session.
+     */
+    private function commitChangesAfterEdit(Conversation $conversation, EditSession $session): void
+    {
+        try {
+            $accountInfo = $this->accountFacade->getAccountInfoById($conversation->getUserId());
+
+            if ($accountInfo === null) {
+                $this->logger->warning('Cannot commit: account not found for user', [
+                    'userId' => $conversation->getUserId(),
+                ]);
+
+                return;
+            }
+
+            $commitMessage = 'Edit session: ' . $this->truncateMessage($session->getInstruction(), 50);
+
+            // Generate conversation URL for linking
+            $conversationId  = $conversation->getId();
+            $conversationUrl = $conversationId !== null ? $this->conversationUrlService->getConversationUrl($conversationId) : null;
+
+            $this->workspaceMgmtFacade->commitAndPush(
+                $conversation->getWorkspaceId(),
+                $commitMessage,
+                $accountInfo->email,
+                $conversationId,
+                $conversationUrl
+            );
+
+            $this->logger->debug('Committed and pushed changes after edit session', [
+                'sessionId'   => $session->getId(),
+                'workspaceId' => $conversation->getWorkspaceId(),
+            ]);
+        } catch (Throwable $e) {
+            // Log but don't fail the edit session - the commit can be retried later
+            // The workspace will be set to PROBLEM status by the facade
+            $this->logger->error('Failed to commit and push after edit session', [
+                'sessionId'   => $session->getId(),
+                'workspaceId' => $conversation->getWorkspaceId(),
+                'error'       => $e->getMessage(),
+            ]);
+        }
+    }
+
+    private function truncateMessage(string $message, int $maxLength): string
+    {
+        if (mb_strlen($message) <= $maxLength) {
+            return $message;
+        }
+
+        return mb_substr($message, 0, $maxLength - 3) . '...';
     }
 }

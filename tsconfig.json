@@ -4,5 +4,5 @@
         "allowImportingTsExtensions": true,
         "lib": ["dom", "es2015"]
     },
-    "exclude": ["node_modules", "vendor", "var"]
+    "exclude": ["node_modules", "vendor", "var", "public/workspaces"]
 }

@@ -6,6 +6,8 @@ twig:
         "src/StaticPages/Presentation/Resources/templates": "static_pages.presentation"
         "src/Account/Presentation/Resources/templates": "account.presentation"
         "src/ChatBasedContentEditor/Presentation/Resources/templates": "chat_based_content_editor.presentation"
+        "src/ProjectMgmt/Presentation/Resources/templates": "project_mgmt.presentation"
+        "src/WorkspaceMgmt/Presentation/Resources/templates": "workspace_mgmt.presentation"
 
 when@test:
     twig:

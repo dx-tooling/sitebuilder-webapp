@@ -22,8 +22,6 @@ RUN if [ "$TARGETPLATFORM" = "linux/amd64" ]; then ARCHITECTURE=amd64; elif [ "$
     && echo "deb [signed-by=/etc/apt/keyrings/mise-archive-keyring.gpg arch=${ARCHITECTURE}] https://mise.jdx.dev/deb stable main" | tee /etc/apt/sources.list.d/mise.list
 RUN apt-get update -y
 RUN apt-get install -y mise
-RUN echo 'eval "$(/usr/bin/env mise activate bash)"' >> ~/.bashrc
-RUN cd /var/www && mise trust
 
 # Clean up to reduce image size
 RUN apt-get clean && rm -rf /var/lib/apt/lists/*
@@ -54,6 +52,28 @@ CMD ["php-fpm"]
 # Document that we use port 9000
 EXPOSE 9000
 
-RUN mkdir -p ~/.local/state/mise/trusted-configs
-RUN ln -s /var/www ~/.local/state/mise/trusted-configs/
+# Mise configuration - use /opt/mise for shared volume mount at runtime
+# These directories will be mounted as a Docker volume shared between containers
+ENV MISE_DATA_DIR=/opt/mise/data
+ENV MISE_CACHE_DIR=/opt/mise/cache
+ENV MISE_STATE_DIR=/opt/mise/state
+
+# Create mise directories and pre-install common Node versions
+# This ensures Node is available without runtime installation (which can fail with lock issues)
+RUN mkdir -p /opt/mise/data /opt/mise/cache /opt/mise/state && \
+    chmod -R 777 /opt/mise && \
+    mise install node@24 node@22 node@20
+
+# Shell activation for interactive use (debugging)
+RUN echo 'eval "$(/usr/bin/env mise activate bash)"' >> ~/.bashrc
 RUN echo 'eval "$(/usr/bin/env mise activate zsh)"' >> ~/.zshrc
+
+# Create container home directory structure for runtime cache/config directories
+# This prevents polluting the mounted /var/www directory
+# Note: mise directories are now in /opt/mise (shared volume), not here
+RUN mkdir -p /tmp/container-home/.cache \
+    /tmp/container-home/.config \
+    /tmp/container-home/.local/share \
+    /tmp/container-home/.gnupg \
+    /tmp/container-home/.npm && \
+    chmod -R 777 /tmp/container-home

@@ -13,3 +13,4 @@ parameters:
         analyse:
             - tests/Architecture/*
             - config/reference.php
+            - public/workspaces/*

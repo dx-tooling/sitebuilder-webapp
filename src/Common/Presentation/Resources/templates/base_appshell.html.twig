@@ -1,1 +1,32 @@
 {% extends '@Webui/base_appshell.html.twig' %}
+
+{% block flash_messages %}
+    {% set flashes = app.flashes %}
+    {% if flashes|length > 0 %}
+        <div class="space-y-4 mb-8">
+            {% for type, messages in flashes %}
+                {% for message in messages %}
+                    {% set alert_classes = 'p-4 rounded-md border text-sm font-medium' %}
+                    {% if type is same as 'success' %}
+                        {% set alert_classes = alert_classes ~ ' bg-green-50 border-green-300 dark:bg-green-900/30 dark:border-green-700/50 text-green-800 dark:text-green-200' %}
+                    {% elseif type is same as 'warning' %}
+                        {% set alert_classes = alert_classes ~ ' bg-yellow-50 border-yellow-300 dark:bg-yellow-900/30 dark:border-yellow-700/50 text-yellow-800 dark:text-yellow-200' %}
+                    {% elseif type is same as 'error' or type is same as 'danger' %}
+                        {% set alert_classes = alert_classes ~ ' bg-red-50 border-red-300 dark:bg-red-900/30 dark:border-red-700/50 text-red-800 dark:text-red-200' %}
+                    {% else %}
+                        {% set alert_classes = alert_classes ~ ' bg-blue-50 border-blue-300 dark:bg-blue-900/30 dark:border-blue-700/50 text-blue-800 dark:text-blue-200' %}
+                    {% endif %}
+                    <div class="{{ alert_classes }}" role="alert">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endfor %}
+        </div>
+    {% endif %}
+{% endblock %}
+
+{% block body %}
+    <div class="max-w-7xl mx-auto">
+        {% block content %}{% endblock %}
+    </div>
+{% endblock %}

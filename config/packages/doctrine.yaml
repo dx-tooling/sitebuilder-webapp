@@ -33,6 +33,18 @@ doctrine:
                 dir: "%kernel.project_dir%/src/ChatBasedContentEditor/Domain/Entity"
                 prefix: 'App\ChatBasedContentEditor\Domain\Entity'
 
+            App\ProjectMgmt\Domain\Entity:
+                type: attribute
+                is_bundle: false
+                dir: "%kernel.project_dir%/src/ProjectMgmt/Domain/Entity"
+                prefix: 'App\ProjectMgmt\Domain\Entity'
+
+            App\WorkspaceMgmt\Domain\Entity:
+                type: attribute
+                is_bundle: false
+                dir: "%kernel.project_dir%/src/WorkspaceMgmt/Domain/Entity"
+                prefix: 'App\WorkspaceMgmt\Domain\Entity'
+
         controller_resolver:
             auto_mapping: false
 
