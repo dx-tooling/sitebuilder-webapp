@@ -42,13 +42,13 @@ use function json_decode;
 final class ChatBasedContentEditorController extends AbstractController
 {
     public function __construct(
-        private readonly ConversationService          $conversationService,
-        private readonly WorkspaceMgmtFacadeInterface $workspaceMgmtFacade,
-        private readonly ProjectMgmtFacadeInterface   $projectMgmtFacade,
-        private readonly AccountFacadeInterface       $accountFacade,
-        private readonly EntityManagerInterface       $entityManager,
-        private readonly MessageBusInterface          $messageBus,
-        private readonly DistFileScannerInterface     $distFileScanner,
+        private readonly ConversationService             $conversationService,
+        private readonly WorkspaceMgmtFacadeInterface    $workspaceMgmtFacade,
+        private readonly ProjectMgmtFacadeInterface      $projectMgmtFacade,
+        private readonly AccountFacadeInterface          $accountFacade,
+        private readonly EntityManagerInterface          $entityManager,
+        private readonly MessageBusInterface             $messageBus,
+        private readonly DistFileScannerInterface        $distFileScanner,
         private readonly ConversationContextUsageService $contextUsageService,
     ) {
     }
@@ -247,14 +247,14 @@ final class ChatBasedContentEditorController extends AbstractController
         $contextUsage = $this->contextUsageService->getContextUsage($conversation);
 
         return $this->render('@chat_based_content_editor.presentation/chat_based_content_editor.twig', [
-            'conversation'      => $conversation,
-            'workspace'         => $workspace,
-            'project'           => $projectInfo,
-            'turns'             => $turns,
-            'canEdit'           => $canEdit,
-            'runUrl'            => $this->generateUrl('chat_based_content_editor.presentation.run'),
-            'pollUrlTemplate'   => $this->generateUrl('chat_based_content_editor.presentation.poll', ['sessionId' => '__SESSION_ID__']),
-            'contextUsage'      => [
+            'conversation'    => $conversation,
+            'workspace'       => $workspace,
+            'project'         => $projectInfo,
+            'turns'           => $turns,
+            'canEdit'         => $canEdit,
+            'runUrl'          => $this->generateUrl('chat_based_content_editor.presentation.run'),
+            'pollUrlTemplate' => $this->generateUrl('chat_based_content_editor.presentation.poll', ['sessionId' => '__SESSION_ID__']),
+            'contextUsage'    => [
                 'usedTokens' => $contextUsage->usedTokens,
                 'maxTokens'  => $contextUsage->maxTokens,
                 'modelName'  => $contextUsage->modelName,
