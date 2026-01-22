@@ -61,8 +61,12 @@ interface WorkspaceMgmtFacadeInterface
     /**
      * Commit all changes and push to remote.
      * Called after edit sessions complete.
+     *
+     * @param string $workspaceId the workspace ID
+     * @param string $message     the commit message
+     * @param string $authorEmail the author's email address for the commit
      */
-    public function commitAndPush(string $workspaceId, string $message): void;
+    public function commitAndPush(string $workspaceId, string $message, string $authorEmail): void;
 
     /**
      * Ensure a pull request exists for the workspace branch.

@@ -46,6 +46,7 @@ final class SetupStepsExecutor implements SetupStepsExecutorInterface
         );
 
         $command = array_merge([$step->command], $step->arguments);
+        // Note: Process inherits environment variables by default, including MISE_*_DIR vars
         $process = new Process($command);
         $process->setWorkingDirectory($workspacePath);
         $process->setTimeout($step->timeout ?? self::DEFAULT_TIMEOUT);

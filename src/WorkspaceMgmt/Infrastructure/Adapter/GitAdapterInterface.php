@@ -41,8 +41,15 @@ interface GitAdapterInterface
      *
      * @param string $workspacePath the workspace directory
      * @param string $message       the commit message
+     * @param string $authorName    the author name for the commit
+     * @param string $authorEmail   the author email for the commit
      */
-    public function commitAll(string $workspacePath, string $message): void;
+    public function commitAll(
+        string $workspacePath,
+        string $message,
+        string $authorName,
+        string $authorEmail
+    ): void;
 
     /**
      * Push the branch to remote.

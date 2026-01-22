@@ -135,12 +135,12 @@ final class WorkspaceMgmtFacade implements WorkspaceMgmtFacadeInterface
         $this->workspaceService->setStatus($workspace, WorkspaceStatus::AVAILABLE_FOR_SETUP);
     }
 
-    public function commitAndPush(string $workspaceId, string $message): void
+    public function commitAndPush(string $workspaceId, string $message, string $authorEmail): void
     {
         $workspace = $this->getWorkspaceOrFail($workspaceId);
 
         try {
-            $this->gitService->commitAndPush($workspace, $message);
+            $this->gitService->commitAndPush($workspace, $message, $authorEmail);
         } catch (Throwable $e) {
             // On git failure, set workspace to PROBLEM
             $this->workspaceService->setStatus($workspace, WorkspaceStatus::PROBLEM);

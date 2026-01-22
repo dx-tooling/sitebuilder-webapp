@@ -46,16 +46,26 @@ final class GitCliAdapter implements GitAdapterInterface
         return trim($process->getOutput()) !== '';
     }
 
-    public function commitAll(string $workspacePath, string $message): void
-    {
+    public function commitAll(
+        string $workspacePath,
+        string $message,
+        string $authorName,
+        string $authorEmail
+    ): void {
         // Stage all changes
         $addProcess = new Process(['git', 'add', '-A']);
         $addProcess->setWorkingDirectory($workspacePath);
         $addProcess->setTimeout(self::TIMEOUT_SECONDS);
         $this->runProcess($addProcess, 'Failed to stage changes');
 
-        // Commit
-        $commitProcess = new Process(['git', 'commit', '-m', $message]);
+        // Commit with author info using -c flags (no global config change needed)
+        $commitProcess = new Process([
+            'git',
+            '-c', 'user.name=' . $authorName,
+            '-c', 'user.email=' . $authorEmail,
+            'commit',
+            '-m', $message,
+        ]);
         $commitProcess->setWorkingDirectory($workspacePath);
         $commitProcess->setTimeout(self::TIMEOUT_SECONDS);
         $this->runProcess($commitProcess, 'Failed to commit changes');

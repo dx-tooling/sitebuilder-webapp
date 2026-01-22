@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\ChatBasedContentEditor\Domain\Service;
 
+use App\Account\Facade\AccountFacadeInterface;
 use App\ChatBasedContentEditor\Domain\Dto\ConversationInfoDto;
 use App\ChatBasedContentEditor\Domain\Entity\Conversation;
 use App\ChatBasedContentEditor\Domain\Enum\ConversationStatus;
@@ -20,6 +21,7 @@ final class ConversationService
     public function __construct(
         private readonly EntityManagerInterface       $entityManager,
         private readonly WorkspaceMgmtFacadeInterface $workspaceMgmtFacade,
+        private readonly AccountFacadeInterface       $accountFacade,
     ) {
     }
 
@@ -71,10 +73,14 @@ final class ConversationService
             throw new RuntimeException('Conversation is not ongoing');
         }
 
+        // Get user email for commit author
+        $authorEmail = $this->getAuthorEmail($userId);
+
         // Commit any pending changes
         $this->workspaceMgmtFacade->commitAndPush(
             $conversation->getWorkspaceId(),
-            'Auto-commit on conversation finish'
+            'Auto-commit on conversation finish',
+            $authorEmail
         );
 
         // Mark conversation as finished
@@ -100,10 +106,14 @@ final class ConversationService
             throw new RuntimeException('Conversation is not ongoing');
         }
 
+        // Get user email for commit author
+        $authorEmail = $this->getAuthorEmail($userId);
+
         // Commit any pending changes
         $this->workspaceMgmtFacade->commitAndPush(
             $conversation->getWorkspaceId(),
-            'Auto-commit before review'
+            'Auto-commit before review',
+            $authorEmail
         );
 
         // Mark conversation as finished
@@ -163,6 +173,17 @@ final class ConversationService
         if ($conversation->getUserId() !== $userId) {
             throw new RuntimeException('Only the conversation owner can perform this action');
         }
+    }
+
+    private function getAuthorEmail(string $userId): string
+    {
+        $accountInfo = $this->accountFacade->getAccountInfoById($userId);
+
+        if ($accountInfo === null) {
+            throw new RuntimeException('Account not found for user: ' . $userId);
+        }
+
+        return $accountInfo->email;
     }
 
     private function toDto(Conversation $conversation): ConversationInfoDto

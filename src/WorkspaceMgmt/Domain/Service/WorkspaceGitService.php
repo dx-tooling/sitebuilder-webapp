@@ -33,8 +33,12 @@ final class WorkspaceGitService
 
     /**
      * Commit all changes and push to remote.
+     *
+     * @param Workspace $workspace   the workspace to commit changes for
+     * @param string    $message     the commit message
+     * @param string    $authorEmail the author's email address for the commit
      */
-    public function commitAndPush(Workspace $workspace, string $message): void
+    public function commitAndPush(Workspace $workspace, string $message, string $authorEmail): void
     {
         $workspacePath = $this->getWorkspacePath($workspace);
         $branchName    = $workspace->getBranchName();
@@ -54,12 +58,16 @@ final class WorkspaceGitService
             return;
         }
 
+        // Build author name in format "SiteBuilder user <email>"
+        $authorName = 'SiteBuilder user ' . $authorEmail;
+
         // Commit all changes
         $this->logger->debug('Committing changes', [
             'workspaceId' => $workspace->getId(),
             'message'     => $message,
+            'authorEmail' => $authorEmail,
         ]);
-        $this->gitAdapter->commitAll($workspacePath, $message);
+        $this->gitAdapter->commitAll($workspacePath, $message, $authorName, $authorEmail);
 
         // Push to remote
         $this->logger->debug('Pushing to remote', [
