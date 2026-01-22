@@ -6,6 +6,7 @@ namespace App\ProjectMgmt\Facade;
 
 use App\ProjectMgmt\Domain\Entity\Project;
 use App\ProjectMgmt\Facade\Dto\ProjectInfoDto;
+use App\WorkspaceMgmt\Infrastructure\Service\GitHubUrlServiceInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use RuntimeException;
 
@@ -16,7 +17,8 @@ use RuntimeException;
 final class ProjectMgmtFacade implements ProjectMgmtFacadeInterface
 {
     public function __construct(
-        private readonly EntityManagerInterface $entityManager,
+        private readonly EntityManagerInterface    $entityManager,
+        private readonly GitHubUrlServiceInterface $gitHubUrlService,
     ) {
     }
 
@@ -59,12 +61,15 @@ final class ProjectMgmtFacade implements ProjectMgmtFacadeInterface
             throw new RuntimeException('Project ID cannot be null');
         }
 
+        $githubUrl = $this->gitHubUrlService->getRepositoryUrl($project->getGitUrl());
+
         return new ProjectInfoDto(
             $id,
             $project->getName(),
             $project->getGitUrl(),
             $project->getGithubToken(),
             $project->getProjectType(),
+            $githubUrl,
         );
     }
 }

@@ -60,9 +60,26 @@
                     <dd class="text-dark-900 dark:text-dark-100">{{ project.name }}</dd>
                 </div>
                 {% if workspace.branchName %}
-                    <div class="flex justify-between">
+                    <div class="flex justify-between items-center">
                         <dt class="text-dark-500 dark:text-dark-400">Branch:</dt>
-                        <dd class="text-dark-900 dark:text-dark-100 font-mono text-xs">{{ workspace.branchName }}</dd>
+                        <dd class="text-dark-900 dark:text-dark-100">
+                            <code class="px-1.5 py-0.5 bg-dark-100 dark:bg-dark-700 rounded text-xs font-mono">{{ workspace.branchName }}</code>
+                            {% if workspace.githubBranchUrl %}
+                                <a href="{{ workspace.githubBranchUrl }}" target="_blank" rel="noopener noreferrer" class="ml-2 text-primary-600 dark:text-primary-400 hover:underline text-xs">
+                                    View on GitHub
+                                </a>
+                            {% endif %}
+                        </dd>
+                    </div>
+                {% endif %}
+                {% if project.githubUrl %}
+                    <div class="flex justify-between items-center">
+                        <dt class="text-dark-500 dark:text-dark-400">Repository:</dt>
+                        <dd class="text-dark-900 dark:text-dark-100">
+                            <a href="{{ project.githubUrl }}" target="_blank" rel="noopener noreferrer" class="text-primary-600 dark:text-primary-400 hover:underline text-xs">
+                                View on GitHub
+                            </a>
+                        </dd>
                     </div>
                 {% endif %}
             </dl>

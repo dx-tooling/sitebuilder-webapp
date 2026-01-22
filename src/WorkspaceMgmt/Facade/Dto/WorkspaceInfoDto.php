@@ -15,6 +15,8 @@ final readonly class WorkspaceInfoDto
         public WorkspaceStatus $status,
         public ?string         $branchName,
         public string          $workspacePath,
+        public ?string         $githubBranchUrl,
+        public ?string         $githubPrUrl,
     ) {
     }
 }

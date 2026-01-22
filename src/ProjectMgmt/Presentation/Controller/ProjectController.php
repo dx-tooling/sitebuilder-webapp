@@ -7,6 +7,7 @@ namespace App\ProjectMgmt\Presentation\Controller;
 use App\Account\Facade\AccountFacadeInterface;
 use App\ChatBasedContentEditor\Facade\ChatBasedContentEditorFacadeInterface;
 use App\ProjectMgmt\Domain\Service\ProjectService;
+use App\ProjectMgmt\Facade\ProjectMgmtFacadeInterface;
 use App\WorkspaceMgmt\Facade\Enum\WorkspaceStatus;
 use App\WorkspaceMgmt\Facade\WorkspaceMgmtFacadeInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -25,6 +26,7 @@ final class ProjectController extends AbstractController
 {
     public function __construct(
         private readonly ProjectService                        $projectService,
+        private readonly ProjectMgmtFacadeInterface           $projectMgmtFacade,
         private readonly WorkspaceMgmtFacadeInterface          $workspaceMgmtFacade,
         private readonly ChatBasedContentEditorFacadeInterface $chatBasedContentEditorFacade,
         private readonly AccountFacadeInterface                $accountFacade,
@@ -47,6 +49,8 @@ final class ProjectController extends AbstractController
                 continue;
             }
 
+            // Get project info DTO which includes GitHub URL
+            $projectInfo      = $this->projectMgmtFacade->getProjectInfo($projectId);
             $workspace        = $this->workspaceMgmtFacade->getWorkspaceForProject($projectId);
             $inConversationBy = null;
 
@@ -60,7 +64,7 @@ final class ProjectController extends AbstractController
             }
 
             $projectsWithStatus[] = [
-                'project'          => $project,
+                'project'          => $projectInfo,
                 'workspace'        => $workspace,
                 'inConversationBy' => $inConversationBy,
             ];

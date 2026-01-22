@@ -8,6 +8,7 @@ use App\Account\Facade\AccountFacadeInterface;
 use App\ChatBasedContentEditor\Domain\Dto\ConversationInfoDto;
 use App\ChatBasedContentEditor\Domain\Entity\Conversation;
 use App\ChatBasedContentEditor\Domain\Enum\ConversationStatus;
+use App\ChatBasedContentEditor\Infrastructure\Service\ConversationUrlServiceInterface;
 use App\WorkspaceMgmt\Facade\WorkspaceMgmtFacadeInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use RuntimeException;
@@ -19,9 +20,10 @@ use RuntimeException;
 final class ConversationService
 {
     public function __construct(
-        private readonly EntityManagerInterface       $entityManager,
-        private readonly WorkspaceMgmtFacadeInterface $workspaceMgmtFacade,
-        private readonly AccountFacadeInterface       $accountFacade,
+        private readonly EntityManagerInterface          $entityManager,
+        private readonly WorkspaceMgmtFacadeInterface    $workspaceMgmtFacade,
+        private readonly AccountFacadeInterface          $accountFacade,
+        private readonly ConversationUrlServiceInterface $conversationUrlService,
     ) {
     }
 
@@ -77,11 +79,17 @@ final class ConversationService
         // Get user email for commit author
         $authorEmail = $this->getAuthorEmail($userId);
 
+        // Generate conversation URL for linking
+        $conversationId  = $conversation->getId();
+        $conversationUrl = $conversationId !== null ? $this->conversationUrlService->getConversationUrl($conversationId) : null;
+
         // Commit any pending changes
         $this->workspaceMgmtFacade->commitAndPush(
             $conversation->getWorkspaceId(),
             'Auto-commit on conversation finish',
-            $authorEmail
+            $authorEmail,
+            $conversationId,
+            $conversationUrl
         );
 
         // Mark conversation as finished
@@ -110,11 +118,17 @@ final class ConversationService
         // Get user email for commit author
         $authorEmail = $this->getAuthorEmail($userId);
 
+        // Generate conversation URL for linking
+        $conversationId  = $conversation->getId();
+        $conversationUrl = $conversationId !== null ? $this->conversationUrlService->getConversationUrl($conversationId) : null;
+
         // Commit any pending changes
         $this->workspaceMgmtFacade->commitAndPush(
             $conversation->getWorkspaceId(),
             'Auto-commit before review',
-            $authorEmail
+            $authorEmail,
+            $conversationId,
+            $conversationUrl
         );
 
         // Mark conversation as finished
@@ -125,7 +139,12 @@ final class ConversationService
         $this->workspaceMgmtFacade->transitionToInReview($conversation->getWorkspaceId());
 
         // Ensure PR exists and return URL
-        return $this->workspaceMgmtFacade->ensurePullRequest($conversation->getWorkspaceId());
+        return $this->workspaceMgmtFacade->ensurePullRequest(
+            $conversation->getWorkspaceId(),
+            $conversationId,
+            $conversationUrl,
+            $authorEmail
+        );
     }
 
     public function findById(string $id): ?ConversationInfoDto

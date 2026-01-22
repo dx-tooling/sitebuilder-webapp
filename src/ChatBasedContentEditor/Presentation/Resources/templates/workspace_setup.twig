@@ -73,6 +73,16 @@
                     <dt class="text-dark-500 dark:text-dark-400">Project:</dt>
                     <dd class="text-dark-900 dark:text-dark-100">{{ project.name }}</dd>
                 </div>
+                {% if project.githubUrl %}
+                    <div class="flex justify-between items-center">
+                        <dt class="text-dark-500 dark:text-dark-400">Repository:</dt>
+                        <dd class="text-dark-900 dark:text-dark-100">
+                            <a href="{{ project.githubUrl }}" target="_blank" rel="noopener noreferrer" class="text-primary-600 dark:text-primary-400 hover:underline text-xs">
+                                View on GitHub
+                            </a>
+                        </dd>
+                    </div>
+                {% endif %}
                 <div class="flex justify-between">
                     <dt class="text-dark-500 dark:text-dark-400">Status:</dt>
                     <dd {{ stimulus_target('workspace-setup', 'status') }} class="text-dark-900 dark:text-dark-100 font-mono text-xs">{{ workspace.status.name | replace({'_': ' '}) | lower | capitalize }}</dd>
