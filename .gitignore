@@ -41,3 +41,11 @@ node_modules/
 ###> sensiolabs/minify-bundle ###
 /var/minify/
 ###< sensiolabs/minify-bundle ###
+
+public/workspaces/*
+
+# Container-generated cache directories (should not appear with proper env vars, but ignore just in case)
+/.cache/
+/.gnupg/
+/.local/
+/.npm/

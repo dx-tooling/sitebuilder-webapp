@@ -4,8 +4,9 @@
 # Put parameters here that don't need to change on each machine where the app is deployed
 # https://symfony.com/doc/current/best_practices.html#use-parameters-for-application-configuration
 parameters:
-    chat_based_content_editor.workspace_root_default: ""
-    chat_based_content_editor.workspace_root: "%env(default:chat_based_content_editor.workspace_root_default:CHAT_EDITOR_WORKSPACE_ROOT)%"
+    # Workspace root directory for all workspace operations
+    workspace_mgmt.workspace_root_default: "/var/www/public/workspaces"
+    workspace_mgmt.workspace_root: "%env(default:workspace_mgmt.workspace_root_default:WORKSPACE_ROOT)%"
 
 services:
     # default configuration for services in *this* file
@@ -47,3 +48,39 @@ services:
             - "@EtfsCodingAgent\\Service\\FileOperationsServiceInterface"
             - "@EtfsCodingAgent\\Service\\TextOperationsService"
             - "@EtfsCodingAgent\\Service\\ShellOperationsServiceInterface"
+
+    # Facade bindings
+    App\ProjectMgmt\Facade\ProjectMgmtFacadeInterface:
+        class: App\ProjectMgmt\Facade\ProjectMgmtFacade
+
+    App\WorkspaceMgmt\Facade\WorkspaceMgmtFacadeInterface:
+        class: App\WorkspaceMgmt\Facade\WorkspaceMgmtFacade
+
+    App\ChatBasedContentEditor\Facade\ChatBasedContentEditorFacadeInterface:
+        class: App\ChatBasedContentEditor\Facade\ChatBasedContentEditorFacade
+
+    # Domain service bindings
+    App\WorkspaceMgmt\Domain\Service\WorkspaceStatusGuardInterface:
+        class: App\WorkspaceMgmt\Domain\Service\WorkspaceStatusGuard
+
+    # Infrastructure adapter bindings
+    App\WorkspaceMgmt\Infrastructure\Adapter\GitAdapterInterface:
+        class: App\WorkspaceMgmt\Infrastructure\Adapter\GitCliAdapter
+
+    App\WorkspaceMgmt\Infrastructure\Adapter\GitHubAdapterInterface:
+        class: App\WorkspaceMgmt\Infrastructure\Adapter\GitHubApiAdapter
+
+    App\WorkspaceMgmt\Infrastructure\Adapter\FilesystemAdapterInterface:
+        class: App\WorkspaceMgmt\Infrastructure\Adapter\LocalFilesystemAdapter
+
+    # Setup steps providers - tagged for collection by registry
+    _instanceof:
+        App\WorkspaceMgmt\Infrastructure\SetupSteps\ProjectSetupStepsProviderInterface:
+            tags: ["workspace_mgmt.setup_steps_provider"]
+
+    # Setup steps infrastructure
+    App\WorkspaceMgmt\Infrastructure\SetupSteps\ProjectSetupStepsRegistryInterface:
+        class: App\WorkspaceMgmt\Infrastructure\SetupSteps\ProjectSetupStepsRegistry
+
+    App\WorkspaceMgmt\Infrastructure\SetupSteps\SetupStepsExecutorInterface:
+        class: App\WorkspaceMgmt\Infrastructure\SetupSteps\SetupStepsExecutor
