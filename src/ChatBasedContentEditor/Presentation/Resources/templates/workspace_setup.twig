@@ -1,8 +1,8 @@
-{% extends '@Webui/base_appshell.html.twig' %}
+{% extends '@common.presentation/base_appshell.html.twig' %}
 
 {% block title %}Setting Up Workspace{% endblock %}
 
-{% block body %}
+{% block content %}
     <div class="max-w-2xl mx-auto space-y-6" {{ stimulus_controller('workspace-setup', {
         pollUrl: pollUrl,
         redirectUrl: redirectUrl
@@ -80,4 +80,4 @@
             </dl>
         </div>
     </div>
-{% endblock %}
+{% endblock content %}

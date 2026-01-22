@@ -1,8 +1,8 @@
-{% extends '@Webui/base_appshell.html.twig' %}
+{% extends '@common.presentation/base_appshell.html.twig' %}
 
 {% block title %}{{ project ? 'Edit Project' : 'New Project' }}{% endblock %}
 
-{% block body %}
+{% block content %}
     <div class="max-w-2xl mx-auto space-y-6">
         <div>
             <h1 class="text-2xl font-semibold text-dark-900 dark:text-dark-100">{{ project ? 'Edit Project' : 'New Project' }}</h1>
@@ -67,4 +67,4 @@
             </div>
         </form>
     </div>
-{% endblock %}
+{% endblock content %}

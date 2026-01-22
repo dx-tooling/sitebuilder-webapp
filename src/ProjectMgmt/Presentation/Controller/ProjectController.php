@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\ProjectMgmt\Presentation\Controller;
 
+use App\Account\Facade\AccountFacadeInterface;
 use App\ChatBasedContentEditor\Facade\ChatBasedContentEditorFacadeInterface;
 use App\ProjectMgmt\Domain\Service\ProjectService;
+use App\WorkspaceMgmt\Facade\Enum\WorkspaceStatus;
 use App\WorkspaceMgmt\Facade\WorkspaceMgmtFacadeInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -25,6 +27,7 @@ final class ProjectController extends AbstractController
         private readonly ProjectService                        $projectService,
         private readonly WorkspaceMgmtFacadeInterface          $workspaceMgmtFacade,
         private readonly ChatBasedContentEditorFacadeInterface $chatBasedContentEditorFacade,
+        private readonly AccountFacadeInterface                $accountFacade,
     ) {
     }
 
@@ -44,11 +47,22 @@ final class ProjectController extends AbstractController
                 continue;
             }
 
-            $workspace = $this->workspaceMgmtFacade->getWorkspaceForProject($projectId);
+            $workspace        = $this->workspaceMgmtFacade->getWorkspaceForProject($projectId);
+            $inConversationBy = null;
+
+            // If workspace is in conversation, get the user's email
+            if ($workspace !== null && $workspace->status === WorkspaceStatus::IN_CONVERSATION) {
+                $userId = $this->chatBasedContentEditorFacade->getOngoingConversationUserId($workspace->id);
+                if ($userId !== null) {
+                    $account          = $this->accountFacade->getAccountInfoById($userId);
+                    $inConversationBy = $account?->email;
+                }
+            }
 
             $projectsWithStatus[] = [
-                'project'   => $project,
-                'workspace' => $workspace,
+                'project'          => $project,
+                'workspace'        => $workspace,
+                'inConversationBy' => $inConversationBy,
             ];
         }
 

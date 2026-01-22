@@ -1,8 +1,8 @@
-{% extends '@Webui/base_appshell.html.twig' %}
+{% extends '@common.presentation/base_appshell.html.twig' %}
 
 {% block title %}Chat-based content editor{% endblock %}
 
-{% block body %}
+{% block content %}
     <div class="space-y-6"
          {{ stimulus_controller('chat-based-content-editor', {
              runUrl: runUrl,
@@ -200,4 +200,4 @@
             </div>
         {% endif %}
     </div>
-{% endblock %}
+{% endblock content %}

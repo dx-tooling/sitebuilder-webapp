@@ -17,4 +17,10 @@ interface ChatBasedContentEditorFacadeInterface
      * @return int the number of conversations finished
      */
     public function finishAllOngoingConversationsForWorkspace(string $workspaceId): int;
+
+    /**
+     * Get the user ID of the ongoing conversation for a workspace.
+     * Returns null if no ongoing conversation exists.
+     */
+    public function getOngoingConversationUserId(string $workspaceId): ?string;
 }
