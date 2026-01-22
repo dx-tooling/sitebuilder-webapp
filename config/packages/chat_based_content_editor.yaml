@@ -1,0 +1,2 @@
+parameters:
+    chat_based_content_editor.bytes_per_token_estimate: 4

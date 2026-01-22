@@ -13,6 +13,7 @@ use App\ChatBasedContentEditor\Domain\Enum\ConversationStatus;
 use App\ChatBasedContentEditor\Domain\Service\ConversationService;
 use App\ChatBasedContentEditor\Infrastructure\Adapter\DistFileScannerInterface;
 use App\ChatBasedContentEditor\Infrastructure\Message\RunEditSessionMessage;
+use App\ChatBasedContentEditor\Presentation\Service\ConversationContextUsageService;
 use App\ProjectMgmt\Facade\ProjectMgmtFacadeInterface;
 use App\WorkspaceMgmt\Facade\Enum\WorkspaceStatus;
 use App\WorkspaceMgmt\Facade\WorkspaceMgmtFacadeInterface;
@@ -41,13 +42,14 @@ use function json_decode;
 final class ChatBasedContentEditorController extends AbstractController
 {
     public function __construct(
-        private readonly ConversationService          $conversationService,
-        private readonly WorkspaceMgmtFacadeInterface $workspaceMgmtFacade,
-        private readonly ProjectMgmtFacadeInterface   $projectMgmtFacade,
-        private readonly AccountFacadeInterface       $accountFacade,
-        private readonly EntityManagerInterface       $entityManager,
-        private readonly MessageBusInterface          $messageBus,
-        private readonly DistFileScannerInterface     $distFileScanner,
+        private readonly ConversationService             $conversationService,
+        private readonly WorkspaceMgmtFacadeInterface    $workspaceMgmtFacade,
+        private readonly ProjectMgmtFacadeInterface      $projectMgmtFacade,
+        private readonly AccountFacadeInterface          $accountFacade,
+        private readonly EntityManagerInterface          $entityManager,
+        private readonly MessageBusInterface             $messageBus,
+        private readonly DistFileScannerInterface        $distFileScanner,
+        private readonly ConversationContextUsageService $contextUsageService,
     ) {
     }
 
@@ -242,6 +244,8 @@ final class ChatBasedContentEditorController extends AbstractController
         // Since we already verified ownership and status above, canEdit is always true here
         $canEdit = true;
 
+        $contextUsage = $this->contextUsageService->getContextUsage($conversation);
+
         return $this->render('@chat_based_content_editor.presentation/chat_based_content_editor.twig', [
             'conversation'    => $conversation,
             'workspace'       => $workspace,
@@ -250,6 +254,44 @@ final class ChatBasedContentEditorController extends AbstractController
             'canEdit'         => $canEdit,
             'runUrl'          => $this->generateUrl('chat_based_content_editor.presentation.run'),
             'pollUrlTemplate' => $this->generateUrl('chat_based_content_editor.presentation.poll', ['sessionId' => '__SESSION_ID__']),
+            'contextUsage'    => [
+                'usedTokens'   => $contextUsage->usedTokens,
+                'maxTokens'    => $contextUsage->maxTokens,
+                'modelName'    => $contextUsage->modelName,
+                'inputTokens'  => $contextUsage->inputTokens,
+                'outputTokens' => $contextUsage->outputTokens,
+                'inputCost'    => $contextUsage->inputCost,
+                'outputCost'   => $contextUsage->outputCost,
+                'totalCost'    => $contextUsage->totalCost,
+            ],
+            'contextUsageUrl' => $this->generateUrl('chat_based_content_editor.presentation.context_usage', ['conversationId' => $conversation->getId()]),
+        ]);
+    }
+
+    #[Route(
+        path: '/chat-based-content-editor/{conversationId}/context-usage',
+        name: 'chat_based_content_editor.presentation.context_usage',
+        methods: [Request::METHOD_GET],
+        requirements: ['conversationId' => '[a-f0-9-]{36}']
+    )]
+    public function contextUsage(string $conversationId): Response
+    {
+        $conversation = $this->entityManager->find(Conversation::class, $conversationId);
+        if ($conversation === null) {
+            return $this->json(['error' => 'Conversation not found.'], Response::HTTP_NOT_FOUND);
+        }
+
+        $dto = $this->contextUsageService->getContextUsage($conversation);
+
+        return $this->json([
+            'usedTokens'   => $dto->usedTokens,
+            'maxTokens'    => $dto->maxTokens,
+            'modelName'    => $dto->modelName,
+            'inputTokens'  => $dto->inputTokens,
+            'outputTokens' => $dto->outputTokens,
+            'inputCost'    => $dto->inputCost,
+            'outputCost'   => $dto->outputCost,
+            'totalCost'    => $dto->totalCost,
         ]);
     }
 
@@ -440,10 +482,23 @@ final class ChatBasedContentEditorController extends AbstractController
             ];
         }
 
+        $conversation = $session->getConversation();
+        $contextUsage = $this->contextUsageService->getContextUsage($conversation);
+
         return $this->json([
-            'chunks' => $chunkData,
-            'lastId' => $lastId,
-            'status' => $session->getStatus()->value,
+            'chunks'       => $chunkData,
+            'lastId'       => $lastId,
+            'status'       => $session->getStatus()->value,
+            'contextUsage' => [
+                'usedTokens'   => $contextUsage->usedTokens,
+                'maxTokens'    => $contextUsage->maxTokens,
+                'modelName'    => $contextUsage->modelName,
+                'inputTokens'  => $contextUsage->inputTokens,
+                'outputTokens' => $contextUsage->outputTokens,
+                'inputCost'    => $contextUsage->inputCost,
+                'outputCost'   => $contextUsage->outputCost,
+                'totalCost'    => $contextUsage->totalCost,
+            ],
         ]);
     }
 

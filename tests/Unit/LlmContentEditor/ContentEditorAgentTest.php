@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Unit\LlmContentEditor;
 
 use App\LlmContentEditor\Domain\Agent\ContentEditorAgent;
+use App\LlmContentEditor\Domain\Enum\LlmModelName;
 use App\WorkspaceTooling\Facade\WorkspaceToolingServiceInterface;
 use PHPUnit\Framework\TestCase;
 use ReflectionMethod;
@@ -13,7 +14,7 @@ final class ContentEditorAgentTest extends TestCase
 {
     public function testGetBackgroundInstructionsContainsPathRules(): void
     {
-        $agent = new ContentEditorAgent($this->createMockWorkspaceTooling());
+        $agent = new ContentEditorAgent($this->createMockWorkspaceTooling(), LlmModelName::defaultForContentEditor());
         $ref   = new ReflectionMethod(ContentEditorAgent::class, 'getBackgroundInstructions');
         $ref->setAccessible(true);
 
@@ -29,7 +30,7 @@ final class ContentEditorAgentTest extends TestCase
 
     public function testGetStepInstructionsExploreStepRefersToWorkingFolderFromUserMessage(): void
     {
-        $agent = new ContentEditorAgent($this->createMockWorkspaceTooling());
+        $agent = new ContentEditorAgent($this->createMockWorkspaceTooling(), LlmModelName::defaultForContentEditor());
         $ref   = new ReflectionMethod(ContentEditorAgent::class, 'getStepInstructions');
         $ref->setAccessible(true);
 

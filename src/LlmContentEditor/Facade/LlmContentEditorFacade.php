@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\LlmContentEditor\Facade;
 
 use App\LlmContentEditor\Domain\Agent\ContentEditorAgent;
+use App\LlmContentEditor\Domain\Enum\LlmModelName;
 use App\LlmContentEditor\Facade\Dto\ConversationMessageDto;
 use App\LlmContentEditor\Facade\Dto\EditStreamChunkDto;
 use App\LlmContentEditor\Infrastructure\AgentEventQueue;
@@ -110,7 +111,7 @@ final class LlmContentEditorFacade implements LlmContentEditorFacadeInterface
             }
         });
 
-        $agent = new ContentEditorAgent($this->workspaceTooling);
+        $agent = new ContentEditorAgent($this->workspaceTooling, LlmModelName::defaultForContentEditor());
         $agent->withChatHistory($chatHistory);
 
         $queue = new AgentEventQueue();

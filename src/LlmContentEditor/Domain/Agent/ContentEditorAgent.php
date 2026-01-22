@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\LlmContentEditor\Domain\Agent;
 
+use App\LlmContentEditor\Domain\Enum\LlmModelName;
 use App\WorkspaceTooling\Facade\WorkspaceToolingServiceInterface;
 use EtfsCodingAgent\Agent\BaseCodingAgent;
 use NeuronAI\Providers\AIProviderInterface;
@@ -15,7 +16,8 @@ use NeuronAI\Tools\ToolProperty;
 class ContentEditorAgent extends BaseCodingAgent
 {
     public function __construct(
-        private readonly WorkspaceToolingServiceInterface $sitebuilderFacade
+        private readonly WorkspaceToolingServiceInterface $sitebuilderFacade,
+        private readonly LlmModelName                     $model,
     ) {
         parent::__construct($sitebuilderFacade);
     }
@@ -27,7 +29,7 @@ class ContentEditorAgent extends BaseCodingAgent
 
         return new OpenAI(
             $apiKey,
-            'gpt-5.2',
+            $this->model->value,
         );
     }
 
