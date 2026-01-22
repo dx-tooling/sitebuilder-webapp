@@ -15,6 +15,7 @@ use RuntimeException;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
+use Throwable;
 
 /**
  * Integration tests for ChatBasedContentEditorController to safeguard
@@ -44,6 +45,23 @@ final class ChatBasedContentEditorControllerTest extends WebTestCase
         /** @var UserPasswordHasherInterface $passwordHasher */
         $passwordHasher       = $container->get(UserPasswordHasherInterface::class);
         $this->passwordHasher = $passwordHasher;
+
+        // Clean up test data before each test
+        $this->cleanupTestData();
+    }
+
+    private function cleanupTestData(): void
+    {
+        $connection = $this->entityManager->getConnection();
+
+        try {
+            $connection->executeStatement('DELETE FROM conversations');
+            $connection->executeStatement('DELETE FROM workspaces');
+            $connection->executeStatement('DELETE FROM projects');
+            $connection->executeStatement('DELETE FROM account_cores');
+        } catch (Throwable) {
+            // Tables may not exist yet on first run - that's fine
+        }
     }
 
     public function testShowConversationDeniesAccessWhenUserIsNotOwner(): void
