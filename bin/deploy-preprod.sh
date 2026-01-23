@@ -98,6 +98,10 @@ ssh "${SERVER}" << EOF
     echo "Starting services..."
     docker compose -f ${COMPOSE_FILE} up -d --scale messenger=3
     
+    # Restart nginx to pick up new container IPs (important after app container recreation)
+    echo "Restarting nginx to pick up new container IPs..."
+    docker compose -f ${COMPOSE_FILE} restart nginx
+    
     # Wait for services to be ready
     echo "Waiting for services to start..."
     sleep 5
