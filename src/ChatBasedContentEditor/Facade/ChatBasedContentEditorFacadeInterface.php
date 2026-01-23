@@ -23,4 +23,15 @@ interface ChatBasedContentEditorFacadeInterface
      * Returns null if no ongoing conversation exists.
      */
     public function getOngoingConversationUserId(string $workspaceId): ?string;
+
+    /**
+     * Release stale conversations by finishing them and making workspaces available.
+     * A conversation is considered stale if the user hasn't sent a heartbeat
+     * (updated lastActivityAt) within the specified timeout.
+     *
+     * @param int $timeoutMinutes number of minutes after which a conversation is considered stale
+     *
+     * @return list<string> list of workspace IDs that were released
+     */
+    public function releaseStaleConversations(int $timeoutMinutes = 5): array;
 }

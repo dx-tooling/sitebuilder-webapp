@@ -3,6 +3,12 @@
 {% block title %}Chat-based content editor{% endblock %}
 
 {% block content %}
+    {# Heartbeat controller to track user presence (prevents stale conversation locks) #}
+    <div {{ stimulus_controller('conversation-heartbeat', {
+             heartbeatUrl: path('chat_based_content_editor.presentation.heartbeat', { conversationId: conversation.id }),
+             interval: 10000
+         }) }}></div>
+
     <div class="space-y-6"
          {{ stimulus_controller('chat-based-content-editor', {
              runUrl: runUrl,

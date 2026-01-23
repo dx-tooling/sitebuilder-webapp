@@ -184,6 +184,43 @@ final class ChatBasedContentEditorController extends AbstractController
         ]);
     }
 
+    /**
+     * Heartbeat endpoint to track user presence in a conversation.
+     * Called periodically by the frontend to indicate the user is still active.
+     */
+    #[Route(
+        path: '/conversation/{conversationId}/heartbeat',
+        name: 'chat_based_content_editor.presentation.heartbeat',
+        methods: [Request::METHOD_POST],
+        requirements: ['conversationId' => '[a-f0-9-]{36}']
+    )]
+    public function heartbeat(
+        string        $conversationId,
+        #[CurrentUser] UserInterface $user
+    ): Response {
+        $conversation = $this->entityManager->find(Conversation::class, $conversationId);
+        if ($conversation === null) {
+            return $this->json(['error' => 'Conversation not found.'], Response::HTTP_NOT_FOUND);
+        }
+
+        $accountInfo = $this->getAccountInfo($user);
+
+        // Only the conversation owner can send heartbeats
+        if ($conversation->getUserId() !== $accountInfo->id) {
+            return $this->json(['error' => 'Not authorized.'], Response::HTTP_FORBIDDEN);
+        }
+
+        // Only update heartbeat for ongoing conversations
+        if ($conversation->getStatus() !== ConversationStatus::ONGOING) {
+            return $this->json(['error' => 'Conversation is not ongoing.'], Response::HTTP_BAD_REQUEST);
+        }
+
+        $conversation->updateLastActivity();
+        $this->entityManager->flush();
+
+        return $this->json(['success' => true]);
+    }
+
     #[Route(
         path: '/conversation/{conversationId}',
         name: 'chat_based_content_editor.presentation.show',
