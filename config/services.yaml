@@ -30,12 +30,39 @@ services:
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones
 
-    # etfs-coding-agent library services
-    EtfsCodingAgent\Service\FileOperationsServiceInterface:
-        class: EtfsCodingAgent\Service\FileOperationsService
+    # Secure path resolver for workspace isolation
+    App\WorkspaceTooling\Infrastructure\Security\SecurePathResolver:
+        arguments:
+            - "%workspace_mgmt.workspace_root%"
 
+    # Docker executor for running commands in isolated containers
+    App\WorkspaceTooling\Infrastructure\Execution\DockerExecutor: ~
+
+    # Base file operations service (inner service for decorator)
+    EtfsCodingAgent\Service\FileOperationsService: ~
+
+    # Secure file operations decorator - wraps base service with path validation
+    App\WorkspaceTooling\Infrastructure\Security\SecureFileOperationsService:
+        arguments:
+            - '@EtfsCodingAgent\Service\FileOperationsService'
+            - '@App\WorkspaceTooling\Infrastructure\Security\SecurePathResolver'
+            - "%workspace_mgmt.workspace_root%"
+
+    # Wire FileOperationsServiceInterface to the secure decorator
+    EtfsCodingAgent\Service\FileOperationsServiceInterface:
+        alias: App\WorkspaceTooling\Infrastructure\Security\SecureFileOperationsService
+
+    # Isolated shell executor - runs commands in Docker containers
+    App\WorkspaceTooling\Infrastructure\Execution\IsolatedShellExecutor:
+        arguments:
+            - '@App\WorkspaceTooling\Infrastructure\Execution\DockerExecutor'
+            - '@App\WorkspaceTooling\Infrastructure\Security\SecurePathResolver'
+            - '@App\ProjectMgmt\Facade\ProjectMgmtFacadeInterface'
+            - '@App\WorkspaceMgmt\Facade\WorkspaceMgmtFacadeInterface'
+
+    # Wire ShellOperationsServiceInterface to the isolated executor
     EtfsCodingAgent\Service\ShellOperationsServiceInterface:
-        class: EtfsCodingAgent\Service\ShellOperationsService
+        alias: App\WorkspaceTooling\Infrastructure\Execution\IsolatedShellExecutor
 
     EtfsCodingAgent\Service\TextOperationsService:
         arguments:

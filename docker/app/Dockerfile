@@ -23,6 +23,15 @@ RUN if [ "$TARGETPLATFORM" = "linux/amd64" ]; then ARCHITECTURE=amd64; elif [ "$
 RUN apt-get update -y
 RUN apt-get install -y mise
 
+# Install Docker CLI for workspace isolation (running commands in sibling containers)
+# Using official Docker repo for the CLI
+RUN install -m 0755 -d /etc/apt/keyrings && \
+    curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc && \
+    chmod a+r /etc/apt/keyrings/docker.asc && \
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/debian $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null && \
+    apt-get update -y && \
+    apt-get install -y docker-ce-cli
+
 # Clean up to reduce image size
 RUN apt-get clean && rm -rf /var/lib/apt/lists/*
 

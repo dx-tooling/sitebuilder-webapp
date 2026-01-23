@@ -33,6 +33,7 @@ services:
         volumes:
             - .:/var/www
             - mise_data:/opt/mise
+            - /var/run/docker.sock:/var/run/docker.sock
         environment:
             HOME: /tmp/container-home
             XDG_CACHE_HOME: /tmp/container-home/.cache

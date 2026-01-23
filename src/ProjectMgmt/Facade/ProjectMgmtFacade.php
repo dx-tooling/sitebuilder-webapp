@@ -70,6 +70,7 @@ final class ProjectMgmtFacade implements ProjectMgmtFacadeInterface
             $project->getGithubToken(),
             $project->getProjectType(),
             $githubUrl,
+            $project->getAgentImage(),
         );
     }
 }

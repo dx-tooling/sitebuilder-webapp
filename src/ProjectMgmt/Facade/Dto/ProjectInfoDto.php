@@ -15,6 +15,7 @@ final readonly class ProjectInfoDto
         public string      $githubToken,
         public ProjectType $projectType,
         public string      $githubUrl,
+        public string      $agentImage,
     ) {
     }
 }

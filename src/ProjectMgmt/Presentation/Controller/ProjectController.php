@@ -7,6 +7,7 @@ namespace App\ProjectMgmt\Presentation\Controller;
 use App\Account\Facade\AccountFacadeInterface;
 use App\ChatBasedContentEditor\Facade\ChatBasedContentEditorFacadeInterface;
 use App\ProjectMgmt\Domain\Service\ProjectService;
+use App\ProjectMgmt\Facade\Enum\ProjectType;
 use App\ProjectMgmt\Facade\ProjectMgmtFacadeInterface;
 use App\WorkspaceMgmt\Facade\Enum\WorkspaceStatus;
 use App\WorkspaceMgmt\Facade\WorkspaceMgmtFacadeInterface;
@@ -107,6 +108,7 @@ final class ProjectController extends AbstractController
         $name        = $request->request->getString('name');
         $gitUrl      = $request->request->getString('git_url');
         $githubToken = $request->request->getString('github_token');
+        $agentImage  = $this->resolveAgentImage($request);
 
         if ($name === '' || $gitUrl === '' || $githubToken === '') {
             $this->addFlash('error', 'All fields are required.');
@@ -114,7 +116,13 @@ final class ProjectController extends AbstractController
             return $this->redirectToRoute('project_mgmt.presentation.new');
         }
 
-        $this->projectService->create($name, $gitUrl, $githubToken);
+        if ($agentImage === '' || !$this->isValidDockerImageName($agentImage)) {
+            $this->addFlash('error', 'Invalid Docker image format. Expected format: name:tag');
+
+            return $this->redirectToRoute('project_mgmt.presentation.new');
+        }
+
+        $this->projectService->create($name, $gitUrl, $githubToken, ProjectType::DEFAULT, $agentImage);
         $this->addFlash('success', 'Project created successfully.');
 
         return $this->redirectToRoute('project_mgmt.presentation.list');
@@ -162,6 +170,7 @@ final class ProjectController extends AbstractController
         $name        = $request->request->getString('name');
         $gitUrl      = $request->request->getString('git_url');
         $githubToken = $request->request->getString('github_token');
+        $agentImage  = $this->resolveAgentImage($request);
 
         if ($name === '' || $gitUrl === '' || $githubToken === '') {
             $this->addFlash('error', 'All fields are required.');
@@ -169,7 +178,13 @@ final class ProjectController extends AbstractController
             return $this->redirectToRoute('project_mgmt.presentation.edit', ['id' => $id]);
         }
 
-        $this->projectService->update($project, $name, $gitUrl, $githubToken);
+        if ($agentImage === '' || !$this->isValidDockerImageName($agentImage)) {
+            $this->addFlash('error', 'Invalid Docker image format. Expected format: name:tag');
+
+            return $this->redirectToRoute('project_mgmt.presentation.edit', ['id' => $id]);
+        }
+
+        $this->projectService->update($project, $name, $gitUrl, $githubToken, ProjectType::DEFAULT, $agentImage);
         $this->addFlash('success', 'Project updated successfully.');
 
         return $this->redirectToRoute('project_mgmt.presentation.list');
@@ -222,5 +237,31 @@ final class ProjectController extends AbstractController
         }
 
         return $this->redirectToRoute('project_mgmt.presentation.list');
+    }
+
+    /**
+     * Resolve the agent image from the request.
+     * If "custom" is selected, use the custom_agent_image field.
+     */
+    private function resolveAgentImage(Request $request): string
+    {
+        $agentImage = $request->request->getString('agent_image');
+
+        if ($agentImage === 'custom') {
+            return $request->request->getString('custom_agent_image');
+        }
+
+        return $agentImage;
+    }
+
+    /**
+     * Validate Docker image name format.
+     * Accepts formats like: name:tag, registry/name:tag, registry:port/name:tag.
+     */
+    private function isValidDockerImageName(string $imageName): bool
+    {
+        // Basic validation: must contain a colon for tag, alphanumeric with allowed chars
+        // Allows: letters, numbers, dots, dashes, underscores, slashes, colons
+        return preg_match('/^[\w.\-\/]+:[\w.\-]+$/', $imageName) === 1;
     }
 }
