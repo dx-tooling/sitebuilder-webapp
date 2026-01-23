@@ -148,8 +148,10 @@
                             <div class="max-w-[85%] rounded-lg px-4 py-2 bg-primary-100 dark:bg-primary-900/30 text-dark-900 dark:text-dark-100 text-sm">{{ turn.instruction }}</div>
                         </div>
                         <div class="flex justify-start">
+                            {# Note: Markdown rendering is handled by chat_based_content_editor_controller.ts #}
+                            {# to avoid race conditions with technical container rendering #}
                             <div class="max-w-[85%] rounded-lg px-4 py-2 bg-dark-100 dark:bg-dark-700/50 text-dark-800 dark:text-dark-200 text-sm {{ turn.status == 'failed' ? 'border-l-2 border-red-500 pl-2' : '' }}"
-                                 {{ stimulus_controller('markdown', { streaming: false }) }}>{{ turn.response ?: '(No response)' }}</div>
+                                 data-turn-response="{{ turn.response ?: '' }}"></div>
                         </div>
                     {% endfor %}
                 {% endif %}
