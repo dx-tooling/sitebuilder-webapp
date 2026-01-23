@@ -8,6 +8,10 @@ import {
     isActiveSessionStatus,
     isSuccessStatus,
     truncateString,
+    getCompletedContainerStyle,
+    getWorkingContainerStyle,
+    getProgressAnimationState,
+    shouldShowEventFeedback,
     type PollChunk,
     type ChunkPayload,
 } from "../../../../src/ChatBasedContentEditor/Presentation/Resources/assets/controllers/chat_editor_helpers.ts";
@@ -15,9 +19,7 @@ import {
 describe("chat_editor_helpers", () => {
     describe("escapeHtml", () => {
         it("should escape HTML special characters", () => {
-            expect(escapeHtml("<script>alert('xss')</script>")).toBe(
-                "&lt;script&gt;alert('xss')&lt;/script&gt;",
-            );
+            expect(escapeHtml("<script>alert('xss')</script>")).toBe("&lt;script&gt;alert('xss')&lt;/script&gt;");
         });
 
         it("should escape ampersands", () => {
@@ -25,7 +27,7 @@ describe("chat_editor_helpers", () => {
         });
 
         it("should escape quotes", () => {
-            expect(escapeHtml('say "hello"')).toBe("say \"hello\"");
+            expect(escapeHtml('say "hello"')).toBe('say "hello"');
         });
 
         it("should handle empty string", () => {
@@ -197,6 +199,130 @@ describe("chat_editor_helpers", () => {
 
         it("should handle empty strings", () => {
             expect(truncateString("", 5)).toBe("");
+        });
+    });
+
+    describe("getCompletedContainerStyle", () => {
+        it("should return Done label text", () => {
+            const style = getCompletedContainerStyle();
+            expect(style.labelText).toBe("Done");
+        });
+
+        it("should return checkmark emoji", () => {
+            const style = getCompletedContainerStyle();
+            expect(style.sparkleEmoji).toBe("✅");
+        });
+
+        it("should return green indicator classes", () => {
+            const style = getCompletedContainerStyle();
+            expect(style.indicatorClass).toContain("green");
+        });
+
+        it("should return green header background classes", () => {
+            const style = getCompletedContainerStyle();
+            expect(style.headerBgClass).toContain("green");
+            expect(style.headerBgClass).toContain("emerald");
+        });
+
+        it("should return green label color classes", () => {
+            const style = getCompletedContainerStyle();
+            expect(style.labelColorClass).toContain("green");
+        });
+
+        it("should not contain any red or error styling", () => {
+            const style = getCompletedContainerStyle();
+            expect(style.labelText).not.toContain("Failed");
+            expect(style.labelText).not.toContain("Error");
+            expect(style.indicatorClass).not.toContain("red");
+            expect(style.headerBgClass).not.toContain("red");
+        });
+    });
+
+    describe("getWorkingContainerStyle", () => {
+        it("should return Working... label text", () => {
+            const style = getWorkingContainerStyle();
+            expect(style.labelText).toBe("Working...");
+        });
+
+        it("should return sparkle emoji", () => {
+            const style = getWorkingContainerStyle();
+            expect(style.sparkleEmoji).toBe("✨");
+        });
+
+        it("should return purple/blue indicator classes", () => {
+            const style = getWorkingContainerStyle();
+            expect(style.indicatorClass).toContain("purple");
+            expect(style.indicatorClass).toContain("blue");
+        });
+
+        it("should return purple/blue header background classes", () => {
+            const style = getWorkingContainerStyle();
+            expect(style.headerBgClass).toContain("purple");
+            expect(style.headerBgClass).toContain("blue");
+        });
+    });
+
+    describe("getProgressAnimationState", () => {
+        it("should intensify for tool_calling events", () => {
+            const state = getProgressAnimationState("tool_calling");
+            expect(state.intensify).toBe(true);
+            expect(state.returnToNormal).toBe(false);
+        });
+
+        it("should intensify for inference_start events", () => {
+            const state = getProgressAnimationState("inference_start");
+            expect(state.intensify).toBe(true);
+            expect(state.returnToNormal).toBe(false);
+        });
+
+        it("should return to normal for tool_called events", () => {
+            const state = getProgressAnimationState("tool_called");
+            expect(state.intensify).toBe(false);
+            expect(state.returnToNormal).toBe(true);
+        });
+
+        it("should return to normal for inference_stop events", () => {
+            const state = getProgressAnimationState("inference_stop");
+            expect(state.intensify).toBe(false);
+            expect(state.returnToNormal).toBe(true);
+        });
+
+        it("should not change animation for agent_error events", () => {
+            const state = getProgressAnimationState("agent_error");
+            expect(state.intensify).toBe(false);
+            expect(state.returnToNormal).toBe(false);
+        });
+
+        it("should not change animation for unknown events", () => {
+            const state = getProgressAnimationState("some_other_event");
+            expect(state.intensify).toBe(false);
+            expect(state.returnToNormal).toBe(false);
+        });
+    });
+
+    describe("shouldShowEventFeedback", () => {
+        it("should show feedback for tool_calling events", () => {
+            expect(shouldShowEventFeedback("tool_calling")).toBe(true);
+        });
+
+        it("should show feedback for tool_called events", () => {
+            expect(shouldShowEventFeedback("tool_called")).toBe(true);
+        });
+
+        it("should show feedback for inference_start events", () => {
+            expect(shouldShowEventFeedback("inference_start")).toBe(true);
+        });
+
+        it("should show feedback for inference_stop events", () => {
+            expect(shouldShowEventFeedback("inference_stop")).toBe(true);
+        });
+
+        it("should NOT show feedback for agent_error events", () => {
+            expect(shouldShowEventFeedback("agent_error")).toBe(false);
+        });
+
+        it("should NOT show feedback for unknown events", () => {
+            expect(shouldShowEventFeedback("some_random_event")).toBe(false);
         });
     });
 });

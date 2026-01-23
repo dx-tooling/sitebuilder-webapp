@@ -108,7 +108,10 @@ describe("ChatBasedContentEditorController", () => {
             const container = document.createElement("div");
             container.setAttribute("data-controller", "chat-based-content-editor");
             container.setAttribute("data-chat-based-content-editor-run-url-value", "/api/run");
-            container.setAttribute("data-chat-based-content-editor-poll-url-template-value", "/api/poll/__SESSION_ID__");
+            container.setAttribute(
+                "data-chat-based-content-editor-poll-url-template-value",
+                "/api/poll/__SESSION_ID__",
+            );
             container.setAttribute("data-chat-based-content-editor-conversation-id-value", "test-conv-123");
             container.setAttribute("data-chat-based-content-editor-context-usage-url-value", "/api/context");
             container.setAttribute(

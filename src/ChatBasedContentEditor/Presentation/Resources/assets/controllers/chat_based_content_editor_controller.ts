@@ -11,6 +11,9 @@ import {
     formatInt,
     parseChunkPayload,
     payloadToAgentEvent,
+    getCompletedContainerStyle,
+    getWorkingContainerStyle,
+    getProgressAnimationState,
 } from "./chat_editor_helpers.ts";
 
 export default class extends Controller {
@@ -361,14 +364,11 @@ export default class extends Controller {
         container.className = "technical-messages-container";
         container.dataset.technicalMessages = "1";
 
-        const isSuccess = turn.status === "completed";
-        const headerBgClass = isSuccess
-            ? "from-green-50/80 to-emerald-50/80 dark:from-green-900/20 dark:to-emerald-900/20 border-green-200/50 dark:border-green-700/30"
-            : "from-red-50/80 to-rose-50/80 dark:from-red-900/20 dark:to-rose-900/20 border-red-200/50 dark:border-red-700/30";
+        const style = getCompletedContainerStyle();
 
         const header = document.createElement("button");
         header.type = "button";
-        header.className = `flex items-center gap-2 w-full text-left py-2 px-3 rounded-lg bg-gradient-to-r ${headerBgClass} hover:opacity-90 transition-all duration-300`;
+        header.className = `flex items-center gap-2 w-full text-left py-2 px-3 rounded-lg bg-gradient-to-r ${style.headerBgClass} hover:opacity-90 transition-all duration-300`;
         header.dataset.header = "1";
         header.addEventListener("click", () => {
             this.toggleTechnicalMessages(container);
@@ -378,9 +378,7 @@ export default class extends Controller {
         indicatorWrapper.className = "relative flex-shrink-0";
 
         const indicator = document.createElement("div");
-        indicator.className = isSuccess
-            ? "technical-indicator w-2.5 h-2.5 rounded-full bg-green-500 dark:bg-green-400"
-            : "technical-indicator w-2.5 h-2.5 rounded-full bg-red-500 dark:bg-red-400";
+        indicator.className = `technical-indicator w-2.5 h-2.5 rounded-full ${style.indicatorClass}`;
         indicator.dataset.indicator = "1";
 
         indicatorWrapper.appendChild(indicator);
@@ -390,32 +388,23 @@ export default class extends Controller {
 
         const sparkle = document.createElement("span");
         sparkle.className = "text-xs";
-        sparkle.textContent = isSuccess ? "✅" : "❌";
+        sparkle.textContent = style.sparkleEmoji;
 
         const label = document.createElement("span");
-        const labelColorClass = isSuccess
-            ? "from-green-600 to-green-600 dark:from-green-400 dark:to-green-400"
-            : "from-red-600 to-red-600 dark:from-red-400 dark:to-red-400";
-        label.className = `text-[11px] font-semibold bg-gradient-to-r ${labelColorClass} bg-clip-text text-transparent`;
-        label.innerHTML = isSuccess ? "Done" : "Failed";
+        label.className = `text-[11px] font-semibold bg-gradient-to-r ${style.labelColorClass} bg-clip-text text-transparent`;
+        label.innerHTML = style.labelText;
         label.dataset.label = "1";
 
         labelWrapper.appendChild(sparkle);
         labelWrapper.appendChild(label);
 
         const count = document.createElement("span");
-        const countColorClass = isSuccess
-            ? "text-green-500 dark:text-green-400 bg-green-100/50 dark:bg-green-900/30"
-            : "text-red-500 dark:text-red-400 bg-red-100/50 dark:bg-red-900/30";
-        count.className = `text-[10px] ${countColorClass} ml-auto font-medium px-1.5 py-0.5 rounded-full`;
+        count.className = `text-[10px] ${style.countColorClass} ml-auto font-medium px-1.5 py-0.5 rounded-full`;
         count.dataset.count = "1";
         count.textContent = String(turn.events.length);
 
         const chevron = document.createElement("svg");
-        const chevronColorClass = isSuccess
-            ? "text-green-400 dark:text-green-500"
-            : "text-red-400 dark:text-red-500";
-        chevron.className = `w-3 h-3 ${chevronColorClass} transition-transform duration-300`;
+        chevron.className = `w-3 h-3 ${style.chevronColorClass} transition-transform duration-300`;
         chevron.dataset.chevron = "1";
         chevron.innerHTML = '<path fill="currentColor" d="M6 9l6 6 6-6H6z"/>';
         chevron.setAttribute("viewBox", "0 0 24 24");
@@ -426,10 +415,7 @@ export default class extends Controller {
         header.appendChild(chevron);
 
         const messagesList = document.createElement("div");
-        const messagesListBorderClass = isSuccess
-            ? "border-green-200/30 dark:border-green-700/20"
-            : "border-red-200/30 dark:border-red-700/20";
-        messagesList.className = `technical-messages-list max-h-[120px] overflow-y-auto space-y-1 px-3 py-2 hidden bg-white/50 dark:bg-dark-800/50 rounded-b-lg border-x border-b ${messagesListBorderClass}`;
+        messagesList.className = `technical-messages-list max-h-[120px] overflow-y-auto space-y-1 px-3 py-2 hidden bg-white/50 dark:bg-dark-800/50 rounded-b-lg border-x border-b ${style.messagesListBorderClass}`;
         messagesList.dataset.messagesList = "1";
 
         // Render all events
@@ -505,10 +491,8 @@ export default class extends Controller {
         } else if (chunk.chunkType === "done") {
             if (payload.success === false && payload.errorMessage) {
                 this.appendError(container, payload.errorMessage);
-                this.markTechnicalContainerComplete(container, false);
-            } else {
-                this.markTechnicalContainerComplete(container, true);
             }
+            this.markTechnicalContainerComplete(container);
             this.scrollToBottom();
 
             return true;
@@ -536,10 +520,11 @@ export default class extends Controller {
         container.className = "technical-messages-container";
         container.dataset.technicalMessages = "1";
 
+        const style = getWorkingContainerStyle();
+
         const header = document.createElement("button");
         header.type = "button";
-        header.className =
-            "flex items-center gap-2 w-full text-left py-2 px-3 rounded-lg bg-gradient-to-r from-purple-50/80 to-blue-50/80 dark:from-purple-900/20 dark:to-blue-900/20 border border-purple-200/50 dark:border-purple-700/30 hover:from-purple-100/80 hover:to-blue-100/80 dark:hover:from-purple-900/30 dark:hover:to-blue-900/30 transition-all duration-300";
+        header.className = `flex items-center gap-2 w-full text-left py-2 px-3 rounded-lg bg-gradient-to-r ${style.headerBgClass} border hover:from-purple-100/80 hover:to-blue-100/80 dark:hover:from-purple-900/30 dark:hover:to-blue-900/30 transition-all duration-300`;
         header.dataset.header = "1";
         header.addEventListener("click", () => {
             this.toggleTechnicalMessages(container);
@@ -549,13 +534,11 @@ export default class extends Controller {
         indicatorWrapper.className = "relative flex-shrink-0";
 
         const indicator = document.createElement("div");
-        indicator.className =
-            "technical-indicator w-2.5 h-2.5 rounded-full bg-gradient-to-r from-purple-500 to-blue-500 dark:from-purple-400 dark:to-blue-400 animate-pulse";
+        indicator.className = `technical-indicator w-2.5 h-2.5 rounded-full ${style.indicatorClass} animate-pulse`;
         indicator.dataset.indicator = "1";
 
         const indicatorGlow = document.createElement("div");
-        indicatorGlow.className =
-            "absolute inset-0 w-2.5 h-2.5 rounded-full bg-gradient-to-r from-purple-500 to-blue-500 dark:from-purple-400 dark:to-blue-400 animate-ping opacity-75";
+        indicatorGlow.className = `absolute inset-0 w-2.5 h-2.5 rounded-full ${style.indicatorClass} animate-ping opacity-75`;
 
         indicatorWrapper.appendChild(indicator);
         indicatorWrapper.appendChild(indicatorGlow);
@@ -565,25 +548,23 @@ export default class extends Controller {
 
         const sparkle = document.createElement("span");
         sparkle.className = "text-xs";
-        sparkle.textContent = "✨";
+        sparkle.textContent = style.sparkleEmoji;
 
         const label = document.createElement("span");
-        label.className =
-            "text-[11px] font-semibold bg-gradient-to-r from-purple-600 to-blue-600 dark:from-purple-400 dark:to-blue-400 bg-clip-text text-transparent";
-        label.innerHTML = "Working...";
+        label.className = `text-[11px] font-semibold bg-gradient-to-r ${style.labelColorClass} bg-clip-text text-transparent`;
+        label.innerHTML = style.labelText;
         label.dataset.label = "1";
 
         labelWrapper.appendChild(sparkle);
         labelWrapper.appendChild(label);
 
         const count = document.createElement("span");
-        count.className =
-            "text-[10px] text-purple-500 dark:text-purple-400 ml-auto font-medium bg-purple-100/50 dark:bg-purple-900/30 px-1.5 py-0.5 rounded-full";
+        count.className = `text-[10px] ${style.countColorClass} ml-auto font-medium px-1.5 py-0.5 rounded-full`;
         count.dataset.count = "1";
         count.textContent = "0";
 
         const chevron = document.createElement("svg");
-        chevron.className = "w-3 h-3 text-purple-400 dark:text-purple-500 transition-transform duration-300";
+        chevron.className = `w-3 h-3 ${style.chevronColorClass} transition-transform duration-300`;
         chevron.dataset.chevron = "1";
         chevron.innerHTML = '<path fill="currentColor" d="M6 9l6 6 6-6H6z"/>';
         chevron.setAttribute("viewBox", "0 0 24 24");
@@ -594,8 +575,7 @@ export default class extends Controller {
         header.appendChild(chevron);
 
         const messagesList = document.createElement("div");
-        messagesList.className =
-            "technical-messages-list max-h-[120px] overflow-y-auto space-y-1 px-3 py-2 hidden bg-white/50 dark:bg-dark-800/50 rounded-b-lg border-x border-b border-purple-200/30 dark:border-purple-700/20";
+        messagesList.className = `technical-messages-list max-h-[120px] overflow-y-auto space-y-1 px-3 py-2 hidden bg-white/50 dark:bg-dark-800/50 rounded-b-lg border-x border-b ${style.messagesListBorderClass}`;
         messagesList.dataset.messagesList = "1";
 
         container.appendChild(header);
@@ -705,15 +685,15 @@ export default class extends Controller {
     private updateTechnicalIndicator(container: HTMLElement, event: AgentEvent): void {
         const indicator = container.querySelector<HTMLElement>('[data-indicator="1"]');
         const indicatorGlow = indicator?.nextElementSibling as HTMLElement | null;
-        const label = container.querySelector<HTMLElement>('[data-label="1"]');
         const header = container.querySelector<HTMLElement>('[data-header="1"]');
 
         if (!indicator) {
             return;
         }
 
-        // Intensify animations for active tool calls and inference
-        if (event.kind === "tool_calling" || event.kind === "inference_start") {
+        const animationState = getProgressAnimationState(event.kind);
+
+        if (animationState.intensify) {
             // Make indicator more vibrant
             indicator.classList.add("scale-125");
             if (indicatorGlow) {
@@ -730,7 +710,7 @@ export default class extends Controller {
                     "dark:border-purple-600/50",
                 );
             }
-        } else if (event.kind === "tool_called" || event.kind === "inference_stop") {
+        } else if (animationState.returnToNormal) {
             // Return to normal animation intensity
             setTimeout(() => {
                 if (indicator) {
@@ -750,28 +730,12 @@ export default class extends Controller {
                     );
                 }
             }, 500);
-        } else if (event.kind === "agent_error") {
-            // Show error state
-            indicator.classList.remove(
-                "bg-gradient-to-r",
-                "from-purple-500",
-                "to-blue-500",
-                "dark:from-purple-400",
-                "dark:to-blue-400",
-            );
-            indicator.classList.add("bg-red-500", "dark:bg-red-400");
-            if (indicatorGlow) {
-                indicatorGlow.classList.add("hidden");
-            }
-            if (label) {
-                label.innerHTML = "Error occurred";
-                label.classList.remove("from-purple-600", "to-blue-600", "dark:from-purple-400", "dark:to-blue-400");
-                label.classList.add("from-red-600", "to-red-600", "dark:from-red-400", "dark:to-red-400");
-            }
         }
+        // Note: agent_error events are not surfaced to the UI since the agent
+        // can handle errors gracefully and continue working
     }
 
-    private markTechnicalContainerComplete(container: HTMLElement, success: boolean): void {
+    private markTechnicalContainerComplete(container: HTMLElement): void {
         const technicalContainer = this.getTechnicalMessagesContainer(container);
         if (!technicalContainer) {
             return;
@@ -783,6 +747,9 @@ export default class extends Controller {
         const header = technicalContainer.querySelector<HTMLElement>('[data-header="1"]');
         const sparkle = label?.previousElementSibling as HTMLElement | null;
 
+        const style = getCompletedContainerStyle();
+        const workingStyle = getWorkingContainerStyle();
+
         // Stop all animations
         if (indicator) {
             indicator.classList.remove("animate-pulse", "scale-125");
@@ -791,90 +758,33 @@ export default class extends Controller {
             indicatorGlow.classList.add("hidden");
         }
 
-        if (success) {
-            // Success state - green checkmark vibes
-            if (indicator) {
-                indicator.classList.remove(
-                    "bg-gradient-to-r",
-                    "from-purple-500",
-                    "to-blue-500",
-                    "dark:from-purple-400",
-                    "dark:to-blue-400",
-                );
-                indicator.classList.add("bg-green-500", "dark:bg-green-400");
-            }
-            if (label) {
-                label.innerHTML = "Done";
-                label.classList.remove("from-purple-600", "to-blue-600", "dark:from-purple-400", "dark:to-blue-400");
-                label.classList.add("from-green-600", "to-green-600", "dark:from-green-400", "dark:to-green-400");
-            }
-            if (sparkle) {
-                sparkle.textContent = "✅";
-            }
-            if (header) {
-                header.classList.remove(
-                    "from-purple-50/80",
-                    "to-blue-50/80",
-                    "dark:from-purple-900/20",
-                    "dark:to-blue-900/20",
-                    "border-purple-200/50",
-                    "dark:border-purple-700/30",
-                    "hover:from-purple-100/80",
-                    "hover:to-blue-100/80",
-                    "dark:hover:from-purple-900/30",
-                    "dark:hover:to-blue-900/30",
-                );
-                header.classList.add(
-                    "from-green-50/80",
-                    "to-emerald-50/80",
-                    "dark:from-green-900/20",
-                    "dark:to-emerald-900/20",
-                    "border-green-200/50",
-                    "dark:border-green-700/30",
-                );
-            }
-        } else {
-            // Error state - red
-            if (indicator) {
-                indicator.classList.remove(
-                    "bg-gradient-to-r",
-                    "from-purple-500",
-                    "to-blue-500",
-                    "dark:from-purple-400",
-                    "dark:to-blue-400",
-                );
-                indicator.classList.add("bg-red-500", "dark:bg-red-400");
-            }
-            if (label) {
-                label.innerHTML = "Failed";
-                label.classList.remove("from-purple-600", "to-blue-600", "dark:from-purple-400", "dark:to-blue-400");
-                label.classList.add("from-red-600", "to-red-600", "dark:from-red-400", "dark:to-red-400");
-            }
-            if (sparkle) {
-                sparkle.textContent = "❌";
-            }
-            if (header) {
-                header.classList.remove(
-                    "from-purple-50/80",
-                    "to-blue-50/80",
-                    "dark:from-purple-900/20",
-                    "dark:to-blue-900/20",
-                    "border-purple-200/50",
-                    "dark:border-purple-700/30",
-                    "hover:from-purple-100/80",
-                    "hover:to-blue-100/80",
-                    "dark:hover:from-purple-900/30",
-                    "dark:hover:to-blue-900/30",
-                );
-                header.classList.add(
-                    "from-red-50/80",
-                    "to-rose-50/80",
-                    "dark:from-red-900/20",
-                    "dark:to-rose-900/20",
-                    "border-red-200/50",
-                    "dark:border-red-700/30",
-                );
-            }
+        // Transition from working to completed state
+        if (indicator) {
+            // Remove working indicator classes
+            indicator.classList.remove("bg-gradient-to-r", ...workingStyle.indicatorClass.split(" "));
+            // Add completed indicator classes
+            indicator.classList.add(...style.indicatorClass.split(" "));
+        }
+        if (label) {
+            label.innerHTML = style.labelText;
+            // Remove working label classes and add completed
+            label.classList.remove(...workingStyle.labelColorClass.split(" "));
+            label.classList.add(...style.labelColorClass.split(" "));
+        }
+        if (sparkle) {
+            sparkle.textContent = style.sparkleEmoji;
+        }
+        if (header) {
+            // Remove working header classes
+            header.classList.remove(
+                ...workingStyle.headerBgClass.split(" "),
+                "hover:from-purple-100/80",
+                "hover:to-blue-100/80",
+                "dark:hover:from-purple-900/30",
+                "dark:hover:to-blue-900/30",
+            );
+            // Add completed header classes
+            header.classList.add(...style.headerBgClass.split(" "));
         }
     }
 

@@ -131,3 +131,83 @@ export function truncateString(s: string, maxLength: number): string {
     }
     return s.slice(0, maxLength) + "…";
 }
+
+/**
+ * Configuration for technical container styling.
+ */
+export interface TechnicalContainerStyle {
+    headerBgClass: string;
+    indicatorClass: string;
+    labelText: string;
+    labelColorClass: string;
+    sparkleEmoji: string;
+    countColorClass: string;
+    chevronColorClass: string;
+    messagesListBorderClass: string;
+}
+
+/**
+ * Get the styling configuration for a completed technical container.
+ * Always returns "Done" state styling since the agent handles errors gracefully.
+ */
+export function getCompletedContainerStyle(): TechnicalContainerStyle {
+    return {
+        headerBgClass:
+            "from-green-50/80 to-emerald-50/80 dark:from-green-900/20 dark:to-emerald-900/20 border-green-200/50 dark:border-green-700/30",
+        indicatorClass: "bg-green-500 dark:bg-green-400",
+        labelText: "Done",
+        labelColorClass: "from-green-600 to-green-600 dark:from-green-400 dark:to-green-400",
+        sparkleEmoji: "✅",
+        countColorClass: "text-green-500 dark:text-green-400 bg-green-100/50 dark:bg-green-900/30",
+        chevronColorClass: "text-green-400 dark:text-green-500",
+        messagesListBorderClass: "border-green-200/30 dark:border-green-700/20",
+    };
+}
+
+/**
+ * Get the styling configuration for a working/in-progress technical container.
+ */
+export function getWorkingContainerStyle(): TechnicalContainerStyle {
+    return {
+        headerBgClass:
+            "from-purple-50/80 to-blue-50/80 dark:from-purple-900/20 dark:to-blue-900/20 border-purple-200/50 dark:border-purple-700/30",
+        indicatorClass: "bg-gradient-to-r from-purple-500 to-blue-500 dark:from-purple-400 dark:to-blue-400",
+        labelText: "Working...",
+        labelColorClass: "from-purple-600 to-blue-600 dark:from-purple-400 dark:to-blue-400",
+        sparkleEmoji: "✨",
+        countColorClass: "text-purple-500 dark:text-purple-400 bg-purple-100/50 dark:bg-purple-900/30",
+        chevronColorClass: "text-purple-400 dark:text-purple-500",
+        messagesListBorderClass: "border-purple-200/30 dark:border-purple-700/20",
+    };
+}
+
+/**
+ * Configuration for progress indicator animation state.
+ */
+export interface ProgressAnimationState {
+    intensify: boolean;
+    returnToNormal: boolean;
+}
+
+/**
+ * Determine the animation state change based on an agent event.
+ * Returns whether to intensify animations, return to normal, or do nothing.
+ */
+export function getProgressAnimationState(eventKind: string): ProgressAnimationState {
+    const intensifyEvents = ["tool_calling", "inference_start"];
+    const normalizeEvents = ["tool_called", "inference_stop"];
+
+    return {
+        intensify: intensifyEvents.includes(eventKind),
+        returnToNormal: normalizeEvents.includes(eventKind),
+    };
+}
+
+/**
+ * Determine if an event kind should trigger any visual feedback.
+ * Note: agent_error events are intentionally not surfaced to avoid alarming users.
+ */
+export function shouldShowEventFeedback(eventKind: string): boolean {
+    const feedbackEvents = ["tool_calling", "inference_start", "tool_called", "inference_stop"];
+    return feedbackEvents.includes(eventKind);
+}
