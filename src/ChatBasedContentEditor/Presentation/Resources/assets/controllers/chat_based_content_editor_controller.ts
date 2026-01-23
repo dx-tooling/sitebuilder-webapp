@@ -362,11 +362,6 @@ export default class extends Controller {
         const turnsToProcess = hasActiveSession ? turns.slice(0, -1) : turns;
 
         turnsToProcess.forEach((turn, index) => {
-            // Only render if there are events to show
-            if (!turn.events || turn.events.length === 0) {
-                return;
-            }
-
             const assistantEl = assistantElements[index];
             if (!assistantEl) {
                 return;
@@ -378,20 +373,27 @@ export default class extends Controller {
                 return;
             }
 
-            // Create a wrapper for the technical container and response
-            const existingContent = innerContainer.innerHTML;
+            // Clear the container and set up structure
             innerContainer.innerHTML = "";
             innerContainer.classList.add("space-y-2");
 
-            // Create and add completed technical container
-            const technicalContainer = this.createCompletedTechnicalContainer(turn);
-            innerContainer.appendChild(technicalContainer);
+            // Create and add completed technical container if there are events
+            if (turn.events && turn.events.length > 0) {
+                const technicalContainer = this.createCompletedTechnicalContainer(turn);
+                innerContainer.appendChild(technicalContainer);
+            }
 
-            // Add back the response text
-            if (existingContent) {
+            // Render the response text as markdown
+            const responseText = turn.response || innerContainer.dataset.turnResponse || "";
+            if (responseText) {
                 const textEl = document.createElement("div");
                 textEl.className = "whitespace-pre-wrap";
-                textEl.innerHTML = existingContent;
+                textEl.innerHTML = renderMarkdown(responseText, { streaming: false });
+                innerContainer.appendChild(textEl);
+            } else {
+                const textEl = document.createElement("div");
+                textEl.className = "whitespace-pre-wrap text-dark-500 dark:text-dark-400";
+                textEl.textContent = "(No response)";
                 innerContainer.appendChild(textEl);
             }
         });
