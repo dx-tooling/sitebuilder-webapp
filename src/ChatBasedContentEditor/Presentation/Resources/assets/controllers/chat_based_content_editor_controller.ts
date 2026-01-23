@@ -1,56 +1,17 @@
 import { Controller } from "@hotwired/stimulus";
-
-interface AgentEvent {
-    kind: string;
-    toolName?: string | null;
-    toolInputs?: Array<{ key: string; value: string }> | null;
-    toolResult?: string | null;
-    errorMessage?: string | null;
-}
-
-interface PollChunk {
-    id: number;
-    chunkType: string;
-    payload: string;
-}
-
-interface PollResponse {
-    chunks: PollChunk[];
-    lastId: number;
-    status: string;
-    contextUsage?: ContextUsageData;
-}
-
-interface ContextUsageData {
-    usedTokens: number;
-    maxTokens: number;
-    modelName: string;
-    inputTokens: number;
-    outputTokens: number;
-    inputCost: number;
-    outputCost: number;
-    totalCost: number;
-}
-
-interface RunResponse {
-    sessionId?: string;
-    error?: string;
-}
-
-interface ActiveSessionData {
-    id: string;
-    status: string;
-    instruction: string;
-    chunks: PollChunk[];
-    lastChunkId: number;
-}
-
-interface TurnData {
-    instruction: string;
-    response: string;
-    status: string;
-    events: PollChunk[];
-}
+import {
+    type AgentEvent,
+    type PollChunk,
+    type PollResponse,
+    type ContextUsageData,
+    type RunResponse,
+    type ActiveSessionData,
+    type TurnData,
+    escapeHtml,
+    formatInt,
+    parseChunkPayload,
+    payloadToAgentEvent,
+} from "./chat_editor_helpers.ts";
 
 export default class extends Controller {
     static values = {
@@ -473,22 +434,8 @@ export default class extends Controller {
 
         // Render all events
         for (const eventChunk of turn.events) {
-            const payload = JSON.parse(eventChunk.payload) as {
-                kind?: string;
-                toolName?: string;
-                toolInputs?: Array<{ key: string; value: string }>;
-                toolResult?: string;
-                errorMessage?: string;
-            };
-
-            const event: AgentEvent = {
-                kind: payload.kind ?? "unknown",
-                toolName: payload.toolName,
-                toolInputs: payload.toolInputs,
-                toolResult: payload.toolResult,
-                errorMessage: payload.errorMessage,
-            };
-
+            const payload = parseChunkPayload(eventChunk.payload);
+            const event = payloadToAgentEvent(payload);
             const eventEl = this.renderTechnicalEvent(event);
             messagesList.appendChild(eventEl);
         }
@@ -545,28 +492,14 @@ export default class extends Controller {
     }
 
     private handleChunk(chunk: PollChunk, container: HTMLElement): boolean {
-        const payload = JSON.parse(chunk.payload) as {
-            content?: string;
-            kind?: string;
-            toolName?: string;
-            toolInputs?: Array<{ key: string; value: string }>;
-            toolResult?: string;
-            errorMessage?: string;
-            success?: boolean;
-        };
+        const payload = parseChunkPayload(chunk.payload);
 
         if (chunk.chunkType === "text" && payload.content) {
             const textEl = this.getOrCreateTextElement(container);
             textEl.textContent += payload.content;
             this.scrollToBottom();
         } else if (chunk.chunkType === "event") {
-            const event: AgentEvent = {
-                kind: payload.kind ?? "unknown",
-                toolName: payload.toolName,
-                toolInputs: payload.toolInputs,
-                toolResult: payload.toolResult,
-                errorMessage: payload.errorMessage,
-            };
+            const event = payloadToAgentEvent(payload);
             this.appendTechnicalEvent(container, event);
             this.scrollToBottom();
         } else if (chunk.chunkType === "done") {
@@ -952,15 +885,4 @@ export default class extends Controller {
         container.appendChild(div);
         this.scrollToBottom();
     }
-}
-
-function escapeHtml(s: string): string {
-    const div = document.createElement("div");
-    div.textContent = s;
-
-    return div.innerHTML;
-}
-
-function formatInt(n: number): string {
-    return n.toLocaleString("en-US", { maximumFractionDigits: 0 });
 }
