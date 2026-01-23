@@ -89,4 +89,5 @@ RUN mkdir -p /tmp/container-home/.cache \
 
 # Configure Git to trust all directories (needed for workspace git operations)
 # Workspaces may be created by different users/processes, causing "dubious ownership" errors
-RUN git config --global --add safe.directory '*'
+# Using --system to write to /etc/gitconfig which persists regardless of HOME setting
+RUN git config --system --add safe.directory '*'
