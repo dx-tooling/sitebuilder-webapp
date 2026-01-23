@@ -38,6 +38,12 @@ services:
     # Docker executor for running commands in isolated containers
     App\WorkspaceTooling\Infrastructure\Execution\DockerExecutor: ~
 
+    # Agent execution context - holds workspace/conversation info for container naming
+    App\WorkspaceTooling\Infrastructure\Execution\AgentExecutionContext: ~
+
+    App\WorkspaceTooling\Facade\AgentExecutionContextInterface:
+        alias: App\WorkspaceTooling\Infrastructure\Execution\AgentExecutionContext
+
     # Base file operations service (inner service for decorator)
     EtfsCodingAgent\Service\FileOperationsService: ~
 
@@ -59,6 +65,7 @@ services:
             - '@App\WorkspaceTooling\Infrastructure\Security\SecurePathResolver'
             - '@App\ProjectMgmt\Facade\ProjectMgmtFacadeInterface'
             - '@App\WorkspaceMgmt\Facade\WorkspaceMgmtFacadeInterface'
+            - '@App\WorkspaceTooling\Infrastructure\Execution\AgentExecutionContext'
 
     # Wire ShellOperationsServiceInterface to the isolated executor
     EtfsCodingAgent\Service\ShellOperationsServiceInterface:

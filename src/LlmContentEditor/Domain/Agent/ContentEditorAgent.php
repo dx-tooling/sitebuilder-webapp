@@ -53,7 +53,7 @@ class ContentEditorAgent extends BaseCodingAgent
             'PATH RULES (critical):',
             '- The working folder path is given in the user\'s message. Use it for ALL path-based tools (get_folder_content, get_file_content, get_file_lines, replace_in_file, apply_diff_to_file, run_quality_checks, run_tests, run_build).',
             '- "Workspace root" and "working folder" are the same. Both mean the path from the user\'s message.',
-            '- Never use /workspace or any path not under the working folder unless the user explicitly gave you that path.',
+            '- Never use /workspace or any path not under the working folder.',
             '- If a tool returns "Directory does not exist" or "File does not exist", the path you used is wrong. Do not retry the same path. Re-read the user\'s message for the correct working folder and use paths under it.',
             '',
             'EFFICIENT FILE READING:',

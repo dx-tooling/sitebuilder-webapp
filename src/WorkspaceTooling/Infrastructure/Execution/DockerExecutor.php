@@ -23,28 +23,31 @@ final class DockerExecutor
     /**
      * Run a command in an isolated Docker container.
      *
-     * @param string $image        Docker image to use (e.g., node:22-slim)
-     * @param string $command      Command to execute inside the container
-     * @param string $hostPath     Host path to mount as /workspace
-     * @param int    $timeout      Timeout in seconds
-     * @param bool   $allowNetwork Whether to allow network access
+     * @param string      $image         Docker image to use (e.g., node:22-slim)
+     * @param string      $command       Command to execute inside the container
+     * @param string      $hostPath      Host path to mount as /workspace
+     * @param int         $timeout       Timeout in seconds
+     * @param bool        $allowNetwork  Whether to allow network access
+     * @param string|null $containerName Optional container name for identification
      *
      * @return string Combined stdout and stderr output
      *
      * @throws DockerExecutionException if command execution fails
      */
     public function run(
-        string $image,
-        string $command,
-        string $hostPath,
-        int    $timeout = self::DEFAULT_TIMEOUT,
-        bool   $allowNetwork = true
+        string  $image,
+        string  $command,
+        string  $hostPath,
+        int     $timeout = self::DEFAULT_TIMEOUT,
+        bool    $allowNetwork = true,
+        ?string $containerName = null
     ): string {
         $dockerCommand = $this->buildDockerCommand(
             $image,
             $command,
             $hostPath,
-            $allowNetwork
+            $allowNetwork,
+            $containerName
         );
 
         $process = new Process($dockerCommand);
@@ -138,10 +141,11 @@ final class DockerExecutor
      * @return list<string>
      */
     private function buildDockerCommand(
-        string $image,
-        string $command,
-        string $hostPath,
-        bool   $allowNetwork
+        string  $image,
+        string  $command,
+        string  $hostPath,
+        bool    $allowNetwork,
+        ?string $containerName
     ): array {
         $dockerCmd = [
             'docker', 'run',
@@ -150,6 +154,12 @@ final class DockerExecutor
             '--workdir=/workspace',          // Set working directory
             '-v', $hostPath . ':/workspace', // Mount workspace
         ];
+
+        // Add container name for identification (with unique suffix to allow concurrent runs)
+        if ($containerName !== null) {
+            $uniqueSuffix = substr(bin2hex(random_bytes(4)), 0, 8);
+            $dockerCmd[]  = '--name=' . $containerName . '-' . $uniqueSuffix;
+        }
 
         // Disable network if not needed (more secure, but prevents npm install etc.)
         if (!$allowNetwork) {

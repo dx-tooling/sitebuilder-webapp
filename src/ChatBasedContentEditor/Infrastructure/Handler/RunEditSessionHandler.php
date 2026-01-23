@@ -18,6 +18,7 @@ use App\LlmContentEditor\Facade\Dto\ConversationMessageDto;
 use App\LlmContentEditor\Facade\Dto\ToolInputEntryDto;
 use App\LlmContentEditor\Facade\LlmContentEditorFacadeInterface;
 use App\WorkspaceMgmt\Facade\WorkspaceMgmtFacadeInterface;
+use App\WorkspaceTooling\Facade\AgentExecutionContextInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
@@ -38,6 +39,7 @@ final readonly class RunEditSessionHandler
         private WorkspaceMgmtFacadeInterface    $workspaceMgmtFacade,
         private AccountFacadeInterface          $accountFacade,
         private ConversationUrlServiceInterface $conversationUrlService,
+        private AgentExecutionContextInterface  $executionContext,
     ) {
     }
 
@@ -58,6 +60,14 @@ final readonly class RunEditSessionHandler
             // Load previous messages from conversation
             $previousMessages = $this->loadPreviousMessages($session);
             $conversation     = $session->getConversation();
+
+            // Set execution context for container naming
+            $workspace = $this->workspaceMgmtFacade->getWorkspaceById($conversation->getWorkspaceId());
+            $this->executionContext->setContext(
+                $conversation->getWorkspaceId(),
+                $conversation->getId(),
+                $workspace?->projectName
+            );
 
             $generator = $this->facade->streamEditWithHistory(
                 $session->getWorkspacePath(),
@@ -99,6 +109,9 @@ final readonly class RunEditSessionHandler
             EditSessionChunk::createDoneChunk($session, false, 'An error occurred during processing.');
             $session->setStatus(EditSessionStatus::Failed);
             $this->entityManager->flush();
+        } finally {
+            // Always clear execution context
+            $this->executionContext->clearContext();
         }
     }
 

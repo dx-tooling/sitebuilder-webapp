@@ -108,6 +108,7 @@ Builds and executes Docker commands:
 
 ```bash
 docker run --rm -i \
+    --name=sitebuilder-ws-my-project-019be640-a1b2c3d4-f8e9d0c1 \
     --workdir=/workspace \
     -v /var/www/public/workspaces/{id}:/workspace \
     --memory=512m \
@@ -116,11 +117,41 @@ docker run --rm -i \
     sh -c "npm run build"
 ```
 
-Key security features:
+Key features:
+- `--name` - Container named for easy identification (see naming convention below)
 - `--rm` - Container is removed after execution
 - `-v` mount - Only the specific workspace is accessible
 - `--memory` / `--cpus` - Resource limits prevent runaway processes
 - `--network=none` - Can optionally disable network (currently enabled for npm install)
+
+### Container Naming Convention
+
+Containers are named: `sitebuilder-ws-{project}-{workspace}-{conversation}-{unique}`
+
+| Component | Description | Example |
+|-----------|-------------|---------|
+| `sitebuilder-ws` | Fixed prefix | `sitebuilder-ws` |
+| `{project}` | Normalized project name (max 20 chars) | `my-project` |
+| `{workspace}` | First 8 chars of workspace ID | `019be640` |
+| `{conversation}` | First 8 chars of conversation ID | `a1b2c3d4` |
+| `{unique}` | Random suffix for concurrent runs | `f8e9d0c1` |
+
+This naming makes it easy to identify which project, workspace, and conversation a container belongs to.
+
+### Monitoring Agent Containers
+
+To watch agent containers in real-time:
+
+```bash
+# Watch sitebuilder agent containers
+watch -n 0.5 'docker ps --format "table {{.Names}}\t{{.Image}}\t{{.Status}}" | grep sitebuilder-ws'
+
+# Filter by project name
+docker ps --format "table {{.Names}}\t{{.Image}}\t{{.Status}}" | grep "sitebuilder-ws-my-project"
+
+# Or see all container events
+docker events --filter 'event=start' --filter 'event=die' --filter 'name=sitebuilder-ws'
+```
 
 ## Configuration
 

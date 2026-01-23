@@ -27,7 +27,7 @@ final class WorkspaceToolingFacade extends BaseWorkspaceToolingFacade implements
     {
         return $this->shellOperationsService->runCommand(
             $pathToFolder,
-            'mise exec -- npm run quality'
+            'npm run quality'
         );
     }
 
@@ -35,7 +35,7 @@ final class WorkspaceToolingFacade extends BaseWorkspaceToolingFacade implements
     {
         return $this->shellOperationsService->runCommand(
             $pathToFolder,
-            'mise exec -- npm run test'
+            'npm run test'
         );
     }
 
@@ -43,7 +43,7 @@ final class WorkspaceToolingFacade extends BaseWorkspaceToolingFacade implements
     {
         return $this->shellOperationsService->runCommand(
             $pathToFolder,
-            'mise exec -- npm run build'
+            'npm run build'
         );
     }
 

@@ -26,7 +26,8 @@ final class IsolatedShellExecutor implements ShellOperationsServiceInterface
         private readonly DockerExecutor               $dockerExecutor,
         private readonly SecurePathResolver           $pathResolver,
         private readonly ProjectMgmtFacadeInterface   $projectMgmtFacade,
-        private readonly WorkspaceMgmtFacadeInterface $workspaceMgmtFacade
+        private readonly WorkspaceMgmtFacadeInterface $workspaceMgmtFacade,
+        private readonly AgentExecutionContext        $executionContext
     ) {
     }
 
@@ -51,6 +52,10 @@ final class IsolatedShellExecutor implements ShellOperationsServiceInterface
         // Resolve the Docker image for this workspace
         $image = $this->resolveImageForWorkspace($workingDirectory);
 
+        // Get container name from execution context (set by the handler)
+        // Format: sitebuilder-ws-{project}-{workspace}-{conversation}
+        $containerName = $this->executionContext->buildContainerName();
+
         // Execute command in isolated container
         // Allow network for npm install, etc.
         return $this->dockerExecutor->run(
@@ -58,7 +63,8 @@ final class IsolatedShellExecutor implements ShellOperationsServiceInterface
             $command,
             $workingDirectory,
             300,
-            true
+            true,
+            $containerName
         );
     }
 
