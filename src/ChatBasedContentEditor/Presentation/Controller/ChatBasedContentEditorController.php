@@ -10,6 +10,7 @@ use App\ChatBasedContentEditor\Domain\Entity\Conversation;
 use App\ChatBasedContentEditor\Domain\Entity\EditSession;
 use App\ChatBasedContentEditor\Domain\Entity\EditSessionChunk;
 use App\ChatBasedContentEditor\Domain\Enum\ConversationStatus;
+use App\ChatBasedContentEditor\Domain\Enum\EditSessionStatus;
 use App\ChatBasedContentEditor\Domain\Service\ConversationService;
 use App\ChatBasedContentEditor\Infrastructure\Adapter\DistFileScannerInterface;
 use App\ChatBasedContentEditor\Infrastructure\Message\RunEditSessionMessage;
@@ -221,23 +222,50 @@ final class ChatBasedContentEditorController extends AbstractController
             $projectInfo = $this->projectMgmtFacade->getProjectInfo($workspace->projectId);
         }
 
-        // Build turns from edit sessions
-        $turns = [];
+        // Build turns from edit sessions and detect active session
+        $turns               = [];
+        $activeSession       = null;
+        $activeSessionChunks = [];
+
         foreach ($conversation->getEditSessions() as $session) {
+            $sessionStatus = $session->getStatus();
+
+            // Check if this is an active (Pending or Running) session
+            if ($sessionStatus === EditSessionStatus::Pending || $sessionStatus === EditSessionStatus::Running) {
+                $activeSession = $session;
+                // Collect existing chunks for this active session
+                foreach ($session->getChunks() as $chunk) {
+                    $activeSessionChunks[] = [
+                        'id'        => $chunk->getId(),
+                        'chunkType' => $chunk->getChunkType()->value,
+                        'payload'   => $chunk->getPayloadJson(),
+                    ];
+                }
+            }
+
             $assistantResponse = '';
+            $eventChunks       = [];
             foreach ($session->getChunks() as $chunk) {
-                if ($chunk->getChunkType()->value === 'text') {
+                $chunkType = $chunk->getChunkType()->value;
+                if ($chunkType === 'text') {
                     $payload = json_decode($chunk->getPayloadJson(), true);
                     if (is_array($payload) && array_key_exists('content', $payload) && is_string($payload['content'])) {
                         $assistantResponse .= $payload['content'];
                     }
+                } elseif ($chunkType === 'event') {
+                    $eventChunks[] = [
+                        'id'        => $chunk->getId(),
+                        'chunkType' => $chunkType,
+                        'payload'   => $chunk->getPayloadJson(),
+                    ];
                 }
             }
 
             $turns[] = [
                 'instruction' => $session->getInstruction(),
                 'response'    => $assistantResponse,
-                'status'      => $session->getStatus()->value,
+                'status'      => $sessionStatus->value,
+                'events'      => $eventChunks,
             ];
         }
 
@@ -265,6 +293,13 @@ final class ChatBasedContentEditorController extends AbstractController
                 'totalCost'    => $contextUsage->totalCost,
             ],
             'contextUsageUrl' => $this->generateUrl('chat_based_content_editor.presentation.context_usage', ['conversationId' => $conversation->getId()]),
+            'activeSession'   => $activeSession !== null ? [
+                'id'          => $activeSession->getId(),
+                'status'      => $activeSession->getStatus()->value,
+                'instruction' => $activeSession->getInstruction(),
+                'chunks'      => $activeSessionChunks,
+                'lastChunkId' => count($activeSessionChunks) > 0 ? $activeSessionChunks[count($activeSessionChunks) - 1]['id'] : 0,
+            ] : null,
         ]);
     }
 
