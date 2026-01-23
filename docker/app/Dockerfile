@@ -86,3 +86,7 @@ RUN mkdir -p /tmp/container-home/.cache \
     /tmp/container-home/.gnupg \
     /tmp/container-home/.npm && \
     chmod -R 777 /tmp/container-home
+
+# Configure Git to trust all directories (needed for workspace git operations)
+# Workspaces may be created by different users/processes, causing "dubious ownership" errors
+RUN git config --global --add safe.directory '*'
