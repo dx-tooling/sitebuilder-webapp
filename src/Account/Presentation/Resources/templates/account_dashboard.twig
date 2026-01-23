@@ -1,20 +1,20 @@
 {% extends '@common.presentation/base_appshell.html.twig' %}
 
 {% block content %}
-    <h1 class="etfswui-pagetitle mb-10">Account Dashboard</h1>
+    <h1 class="etfswui-pagetitle mb-10">Your account</h1>
     <div class="etfswui-card max-w-2xl mb-8">
         <div class="etfswui-card-title">
-            <h2 class="etfswui-card-title-text">Account Information</h2>
+            <h2 class="etfswui-card-title-text">Account details</h2>
         </div>
         <div class="etfswui-card-content">
             <p class="mb-6 text-gray-500">Welcome back, {{ app.user.email }}!</p>
             <dl class="etfswui-description-list">
                 <div class="etfswui-description-list-item">
-                    <dt class="etfswui-description-list-term">Email address</dt>
+                    <dt class="etfswui-description-list-term">Email</dt>
                     <dd class="etfswui-description-list-description">{{ app.user.email }}</dd>
                 </div>
                 <div class="etfswui-description-list-item">
-                    <dt class="etfswui-description-list-term">Account created</dt>
+                    <dt class="etfswui-description-list-term">Member since</dt>
                     <dd class="etfswui-description-list-description">{{ app.user.createdAt|date('Y-m-d H:i:s') }}</dd>
                 </div>
             </dl>

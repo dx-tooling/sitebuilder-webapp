@@ -205,7 +205,7 @@ describe("chat_editor_helpers", () => {
     describe("getCompletedContainerStyle", () => {
         it("should return Done label text", () => {
             const style = getCompletedContainerStyle();
-            expect(style.labelText).toBe("Done");
+            expect(style.labelText).toBe("All set");
         });
 
         it("should return checkmark emoji", () => {
@@ -241,7 +241,7 @@ describe("chat_editor_helpers", () => {
     describe("getWorkingContainerStyle", () => {
         it("should return Working... label text", () => {
             const style = getWorkingContainerStyle();
-            expect(style.labelText).toBe("Working...");
+            expect(style.labelText).toBe("In progress");
         });
 
         it("should return sparkle emoji", () => {

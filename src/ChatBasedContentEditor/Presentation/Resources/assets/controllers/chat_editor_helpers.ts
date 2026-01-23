@@ -155,7 +155,7 @@ export function getCompletedContainerStyle(): TechnicalContainerStyle {
         headerBgClass:
             "from-green-50/80 to-emerald-50/80 dark:from-green-900/20 dark:to-emerald-900/20 border-green-200/50 dark:border-green-700/30",
         indicatorClass: "bg-green-500 dark:bg-green-400",
-        labelText: "Done",
+        labelText: "All set",
         labelColorClass: "from-green-600 to-green-600 dark:from-green-400 dark:to-green-400",
         sparkleEmoji: "✅",
         countColorClass: "text-green-500 dark:text-green-400 bg-green-100/50 dark:bg-green-900/30",
@@ -172,7 +172,7 @@ export function getWorkingContainerStyle(): TechnicalContainerStyle {
         headerBgClass:
             "from-purple-50/80 to-blue-50/80 dark:from-purple-900/20 dark:to-blue-900/20 border-purple-200/50 dark:border-purple-700/30",
         indicatorClass: "bg-gradient-to-r from-purple-500 to-blue-500 dark:from-purple-400 dark:to-blue-400",
-        labelText: "Working...",
+        labelText: "In progress",
         labelColorClass: "from-purple-600 to-blue-600 dark:from-purple-400 dark:to-blue-400",
         sparkleEmoji: "✨",
         countColorClass: "text-purple-500 dark:text-purple-400 bg-purple-100/50 dark:bg-purple-900/30",
