@@ -244,12 +244,20 @@ final class ChatBasedContentEditorController extends AbstractController
             }
 
             $assistantResponse = '';
+            $eventChunks       = [];
             foreach ($session->getChunks() as $chunk) {
-                if ($chunk->getChunkType()->value === 'text') {
+                $chunkType = $chunk->getChunkType()->value;
+                if ($chunkType === 'text') {
                     $payload = json_decode($chunk->getPayloadJson(), true);
                     if (is_array($payload) && array_key_exists('content', $payload) && is_string($payload['content'])) {
                         $assistantResponse .= $payload['content'];
                     }
+                } elseif ($chunkType === 'event') {
+                    $eventChunks[] = [
+                        'id'        => $chunk->getId(),
+                        'chunkType' => $chunkType,
+                        'payload'   => $chunk->getPayloadJson(),
+                    ];
                 }
             }
 
@@ -257,6 +265,7 @@ final class ChatBasedContentEditorController extends AbstractController
                 'instruction' => $session->getInstruction(),
                 'response'    => $assistantResponse,
                 'status'      => $sessionStatus->value,
+                'events'      => $eventChunks,
             ];
         }
 

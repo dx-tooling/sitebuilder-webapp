@@ -45,6 +45,13 @@ interface ActiveSessionData {
     lastChunkId: number;
 }
 
+interface TurnData {
+    instruction: string;
+    response: string;
+    status: string;
+    events: PollChunk[];
+}
+
 export default class extends Controller {
     static values = {
         runUrl: String,
@@ -53,6 +60,7 @@ export default class extends Controller {
         contextUsageUrl: String,
         contextUsage: Object,
         activeSession: Object,
+        turns: Array,
     };
 
     static targets = [
@@ -73,6 +81,7 @@ export default class extends Controller {
     declare readonly contextUsageUrlValue: string;
     declare readonly contextUsageValue: ContextUsageData;
     declare readonly activeSessionValue: ActiveSessionData | null;
+    declare readonly turnsValue: TurnData[];
 
     declare readonly hasMessagesTarget: boolean;
     declare readonly messagesTarget: HTMLElement;
@@ -104,6 +113,9 @@ export default class extends Controller {
             this.updateContextBar(cu);
         }
         this.startContextUsagePolling();
+
+        // Render technical containers for completed turns
+        this.renderCompletedTurnsTechnicalContainers();
 
         // Check for active session and resume if needed
         const activeSession = this.activeSessionValue as ActiveSessionData | null;
@@ -330,6 +342,161 @@ export default class extends Controller {
             this.submitTarget.innerHTML = '<span class="inline-flex items-center gap-1.5">✨ Working...</span>';
             this.submitTarget.classList.add("!bg-gradient-to-r", "!from-purple-500", "!to-blue-500", "animate-pulse");
         }
+    }
+
+    private renderCompletedTurnsTechnicalContainers(): void {
+        if (!this.hasMessagesTarget) {
+            return;
+        }
+
+        const turns = this.turnsValue || [];
+        const activeSession = this.activeSessionValue as ActiveSessionData | null;
+        const hasActiveSession = activeSession && activeSession.id;
+
+        // Get all assistant response elements
+        const assistantElements = this.messagesTarget.querySelectorAll<HTMLElement>(".flex.justify-start");
+
+        // Process each turn (skip the last one if there's an active session - it will be handled by resumeActiveSession)
+        const turnsToProcess = hasActiveSession ? turns.slice(0, -1) : turns;
+
+        turnsToProcess.forEach((turn, index) => {
+            // Only render if there are events to show
+            if (!turn.events || turn.events.length === 0) {
+                return;
+            }
+
+            const assistantEl = assistantElements[index];
+            if (!assistantEl) {
+                return;
+            }
+
+            // Get the inner container
+            const innerContainer = assistantEl.querySelector<HTMLElement>(".max-w-\\[85\\%\\].rounded-lg.px-4.py-2");
+            if (!innerContainer) {
+                return;
+            }
+
+            // Create a wrapper for the technical container and response
+            const existingContent = innerContainer.innerHTML;
+            innerContainer.innerHTML = "";
+            innerContainer.classList.add("space-y-2");
+
+            // Create and add completed technical container
+            const technicalContainer = this.createCompletedTechnicalContainer(turn);
+            innerContainer.appendChild(technicalContainer);
+
+            // Add back the response text
+            if (existingContent) {
+                const textEl = document.createElement("div");
+                textEl.className = "whitespace-pre-wrap";
+                textEl.innerHTML = existingContent;
+                innerContainer.appendChild(textEl);
+            }
+        });
+    }
+
+    private createCompletedTechnicalContainer(turn: TurnData): HTMLElement {
+        const container = document.createElement("div");
+        container.className = "technical-messages-container";
+        container.dataset.technicalMessages = "1";
+
+        const isSuccess = turn.status === "completed";
+        const headerBgClass = isSuccess
+            ? "from-green-50/80 to-emerald-50/80 dark:from-green-900/20 dark:to-emerald-900/20 border-green-200/50 dark:border-green-700/30"
+            : "from-red-50/80 to-rose-50/80 dark:from-red-900/20 dark:to-rose-900/20 border-red-200/50 dark:border-red-700/30";
+
+        const header = document.createElement("button");
+        header.type = "button";
+        header.className = `flex items-center gap-2 w-full text-left py-2 px-3 rounded-lg bg-gradient-to-r ${headerBgClass} hover:opacity-90 transition-all duration-300`;
+        header.dataset.header = "1";
+        header.addEventListener("click", () => {
+            this.toggleTechnicalMessages(container);
+        });
+
+        const indicatorWrapper = document.createElement("div");
+        indicatorWrapper.className = "relative flex-shrink-0";
+
+        const indicator = document.createElement("div");
+        indicator.className = isSuccess
+            ? "technical-indicator w-2.5 h-2.5 rounded-full bg-green-500 dark:bg-green-400"
+            : "technical-indicator w-2.5 h-2.5 rounded-full bg-red-500 dark:bg-red-400";
+        indicator.dataset.indicator = "1";
+
+        indicatorWrapper.appendChild(indicator);
+
+        const labelWrapper = document.createElement("div");
+        labelWrapper.className = "flex items-center gap-1.5";
+
+        const sparkle = document.createElement("span");
+        sparkle.className = "text-xs";
+        sparkle.textContent = isSuccess ? "✅" : "❌";
+
+        const label = document.createElement("span");
+        const labelColorClass = isSuccess
+            ? "from-green-600 to-green-600 dark:from-green-400 dark:to-green-400"
+            : "from-red-600 to-red-600 dark:from-red-400 dark:to-red-400";
+        label.className = `text-[11px] font-semibold bg-gradient-to-r ${labelColorClass} bg-clip-text text-transparent`;
+        label.innerHTML = isSuccess ? "Done" : "Failed";
+        label.dataset.label = "1";
+
+        labelWrapper.appendChild(sparkle);
+        labelWrapper.appendChild(label);
+
+        const count = document.createElement("span");
+        const countColorClass = isSuccess
+            ? "text-green-500 dark:text-green-400 bg-green-100/50 dark:bg-green-900/30"
+            : "text-red-500 dark:text-red-400 bg-red-100/50 dark:bg-red-900/30";
+        count.className = `text-[10px] ${countColorClass} ml-auto font-medium px-1.5 py-0.5 rounded-full`;
+        count.dataset.count = "1";
+        count.textContent = String(turn.events.length);
+
+        const chevron = document.createElement("svg");
+        const chevronColorClass = isSuccess
+            ? "text-green-400 dark:text-green-500"
+            : "text-red-400 dark:text-red-500";
+        chevron.className = `w-3 h-3 ${chevronColorClass} transition-transform duration-300`;
+        chevron.dataset.chevron = "1";
+        chevron.innerHTML = '<path fill="currentColor" d="M6 9l6 6 6-6H6z"/>';
+        chevron.setAttribute("viewBox", "0 0 24 24");
+
+        header.appendChild(indicatorWrapper);
+        header.appendChild(labelWrapper);
+        header.appendChild(count);
+        header.appendChild(chevron);
+
+        const messagesList = document.createElement("div");
+        const messagesListBorderClass = isSuccess
+            ? "border-green-200/30 dark:border-green-700/20"
+            : "border-red-200/30 dark:border-red-700/20";
+        messagesList.className = `technical-messages-list max-h-[120px] overflow-y-auto space-y-1 px-3 py-2 hidden bg-white/50 dark:bg-dark-800/50 rounded-b-lg border-x border-b ${messagesListBorderClass}`;
+        messagesList.dataset.messagesList = "1";
+
+        // Render all events
+        for (const eventChunk of turn.events) {
+            const payload = JSON.parse(eventChunk.payload) as {
+                kind?: string;
+                toolName?: string;
+                toolInputs?: Array<{ key: string; value: string }>;
+                toolResult?: string;
+                errorMessage?: string;
+            };
+
+            const event: AgentEvent = {
+                kind: payload.kind ?? "unknown",
+                toolName: payload.toolName,
+                toolInputs: payload.toolInputs,
+                toolResult: payload.toolResult,
+                errorMessage: payload.errorMessage,
+            };
+
+            const eventEl = this.renderTechnicalEvent(event);
+            messagesList.appendChild(eventEl);
+        }
+
+        container.appendChild(header);
+        container.appendChild(messagesList);
+
+        return container;
     }
 
     private resumeActiveSession(activeSession: ActiveSessionData): void {
