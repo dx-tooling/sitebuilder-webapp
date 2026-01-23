@@ -58,13 +58,13 @@ describe("ChatBasedContentEditorController", () => {
                 <p class="text-dark-500">Messages will appear here.</p>
             </div>
             <div data-chat-based-content-editor-target="contextUsage">
-                <span data-chat-based-content-editor-target="contextUsageText">0 of 1000 tokens</span>
+                <span data-chat-based-content-editor-target="contextUsageText">AI budget: 0 of 1000 used</span>
                 <div data-chat-based-content-editor-target="contextUsageBar" style="width: 0%"></div>
                 <span data-chat-based-content-editor-target="contextUsageCost">$0.00</span>
             </div>
             <form>
                 <textarea data-chat-based-content-editor-target="instruction"></textarea>
-                <button type="submit" data-chat-based-content-editor-target="submit">Run</button>
+                <button type="submit" data-chat-based-content-editor-target="submit">Make changes</button>
             </form>
         `;
 
@@ -99,7 +99,7 @@ describe("ChatBasedContentEditorController", () => {
                 "[data-chat-based-content-editor-target='submit']",
             ) as HTMLButtonElement;
             expect(submitButton.disabled).toBe(false);
-            expect(submitButton.textContent).toBe("Run");
+            expect(submitButton.textContent).toBe("Make changes");
         });
     });
 
@@ -142,7 +142,7 @@ describe("ChatBasedContentEditorController", () => {
                 </div>
                 <form>
                     <textarea data-chat-based-content-editor-target="instruction"></textarea>
-                    <button type="submit" data-chat-based-content-editor-target="submit">Run</button>
+                    <button type="submit" data-chat-based-content-editor-target="submit">Make changes</button>
                 </form>
             `;
 

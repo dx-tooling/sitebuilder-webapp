@@ -71,7 +71,7 @@ export default class extends Controller {
         // Stop polling if we've exceeded the max
         if (this.pollCount > this.maxPollCount) {
             this.isActive = false;
-            this.showError("Setup is taking longer than expected. Please try again.");
+            this.showError("This is taking longer than expected. Please try again.");
 
             return;
         }
@@ -106,7 +106,7 @@ export default class extends Controller {
             if (data.error) {
                 // Setup failed - show error state
                 this.isActive = false;
-                this.showError("Workspace setup failed. Please try resetting the workspace.");
+                this.showError("We couldn't finish setup. Please try resetting the work area.");
 
                 return;
             }
@@ -128,7 +128,7 @@ export default class extends Controller {
         }
 
         if (this.hasTitleTarget) {
-            this.titleTarget.textContent = "Setup Problem";
+            this.titleTarget.textContent = "We hit a snag";
             this.titleTarget.classList.remove("text-blue-800", "dark:text-blue-200");
             this.titleTarget.classList.add("text-red-800", "dark:text-red-200");
         }

@@ -133,14 +133,14 @@ export default class extends Controller {
 
     private updateContextBar(usage: ContextUsageData): void {
         if (this.hasContextUsageTextTarget) {
-            this.contextUsageTextTarget.textContent = `${formatInt(usage.usedTokens)} of ${formatInt(usage.maxTokens)} tokens used`;
+            this.contextUsageTextTarget.textContent = `AI budget: ${formatInt(usage.usedTokens)} of ${formatInt(usage.maxTokens)} used`;
         }
         if (this.hasContextUsageBarTarget) {
             const pct = usage.maxTokens > 0 ? Math.min(100, (100 * usage.usedTokens) / usage.maxTokens) : 0;
             this.contextUsageBarTarget.style.width = `${pct}%`;
         }
         if (this.hasContextUsageCostTarget) {
-            this.contextUsageCostTarget.textContent = `$${usage.totalCost.toFixed(4)}`;
+            this.contextUsageCostTarget.textContent = `Est. $${usage.totalCost.toFixed(4)}`;
         }
     }
 
@@ -232,7 +232,7 @@ export default class extends Controller {
             const data = (await response.json()) as RunResponse;
 
             if (!response.ok || !data.sessionId) {
-                const msg = data.error || `Request failed: ${response.status}`;
+                const msg = data.error || `We couldn't send that request (${response.status}).`;
                 this.appendError(inner, msg);
                 this.resetSubmitButton();
 
@@ -241,7 +241,7 @@ export default class extends Controller {
 
             this.startPolling(data.sessionId, inner);
         } catch (err) {
-            const msg = err instanceof Error ? err.message : "Network error.";
+            const msg = err instanceof Error ? err.message : "Network error. Please try again.";
             this.appendError(inner, msg);
             this.resetSubmitButton();
         }
@@ -278,7 +278,7 @@ export default class extends Controller {
             });
 
             if (!response.ok) {
-                this.appendError(container, `Poll failed: ${response.status}`);
+                this.appendError(container, `We lost the update feed (${response.status}).`);
                 this.stopPolling();
                 this.resetSubmitButton();
 
@@ -309,7 +309,7 @@ export default class extends Controller {
                 return;
             }
         } catch (err) {
-            const msg = err instanceof Error ? err.message : "Polling error.";
+            const msg = err instanceof Error ? err.message : "Connection hiccup. Retrying...";
             this.appendError(container, msg);
             this.stopPolling();
             this.resetSubmitButton();
@@ -334,14 +334,14 @@ export default class extends Controller {
 
     private resetSubmitButton(): void {
         this.submitTarget.disabled = false;
-        this.submitTarget.textContent = "Run";
+        this.submitTarget.textContent = "Make changes";
         this.submitTarget.classList.remove("!bg-gradient-to-r", "!from-purple-500", "!to-blue-500", "animate-pulse");
     }
 
     private setWorkingState(): void {
         if (this.hasSubmitTarget) {
             this.submitTarget.disabled = true;
-            this.submitTarget.innerHTML = '<span class="inline-flex items-center gap-1.5">✨ Working...</span>';
+            this.submitTarget.innerHTML = '<span class="inline-flex items-center gap-1.5">✨ Making changes...</span>';
             this.submitTarget.classList.add("!bg-gradient-to-r", "!from-purple-500", "!to-blue-500", "animate-pulse");
         }
     }
@@ -667,11 +667,11 @@ export default class extends Controller {
 
         switch (e.kind) {
             case "inference_start":
-                wrap.textContent = "→ Sending to LLM…";
+                wrap.textContent = "→ Asking the AI…";
                 wrap.classList.add("text-amber-600/70", "dark:text-amber-400/70");
                 break;
             case "inference_stop":
-                wrap.textContent = "← LLM response received";
+                wrap.textContent = "← AI response received";
                 wrap.classList.add("text-amber-600/70", "dark:text-amber-400/70");
                 break;
             case "tool_calling":

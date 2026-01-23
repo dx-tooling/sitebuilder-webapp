@@ -157,7 +157,7 @@ final class ChatBasedContentEditorControllerTest extends WebTestCase
 
         // Assert: Successfully accessed
         self::assertResponseIsSuccessful();
-        self::assertSelectorTextContains('h1', 'Chat-based content editor');
+        self::assertSelectorTextContains('h1', 'Content editor');
     }
 
     public function testShowConversationReturns404WhenConversationDoesNotExist(): void

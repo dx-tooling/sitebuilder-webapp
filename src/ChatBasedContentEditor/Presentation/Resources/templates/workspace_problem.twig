@@ -1,6 +1,6 @@
 {% extends '@common.presentation/base_appshell.html.twig' %}
 
-{% block title %}Workspace Problem{% endblock %}
+{% block title %}Work Area Problem{% endblock %}
 
 {% block content %}
     <div class="max-w-2xl mx-auto space-y-6">
@@ -12,14 +12,14 @@
                     </svg>
                 </div>
                 <div class="ml-3">
-                    <h3 class="text-lg font-medium text-red-800 dark:text-red-200">Workspace Problem</h3>
+                    <h3 class="text-lg font-medium text-red-800 dark:text-red-200">We couldn't set up the work area</h3>
                     <div class="mt-2 text-sm text-red-700 dark:text-red-300">
-                        <p>There was a problem with the workspace for project <strong>{{ project.name }}</strong>.</p>
-                        <p class="mt-2">This typically happens when:</p>
+                        <p>There was a problem preparing the work area for <strong>{{ project.name }}</strong>.</p>
+                        <p class="mt-2">This can happen if:</p>
                         <ul class="list-disc list-inside mt-1 space-y-1">
-                            <li>Git clone failed (network issue or invalid credentials)</li>
-                            <li>Branch creation failed</li>
-                            <li>Push operation failed</li>
+                            <li>We can't reach the project right now</li>
+                            <li>We don't have access to the project</li>
+                            <li>Something timed out during setup</li>
                         </ul>
                     </div>
                 </div>
@@ -37,22 +37,22 @@
                         <svg class="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                         </svg>
-                        Reset Workspace and Try Again
+                        Try again
                     </button>
                 </form>
 
                 <a href="{{ path('project_mgmt.presentation.list') }}"
                    class="w-full flex items-center justify-center px-4 py-3 rounded-md border border-dark-300 dark:border-dark-600 text-dark-700 dark:text-dark-300 text-sm font-medium hover:bg-dark-100 dark:hover:bg-dark-700">
-                    Back to Projects
+                    Back to projects
                 </a>
             </div>
         </div>
 
         <div class="bg-dark-50 dark:bg-dark-800/50 rounded-lg border border-dark-200 dark:border-dark-700 p-4">
-            <h4 class="text-xs font-medium text-dark-500 dark:text-dark-400 uppercase tracking-wider mb-2">Workspace Details</h4>
+            <h4 class="text-xs font-medium text-dark-500 dark:text-dark-400 uppercase tracking-wider mb-2">Technical details</h4>
             <dl class="text-sm space-y-1">
                 <div class="flex justify-between">
-                    <dt class="text-dark-500 dark:text-dark-400">Workspace ID:</dt>
+                    <dt class="text-dark-500 dark:text-dark-400">Work area ID:</dt>
                     <dd class="text-dark-900 dark:text-dark-100 font-mono text-xs">{{ workspace.id }}</dd>
                 </div>
                 <div class="flex justify-between">
@@ -61,12 +61,12 @@
                 </div>
                 {% if workspace.branchName %}
                     <div class="flex justify-between items-center">
-                        <dt class="text-dark-500 dark:text-dark-400">Branch:</dt>
+                        <dt class="text-dark-500 dark:text-dark-400">Work area name:</dt>
                         <dd class="text-dark-900 dark:text-dark-100">
                             <code class="px-1.5 py-0.5 bg-dark-100 dark:bg-dark-700 rounded text-xs font-mono">{{ workspace.branchName }}</code>
                             {% if workspace.githubBranchUrl %}
                                 <a href="{{ workspace.githubBranchUrl }}" target="_blank" rel="noopener noreferrer" class="ml-2 text-primary-600 dark:text-primary-400 hover:underline text-xs">
-                                    View on GitHub
+                                    Open on GitHub
                                 </a>
                             {% endif %}
                         </dd>
@@ -74,10 +74,10 @@
                 {% endif %}
                 {% if project.githubUrl %}
                     <div class="flex justify-between items-center">
-                        <dt class="text-dark-500 dark:text-dark-400">Repository:</dt>
+                        <dt class="text-dark-500 dark:text-dark-400">Project link:</dt>
                         <dd class="text-dark-900 dark:text-dark-100">
                             <a href="{{ project.githubUrl }}" target="_blank" rel="noopener noreferrer" class="text-primary-600 dark:text-primary-400 hover:underline text-xs">
-                                View on GitHub
+                                Open on GitHub
                             </a>
                         </dd>
                     </div>

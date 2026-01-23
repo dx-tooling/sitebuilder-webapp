@@ -42,7 +42,7 @@ final class SignInTest extends WebTestCase
         // Act: Submit the login form
         $crawler = $this->client->request('GET', '/account/sign-in');
 
-        $form = $crawler->selectButton('Sign in')->form([
+        $form = $crawler->selectButton('Continue')->form([
             'email'    => $email,
             'password' => $plainPassword,
         ]);
@@ -55,7 +55,7 @@ final class SignInTest extends WebTestCase
         // Follow redirect and verify we're authenticated
         $this->client->followRedirect();
         self::assertResponseIsSuccessful();
-        self::assertSelectorTextContains('h1', 'Projects');
+        self::assertSelectorTextContains('h1', 'Your projects');
     }
 
     public function testSignInWithInvalidCredentialsShowsError(): void
@@ -69,7 +69,7 @@ final class SignInTest extends WebTestCase
         // Act: Submit the login form with wrong password
         $crawler = $this->client->request('GET', '/account/sign-in');
 
-        $form = $crawler->selectButton('Sign in')->form([
+        $form = $crawler->selectButton('Continue')->form([
             'email'    => $email,
             'password' => 'wrong-password',
         ]);
