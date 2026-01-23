@@ -21,7 +21,7 @@ services:
             MISE_STATE_DIR: /opt/mise/state
             # Preprod environment
             APP_ENV: preprod
-            APP_DEBUG: "0"
+            APP_DEBUG: "1"
         networks:
             - default
         depends_on:
@@ -36,6 +36,7 @@ services:
         volumes:
             - .:/var/www
             - mise_data:/opt/mise
+            - /var/run/docker.sock:/var/run/docker.sock
         environment:
             HOME: /tmp/container-home
             XDG_CACHE_HOME: /tmp/container-home/.cache
@@ -49,7 +50,9 @@ services:
             MISE_STATE_DIR: /opt/mise/state
             # Preprod environment
             APP_ENV: preprod
-            APP_DEBUG: "0"
+            APP_DEBUG: "1"
+            # Host path for Docker volume mounts (required for agent containers)
+            HOST_PROJECT_PATH: ${HOST_PROJECT_PATH:-/opt/sitebuilder-preprod}
         networks:
             - default
         depends_on:

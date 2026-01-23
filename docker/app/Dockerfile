@@ -23,6 +23,15 @@ RUN if [ "$TARGETPLATFORM" = "linux/amd64" ]; then ARCHITECTURE=amd64; elif [ "$
 RUN apt-get update -y
 RUN apt-get install -y mise
 
+# Install Docker CLI for workspace isolation (running commands in sibling containers)
+# Using official Docker repo for the CLI
+RUN install -m 0755 -d /etc/apt/keyrings && \
+    curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc && \
+    chmod a+r /etc/apt/keyrings/docker.asc && \
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/debian $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null && \
+    apt-get update -y && \
+    apt-get install -y docker-ce-cli
+
 # Clean up to reduce image size
 RUN apt-get clean && rm -rf /var/lib/apt/lists/*
 
@@ -58,11 +67,11 @@ ENV MISE_DATA_DIR=/opt/mise/data
 ENV MISE_CACHE_DIR=/opt/mise/cache
 ENV MISE_STATE_DIR=/opt/mise/state
 
-# Create mise directories and pre-install common Node versions
+# Create mise directories and pre-install Node
 # This ensures Node is available without runtime installation (which can fail with lock issues)
 RUN mkdir -p /opt/mise/data /opt/mise/cache /opt/mise/state && \
     chmod -R 777 /opt/mise && \
-    mise install node@24 node@22 node@20
+    mise install node@24
 
 # Shell activation for interactive use (debugging)
 RUN echo 'eval "$(/usr/bin/env mise activate bash)"' >> ~/.bashrc
@@ -77,3 +86,7 @@ RUN mkdir -p /tmp/container-home/.cache \
     /tmp/container-home/.gnupg \
     /tmp/container-home/.npm && \
     chmod -R 777 /tmp/container-home
+
+# Configure Git to trust all directories (needed for workspace git operations)
+# Workspaces may be created by different users/processes, causing "dubious ownership" errors
+RUN git config --global --add safe.directory '*'

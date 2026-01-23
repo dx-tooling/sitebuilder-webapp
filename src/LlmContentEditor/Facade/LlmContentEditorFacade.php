@@ -69,10 +69,12 @@ final class LlmContentEditorFacade implements LlmContentEditorFacadeInterface
         $isFirstMessage = $initialMessages === [];
 
         // Build the user prompt
+        // The agent always sees /workspace as its working directory - the actual path
+        // is handled by IsolatedShellExecutor which mounts the real workspace there
         if ($isFirstMessage) {
             $prompt = sprintf(
                 'The working folder is: %s' . "\n\n" . 'Please perform the following task: %s',
-                $workspacePath,
+                '/workspace',
                 $instruction
             );
         } else {

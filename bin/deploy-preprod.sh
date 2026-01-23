@@ -98,6 +98,10 @@ ssh "${SERVER}" << EOF
     echo "Starting services..."
     docker compose -f ${COMPOSE_FILE} up -d --scale messenger=3
     
+    # Restart nginx to pick up new container IPs (important after app container recreation)
+    echo "Restarting nginx to pick up new container IPs..."
+    docker compose -f ${COMPOSE_FILE} restart nginx
+    
     # Wait for services to be ready
     echo "Waiting for services to start..."
     sleep 5
@@ -115,21 +119,27 @@ if [ "${SKIP_MIGRATIONS}" != "true" ]; then
         cd ${REMOTE_DIR}
         export ETFS_PROJECT_NAME=sitebuilder_preprod
         
-        # Wait for database to be ready
-        echo "Waiting for database..."
-        sleep 10
+        # Wait for database and app container to be ready
+        echo "Waiting for database and app container..."
+        sleep 15
+        
+        # Verify app container is running
+        echo "Checking app container status..."
+        docker compose -f ${COMPOSE_FILE} ps app
         
         # Create database if it doesn't exist (won't fail if it already exists)
         echo "Creating database if needed..."
-        docker compose -f ${COMPOSE_FILE} exec -T app php bin/console doctrine:database:create --if-not-exists --no-interaction || {
-            echo "⚠️  Database creation check failed, but continuing..."
-        }
+        docker compose -f ${COMPOSE_FILE} exec -T app php bin/console doctrine:database:create --if-not-exists --no-interaction
         
-        # Run migrations
+        # Show migration status before running
+        echo "Current migration status:"
+        docker compose -f ${COMPOSE_FILE} exec -T app php bin/console doctrine:migrations:status
+        
+        # Run migrations (do NOT swallow errors - let them propagate)
         echo "Running database migrations..."
-        docker compose -f ${COMPOSE_FILE} exec -T app php bin/console doctrine:migrations:migrate --no-interaction || {
-            echo "⚠️  Migration failed, but continuing..."
-        }
+        docker compose -f ${COMPOSE_FILE} exec -T app php bin/console doctrine:migrations:migrate --no-interaction
+        
+        echo "✓ Migrations completed successfully"
 EOF
 fi
 

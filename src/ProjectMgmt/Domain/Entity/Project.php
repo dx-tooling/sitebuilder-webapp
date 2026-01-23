@@ -16,6 +16,8 @@ use Symfony\Bridge\Doctrine\IdGenerator\UuidGenerator;
 #[ORM\Table(name: 'projects')]
 class Project
 {
+    public const string DEFAULT_AGENT_IMAGE = 'node:22-slim';
+
     /**
      * @throws Exception
      */
@@ -23,12 +25,14 @@ class Project
         string      $name,
         string      $gitUrl,
         string      $githubToken,
-        ProjectType $projectType = ProjectType::DEFAULT
+        ProjectType $projectType = ProjectType::DEFAULT,
+        string      $agentImage = self::DEFAULT_AGENT_IMAGE
     ) {
         $this->name        = $name;
         $this->gitUrl      = $gitUrl;
         $this->githubToken = $githubToken;
         $this->projectType = $projectType;
+        $this->agentImage  = $agentImage;
         $this->createdAt   = DateAndTimeService::getDateTimeImmutable();
     }
 
@@ -113,6 +117,24 @@ class Project
     public function setProjectType(ProjectType $projectType): void
     {
         $this->projectType = $projectType;
+    }
+
+    #[ORM\Column(
+        type: Types::STRING,
+        length: 255,
+        nullable: false,
+        options: ['default' => self::DEFAULT_AGENT_IMAGE]
+    )]
+    private string $agentImage = self::DEFAULT_AGENT_IMAGE;
+
+    public function getAgentImage(): string
+    {
+        return $this->agentImage;
+    }
+
+    public function setAgentImage(string $agentImage): void
+    {
+        $this->agentImage = $agentImage;
     }
 
     #[ORM\Column(

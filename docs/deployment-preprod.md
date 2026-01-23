@@ -109,6 +109,10 @@ cd /opt/sitebuilder-preprod
 # Set project name environment variable (used in docker compose)
 export ETFS_PROJECT_NAME=sitebuilder_preprod
 
+# Set host project path for agent container Docker mounts
+# This is required for the AI agent to mount workspace directories
+export HOST_PROJECT_PATH=/opt/sitebuilder-preprod
+
 # Build images
 docker compose -f docker-compose.preprod.yml build
 

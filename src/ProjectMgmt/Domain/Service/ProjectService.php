@@ -23,9 +23,10 @@ final class ProjectService
         string      $name,
         string      $gitUrl,
         string      $githubToken,
-        ProjectType $projectType = ProjectType::DEFAULT
+        ProjectType $projectType = ProjectType::DEFAULT,
+        string      $agentImage = Project::DEFAULT_AGENT_IMAGE
     ): Project {
-        $project = new Project($name, $gitUrl, $githubToken, $projectType);
+        $project = new Project($name, $gitUrl, $githubToken, $projectType, $agentImage);
         $this->entityManager->persist($project);
         $this->entityManager->flush();
 
@@ -37,12 +38,14 @@ final class ProjectService
         string      $name,
         string      $gitUrl,
         string      $githubToken,
-        ProjectType $projectType = ProjectType::DEFAULT
+        ProjectType $projectType = ProjectType::DEFAULT,
+        string      $agentImage = Project::DEFAULT_AGENT_IMAGE
     ): void {
         $project->setName($name);
         $project->setGitUrl($gitUrl);
         $project->setGithubToken($githubToken);
         $project->setProjectType($projectType);
+        $project->setAgentImage($agentImage);
         $this->entityManager->flush();
     }
 

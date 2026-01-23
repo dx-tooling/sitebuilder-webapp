@@ -17,7 +17,9 @@ use App\LlmContentEditor\Facade\Dto\AgentEventDto;
 use App\LlmContentEditor\Facade\Dto\ConversationMessageDto;
 use App\LlmContentEditor\Facade\Dto\ToolInputEntryDto;
 use App\LlmContentEditor\Facade\LlmContentEditorFacadeInterface;
+use App\ProjectMgmt\Facade\ProjectMgmtFacadeInterface;
 use App\WorkspaceMgmt\Facade\WorkspaceMgmtFacadeInterface;
+use App\WorkspaceTooling\Facade\AgentExecutionContextInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
@@ -36,8 +38,10 @@ final readonly class RunEditSessionHandler
         private LlmContentEditorFacadeInterface $facade,
         private LoggerInterface                 $logger,
         private WorkspaceMgmtFacadeInterface    $workspaceMgmtFacade,
+        private ProjectMgmtFacadeInterface      $projectMgmtFacade,
         private AccountFacadeInterface          $accountFacade,
         private ConversationUrlServiceInterface $conversationUrlService,
+        private AgentExecutionContextInterface  $executionContext,
     ) {
     }
 
@@ -58,6 +62,17 @@ final readonly class RunEditSessionHandler
             // Load previous messages from conversation
             $previousMessages = $this->loadPreviousMessages($session);
             $conversation     = $session->getConversation();
+
+            // Set execution context for agent container execution
+            $workspace = $this->workspaceMgmtFacade->getWorkspaceById($conversation->getWorkspaceId());
+            $project   = $workspace !== null ? $this->projectMgmtFacade->getProjectInfo($workspace->projectId) : null;
+            $this->executionContext->setContext(
+                $conversation->getWorkspaceId(),
+                $session->getWorkspacePath(),
+                $conversation->getId(),
+                $workspace?->projectName,
+                $project?->agentImage
+            );
 
             $generator = $this->facade->streamEditWithHistory(
                 $session->getWorkspacePath(),
@@ -99,6 +114,9 @@ final readonly class RunEditSessionHandler
             EditSessionChunk::createDoneChunk($session, false, 'An error occurred during processing.');
             $session->setStatus(EditSessionStatus::Failed);
             $this->entityManager->flush();
+        } finally {
+            // Always clear execution context
+            $this->executionContext->clearContext();
         }
     }
 

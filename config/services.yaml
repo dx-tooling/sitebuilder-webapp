@@ -8,6 +8,13 @@ parameters:
     workspace_mgmt.workspace_root_default: "/var/www/public/workspaces"
     workspace_mgmt.workspace_root: "%env(default:workspace_mgmt.workspace_root_default:WORKSPACE_ROOT)%"
 
+    # Host path mapping for Docker-in-Docker volume mounts
+    # When running Docker commands from inside a container, paths must be translated
+    # to host paths. This maps /var/www (container) to the host project path.
+    docker.container_base_path: "/var/www"
+    docker.host_base_path_default: "/var/www"
+    docker.host_base_path: "%env(default:docker.host_base_path_default:HOST_PROJECT_PATH)%"
+
 services:
     # default configuration for services in *this* file
     _defaults:
@@ -30,12 +37,50 @@ services:
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones
 
-    # etfs-coding-agent library services
-    EtfsCodingAgent\Service\FileOperationsServiceInterface:
-        class: EtfsCodingAgent\Service\FileOperationsService
+    # Secure path resolver for workspace isolation
+    App\WorkspaceTooling\Infrastructure\Security\SecurePathResolver:
+        arguments:
+            - "%workspace_mgmt.workspace_root%"
 
+    # Docker executor for running commands in isolated containers
+    # Configured with path mapping for Docker-in-Docker volume mounts
+    App\WorkspaceTooling\Infrastructure\Execution\DockerExecutor:
+        arguments:
+            - "%docker.container_base_path%"
+            - "%docker.host_base_path%"
+
+    # Agent execution context - holds workspace/conversation info for container naming
+    App\WorkspaceTooling\Infrastructure\Execution\AgentExecutionContext: ~
+
+    App\WorkspaceTooling\Facade\AgentExecutionContextInterface:
+        alias: App\WorkspaceTooling\Infrastructure\Execution\AgentExecutionContext
+
+    # Base file operations service (inner service for decorator)
+    EtfsCodingAgent\Service\FileOperationsService: ~
+
+    # Secure file operations decorator - wraps base service with path validation
+    # Also translates /workspace paths to actual workspace paths via execution context
+    App\WorkspaceTooling\Infrastructure\Security\SecureFileOperationsService:
+        arguments:
+            - '@EtfsCodingAgent\Service\FileOperationsService'
+            - '@App\WorkspaceTooling\Infrastructure\Security\SecurePathResolver'
+            - '@App\WorkspaceTooling\Infrastructure\Execution\AgentExecutionContext'
+            - "%workspace_mgmt.workspace_root%"
+
+    # Wire FileOperationsServiceInterface to the secure decorator
+    EtfsCodingAgent\Service\FileOperationsServiceInterface:
+        alias: App\WorkspaceTooling\Infrastructure\Security\SecureFileOperationsService
+
+    # Isolated shell executor - runs commands in Docker containers
+    # Uses execution context (set by handler) for workspace path and agent image
+    App\WorkspaceTooling\Infrastructure\Execution\IsolatedShellExecutor:
+        arguments:
+            - '@App\WorkspaceTooling\Infrastructure\Execution\DockerExecutor'
+            - '@App\WorkspaceTooling\Infrastructure\Execution\AgentExecutionContext'
+
+    # Wire ShellOperationsServiceInterface to the isolated executor
     EtfsCodingAgent\Service\ShellOperationsServiceInterface:
-        class: EtfsCodingAgent\Service\ShellOperationsService
+        alias: App\WorkspaceTooling\Infrastructure\Execution\IsolatedShellExecutor
 
     EtfsCodingAgent\Service\TextOperationsService:
         arguments:
