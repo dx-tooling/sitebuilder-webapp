@@ -9,6 +9,9 @@ interface StatusResponse {
 /**
  * Stimulus controller for polling workspace setup status.
  * Automatically redirects when workspace becomes ready.
+ *
+ * Uses non-overlapping polling: next poll is scheduled only after the
+ * current one completes, preventing request pile-up on slow connections.
  */
 export default class extends Controller {
     static values = {
@@ -34,28 +37,31 @@ export default class extends Controller {
     declare readonly hasActionsTarget: boolean;
     declare readonly actionsTarget: HTMLElement;
 
-    private pollingIntervalId: ReturnType<typeof setInterval> | null = null;
+    private pollingTimeoutId: ReturnType<typeof setTimeout> | null = null;
     private pollCount: number = 0;
     private readonly maxPollCount: number = 120; // 2 minutes at 1 second interval
+    private isActive: boolean = false;
 
     connect(): void {
-        this.startPolling();
+        this.isActive = true;
+        this.poll();
     }
 
     disconnect(): void {
+        this.isActive = false;
         this.stopPolling();
     }
 
-    private startPolling(): void {
-        // Poll immediately, then every second
-        this.poll();
-        this.pollingIntervalId = setInterval(() => this.poll(), 1000);
+    private stopPolling(): void {
+        if (this.pollingTimeoutId !== null) {
+            clearTimeout(this.pollingTimeoutId);
+            this.pollingTimeoutId = null;
+        }
     }
 
-    private stopPolling(): void {
-        if (this.pollingIntervalId !== null) {
-            clearInterval(this.pollingIntervalId);
-            this.pollingIntervalId = null;
+    private scheduleNextPoll(): void {
+        if (this.isActive) {
+            this.pollingTimeoutId = setTimeout(() => this.poll(), 1000);
         }
     }
 
@@ -64,7 +70,7 @@ export default class extends Controller {
 
         // Stop polling if we've exceeded the max
         if (this.pollCount > this.maxPollCount) {
-            this.stopPolling();
+            this.isActive = false;
             this.showError("Setup is taking longer than expected. Please try again.");
 
             return;
@@ -77,6 +83,8 @@ export default class extends Controller {
 
             if (!response.ok) {
                 // Keep polling on server errors - setup might still be running
+                this.scheduleNextPoll();
+
                 return;
             }
 
@@ -89,7 +97,7 @@ export default class extends Controller {
 
             if (data.ready) {
                 // Workspace is ready - redirect to start conversation
-                this.stopPolling();
+                this.isActive = false;
                 window.location.href = this.redirectUrlValue;
 
                 return;
@@ -97,7 +105,7 @@ export default class extends Controller {
 
             if (data.error) {
                 // Setup failed - show error state
-                this.stopPolling();
+                this.isActive = false;
                 this.showError("Workspace setup failed. Please try resetting the workspace.");
 
                 return;
@@ -105,6 +113,8 @@ export default class extends Controller {
         } catch {
             // Network error - keep polling, might be temporary
         }
+
+        this.scheduleNextPoll();
     }
 
     private showError(message: string): void {

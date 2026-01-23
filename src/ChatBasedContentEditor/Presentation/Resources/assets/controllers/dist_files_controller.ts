@@ -10,6 +10,12 @@ interface DistFilesResponse {
     error?: string;
 }
 
+/**
+ * Stimulus controller for polling and displaying dist files.
+ *
+ * Uses non-overlapping polling: next poll is scheduled only after the
+ * current one completes, preventing request pile-up on slow connections.
+ */
 export default class extends Controller {
     static values = {
         pollUrl: String,
@@ -26,26 +32,30 @@ export default class extends Controller {
     declare readonly hasContainerTarget: boolean;
     declare readonly containerTarget: HTMLElement;
 
-    private pollingIntervalId: ReturnType<typeof setInterval> | null = null;
+    private pollingTimeoutId: ReturnType<typeof setTimeout> | null = null;
     private lastFilesJson: string = "";
+    private isActive: boolean = false;
 
     connect(): void {
+        this.isActive = true;
         this.poll();
-        this.startPolling();
     }
 
     disconnect(): void {
+        this.isActive = false;
         this.stopPolling();
     }
 
-    private startPolling(): void {
-        this.pollingIntervalId = setInterval(() => this.poll(), this.pollIntervalValue);
+    private stopPolling(): void {
+        if (this.pollingTimeoutId !== null) {
+            clearTimeout(this.pollingTimeoutId);
+            this.pollingTimeoutId = null;
+        }
     }
 
-    private stopPolling(): void {
-        if (this.pollingIntervalId !== null) {
-            clearInterval(this.pollingIntervalId);
-            this.pollingIntervalId = null;
+    private scheduleNextPoll(): void {
+        if (this.isActive) {
+            this.pollingTimeoutId = setTimeout(() => this.poll(), this.pollIntervalValue);
         }
     }
 
@@ -55,21 +65,21 @@ export default class extends Controller {
                 headers: { "X-Requested-With": "XMLHttpRequest" },
             });
 
-            if (!response.ok) {
-                return;
-            }
+            if (response.ok) {
+                const data = (await response.json()) as DistFilesResponse;
+                const filesJson = JSON.stringify(data.files);
 
-            const data = (await response.json()) as DistFilesResponse;
-            const filesJson = JSON.stringify(data.files);
-
-            // Only update if files changed
-            if (filesJson !== this.lastFilesJson) {
-                this.lastFilesJson = filesJson;
-                this.renderFiles(data.files);
+                // Only update if files changed
+                if (filesJson !== this.lastFilesJson) {
+                    this.lastFilesJson = filesJson;
+                    this.renderFiles(data.files);
+                }
             }
         } catch {
             // Silently ignore polling errors
         }
+
+        this.scheduleNextPoll();
     }
 
     private renderFiles(files: DistFile[]): void {

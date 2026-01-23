@@ -66,10 +66,12 @@ export default class extends Controller {
     declare readonly hasContextUsageCostTarget: boolean;
     declare readonly contextUsageCostTarget: HTMLElement;
 
-    private pollingIntervalId: ReturnType<typeof setInterval> | null = null;
-    private contextUsageIntervalId: ReturnType<typeof setInterval> | null = null;
+    private pollingTimeoutId: ReturnType<typeof setTimeout> | null = null;
+    private contextUsageTimeoutId: ReturnType<typeof setTimeout> | null = null;
     private autoScrollEnabled: boolean = true;
     private submitOnEnterEnabled: boolean = true;
+    private isContextUsagePollingActive: boolean = false;
+    private isPollingActive: boolean = false;
 
     connect(): void {
         const cu = this.contextUsageValue as ContextUsageData | undefined;
@@ -98,25 +100,33 @@ export default class extends Controller {
         if (!url) {
             return;
         }
-        const poll = async (): Promise<void> => {
-            try {
-                const res = await fetch(url, { headers: { "X-Requested-With": "XMLHttpRequest" } });
-                if (res.ok) {
-                    const data = (await res.json()) as ContextUsageData;
-                    this.updateContextBar(data);
-                }
-            } catch {
-                // ignore
+        this.isContextUsagePollingActive = true;
+        this.pollContextUsage();
+    }
+
+    private async pollContextUsage(): Promise<void> {
+        const url = this.contextUsageUrlValue;
+        try {
+            const res = await fetch(url, { headers: { "X-Requested-With": "XMLHttpRequest" } });
+            if (res.ok) {
+                const data = (await res.json()) as ContextUsageData;
+                this.updateContextBar(data);
             }
-        };
-        poll();
-        this.contextUsageIntervalId = setInterval(poll, 2500);
+        } catch {
+            // ignore
+        }
+
+        // Schedule next poll only after this one completes (non-overlapping)
+        if (this.isContextUsagePollingActive) {
+            this.contextUsageTimeoutId = setTimeout(() => this.pollContextUsage(), 2500);
+        }
     }
 
     private stopContextUsagePolling(): void {
-        if (this.contextUsageIntervalId !== null) {
-            clearInterval(this.contextUsageIntervalId);
-            this.contextUsageIntervalId = null;
+        this.isContextUsagePollingActive = false;
+        if (this.contextUsageTimeoutId !== null) {
+            clearTimeout(this.contextUsageTimeoutId);
+            this.contextUsageTimeoutId = null;
         }
     }
 
@@ -237,61 +247,88 @@ export default class extends Controller {
     }
 
     private startPolling(sessionId: string, container: HTMLElement, startingLastId: number = 0): void {
-        let lastId = startingLastId;
-        const pollUrl = this.pollUrlTemplateValue.replace("__SESSION_ID__", sessionId);
+        this.currentPollingState = {
+            sessionId,
+            container,
+            lastId: startingLastId,
+            pollUrl: this.pollUrlTemplateValue.replace("__SESSION_ID__", sessionId),
+        };
+        this.isPollingActive = true;
+        this.pollSession();
+    }
 
-        const poll = async (): Promise<void> => {
-            try {
-                const response = await fetch(`${pollUrl}?after=${lastId}`, {
-                    headers: { "X-Requested-With": "XMLHttpRequest" },
-                });
+    private currentPollingState: {
+        sessionId: string;
+        container: HTMLElement;
+        lastId: number;
+        pollUrl: string;
+    } | null = null;
 
-                if (!response.ok) {
-                    this.appendError(container, `Poll failed: ${response.status}`);
+    private async pollSession(): Promise<void> {
+        if (!this.currentPollingState || !this.isPollingActive) {
+            return;
+        }
+
+        const { container, pollUrl } = this.currentPollingState;
+
+        try {
+            const response = await fetch(`${pollUrl}?after=${this.currentPollingState.lastId}`, {
+                headers: { "X-Requested-With": "XMLHttpRequest" },
+            });
+
+            if (!response.ok) {
+                this.appendError(container, `Poll failed: ${response.status}`);
+                this.stopPolling();
+                this.resetSubmitButton();
+
+                return;
+            }
+
+            const data = (await response.json()) as PollResponse;
+
+            for (const chunk of data.chunks) {
+                if (this.handleChunk(chunk, container)) {
                     this.stopPolling();
                     this.resetSubmitButton();
 
                     return;
                 }
+            }
 
-                const data = (await response.json()) as PollResponse;
+            this.currentPollingState.lastId = data.lastId;
 
-                for (const chunk of data.chunks) {
-                    if (this.handleChunk(chunk, container)) {
-                        this.stopPolling();
-                        this.resetSubmitButton();
+            if (data.contextUsage) {
+                this.updateContextBar(data.contextUsage);
+            }
 
-                        return;
-                    }
-                }
-
-                lastId = data.lastId;
-
-                if (data.contextUsage) {
-                    this.updateContextBar(data.contextUsage);
-                }
-
-                if (data.status === "completed" || data.status === "failed") {
-                    this.stopPolling();
-                    this.resetSubmitButton();
-                }
-            } catch (err) {
-                const msg = err instanceof Error ? err.message : "Polling error.";
-                this.appendError(container, msg);
+            if (data.status === "completed" || data.status === "failed") {
                 this.stopPolling();
                 this.resetSubmitButton();
-            }
-        };
 
-        poll();
-        this.pollingIntervalId = setInterval(poll, 500);
+                return;
+            }
+        } catch (err) {
+            const msg = err instanceof Error ? err.message : "Polling error.";
+            this.appendError(container, msg);
+            this.stopPolling();
+            this.resetSubmitButton();
+
+            return;
+        }
+
+        // Schedule next poll only after this one completes (non-overlapping)
+        if (this.isPollingActive) {
+            this.pollingTimeoutId = setTimeout(() => this.pollSession(), 500);
+        }
     }
 
     private stopPolling(): void {
-        if (this.pollingIntervalId !== null) {
-            clearInterval(this.pollingIntervalId);
-            this.pollingIntervalId = null;
+        this.isPollingActive = false;
+        if (this.pollingTimeoutId !== null) {
+            clearTimeout(this.pollingTimeoutId);
+            this.pollingTimeoutId = null;
         }
+        this.currentPollingState = null;
     }
 
     private resetSubmitButton(): void {
