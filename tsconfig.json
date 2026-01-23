@@ -2,7 +2,17 @@
     "compilerOptions": {
         "noEmit": true,
         "allowImportingTsExtensions": true,
-        "lib": ["dom", "es2015"]
+        "lib": ["dom", "es2015"],
+        "types": ["vitest/globals"],
+        "baseUrl": ".",
+        "paths": {
+            "@controllers/*": ["src/ChatBasedContentEditor/Presentation/Resources/assets/controllers/*"]
+        }
     },
+    "include": [
+        "assets/**/*.ts",
+        "src/**/*.ts",
+        "tests/frontend/**/*.ts"
+    ],
     "exclude": ["node_modules", "vendor", "var", "public/workspaces"]
 }
