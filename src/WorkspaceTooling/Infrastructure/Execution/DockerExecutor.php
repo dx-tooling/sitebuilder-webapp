@@ -12,23 +12,33 @@ use Symfony\Component\Process\Process;
  *
  * This executor provides filesystem isolation by:
  * - Running commands in ephemeral containers (--rm)
- * - Mounting only the specific workspace directory
- * - Running as non-root user when possible
+ * - Mounting only the specific workspace directory as /workspace
  * - Optionally disabling network access
+ *
+ * When running Docker commands from inside a container (Docker-in-Docker via socket),
+ * volume mount paths must be translated to host paths since the Docker daemon
+ * interprets paths relative to the host, not the container.
  */
 final class DockerExecutor
 {
     private const int DEFAULT_TIMEOUT = 300; // 5 minutes
 
+    public function __construct(
+        private readonly string $containerBasePath,
+        private readonly string $hostBasePath
+    ) {
+    }
+
     /**
      * Run a command in an isolated Docker container.
      *
-     * @param string      $image         Docker image to use (e.g., node:22-slim)
-     * @param string      $command       Command to execute inside the container
-     * @param string      $hostPath      Host path to mount as /workspace
-     * @param int         $timeout       Timeout in seconds
-     * @param bool        $allowNetwork  Whether to allow network access
-     * @param string|null $containerName Optional container name for identification
+     * @param string      $image            Docker image to use (e.g., node:22-slim)
+     * @param string      $command          Command to execute inside the container
+     * @param string      $mountPath        Path to mount as /workspace (container path, will be translated)
+     * @param string      $workingDirectory Working directory inside the container (e.g., /workspace)
+     * @param int         $timeout          Timeout in seconds
+     * @param bool        $allowNetwork     Whether to allow network access
+     * @param string|null $containerName    Optional container name for identification
      *
      * @return string Combined stdout and stderr output
      *
@@ -37,7 +47,8 @@ final class DockerExecutor
     public function run(
         string  $image,
         string  $command,
-        string  $hostPath,
+        string  $mountPath,
+        string  $workingDirectory = '/workspace',
         int     $timeout = self::DEFAULT_TIMEOUT,
         bool    $allowNetwork = true,
         ?string $containerName = null
@@ -45,7 +56,8 @@ final class DockerExecutor
         $dockerCommand = $this->buildDockerCommand(
             $image,
             $command,
-            $hostPath,
+            $mountPath,
+            $workingDirectory,
             $allowNetwork,
             $containerName
         );
@@ -143,16 +155,20 @@ final class DockerExecutor
     private function buildDockerCommand(
         string  $image,
         string  $command,
-        string  $hostPath,
+        string  $mountPath,
+        string  $workingDirectory,
         bool    $allowNetwork,
         ?string $containerName
     ): array {
+        // Translate container path to host path for Docker volume mount
+        $hostPath = $this->translateToHostPath($mountPath);
+
         $dockerCmd = [
             'docker', 'run',
             '--rm',                          // Remove container after execution
             '-i',                            // Keep stdin open
-            '--workdir=/workspace',          // Set working directory
-            '-v', $hostPath . ':/workspace', // Mount workspace
+            '--workdir=' . $workingDirectory, // Set working directory
+            '-v', $hostPath . ':/workspace', // Mount workspace (using host path)
         ];
 
         // Add container name for identification (with unique suffix to allow concurrent runs)
@@ -167,8 +183,13 @@ final class DockerExecutor
         }
 
         // Add resource limits for safety
-        $dockerCmd[] = '--memory=512m';
-        $dockerCmd[] = '--cpus=1';
+        // 2GB memory to handle webpack/build processes that need more heap
+        $dockerCmd[] = '--memory=2g';
+        $dockerCmd[] = '--cpus=2';
+
+        // Increase Node.js heap size for webpack builds
+        $dockerCmd[] = '-e';
+        $dockerCmd[] = 'NODE_OPTIONS=--max-old-space-size=1536';
 
         // Add the image
         $dockerCmd[] = $image;
@@ -179,5 +200,30 @@ final class DockerExecutor
         $dockerCmd[] = $command;
 
         return $dockerCmd;
+    }
+
+    /**
+     * Translate a container path to a host path for Docker volume mounts.
+     *
+     * When running Docker commands from inside a container (Docker-in-Docker),
+     * the Docker daemon runs on the host and interprets volume paths relative
+     * to the host filesystem. This method translates container paths to host paths.
+     *
+     * Example: /var/www/public/workspaces/123 -> /home/user/project/public/workspaces/123
+     */
+    private function translateToHostPath(string $containerPath): string
+    {
+        // If paths are the same, no translation needed (running on host)
+        if ($this->containerBasePath === $this->hostBasePath) {
+            return $containerPath;
+        }
+
+        // Replace container base path with host base path
+        if (str_starts_with($containerPath, $this->containerBasePath)) {
+            return $this->hostBasePath . substr($containerPath, strlen($this->containerBasePath));
+        }
+
+        // Path doesn't start with container base - return as-is
+        return $containerPath;
     }
 }

@@ -28,17 +28,32 @@ final class AgentExecutionContext implements AgentExecutionContextInterface
     private const int ID_SHORT_LENGTH         = 8;
 
     private ?string $workspaceId    = null;
+    private ?string $workspacePath  = null;
     private ?string $conversationId = null;
     private ?string $projectName    = null;
+    private ?string $agentImage     = null;
 
     /**
      * Set the execution context for the current agent run.
+     *
+     * @param string      $workspaceId    Workspace UUID
+     * @param string      $workspacePath  Actual filesystem path to the workspace
+     * @param string|null $conversationId Conversation UUID
+     * @param string|null $projectName    Project name for container naming
+     * @param string|null $agentImage     Docker image to use for agent containers
      */
-    public function setContext(string $workspaceId, ?string $conversationId, ?string $projectName): void
-    {
+    public function setContext(
+        string  $workspaceId,
+        string  $workspacePath,
+        ?string $conversationId,
+        ?string $projectName,
+        ?string $agentImage
+    ): void {
         $this->workspaceId    = $workspaceId;
+        $this->workspacePath  = $workspacePath;
         $this->conversationId = $conversationId;
         $this->projectName    = $projectName;
+        $this->agentImage     = $agentImage;
     }
 
     /**
@@ -47,13 +62,23 @@ final class AgentExecutionContext implements AgentExecutionContextInterface
     public function clearContext(): void
     {
         $this->workspaceId    = null;
+        $this->workspacePath  = null;
         $this->conversationId = null;
         $this->projectName    = null;
+        $this->agentImage     = null;
     }
 
     public function getWorkspaceId(): ?string
     {
         return $this->workspaceId;
+    }
+
+    /**
+     * Get the actual filesystem path to the workspace.
+     */
+    public function getWorkspacePath(): ?string
+    {
+        return $this->workspacePath;
     }
 
     public function getConversationId(): ?string
@@ -64,6 +89,11 @@ final class AgentExecutionContext implements AgentExecutionContextInterface
     public function getProjectName(): ?string
     {
         return $this->projectName;
+    }
+
+    public function getAgentImage(): ?string
+    {
+        return $this->agentImage;
     }
 
     /**

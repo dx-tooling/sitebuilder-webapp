@@ -9,7 +9,8 @@ How do I get a development environment for this application up and running?
 - Clone this repository
 - cd into the cloned repo root folder
 - Run `mise trust`
-- Run `docker compose up --build -d`
+- Create `.env.local` with `HOST_PROJECT_PATH=$(pwd)` (required for agent Docker execution)
+- Run `HOST_PROJECT_PATH=$(pwd) docker compose up --build -d`
 - Run `docker compose exec -ti app composer install`
 - Run `mise run in-app-container mise trust`
 - Run `mise run in-app-container mise install`

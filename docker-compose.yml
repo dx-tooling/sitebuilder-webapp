@@ -45,6 +45,10 @@ services:
             MISE_DATA_DIR: /opt/mise/data
             MISE_CACHE_DIR: /opt/mise/cache
             MISE_STATE_DIR: /opt/mise/state
+            # Host path for Docker volume mounts (required for agent containers)
+            # The messenger runs Docker commands via the host socket, so paths must be host paths
+            # Uses PWD as default, which is set by docker-compose to the project directory
+            HOST_PROJECT_PATH: ${HOST_PROJECT_PATH:-${PWD}}
         networks:
             - default
         depends_on:

@@ -67,11 +67,11 @@ ENV MISE_DATA_DIR=/opt/mise/data
 ENV MISE_CACHE_DIR=/opt/mise/cache
 ENV MISE_STATE_DIR=/opt/mise/state
 
-# Create mise directories and pre-install common Node versions
+# Create mise directories and pre-install Node
 # This ensures Node is available without runtime installation (which can fail with lock issues)
 RUN mkdir -p /opt/mise/data /opt/mise/cache /opt/mise/state && \
     chmod -R 777 /opt/mise && \
-    mise install node@24 node@22 node@20
+    mise install node@24
 
 # Shell activation for interactive use (debugging)
 RUN echo 'eval "$(/usr/bin/env mise activate bash)"' >> ~/.bashrc

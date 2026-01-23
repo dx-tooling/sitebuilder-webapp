@@ -8,6 +8,13 @@ parameters:
     workspace_mgmt.workspace_root_default: "/var/www/public/workspaces"
     workspace_mgmt.workspace_root: "%env(default:workspace_mgmt.workspace_root_default:WORKSPACE_ROOT)%"
 
+    # Host path mapping for Docker-in-Docker volume mounts
+    # When running Docker commands from inside a container, paths must be translated
+    # to host paths. This maps /var/www (container) to the host project path.
+    docker.container_base_path: "/var/www"
+    docker.host_base_path_default: "/var/www"
+    docker.host_base_path: "%env(default:docker.host_base_path_default:HOST_PROJECT_PATH)%"
+
 services:
     # default configuration for services in *this* file
     _defaults:
@@ -36,7 +43,11 @@ services:
             - "%workspace_mgmt.workspace_root%"
 
     # Docker executor for running commands in isolated containers
-    App\WorkspaceTooling\Infrastructure\Execution\DockerExecutor: ~
+    # Configured with path mapping for Docker-in-Docker volume mounts
+    App\WorkspaceTooling\Infrastructure\Execution\DockerExecutor:
+        arguments:
+            - "%docker.container_base_path%"
+            - "%docker.host_base_path%"
 
     # Agent execution context - holds workspace/conversation info for container naming
     App\WorkspaceTooling\Infrastructure\Execution\AgentExecutionContext: ~
@@ -59,12 +70,10 @@ services:
         alias: App\WorkspaceTooling\Infrastructure\Security\SecureFileOperationsService
 
     # Isolated shell executor - runs commands in Docker containers
+    # Uses execution context (set by handler) for workspace path and agent image
     App\WorkspaceTooling\Infrastructure\Execution\IsolatedShellExecutor:
         arguments:
             - '@App\WorkspaceTooling\Infrastructure\Execution\DockerExecutor'
-            - '@App\WorkspaceTooling\Infrastructure\Security\SecurePathResolver'
-            - '@App\ProjectMgmt\Facade\ProjectMgmtFacadeInterface'
-            - '@App\WorkspaceMgmt\Facade\WorkspaceMgmtFacadeInterface'
             - '@App\WorkspaceTooling\Infrastructure\Execution\AgentExecutionContext'
 
     # Wire ShellOperationsServiceInterface to the isolated executor

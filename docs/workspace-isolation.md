@@ -120,9 +120,43 @@ docker run --rm -i \
 Key features:
 - `--name` - Container named for easy identification (see naming convention below)
 - `--rm` - Container is removed after execution
-- `-v` mount - Only the specific workspace is accessible
-- `--memory` / `--cpus` - Resource limits prevent runaway processes
+- `-v` mount - Workspace is always mounted as `/workspace` (path translated for Docker-in-Docker)
+- `--workdir` - Set to `/workspace` (or subdirectory the agent specifies)
+- `--memory=2g` / `--cpus=2` - Resource limits (2GB RAM, 2 CPUs for webpack builds)
+- `NODE_OPTIONS=--max-old-space-size=1536` - Increased Node.js heap for webpack
 - `--network=none` - Can optionally disable network (currently enabled for npm install)
+
+### Agent Workspace Model
+
+The agent always sees `/workspace` as its working directory. The actual filesystem path is:
+1. Stored in the execution context when the agent session starts
+2. Translated to a host path (for Docker-in-Docker)
+3. Mounted as `/workspace` in the agent container
+
+This simplifies the agent's view - it only needs to work with `/workspace` paths.
+
+### Docker-in-Docker Path Translation
+
+Since the messenger container runs Docker commands via the host Docker socket, volume mount
+paths must be translated from container paths to host paths.
+
+| Container Path | Host Path |
+|----------------|-----------|
+| `/var/www/public/workspaces/{id}` | `{HOST_PROJECT_PATH}/public/workspaces/{id}` |
+
+**Configuration:**
+
+Set `HOST_PROJECT_PATH` in your environment to the absolute path where the project is located on the host:
+
+```bash
+# In .env.local (not committed)
+HOST_PROJECT_PATH=/home/user/git/sitebuilder-webapp
+
+# Or when starting docker-compose
+HOST_PROJECT_PATH=$(pwd) docker compose up -d
+```
+
+If not set, paths are passed through unchanged (works when running directly on host).
 
 ### Container Naming Convention
 

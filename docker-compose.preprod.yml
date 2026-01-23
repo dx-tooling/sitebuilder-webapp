@@ -51,6 +51,8 @@ services:
             # Preprod environment
             APP_ENV: preprod
             APP_DEBUG: "0"
+            # Host path for Docker volume mounts (required for agent containers)
+            HOST_PROJECT_PATH: ${HOST_PROJECT_PATH:-/opt/sitebuilder-preprod}
         networks:
             - default
         depends_on:
