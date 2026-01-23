@@ -33,6 +33,28 @@ alwaysApply: false
 - All frontend code must pass ESLint and TypeScript type checking
 - Format code with Prettier (automatically runs in `mise quality`)
 
+## Polling Pattern (Non-Overlapping)
+
+**Always use `setTimeout` with scheduling after completion**, never `setInterval` for polling:
+
+```ts
+// WRONG - requests can overlap if slow
+this.intervalId = setInterval(() => this.poll(), 1000);
+
+// CORRECT - next poll only after current completes
+private async poll(): Promise<void> {
+    try {
+        await fetch(this.url);
+    } finally {
+        if (this.isActive) {
+            this.timeoutId = setTimeout(() => this.poll(), 1000);
+        }
+    }
+}
+```
+
+This prevents request pile-up on slow connections and is more resilient to network latency.
+
 ## Building Frontend
 
 - Use `mise run frontend` to build frontend assets (see `docs/devbook.md`)

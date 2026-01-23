@@ -237,7 +237,83 @@ Handle non‑OK responses and parse JSON or streamed bodies as needed.
 
 ---
 
-## 5. References
+## 5. Polling Pattern (Non-Overlapping)
+
+When implementing polling in Stimulus controllers, **always use `setTimeout` with scheduling after completion**, never `setInterval`. This prevents request pile-up if the server or network is slow.
+
+### Why Not `setInterval`?
+
+```ts
+// BAD: setInterval fires every N ms regardless of whether the previous request finished
+this.pollingIntervalId = setInterval(() => this.poll(), 1000);
+```
+
+If `poll()` takes 2 seconds to complete but the interval is 1 second, requests will stack up.
+
+### The Correct Pattern
+
+```ts
+private pollingTimeoutId: ReturnType<typeof setTimeout> | null = null;
+private isActive: boolean = false;
+
+connect(): void {
+    this.isActive = true;
+    this.poll(); // Start first poll immediately
+}
+
+disconnect(): void {
+    this.isActive = false;
+    this.stopPolling();
+}
+
+private stopPolling(): void {
+    if (this.pollingTimeoutId !== null) {
+        clearTimeout(this.pollingTimeoutId);
+        this.pollingTimeoutId = null;
+    }
+}
+
+private scheduleNextPoll(): void {
+    if (this.isActive) {
+        this.pollingTimeoutId = setTimeout(() => this.poll(), 1000);
+    }
+}
+
+private async poll(): Promise<void> {
+    try {
+        const response = await fetch(this.pollUrlValue, {
+            headers: { "X-Requested-With": "XMLHttpRequest" },
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            // Process data...
+        }
+    } catch {
+        // Handle error
+    }
+
+    // Schedule next poll only AFTER this one completes
+    this.scheduleNextPoll();
+}
+```
+
+### Key Points
+
+1. **Use `setTimeout`** instead of `setInterval`
+2. **Track active state** with a boolean (`isActive`) to allow clean shutdown
+3. **Schedule next poll** only after the current one finishes (in the `finally` block or at the end of the async function)
+4. **Clear timeout** with `clearTimeout` in `disconnect()` and `stopPolling()`
+5. **Check `isActive`** before scheduling to prevent orphan timeouts
+
+This pattern ensures:
+- No overlapping requests
+- Clean shutdown when the controller disconnects
+- Resilience to slow network/server responses
+
+---
+
+## 6. References
 
 - **Rules**: `.cursor/rules/05-frontend.mdc` (TypeScript, Stimulus, quality).
 - **Architecture**: `docs/archbook.md` — Client-Side Organization, vertical layout.
