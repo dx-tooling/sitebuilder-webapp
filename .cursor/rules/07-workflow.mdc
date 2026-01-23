@@ -6,40 +6,137 @@ alwaysApply: false
 
 **Reference**: See `docs/devbook.md` for common development tasks.
 
+## Important: Always Use `mise run` Commands
+
+**NEVER run npm, composer, or php commands directly.** All commands must go through `mise run` to execute inside the Docker container with the correct environment.
+
+```bash
+# WRONG - runs locally, may fail or use wrong environment
+npm test
+npm install
+php bin/console ...
+
+# CORRECT - runs inside the app container
+mise run npm test
+mise run tests:frontend
+mise run console ...
+```
+
+## Available Mise Tasks
+
+Run `mise tasks` to see all available tasks. Key tasks:
+
+| Task | Description |
+|------|-------------|
+| `mise run quality` | Run ALL quality checks (required before commit) |
+| `mise run tests` | Run PHP tests (architecture, unit, integration, application) |
+| `mise run tests:frontend` | Run frontend/TypeScript tests (vitest) |
+| `mise run frontend` | Build frontend assets (Tailwind + AssetMapper) |
+| `mise run console <cmd>` | Run Symfony console commands |
+| `mise run composer <cmd>` | Run Composer commands |
+| `mise run npm <cmd>` | Run NPM commands inside container |
+| `mise run db` | Connect to local database |
+
 ## Quality Checks
 
-- **Always** run `mise quality` before committing code
-- This runs: Doctrine schema validation, PHP CS Fixer, Prettier, ESLint, TypeScript checks, PHPStan
-- Fix all issues before proceeding
+**Always run `mise run quality` before committing code.**
 
-## Common Tasks
+This runs (in order):
+1. Doctrine schema validation
+2. PHP CS Fixer (auto-fixes formatting)
+3. Prettier (auto-fixes JS/TS/CSS/YAML formatting)
+4. ESLint
+5. TypeScript compiler (`tsc`)
+6. PHPStan
 
-### Building Frontend
-- `mise run frontend` - Build frontend assets
-
-### Updating Dependencies
-- `mise run composer update --with-dependencies` - Update PHP dependencies
-- `mise run npm update` - Update Node.js dependencies
-- `mise run console importmap:update` - Update AssetMapper importmaps
-
-### Database Migrations
-- Edit entities
-- Run `mise run console make:migration` to generate migration
-- Run `mise run console doctrine:migrations:migrate --no-interaction` to apply
-
-### Database Connection
-- `mise run db` - Connect to local database
+Fix all issues before proceeding.
 
 ## Testing
 
-- Run `mise run tests` to execute test suite
-- Architecture tests enforce vertical boundaries
-- Unit tests should be in `tests/Unit/`
-- Integration tests should be in `tests/Integration/`
+### PHP Tests
+```bash
+mise run tests
+```
+Runs: architecture tests, unit tests, integration tests, application tests.
 
-## Before Committing
+### Frontend Tests (TypeScript/Vitest)
+```bash
+mise run tests:frontend            # Run once
+mise run tests:frontend --watch    # Watch mode
+mise run tests:frontend --coverage # With coverage
+```
 
-1. Run `mise quality` and fix all issues
-2. Run `mise run tests` and ensure all pass
-3. Verify architecture boundaries are respected
-4. Check that all type annotations are correct
+### Run Everything Before Commit
+```bash
+mise run quality && mise run tests && mise run tests:frontend
+```
+
+## Building Frontend
+
+```bash
+mise run frontend
+```
+
+This compiles:
+- TailwindCSS
+- TypeScript (via SWC)
+- Asset manifests
+
+## Database Operations
+
+### Migrations
+```bash
+# Generate migration after entity changes
+mise run console make:migration
+
+# Apply migrations
+mise run console doctrine:migrations:migrate --no-interaction
+```
+
+### Database Connection
+```bash
+mise run db
+```
+
+## Updating Dependencies
+
+```bash
+# PHP dependencies
+mise run composer update --with-dependencies
+
+# Node.js dependencies (inside container)
+mise run npm install
+mise run npm update
+
+# Update AssetMapper importmaps
+mise run console importmap:update
+```
+
+## Before Committing Checklist
+
+1. `mise run quality` - Fix all issues
+2. `mise run tests` - All PHP tests pass
+3. `mise run tests:frontend` - All frontend tests pass
+4. `mise run frontend` - Frontend builds successfully
+5. Verify architecture boundaries are respected
+6. Check that all type annotations are correct
+
+## Troubleshooting
+
+### "Module not found" errors in frontend tests
+The container may need npm dependencies installed:
+```bash
+mise run npm install
+```
+
+### Container not running
+```bash
+docker compose up -d
+```
+
+### Stale compiled assets
+Delete and rebuild:
+```bash
+rm -rf public/assets
+mise run frontend
+```
