@@ -3,3 +3,34 @@
 @import "../../vendor/enterprise-tooling-for-symfony/webui-bundle/assets/styles/webui.css";
 
 @config "../../tailwind.config.js";
+
+/* Technical messages container - Working magic animation */
+.technical-messages-container [data-header="1"] {
+    position: relative;
+    overflow: hidden;
+}
+
+.technical-messages-container [data-header="1"]::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent 0%, rgba(168, 85, 247, 0.1) 50%, transparent 100%);
+    transform: translateX(-100%);
+    animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+    0% {
+        transform: translateX(-100%);
+    }
+    100% {
+        transform: translateX(100%);
+    }
+}
+
+/* Stop shimmer animation when container shows completion */
+.technical-messages-container [data-header="1"].from-green-50\/80::before,
+.technical-messages-container [data-header="1"].from-red-50\/80::before {
+    animation: none;
+    background: none;
+}
