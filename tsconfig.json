@@ -2,17 +2,16 @@
     "compilerOptions": {
         "noEmit": true,
         "allowImportingTsExtensions": true,
-        "lib": ["dom", "es2015"],
-        "types": ["vitest/globals"],
+        "lib": ["dom", "es2020"],
+        "types": ["vitest/globals", "node"],
         "baseUrl": ".",
         "paths": {
-            "@controllers/*": ["src/ChatBasedContentEditor/Presentation/Resources/assets/controllers/*"]
-        }
+            "@controllers/*": [
+                "src/ChatBasedContentEditor/Presentation/Resources/assets/controllers/*"
+            ]
+        },
+        "skipLibCheck": true
     },
-    "include": [
-        "assets/**/*.ts",
-        "src/**/*.ts",
-        "tests/frontend/**/*.ts"
-    ],
+    "include": ["assets/**/*.ts", "src/**/*.ts", "tests/frontend/**/*.ts"],
     "exclude": ["node_modules", "vendor", "var", "public/workspaces"]
 }
