@@ -272,4 +272,120 @@ final class ChatBasedContentEditorControllerTest extends WebTestCase
 
         return $conversation;
     }
+
+    public function testHeartbeatUpdatesLastActivityAt(): void
+    {
+        // Arrange: Create a user and an ongoing conversation
+        $user = $this->createTestUser('user@example.com', 'password123');
+
+        $project   = $this->createProject('Test Project', 'https://github.com/org/repo.git', 'token123');
+        $projectId = $project->getId();
+        self::assertNotNull($projectId);
+        $workspace = $this->createWorkspace($projectId, WorkspaceStatus::IN_CONVERSATION);
+
+        $workspaceId = $workspace->getId();
+        $userId      = $user->getId();
+        self::assertNotNull($workspaceId);
+        self::assertNotNull($userId);
+        $conversation = $this->createConversation(
+            $workspaceId,
+            $userId,
+            ConversationStatus::ONGOING
+        );
+
+        // Assert: lastActivityAt is null initially
+        self::assertNull($conversation->getLastActivityAt());
+
+        // Act: Send heartbeat
+        $this->client->loginUser($user);
+        $conversationId = $conversation->getId();
+        self::assertNotNull($conversationId);
+        $this->client->request('POST', '/conversation/' . $conversationId . '/heartbeat');
+
+        // Assert: Heartbeat successful
+        self::assertResponseIsSuccessful();
+        $responseData = json_decode((string) $this->client->getResponse()->getContent(), true);
+        self::assertIsArray($responseData);
+        self::assertTrue($responseData['success']);
+
+        // Assert: lastActivityAt is now set
+        $this->entityManager->clear();
+        $updatedConversation = $this->entityManager->find(Conversation::class, $conversationId);
+        self::assertNotNull($updatedConversation);
+        self::assertNotNull($updatedConversation->getLastActivityAt());
+    }
+
+    public function testHeartbeatDeniesAccessWhenUserIsNotOwner(): void
+    {
+        // Arrange: Create two users
+        $ownerUser = $this->createTestUser('owner@example.com', 'password123');
+        $otherUser = $this->createTestUser('other@example.com', 'password123');
+
+        $project   = $this->createProject('Test Project', 'https://github.com/org/repo.git', 'token123');
+        $projectId = $project->getId();
+        self::assertNotNull($projectId);
+        $workspace = $this->createWorkspace($projectId, WorkspaceStatus::IN_CONVERSATION);
+
+        $workspaceId = $workspace->getId();
+        $ownerUserId = $ownerUser->getId();
+        self::assertNotNull($workspaceId);
+        self::assertNotNull($ownerUserId);
+        $conversation = $this->createConversation(
+            $workspaceId,
+            $ownerUserId,
+            ConversationStatus::ONGOING
+        );
+
+        // Act: Try to send heartbeat as other user
+        $this->client->loginUser($otherUser);
+        $conversationId = $conversation->getId();
+        self::assertNotNull($conversationId);
+        $this->client->request('POST', '/conversation/' . $conversationId . '/heartbeat');
+
+        // Assert: Access denied
+        self::assertResponseStatusCodeSame(403);
+    }
+
+    public function testHeartbeatReturnsErrorWhenConversationIsNotOngoing(): void
+    {
+        // Arrange: Create a user and a finished conversation
+        $user = $this->createTestUser('user@example.com', 'password123');
+
+        $project   = $this->createProject('Test Project', 'https://github.com/org/repo.git', 'token123');
+        $projectId = $project->getId();
+        self::assertNotNull($projectId);
+        $workspace = $this->createWorkspace($projectId, WorkspaceStatus::AVAILABLE_FOR_CONVERSATION);
+
+        $workspaceId = $workspace->getId();
+        $userId      = $user->getId();
+        self::assertNotNull($workspaceId);
+        self::assertNotNull($userId);
+        $conversation = $this->createConversation(
+            $workspaceId,
+            $userId,
+            ConversationStatus::FINISHED
+        );
+
+        // Act: Try to send heartbeat on finished conversation
+        $this->client->loginUser($user);
+        $conversationId = $conversation->getId();
+        self::assertNotNull($conversationId);
+        $this->client->request('POST', '/conversation/' . $conversationId . '/heartbeat');
+
+        // Assert: Bad request
+        self::assertResponseStatusCodeSame(400);
+    }
+
+    public function testHeartbeatReturns404WhenConversationDoesNotExist(): void
+    {
+        // Arrange: Create a user
+        $user = $this->createTestUser('user@example.com', 'password123');
+
+        // Act: Try to send heartbeat to non-existent conversation
+        $this->client->loginUser($user);
+        $this->client->request('POST', '/conversation/00000000-0000-0000-0000-000000000000/heartbeat');
+
+        // Assert: 404 Not Found
+        self::assertResponseStatusCodeSame(404);
+    }
 }

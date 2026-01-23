@@ -115,6 +115,27 @@ class Conversation
         return $this->createdAt;
     }
 
+    #[ORM\Column(
+        type: Types::DATETIME_IMMUTABLE,
+        nullable: true
+    )]
+    private ?DateTimeImmutable $lastActivityAt = null;
+
+    public function getLastActivityAt(): ?DateTimeImmutable
+    {
+        return $this->lastActivityAt;
+    }
+
+    /**
+     * Update the last activity timestamp to current time.
+     *
+     * @throws Exception
+     */
+    public function updateLastActivity(): void
+    {
+        $this->lastActivityAt = DateAndTimeService::getDateTimeImmutable();
+    }
+
     /**
      * @var Collection<int, EditSession>
      */

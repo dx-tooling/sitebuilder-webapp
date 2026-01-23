@@ -40,6 +40,10 @@ final class ProjectController extends AbstractController
     )]
     public function list(): Response
     {
+        // Release any stale conversations (where users left without finishing)
+        // This ensures workspaces become available again after 5 minutes of inactivity
+        $this->chatBasedContentEditorFacade->releaseStaleConversations();
+
         $projects = $this->projectService->findAll();
 
         $projectsWithStatus = [];
