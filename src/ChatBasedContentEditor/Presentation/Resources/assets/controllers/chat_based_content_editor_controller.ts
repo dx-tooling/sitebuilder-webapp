@@ -15,6 +15,7 @@ import {
     getWorkingContainerStyle,
     getProgressAnimationState,
 } from "./chat_editor_helpers.ts";
+import { renderMarkdown } from "./markdown_renderer.ts";
 
 export default class extends Controller {
     static values = {
@@ -519,7 +520,12 @@ export default class extends Controller {
 
         if (chunk.chunkType === "text" && payload.content) {
             const textEl = this.getOrCreateTextElement(container);
-            textEl.textContent += payload.content;
+            // Append to raw markdown content stored in data attribute
+            const currentRaw = textEl.dataset.rawMarkdown || "";
+            const newRaw = currentRaw + payload.content;
+            textEl.dataset.rawMarkdown = newRaw;
+            // Render markdown to HTML
+            textEl.innerHTML = renderMarkdown(newRaw, { streaming: true });
             this.scrollToBottom();
         } else if (chunk.chunkType === "event") {
             const event = payloadToAgentEvent(payload);
