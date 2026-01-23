@@ -5,6 +5,7 @@ import { webuiBootstrap } from "@enterprise-tooling-for-symfony/webui";
 import ChatBasedContentEditorController from "../src/ChatBasedContentEditor/Presentation/Resources/assets/controllers/chat_based_content_editor_controller.ts";
 import ConversationHeartbeatController from "../src/ChatBasedContentEditor/Presentation/Resources/assets/controllers/conversation_heartbeat_controller.ts";
 import DistFilesController from "../src/ChatBasedContentEditor/Presentation/Resources/assets/controllers/dist_files_controller.ts";
+import MarkdownController from "../src/ChatBasedContentEditor/Presentation/Resources/assets/controllers/markdown_controller.ts";
 import WorkspaceSetupController from "../src/ChatBasedContentEditor/Presentation/Resources/assets/controllers/workspace_setup_controller.ts";
 
 const app = startStimulusApp();
@@ -12,6 +13,7 @@ const app = startStimulusApp();
 app.register("chat-based-content-editor", ChatBasedContentEditorController);
 app.register("conversation-heartbeat", ConversationHeartbeatController);
 app.register("dist-files", DistFilesController);
+app.register("markdown", MarkdownController);
 app.register("workspace-setup", WorkspaceSetupController);
 
 webuiBootstrap(app);
