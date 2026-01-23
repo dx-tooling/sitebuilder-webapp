@@ -37,6 +37,14 @@ interface RunResponse {
     error?: string;
 }
 
+interface ActiveSessionData {
+    id: string;
+    status: string;
+    instruction: string;
+    chunks: PollChunk[];
+    lastChunkId: number;
+}
+
 export default class extends Controller {
     static values = {
         runUrl: String,
@@ -44,6 +52,7 @@ export default class extends Controller {
         conversationId: String,
         contextUsageUrl: String,
         contextUsage: Object,
+        activeSession: Object,
     };
 
     static targets = [
@@ -63,6 +72,7 @@ export default class extends Controller {
     declare readonly conversationIdValue: string;
     declare readonly contextUsageUrlValue: string;
     declare readonly contextUsageValue: ContextUsageData;
+    declare readonly activeSessionValue: ActiveSessionData | null;
 
     declare readonly hasMessagesTarget: boolean;
     declare readonly messagesTarget: HTMLElement;
@@ -94,6 +104,12 @@ export default class extends Controller {
             this.updateContextBar(cu);
         }
         this.startContextUsagePolling();
+
+        // Check for active session and resume if needed
+        const activeSession = this.activeSessionValue as ActiveSessionData | null;
+        if (activeSession && activeSession.id) {
+            this.resumeActiveSession(activeSession);
+        }
     }
 
     disconnect(): void {
@@ -207,9 +223,7 @@ export default class extends Controller {
         this.messagesTarget.appendChild(assistantEl);
         this.scrollToBottom();
 
-        this.submitTarget.disabled = true;
-        this.submitTarget.innerHTML = '<span class="inline-flex items-center gap-1.5">✨ Working...</span>';
-        this.submitTarget.classList.add("!bg-gradient-to-r", "!from-purple-500", "!to-blue-500", "animate-pulse");
+        this.setWorkingState();
 
         const form = (event.target as HTMLElement).closest("form");
         const csrfInput = form?.querySelector('input[name="_csrf_token"]') as HTMLInputElement | null;
@@ -246,8 +260,8 @@ export default class extends Controller {
         }
     }
 
-    private startPolling(sessionId: string, container: HTMLElement): void {
-        let lastId = 0;
+    private startPolling(sessionId: string, container: HTMLElement, startingLastId: number = 0): void {
+        let lastId = startingLastId;
         const pollUrl = this.pollUrlTemplateValue.replace("__SESSION_ID__", sessionId);
 
         const poll = async (): Promise<void> => {
@@ -308,6 +322,59 @@ export default class extends Controller {
         this.submitTarget.disabled = false;
         this.submitTarget.textContent = "Run";
         this.submitTarget.classList.remove("!bg-gradient-to-r", "!from-purple-500", "!to-blue-500", "animate-pulse");
+    }
+
+    private setWorkingState(): void {
+        if (this.hasSubmitTarget) {
+            this.submitTarget.disabled = true;
+            this.submitTarget.innerHTML = '<span class="inline-flex items-center gap-1.5">✨ Working...</span>';
+            this.submitTarget.classList.add("!bg-gradient-to-r", "!from-purple-500", "!to-blue-500", "animate-pulse");
+        }
+    }
+
+    private resumeActiveSession(activeSession: ActiveSessionData): void {
+        if (!this.hasMessagesTarget || !this.hasSubmitTarget) {
+            return;
+        }
+
+        // Find the last assistant response element (server-rendered for the active session)
+        const assistantElements = this.messagesTarget.querySelectorAll<HTMLElement>(".flex.justify-start");
+        const lastAssistantEl = assistantElements[assistantElements.length - 1];
+
+        if (!lastAssistantEl) {
+            return;
+        }
+
+        // Get the inner container (the div with the response)
+        const existingInner = lastAssistantEl.querySelector<HTMLElement>(".max-w-\\[85\\%\\].rounded-lg.px-4.py-2");
+
+        if (!existingInner) {
+            return;
+        }
+
+        // Clear the existing content and set up for streaming
+        existingInner.innerHTML = "";
+        existingInner.classList.add("space-y-2");
+
+        // Create technical messages container
+        const technicalContainer = this.createTechnicalMessagesContainer();
+        existingInner.appendChild(technicalContainer);
+
+        // Set submit button to working state
+        this.setWorkingState();
+
+        // Replay existing chunks
+        for (const chunk of activeSession.chunks) {
+            // Check if session already completed while we were away
+            if (this.handleChunk(chunk, existingInner)) {
+                // Session is done, don't start polling
+                return;
+            }
+        }
+
+        // Start polling from where we left off
+        this.startPolling(activeSession.id, existingInner, activeSession.lastChunkId);
+        this.scrollToBottom();
     }
 
     private handleChunk(chunk: PollChunk, container: HTMLElement): boolean {
