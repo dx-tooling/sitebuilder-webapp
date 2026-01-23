@@ -59,10 +59,12 @@ services:
     EtfsCodingAgent\Service\FileOperationsService: ~
 
     # Secure file operations decorator - wraps base service with path validation
+    # Also translates /workspace paths to actual workspace paths via execution context
     App\WorkspaceTooling\Infrastructure\Security\SecureFileOperationsService:
         arguments:
             - '@EtfsCodingAgent\Service\FileOperationsService'
             - '@App\WorkspaceTooling\Infrastructure\Security\SecurePathResolver'
+            - '@App\WorkspaceTooling\Infrastructure\Execution\AgentExecutionContext'
             - "%workspace_mgmt.workspace_root%"
 
     # Wire FileOperationsServiceInterface to the secure decorator
