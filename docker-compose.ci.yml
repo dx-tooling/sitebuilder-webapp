@@ -1,0 +1,5 @@
+# CI override: use pre-built image from GitHub Container Registry instead of building locally
+services:
+    app:
+        image: ${APP_IMAGE}
+        build: !reset null
