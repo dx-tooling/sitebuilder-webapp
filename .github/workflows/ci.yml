@@ -29,7 +29,13 @@ jobs:
                   docker compose exec -T app php bin/console doctrine:migrations:migrate --no-interaction
             - name: Run quality checks
               run: |
-                  docker compose exec -T app mise run quality
+                  docker compose exec -T app php bin/console doctrine:schema:validate -v --skip-sync
+                  docker compose exec -T app php bin/console doctrine:migrations:up-to-date
+                  docker compose exec -T app php bin/php-cs-fixer.php fix
+                  docker compose exec -T app php vendor/bin/phpstan --memory-limit=1024M
+                  docker compose exec -T app mise exec node -- npm run prettier:fix
+                  docker compose exec -T app mise exec node -- npm run lint
+                  docker compose exec -T app mise exec node -- ./node_modules/.bin/tsc --noEmit
                   git diff --exit-code
 
     tests-php:
@@ -54,7 +60,7 @@ jobs:
                   docker compose exec -T app php bin/console doctrine:database:create --if-not-exists
                   docker compose exec -T app php bin/console doctrine:migrations:migrate --no-interaction
             - name: Run PHP tests
-              run: docker compose exec -T app mise run tests
+              run: docker compose exec -T app php bin/phpunit
 
     tests-frontend:
         name: Frontend tests
@@ -74,7 +80,7 @@ jobs:
                   docker compose exec -T app composer install
                   docker compose exec -T app mise exec node -- npm install --no-save
             - name: Run frontend tests
-              run: docker compose exec -T app mise run tests:frontend
+              run: docker compose exec -T app mise exec node -- npm run test
 
     build-frontend:
         name: Frontend build
@@ -94,4 +100,6 @@ jobs:
                   docker compose exec -T app composer install
                   docker compose exec -T app mise exec node -- npm install --no-save
             - name: Build frontend assets
-              run: docker compose exec -T app mise run frontend
+              run: |
+                  docker compose exec -T app mise exec node -- php bin/console tailwind:build
+                  docker compose exec -T app php bin/console asset-map:compile
