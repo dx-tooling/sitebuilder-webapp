@@ -49,3 +49,5 @@ public/workspaces/*
 /.gnupg/
 /.local/
 /.npm/
+
+.playwright-mcp/

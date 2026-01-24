@@ -9,7 +9,8 @@ fi
 
 HOST_PROJECT_PATH="${HOST_PROJECT_PATH:-$(pwd)}" /usr/bin/env docker compose up --build -d
 
-mise run composer install
+docker compose up --build -d
+/usr/bin/env docker compose exec -T app composer install
 mise run in-app-container mise trust
 mise run in-app-container mise install
 mise run npm install --no-save
