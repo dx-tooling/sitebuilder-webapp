@@ -9,11 +9,21 @@ jobs:
     quality:
         name: Quality checks
         runs-on: ubuntu-latest
+        container:
+            image: ubuntu:24.04
+        services:
+            docker:
+                image: docker:dind
+                options: --privileged --shm-size=2g -v /var/run/docker.sock:/var/run/docker.sock:rw
         env:
             ETFS_PROJECT_NAME: ci
             HOST_PROJECT_PATH: ${{ github.workspace }}
         steps:
             - uses: actions/checkout@v4
+            - name: Install Docker CLI and Compose
+              run: |
+                  apt-get update
+                  apt-get install -y docker.io docker-compose-plugin
             - name: Start Docker services
               run: docker compose up --build -d app mariadb
             - name: Install dependencies
@@ -25,27 +35,31 @@ jobs:
                   docker compose exec -T app mise exec node -- npm install --no-save
             - name: Setup database
               run: |
-                  docker compose exec -T app php bin/console doctrine:database:create --if-not-exists
-                  docker compose exec -T app php bin/console doctrine:migrations:migrate --no-interaction
+                  docker compose exec -T app mise run console doctrine:database:create --if-not-exists
+                  docker compose exec -T app mise run console doctrine:migrations:migrate --no-interaction
             - name: Run quality checks
               run: |
-                  docker compose exec -T app php bin/console doctrine:schema:validate -v --skip-sync
-                  docker compose exec -T app php bin/console doctrine:migrations:up-to-date
-                  docker compose exec -T app php bin/php-cs-fixer.php fix
-                  docker compose exec -T app php vendor/bin/phpstan --memory-limit=1024M
-                  docker compose exec -T app mise exec node -- npm run prettier:fix
-                  docker compose exec -T app mise exec node -- npm run lint
-                  docker compose exec -T app mise exec node -- ./node_modules/.bin/tsc --noEmit
+                  docker compose exec -T app mise run quality
                   git diff --exit-code
 
     tests-php:
         name: PHP tests
         runs-on: ubuntu-latest
+        container:
+            image: ubuntu:24.04
+        services:
+            docker:
+                image: docker:dind
+                options: --privileged --shm-size=2g -v /var/run/docker.sock:/var/run/docker.sock:rw
         env:
             ETFS_PROJECT_NAME: ci
             HOST_PROJECT_PATH: ${{ github.workspace }}
         steps:
             - uses: actions/checkout@v4
+            - name: Install Docker CLI and Compose
+              run: |
+                  apt-get update
+                  apt-get install -y docker.io docker-compose-plugin
             - name: Start Docker services
               run: docker compose up --build -d app mariadb
             - name: Install dependencies
@@ -57,19 +71,29 @@ jobs:
                   docker compose exec -T app mise exec node -- npm install --no-save
             - name: Setup database
               run: |
-                  docker compose exec -T app php bin/console doctrine:database:create --if-not-exists
-                  docker compose exec -T app php bin/console doctrine:migrations:migrate --no-interaction
+                  docker compose exec -T app mise run console doctrine:database:create --if-not-exists
+                  docker compose exec -T app mise run console doctrine:migrations:migrate --no-interaction
             - name: Run PHP tests
-              run: docker compose exec -T app php bin/phpunit
+              run: docker compose exec -T app mise run tests
 
     tests-frontend:
         name: Frontend tests
         runs-on: ubuntu-latest
+        container:
+            image: ubuntu:24.04
+        services:
+            docker:
+                image: docker:dind
+                options: --privileged --shm-size=2g -v /var/run/docker.sock:/var/run/docker.sock:rw
         env:
             ETFS_PROJECT_NAME: ci
             HOST_PROJECT_PATH: ${{ github.workspace }}
         steps:
             - uses: actions/checkout@v4
+            - name: Install Docker CLI and Compose
+              run: |
+                  apt-get update
+                  apt-get install -y docker.io docker-compose-plugin
             - name: Start Docker services
               run: docker compose up --build -d app
             - name: Install dependencies
@@ -80,16 +104,26 @@ jobs:
                   docker compose exec -T app composer install
                   docker compose exec -T app mise exec node -- npm install --no-save
             - name: Run frontend tests
-              run: docker compose exec -T app mise exec node -- npm run test
+              run: docker compose exec -T app mise run tests:frontend
 
     build-frontend:
         name: Frontend build
         runs-on: ubuntu-latest
+        container:
+            image: ubuntu:24.04
+        services:
+            docker:
+                image: docker:dind
+                options: --privileged --shm-size=2g -v /var/run/docker.sock:/var/run/docker.sock:rw
         env:
             ETFS_PROJECT_NAME: ci
             HOST_PROJECT_PATH: ${{ github.workspace }}
         steps:
             - uses: actions/checkout@v4
+            - name: Install Docker CLI and Compose
+              run: |
+                  apt-get update
+                  apt-get install -y docker.io docker-compose-plugin
             - name: Start Docker services
               run: docker compose up --build -d app
             - name: Install dependencies
@@ -100,6 +134,4 @@ jobs:
                   docker compose exec -T app composer install
                   docker compose exec -T app mise exec node -- npm install --no-save
             - name: Build frontend assets
-              run: |
-                  docker compose exec -T app mise exec node -- php bin/console tailwind:build
-                  docker compose exec -T app php bin/console asset-map:compile
+              run: docker compose exec -T app mise run frontend
