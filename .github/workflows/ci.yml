@@ -22,7 +22,7 @@ jobs:
                   docker compose exec -T app mise install
                   # Install vendor tasks before using mise run composer
                   docker compose exec -T app composer install
-                  docker compose exec -T app mise run npm install --no-save
+                  docker compose exec -T app mise exec node -- npm install --no-save
             - name: Setup database
               run: |
                   docker compose exec -T app mise run console doctrine:database:create --if-not-exists
@@ -48,7 +48,7 @@ jobs:
                   docker compose exec -T app mise install
                   # Install vendor tasks before using mise run composer
                   docker compose exec -T app composer install
-                  docker compose exec -T app mise run npm install --no-save
+                  docker compose exec -T app mise exec node -- npm install --no-save
             - name: Setup database
               run: |
                   docker compose exec -T app mise run console doctrine:database:create --if-not-exists
@@ -72,7 +72,7 @@ jobs:
                   docker compose exec -T app mise install
                   # Install vendor tasks before using mise run composer
                   docker compose exec -T app composer install
-                  docker compose exec -T app mise run npm install --no-save
+                  docker compose exec -T app mise exec node -- npm install --no-save
             - name: Run frontend tests
               run: docker compose exec -T app mise run tests:frontend
 
@@ -92,6 +92,6 @@ jobs:
                   docker compose exec -T app mise install
                   # Install vendor tasks before using mise run composer
                   docker compose exec -T app composer install
-                  docker compose exec -T app mise run npm install --no-save
+                  docker compose exec -T app mise exec node -- npm install --no-save
             - name: Build frontend assets
               run: docker compose exec -T app mise run frontend
