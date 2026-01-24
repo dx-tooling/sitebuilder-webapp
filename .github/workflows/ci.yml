@@ -64,11 +64,16 @@ jobs:
                   docker compose exec -T app mise exec node -- npm install --no-save
             - name: Setup database
               run: |
-                  docker compose exec -T app mise run console doctrine:database:create --if-not-exists
-                  docker compose exec -T app mise run console doctrine:migrations:migrate --no-interaction
+                  docker compose exec -T app php bin/console doctrine:database:create --if-not-exists
+                  docker compose exec -T app php bin/console doctrine:migrations:migrate --no-interaction
             - name: Run quality checks
               run: |
-                  docker compose exec -T app mise run quality
+                  docker compose exec -T app php bin/console doctrine:schema:validate
+                  docker compose exec -T app composer exec -- php-cs-fixer fix
+                  docker compose exec -T app mise exec node -- npx prettier --write .
+                  docker compose exec -T app mise exec node -- npx eslint --fix .
+                  docker compose exec -T app mise exec node -- npx tsc --noEmit
+                  docker compose exec -T app composer exec -- phpstan analyse
                   git diff --exit-code
 
     tests-php:
@@ -97,10 +102,14 @@ jobs:
                   docker compose exec -T app mise exec node -- npm install --no-save
             - name: Setup database
               run: |
-                  docker compose exec -T app mise run console doctrine:database:create --if-not-exists
-                  docker compose exec -T app mise run console doctrine:migrations:migrate --no-interaction
+                  docker compose exec -T app php bin/console doctrine:database:create --if-not-exists
+                  docker compose exec -T app php bin/console doctrine:migrations:migrate --no-interaction
             - name: Run PHP tests
-              run: docker compose exec -T app mise run tests
+              run: |
+                  docker compose exec -T app php vendor/bin/pest --group=architecture
+                  docker compose exec -T app php vendor/bin/pest tests/Unit
+                  docker compose exec -T app php vendor/bin/pest tests/Integration
+                  docker compose exec -T app php vendor/bin/pest tests/Application
 
     tests-frontend:
         name: Frontend tests
@@ -127,7 +136,7 @@ jobs:
                   docker compose exec -T app composer install
                   docker compose exec -T app mise exec node -- npm install --no-save
             - name: Run frontend tests
-              run: docker compose exec -T app mise run tests:frontend
+              run: docker compose exec -T app mise exec node -- npm test
 
     build-frontend:
         name: Frontend build
@@ -154,4 +163,6 @@ jobs:
                   docker compose exec -T app composer install
                   docker compose exec -T app mise exec node -- npm install --no-save
             - name: Build frontend assets
-              run: docker compose exec -T app mise run frontend
+              run: |
+                  docker compose exec -T app mise exec node -- npx tailwindcss -i ./assets/styles/app.css -o ./public/assets/styles/app.css
+                  docker compose exec -T app php bin/console asset-map:compile
