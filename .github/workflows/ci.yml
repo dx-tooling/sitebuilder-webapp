@@ -120,7 +120,7 @@ jobs:
                   echo "Running unit tests..."
                   docker compose exec -T app php vendor/bin/pest -v tests/Unit
                   echo "Building frontend assets for integration tests..."
-                  docker compose exec -T app php bin/console tailwind:build
+                  docker compose exec -T app mise exec node -- php bin/console tailwind:build
                   docker compose exec -T app mise exec node -- php bin/console typescript:build
                   echo "Running integration tests..."
                   docker compose exec -T app php bin/console doctrine:database:drop --env=test --if-exists --force
