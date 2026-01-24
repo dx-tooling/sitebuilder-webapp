@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Account\Domain\Entity;
 
 use DateTimeImmutable;
+use Deprecated;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use EnterpriseToolingForSymfony\SharedBundle\DateAndTime\Service\DateAndTimeService;
@@ -103,9 +104,10 @@ class AccountCore implements UserInterface, PasswordAuthenticatedUserInterface
         $this->roles = $roles;
     }
 
+    #[Deprecated]
     public function eraseCredentials(): void
     {
-        // If you store any temporary, sensitive data on the user, clear it here
+        // No temporary sensitive data stored on this user entity
     }
 
     public function getUserIdentifier(): string
