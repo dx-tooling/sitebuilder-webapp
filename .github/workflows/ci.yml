@@ -69,11 +69,11 @@ jobs:
             - name: Run quality checks
               run: |
                   docker compose exec -T app php bin/console doctrine:schema:validate
-                  docker compose exec -T app composer exec -- php-cs-fixer fix
-                  docker compose exec -T app mise exec node -- npx prettier --write .
-                  docker compose exec -T app mise exec node -- npx eslint --fix .
-                  docker compose exec -T app mise exec node -- npx tsc --noEmit
-                  docker compose exec -T app composer exec -- phpstan analyse
+                  docker compose exec -T app php bin/php-cs-fixer.php fix
+                  docker compose exec -T app mise exec node -- npm run prettier:fix
+                  docker compose exec -T app mise exec node -- npm run lint
+                  docker compose exec -T app mise exec node -- npm exec tsc
+                  docker compose exec -T app php vendor/bin/phpstan --memory-limit=1024M
                   git diff --exit-code
 
     tests-php:
@@ -113,12 +113,21 @@ jobs:
                   docker compose exec -T app php bin/console doctrine:migrations:migrate --no-interaction
             - name: Run PHP tests
               run: |
+                  echo "Running architecture tests..."
                   docker compose exec -T app php vendor/bin/pest -v --group=architecture
+                  echo "Running shell-scripts tests..."
+                  docker compose exec -T app mise exec bats -- bats tests/ShellScripts
+                  echo "Running unit tests..."
+                  docker compose exec -T app php vendor/bin/pest -v tests/Unit
+                  echo "Running integration tests..."
                   docker compose exec -T app php bin/console doctrine:database:drop --env=test --if-exists --force
                   docker compose exec -T app php bin/console doctrine:database:create --env=test
                   docker compose exec -T app php bin/console doctrine:migrations:migrate --env=test --no-interaction
-                  docker compose exec -T app php vendor/bin/pest -v tests/Unit
                   docker compose exec -T app php vendor/bin/pest -v tests/Integration
+                  echo "Running application tests..."
+                  docker compose exec -T app php bin/console doctrine:database:drop --env=test --if-exists --force
+                  docker compose exec -T app php bin/console doctrine:database:create --env=test
+                  docker compose exec -T app php bin/console doctrine:migrations:migrate --env=test --no-interaction
                   docker compose exec -T app php vendor/bin/pest -v tests/Application
 
     tests-frontend:
@@ -174,5 +183,6 @@ jobs:
                   docker compose exec -T app mise exec node -- npm install --no-save
             - name: Build frontend assets
               run: |
-                  docker compose exec -T app php bin/console tailwind:build
+                  docker compose exec -T app rm -rf public/assets
+                  docker compose exec -T app mise exec node -- php bin/console tailwind:build
                   docker compose exec -T app php bin/console asset-map:compile
