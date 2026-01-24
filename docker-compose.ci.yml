@@ -3,3 +3,5 @@ services:
     app:
         image: ${APP_IMAGE}
         build: !reset null
+        volumes:
+            - /var/run/docker.sock:/var/run/docker.sock
