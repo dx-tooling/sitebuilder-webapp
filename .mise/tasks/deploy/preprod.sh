@@ -1,12 +1,13 @@
 #!/usr/bin/env bash
+#MISE description="Deploy to preprod server"
 
 set -e
 
 # Deployment script for sitebuilder-webapp to preprod environment
-# Usage: ./bin/deploy-preprod.sh [--skip-build] [--skip-migrations]
+# Usage: mise run deploy:preprod -- --skip-build --skip-migrations
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
-PROJECT_ROOT="$( cd "${SCRIPT_DIR}/.." >/dev/null 2>&1 && pwd )"
+PROJECT_ROOT="$( cd "${SCRIPT_DIR}/../../.." >/dev/null 2>&1 && pwd )"
 cd "${PROJECT_ROOT}"
 
 # Configuration
