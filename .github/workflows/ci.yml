@@ -25,8 +25,8 @@ jobs:
                   docker compose exec -T app mise exec node -- npm install --no-save
             - name: Setup database
               run: |
-                  docker compose exec -T app mise run console doctrine:database:create --if-not-exists
-                  docker compose exec -T app mise run console doctrine:migrations:migrate --no-interaction
+                  docker compose exec -T app php bin/console doctrine:database:create --if-not-exists
+                  docker compose exec -T app php bin/console doctrine:migrations:migrate --no-interaction
             - name: Run quality checks
               run: |
                   docker compose exec -T app mise run quality
@@ -51,8 +51,8 @@ jobs:
                   docker compose exec -T app mise exec node -- npm install --no-save
             - name: Setup database
               run: |
-                  docker compose exec -T app mise run console doctrine:database:create --if-not-exists
-                  docker compose exec -T app mise run console doctrine:migrations:migrate --no-interaction
+                  docker compose exec -T app php bin/console doctrine:database:create --if-not-exists
+                  docker compose exec -T app php bin/console doctrine:migrations:migrate --no-interaction
             - name: Run PHP tests
               run: docker compose exec -T app mise run tests
 
