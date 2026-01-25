@@ -84,7 +84,7 @@
 
         {# Header with project context #}
         <div>
-            <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+            <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
                 <div>
                     <h1 class="text-2xl font-semibold text-dark-900 dark:text-dark-100">Content editor</h1>
                     {% if project %}
@@ -95,7 +95,7 @@
                         <p class="text-dark-600 dark:text-dark-400 mt-1">Describe what you want changed in plain language. The assistant will take care of the edits and show progress.</p>
                     {% endif %}
                 </div>
-                <div class="flex flex-wrap items-center gap-2 md:justify-end">
+                <div class="flex flex-wrap items-center gap-2 lg:justify-end">
                     {% if canEdit %}
                         <form method="POST" action="{{ path('chat_based_content_editor.presentation.finish', { conversationId: conversation.id }) }}" class="inline">
                             <input type="hidden" name="_csrf_token" value="{{ csrf_token('conversation_finish') }}">
