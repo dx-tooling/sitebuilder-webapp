@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\LlmContentEditor\Domain\Agent;
 
 use App\LlmContentEditor\Domain\Enum\LlmModelName;
+use App\LlmContentEditor\Facade\Dto\AgentConfigDto;
 use App\WorkspaceTooling\Facade\WorkspaceToolingServiceInterface;
 use EtfsCodingAgent\Agent\BaseCodingAgent;
 use NeuronAI\Providers\AIProviderInterface;
@@ -19,6 +20,7 @@ class ContentEditorAgent extends BaseCodingAgent
         private readonly WorkspaceToolingServiceInterface $sitebuilderFacade,
         private readonly LlmModelName                     $model,
         private readonly string                           $apiKey,
+        private readonly ?AgentConfigDto                  $agentConfig = null,
     ) {
         parent::__construct($sitebuilderFacade);
     }
@@ -35,6 +37,52 @@ class ContentEditorAgent extends BaseCodingAgent
      * @return list<string>
      */
     protected function getBackgroundInstructions(): array
+    {
+        if ($this->agentConfig !== null) {
+            return $this->splitInstructions($this->agentConfig->backgroundInstructions);
+        }
+
+        return $this->getDefaultBackgroundInstructions();
+    }
+
+    /**
+     * @return list<string>
+     */
+    protected function getStepInstructions(): array
+    {
+        if ($this->agentConfig !== null) {
+            return $this->splitInstructions($this->agentConfig->stepInstructions);
+        }
+
+        return $this->getDefaultStepInstructions();
+    }
+
+    /**
+     * @return list<string>
+     */
+    protected function getOutputInstructions(): array
+    {
+        if ($this->agentConfig !== null) {
+            return $this->splitInstructions($this->agentConfig->outputInstructions);
+        }
+
+        return $this->getDefaultOutputInstructions();
+    }
+
+    /**
+     * Split instruction text into lines.
+     *
+     * @return list<string>
+     */
+    private function splitInstructions(string $instructions): array
+    {
+        return explode("\n", $instructions);
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function getDefaultBackgroundInstructions(): array
     {
         return [
             'You are a friendly AI Agent that helps the user to work with files in a Node.js web content workspace.',
@@ -84,7 +132,7 @@ class ContentEditorAgent extends BaseCodingAgent
     /**
      * @return list<string>
      */
-    protected function getStepInstructions(): array
+    private function getDefaultStepInstructions(): array
     {
         return [
             '1. EXPLORE: List the working folder (the path from the user\'s message) to understand its structure.',
@@ -101,7 +149,7 @@ class ContentEditorAgent extends BaseCodingAgent
     /**
      * @return list<string>
      */
-    protected function getOutputInstructions(): array
+    private function getDefaultOutputInstructions(): array
     {
         return [
             'Summarize what changes were made and why.',

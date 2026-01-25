@@ -13,6 +13,7 @@ use App\ChatBasedContentEditor\Domain\Enum\ConversationMessageRole;
 use App\ChatBasedContentEditor\Domain\Enum\EditSessionStatus;
 use App\ChatBasedContentEditor\Infrastructure\Message\RunEditSessionMessage;
 use App\ChatBasedContentEditor\Infrastructure\Service\ConversationUrlServiceInterface;
+use App\LlmContentEditor\Facade\Dto\AgentConfigDto;
 use App\LlmContentEditor\Facade\Dto\AgentEventDto;
 use App\LlmContentEditor\Facade\Dto\ConversationMessageDto;
 use App\LlmContentEditor\Facade\Dto\ToolInputEntryDto;
@@ -89,11 +90,19 @@ final readonly class RunEditSessionHandler
                 $project->agentImage
             );
 
+            // Build agent configuration from project settings
+            $agentConfig = new AgentConfigDto(
+                $project->agentBackgroundInstructions,
+                $project->agentStepInstructions,
+                $project->agentOutputInstructions,
+            );
+
             $generator = $this->facade->streamEditWithHistory(
                 $session->getWorkspacePath(),
                 $session->getInstruction(),
                 $previousMessages,
-                $project->llmApiKey
+                $project->llmApiKey,
+                $agentConfig
             );
 
             foreach ($generator as $chunk) {

@@ -6,6 +6,7 @@ namespace App\LlmContentEditor\Facade;
 
 use App\LlmContentEditor\Domain\Agent\ContentEditorAgent;
 use App\LlmContentEditor\Domain\Enum\LlmModelName;
+use App\LlmContentEditor\Facade\Dto\AgentConfigDto;
 use App\LlmContentEditor\Facade\Dto\ConversationMessageDto;
 use App\LlmContentEditor\Facade\Dto\EditStreamChunkDto;
 use App\LlmContentEditor\Facade\Enum\LlmModelProvider;
@@ -57,10 +58,11 @@ final class LlmContentEditorFacade implements LlmContentEditorFacadeInterface
      * @return Generator<EditStreamChunkDto>
      */
     public function streamEditWithHistory(
-        string $workspacePath,
-        string $instruction,
-        array  $previousMessages,
-        string $llmApiKey
+        string          $workspacePath,
+        string          $instruction,
+        array           $previousMessages,
+        string          $llmApiKey,
+        ?AgentConfigDto $agentConfig = null
     ): Generator {
         // Convert previous message DTOs to NeuronAI messages
         $initialMessages = [];
@@ -123,7 +125,8 @@ final class LlmContentEditorFacade implements LlmContentEditorFacadeInterface
         $agent = new ContentEditorAgent(
             $this->workspaceTooling,
             LlmModelName::defaultForContentEditor(),
-            $llmApiKey
+            $llmApiKey,
+            $agentConfig
         );
         $agent->withChatHistory($chatHistory);
 

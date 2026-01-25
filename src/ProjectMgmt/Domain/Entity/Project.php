@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\ProjectMgmt\Domain\Entity;
 
 use App\LlmContentEditor\Facade\Enum\LlmModelProvider;
+use App\ProjectMgmt\Domain\ValueObject\AgentConfigTemplate;
 use App\ProjectMgmt\Facade\Enum\ProjectType;
 use DateTimeImmutable;
 use Doctrine\DBAL\Types\Types;
@@ -29,7 +30,10 @@ class Project
         LlmModelProvider $llmModelProvider,
         string           $llmApiKey,
         ProjectType      $projectType = ProjectType::DEFAULT,
-        string           $agentImage = self::DEFAULT_AGENT_IMAGE
+        string           $agentImage = self::DEFAULT_AGENT_IMAGE,
+        ?string          $agentBackgroundInstructions = null,
+        ?string          $agentStepInstructions = null,
+        ?string          $agentOutputInstructions = null
     ) {
         $this->name             = $name;
         $this->gitUrl           = $gitUrl;
@@ -39,6 +43,12 @@ class Project
         $this->projectType      = $projectType;
         $this->agentImage       = $agentImage;
         $this->createdAt        = DateAndTimeService::getDateTimeImmutable();
+
+        // Initialize agent config from template if not provided
+        $template                          = AgentConfigTemplate::forProjectType($projectType);
+        $this->agentBackgroundInstructions = $agentBackgroundInstructions ?? $template->backgroundInstructions;
+        $this->agentStepInstructions       = $agentStepInstructions       ?? $template->stepInstructions;
+        $this->agentOutputInstructions     = $agentOutputInstructions     ?? $template->outputInstructions;
     }
 
     #[ORM\Id]
@@ -175,6 +185,54 @@ class Project
     public function setLlmApiKey(string $llmApiKey): void
     {
         $this->llmApiKey = $llmApiKey;
+    }
+
+    #[ORM\Column(
+        type: Types::TEXT,
+        nullable: false
+    )]
+    private string $agentBackgroundInstructions;
+
+    public function getAgentBackgroundInstructions(): string
+    {
+        return $this->agentBackgroundInstructions;
+    }
+
+    public function setAgentBackgroundInstructions(string $agentBackgroundInstructions): void
+    {
+        $this->agentBackgroundInstructions = $agentBackgroundInstructions;
+    }
+
+    #[ORM\Column(
+        type: Types::TEXT,
+        nullable: false
+    )]
+    private string $agentStepInstructions;
+
+    public function getAgentStepInstructions(): string
+    {
+        return $this->agentStepInstructions;
+    }
+
+    public function setAgentStepInstructions(string $agentStepInstructions): void
+    {
+        $this->agentStepInstructions = $agentStepInstructions;
+    }
+
+    #[ORM\Column(
+        type: Types::TEXT,
+        nullable: false
+    )]
+    private string $agentOutputInstructions;
+
+    public function getAgentOutputInstructions(): string
+    {
+        return $this->agentOutputInstructions;
+    }
+
+    public function setAgentOutputInstructions(string $agentOutputInstructions): void
+    {
+        $this->agentOutputInstructions = $agentOutputInstructions;
     }
 
     #[ORM\Column(

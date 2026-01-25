@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\ProjectMgmt\Facade;
 
+use App\ProjectMgmt\Facade\Dto\AgentConfigTemplateDto;
 use App\ProjectMgmt\Facade\Dto\ExistingLlmApiKeyDto;
 use App\ProjectMgmt\Facade\Dto\ProjectInfoDto;
+use App\ProjectMgmt\Facade\Enum\ProjectType;
 
 /**
  * Facade for project management operations.
@@ -33,4 +35,10 @@ interface ProjectMgmtFacadeInterface
      * @return list<ExistingLlmApiKeyDto>
      */
     public function getExistingLlmApiKeys(): array;
+
+    /**
+     * Get the default agent configuration template for a given project type.
+     * Used to pre-fill the agent configuration form during project creation.
+     */
+    public function getAgentConfigTemplate(ProjectType $type): AgentConfigTemplateDto;
 }

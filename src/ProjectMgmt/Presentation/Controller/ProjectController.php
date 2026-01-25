@@ -92,10 +92,14 @@ final class ProjectController extends AbstractController
     )]
     public function new(): Response
     {
+        // Get default agent config template for new projects
+        $defaultTemplate = $this->projectMgmtFacade->getAgentConfigTemplate(ProjectType::DEFAULT);
+
         return $this->render('@project_mgmt.presentation/project_form.twig', [
-            'project'         => null,
-            'llmProviders'    => LlmModelProvider::cases(),
-            'existingLlmKeys' => $this->projectMgmtFacade->getExistingLlmApiKeys(),
+            'project'             => null,
+            'llmProviders'        => LlmModelProvider::cases(),
+            'existingLlmKeys'     => $this->projectMgmtFacade->getExistingLlmApiKeys(),
+            'agentConfigTemplate' => $defaultTemplate,
         ]);
     }
 
@@ -118,6 +122,11 @@ final class ProjectController extends AbstractController
         $llmModelProvider = LlmModelProvider::tryFrom($request->request->getString('llm_model_provider'));
         $llmApiKey        = $request->request->getString('llm_api_key');
         $agentImage       = $this->resolveAgentImage($request);
+
+        // Agent configuration (optional - uses template defaults if empty)
+        $agentBackgroundInstructions = $this->nullIfEmpty($request->request->getString('agent_background_instructions'));
+        $agentStepInstructions       = $this->nullIfEmpty($request->request->getString('agent_step_instructions'));
+        $agentOutputInstructions     = $this->nullIfEmpty($request->request->getString('agent_output_instructions'));
 
         if ($name === '' || $gitUrl === '' || $githubToken === '' || $llmApiKey === '') {
             $this->addFlash('error', 'All fields are required.');
@@ -144,7 +153,10 @@ final class ProjectController extends AbstractController
             $llmModelProvider,
             $llmApiKey,
             ProjectType::DEFAULT,
-            $agentImage
+            $agentImage,
+            $agentBackgroundInstructions,
+            $agentStepInstructions,
+            $agentOutputInstructions
         );
         $this->addFlash('success', 'Project created successfully.');
 
@@ -206,6 +218,11 @@ final class ProjectController extends AbstractController
         $llmApiKey        = $request->request->getString('llm_api_key');
         $agentImage       = $this->resolveAgentImage($request);
 
+        // Agent configuration (null means keep existing values)
+        $agentBackgroundInstructions = $this->nullIfEmpty($request->request->getString('agent_background_instructions'));
+        $agentStepInstructions       = $this->nullIfEmpty($request->request->getString('agent_step_instructions'));
+        $agentOutputInstructions     = $this->nullIfEmpty($request->request->getString('agent_output_instructions'));
+
         if ($name === '' || $gitUrl === '' || $githubToken === '' || $llmApiKey === '') {
             $this->addFlash('error', 'All fields are required.');
 
@@ -232,7 +249,10 @@ final class ProjectController extends AbstractController
             $llmModelProvider,
             $llmApiKey,
             ProjectType::DEFAULT,
-            $agentImage
+            $agentImage,
+            $agentBackgroundInstructions,
+            $agentStepInstructions,
+            $agentOutputInstructions
         );
         $this->addFlash('success', 'Project updated successfully.');
 
@@ -332,6 +352,31 @@ final class ProjectController extends AbstractController
     }
 
     /**
+     * Get agent configuration template for a project type.
+     * Used by frontend to populate defaults when project type changes.
+     */
+    #[Route(
+        path: '/projects/agent-config-template/{type}',
+        name: 'project_mgmt.presentation.agent_config_template',
+        methods: [Request::METHOD_GET]
+    )]
+    public function getAgentConfigTemplate(string $type): JsonResponse
+    {
+        $projectType = ProjectType::tryFrom($type);
+        if ($projectType === null) {
+            return new JsonResponse(['error' => 'Invalid project type.'], 400);
+        }
+
+        $template = $this->projectMgmtFacade->getAgentConfigTemplate($projectType);
+
+        return new JsonResponse([
+            'backgroundInstructions' => $template->backgroundInstructions,
+            'stepInstructions'       => $template->stepInstructions,
+            'outputInstructions'     => $template->outputInstructions,
+        ]);
+    }
+
+    /**
      * Validate Docker image name format.
      * Accepts formats like: name:tag, registry/name:tag, registry:port/name:tag.
      */
@@ -340,5 +385,13 @@ final class ProjectController extends AbstractController
         // Basic validation: must contain a colon for tag, alphanumeric with allowed chars
         // Allows: letters, numbers, dots, dashes, underscores, slashes, colons
         return preg_match('/^[\w.\-\/]+:[\w.\-]+$/', $imageName) === 1;
+    }
+
+    /**
+     * Returns null if string is empty, otherwise returns the string.
+     */
+    private function nullIfEmpty(string $value): ?string
+    {
+        return $value === '' ? null : $value;
     }
 }
