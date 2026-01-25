@@ -27,7 +27,10 @@ final class ProjectService
         LlmModelProvider $llmModelProvider,
         string           $llmApiKey,
         ProjectType      $projectType = ProjectType::DEFAULT,
-        string           $agentImage = Project::DEFAULT_AGENT_IMAGE
+        string           $agentImage = Project::DEFAULT_AGENT_IMAGE,
+        ?string          $agentBackgroundInstructions = null,
+        ?string          $agentStepInstructions = null,
+        ?string          $agentOutputInstructions = null
     ): Project {
         $project = new Project(
             $name,
@@ -36,7 +39,10 @@ final class ProjectService
             $llmModelProvider,
             $llmApiKey,
             $projectType,
-            $agentImage
+            $agentImage,
+            $agentBackgroundInstructions,
+            $agentStepInstructions,
+            $agentOutputInstructions
         );
         $this->entityManager->persist($project);
         $this->entityManager->flush();
@@ -52,7 +58,10 @@ final class ProjectService
         LlmModelProvider $llmModelProvider,
         string           $llmApiKey,
         ProjectType      $projectType = ProjectType::DEFAULT,
-        string           $agentImage = Project::DEFAULT_AGENT_IMAGE
+        string           $agentImage = Project::DEFAULT_AGENT_IMAGE,
+        ?string          $agentBackgroundInstructions = null,
+        ?string          $agentStepInstructions = null,
+        ?string          $agentOutputInstructions = null
     ): void {
         $project->setName($name);
         $project->setGitUrl($gitUrl);
@@ -61,6 +70,17 @@ final class ProjectService
         $project->setLlmApiKey($llmApiKey);
         $project->setProjectType($projectType);
         $project->setAgentImage($agentImage);
+
+        if ($agentBackgroundInstructions !== null) {
+            $project->setAgentBackgroundInstructions($agentBackgroundInstructions);
+        }
+        if ($agentStepInstructions !== null) {
+            $project->setAgentStepInstructions($agentStepInstructions);
+        }
+        if ($agentOutputInstructions !== null) {
+            $project->setAgentOutputInstructions($agentOutputInstructions);
+        }
+
         $this->entityManager->flush();
     }
 

@@ -5,8 +5,11 @@ declare(strict_types=1);
 namespace App\ProjectMgmt\Facade;
 
 use App\ProjectMgmt\Domain\Entity\Project;
+use App\ProjectMgmt\Domain\ValueObject\AgentConfigTemplate;
+use App\ProjectMgmt\Facade\Dto\AgentConfigTemplateDto;
 use App\ProjectMgmt\Facade\Dto\ExistingLlmApiKeyDto;
 use App\ProjectMgmt\Facade\Dto\ProjectInfoDto;
+use App\ProjectMgmt\Facade\Enum\ProjectType;
 use App\WorkspaceMgmt\Infrastructure\Service\GitHubUrlServiceInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use RuntimeException;
@@ -117,6 +120,20 @@ final class ProjectMgmtFacade implements ProjectMgmtFacadeInterface
             $project->getAgentImage(),
             $project->getLlmModelProvider(),
             $project->getLlmApiKey(),
+            $project->getAgentBackgroundInstructions(),
+            $project->getAgentStepInstructions(),
+            $project->getAgentOutputInstructions(),
+        );
+    }
+
+    public function getAgentConfigTemplate(ProjectType $type): AgentConfigTemplateDto
+    {
+        $template = AgentConfigTemplate::forProjectType($type);
+
+        return new AgentConfigTemplateDto(
+            $template->backgroundInstructions,
+            $template->stepInstructions,
+            $template->outputInstructions,
         );
     }
 

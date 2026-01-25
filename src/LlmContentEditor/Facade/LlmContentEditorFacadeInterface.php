@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\LlmContentEditor\Facade;
 
+use App\LlmContentEditor\Facade\Dto\AgentConfigDto;
 use App\LlmContentEditor\Facade\Dto\ConversationMessageDto;
 use App\LlmContentEditor\Facade\Dto\EditStreamChunkDto;
 use App\LlmContentEditor\Facade\Enum\LlmModelProvider;
@@ -28,14 +29,16 @@ interface LlmContentEditorFacadeInterface
      *
      * @param list<ConversationMessageDto> $previousMessages Messages from earlier turns in this conversation
      * @param string                       $llmApiKey        The API key for the LLM provider (BYOK)
+     * @param AgentConfigDto|null          $agentConfig      Custom agent configuration, or null for defaults
      *
      * @return Generator<EditStreamChunkDto>
      */
     public function streamEditWithHistory(
-        string $workspacePath,
-        string $instruction,
-        array  $previousMessages,
-        string $llmApiKey
+        string          $workspacePath,
+        string          $instruction,
+        array           $previousMessages,
+        string          $llmApiKey,
+        ?AgentConfigDto $agentConfig = null
     ): Generator;
 
     /**

@@ -19,6 +19,9 @@ final readonly class ProjectInfoDto
         public string           $agentImage,
         public LlmModelProvider $llmModelProvider,
         public string           $llmApiKey,
+        public string           $agentBackgroundInstructions,
+        public string           $agentStepInstructions,
+        public string           $agentOutputInstructions,
     ) {
     }
 }

@@ -180,6 +180,54 @@
                 });
             </script>
 
+            {# Agent Configuration (Advanced) - collapsible section #}
+            <details class="border border-dark-200 dark:border-dark-700 rounded-lg">
+                <summary class="px-4 py-3 cursor-pointer select-none text-sm font-medium text-dark-700 dark:text-dark-300 hover:bg-dark-50 dark:hover:bg-dark-900/50 rounded-lg">
+                    Agent Configuration (Advanced)
+                </summary>
+                <div class="px-4 pb-4 pt-2 space-y-4 border-t border-dark-200 dark:border-dark-700">
+                    <p class="text-xs text-dark-500 dark:text-dark-400">
+                        Customize how the AI agent behaves when editing this project. These settings control the agent's instructions and workflow.
+                    </p>
+
+                    <div>
+                        <label for="agent_background_instructions" class="etfswui-form-label">Background Instructions</label>
+                        <textarea name="agent_background_instructions"
+                                  id="agent_background_instructions"
+                                  rows="10"
+                                  class="etfswui-form-textarea font-mono text-xs"
+                                  placeholder="System context and workspace conventions...">{{ project ? project.agentBackgroundInstructions : agentConfigTemplate.backgroundInstructions }}</textarea>
+                        <p class="mt-1 text-xs text-dark-500 dark:text-dark-400">
+                            System context about the workspace, conventions, and rules the agent should follow.
+                        </p>
+                    </div>
+
+                    <div>
+                        <label for="agent_step_instructions" class="etfswui-form-label">Step Instructions</label>
+                        <textarea name="agent_step_instructions"
+                                  id="agent_step_instructions"
+                                  rows="6"
+                                  class="etfswui-form-textarea font-mono text-xs"
+                                  placeholder="Workflow steps...">{{ project ? project.agentStepInstructions : agentConfigTemplate.stepInstructions }}</textarea>
+                        <p class="mt-1 text-xs text-dark-500 dark:text-dark-400">
+                            The workflow steps the agent should follow when making changes.
+                        </p>
+                    </div>
+
+                    <div>
+                        <label for="agent_output_instructions" class="etfswui-form-label">Output Instructions</label>
+                        <textarea name="agent_output_instructions"
+                                  id="agent_output_instructions"
+                                  rows="4"
+                                  class="etfswui-form-textarea font-mono text-xs"
+                                  placeholder="Output format instructions...">{{ project ? project.agentOutputInstructions : agentConfigTemplate.outputInstructions }}</textarea>
+                        <p class="mt-1 text-xs text-dark-500 dark:text-dark-400">
+                            Instructions for how the agent should format its output and summaries.
+                        </p>
+                    </div>
+                </div>
+            </details>
+
             <div class="rounded-lg border border-dark-200 dark:border-dark-700 bg-dark-50 dark:bg-dark-800 p-4 text-sm text-dark-600 dark:text-dark-400 space-y-3">
                 <p>
                     Need a GitHub access key? Create a <strong>Personal Access Token</strong> so the app can read and update your project.
