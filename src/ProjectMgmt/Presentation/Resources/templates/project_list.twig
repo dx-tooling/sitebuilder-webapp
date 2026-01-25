@@ -125,5 +125,51 @@
                 {% endfor %}
             </div>
         {% endif %}
+
+        {# Deleted projects section (collapsed by default) #}
+        {% if deletedProjects is not empty %}
+            <details class="mt-8 border border-dark-200 dark:border-dark-700 rounded-lg">
+                <summary class="px-4 py-3 cursor-pointer select-none text-sm font-medium text-dark-500 dark:text-dark-400 hover:bg-dark-50 dark:hover:bg-dark-900/50 rounded-lg">
+                    Deleted projects ({{ deletedProjects|length }})
+                </summary>
+                <div class="px-4 pb-4 pt-2 space-y-3 border-t border-dark-200 dark:border-dark-700">
+                    <p class="text-xs text-dark-500 dark:text-dark-400">
+                        These projects have been soft-deleted. You can permanently delete them to free up resources.
+                    </p>
+                    {% for project in deletedProjects %}
+                        <div class="rounded-lg border border-dark-200 dark:border-dark-700 bg-dark-50 dark:bg-dark-800 p-3">
+                            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                <div class="min-w-0">
+                                    <h4 class="text-sm font-medium text-dark-700 dark:text-dark-300">{{ project.name }}</h4>
+                                    <p class="text-xs text-dark-500 dark:text-dark-400 truncate">{{ project.gitUrl }}</p>
+                                    <p class="text-xs text-dark-400 dark:text-dark-500 mt-1">
+                                        Deleted {{ project.deletedAt|date('M j, Y \\a\\t g:i a') }}
+                                    </p>
+                                </div>
+                                <div class="flex flex-shrink-0 gap-2">
+                                    <form action="{{ path('project_mgmt.presentation.restore', { id: project.id }) }}"
+                                          method="post">
+                                        <input type="hidden" name="_csrf_token" value="{{ csrf_token('restore_project_' ~ project.id) }}">
+                                        <button type="submit"
+                                                class="inline-flex items-center px-3 py-1.5 rounded-md bg-primary-600 text-white text-sm font-medium hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500">
+                                            Restore
+                                        </button>
+                                    </form>
+                                    <form action="{{ path('project_mgmt.presentation.permanently_delete', { id: project.id }) }}"
+                                          method="post"
+                                          onsubmit="return confirm('Permanently delete this project? This action cannot be undone and will remove all associated data.');">
+                                        <input type="hidden" name="_csrf_token" value="{{ csrf_token('permanently_delete_project_' ~ project.id) }}">
+                                        <button type="submit"
+                                                class="inline-flex items-center px-3 py-1.5 rounded-md bg-red-600 text-white text-sm font-medium hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500">
+                                            Delete permanently
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </details>
+        {% endif %}
     </div>
 {% endblock content %}

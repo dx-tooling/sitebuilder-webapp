@@ -99,6 +99,24 @@ final class ProjectService
     }
 
     /**
+     * Permanently delete a project from the database.
+     */
+    public function permanentlyDelete(Project $project): void
+    {
+        $this->entityManager->remove($project);
+        $this->entityManager->flush();
+    }
+
+    /**
+     * Restore a soft-deleted project.
+     */
+    public function restore(Project $project): void
+    {
+        $project->restore();
+        $this->entityManager->flush();
+    }
+
+    /**
      * Find all non-deleted projects.
      *
      * @return list<Project>
@@ -111,6 +129,25 @@ final class ProjectService
             ->from(Project::class, 'p')
             ->where('p.deletedAt IS NULL')
             ->orderBy('p.name', 'ASC')
+            ->getQuery()
+            ->getResult();
+
+        return $projects;
+    }
+
+    /**
+     * Find all soft-deleted projects.
+     *
+     * @return list<Project>
+     */
+    public function findAllDeleted(): array
+    {
+        /** @var list<Project> $projects */
+        $projects = $this->entityManager->createQueryBuilder()
+            ->select('p')
+            ->from(Project::class, 'p')
+            ->where('p.deletedAt IS NOT NULL')
+            ->orderBy('p.deletedAt', 'DESC')
             ->getQuery()
             ->getResult();
 

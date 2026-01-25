@@ -80,8 +80,12 @@ final class ProjectController extends AbstractController
             ];
         }
 
+        // Get soft-deleted projects for the "Deleted projects" section
+        $deletedProjects = $this->projectService->findAllDeleted();
+
         return $this->render('@project_mgmt.presentation/project_list.twig', [
             'projectsWithStatus' => $projectsWithStatus,
+            'deletedProjects'    => $deletedProjects,
         ]);
     }
 
@@ -292,6 +296,67 @@ final class ProjectController extends AbstractController
         $projectName = $project->getName();
         $this->projectService->delete($project);
         $this->addFlash('success', sprintf('Project "%s" deleted successfully.', $projectName));
+
+        return $this->redirectToRoute('project_mgmt.presentation.list');
+    }
+
+    #[Route(
+        path: '/projects/{id}/permanently-delete',
+        name: 'project_mgmt.presentation.permanently_delete',
+        methods: [Request::METHOD_POST],
+        requirements: ['id' => '[a-f0-9-]{36}']
+    )]
+    public function permanentlyDelete(string $id, Request $request): Response
+    {
+        $project = $this->projectService->findById($id);
+
+        if ($project === null || !$project->isDeleted()) {
+            throw $this->createNotFoundException('Project not found.');
+        }
+
+        if (!$this->isCsrfTokenValid('permanently_delete_project_' . $id, $request->request->getString('_csrf_token'))) {
+            $this->addFlash('error', 'Invalid CSRF token.');
+
+            return $this->redirectToRoute('project_mgmt.presentation.list');
+        }
+
+        // Delete associated workspace if exists
+        $workspace = $this->workspaceMgmtFacade->getWorkspaceForProject($id);
+        if ($workspace !== null) {
+            $this->chatBasedContentEditorFacade->finishAllOngoingConversationsForWorkspace($workspace->id);
+            $this->workspaceMgmtFacade->deleteWorkspace($workspace->id);
+        }
+
+        $projectName = $project->getName();
+        $this->projectService->permanentlyDelete($project);
+        $this->addFlash('success', sprintf('Project "%s" permanently deleted.', $projectName));
+
+        return $this->redirectToRoute('project_mgmt.presentation.list');
+    }
+
+    #[Route(
+        path: '/projects/{id}/restore',
+        name: 'project_mgmt.presentation.restore',
+        methods: [Request::METHOD_POST],
+        requirements: ['id' => '[a-f0-9-]{36}']
+    )]
+    public function restore(string $id, Request $request): Response
+    {
+        $project = $this->projectService->findById($id);
+
+        if ($project === null || !$project->isDeleted()) {
+            throw $this->createNotFoundException('Project not found.');
+        }
+
+        if (!$this->isCsrfTokenValid('restore_project_' . $id, $request->request->getString('_csrf_token'))) {
+            $this->addFlash('error', 'Invalid CSRF token.');
+
+            return $this->redirectToRoute('project_mgmt.presentation.list');
+        }
+
+        $projectName = $project->getName();
+        $this->projectService->restore($project);
+        $this->addFlash('success', sprintf('Project "%s" restored successfully.', $projectName));
 
         return $this->redirectToRoute('project_mgmt.presentation.list');
     }

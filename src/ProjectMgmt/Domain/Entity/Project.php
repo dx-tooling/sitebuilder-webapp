@@ -266,4 +266,9 @@ class Project
     {
         $this->deletedAt = DateAndTimeService::getDateTimeImmutable();
     }
+
+    public function restore(): void
+    {
+        $this->deletedAt = null;
+    }
 }
