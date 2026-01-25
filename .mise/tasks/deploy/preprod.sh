@@ -122,53 +122,29 @@ EOF
 
 # Step 3: Create database and run migrations (if not skipped)
 if [ "${SKIP_MIGRATIONS}" != "true" ]; then
+    # Build the compose command (checking for .env.preprod.local on server)
+    COMPOSE_CMD="docker compose --env-file .env.preprod -f ${COMPOSE_FILE}"
+    
     echo ""
     echo "🗄️  Setting up database..."
-    ssh "${SERVER}" << EOF
-        set -e
-        cd ${REMOTE_DIR}
-        export ETFS_PROJECT_NAME=sitebuilder_preprod
-
-        # Build docker compose command with env files
-        COMPOSE="docker compose --env-file .env.preprod"
-        [ -f ".env.preprod.local" ] && COMPOSE="\$COMPOSE --env-file .env.preprod.local"
-        COMPOSE="\$COMPOSE -f ${COMPOSE_FILE}"
-
-        # Wait for database and app container to be ready
-        echo "Waiting for database and app container..."
-        sleep 15
-
-        # Verify app container is running
-        echo "Checking app container status..."
-        \$COMPOSE ps app
-
-        # Create database if it doesn't exist (won't fail if it already exists)
-        echo "Creating database if needed..."
-        \$COMPOSE exec -T app php bin/console doctrine:database:create --if-not-exists --no-interaction
-EOF
+    echo "Waiting for database and app container..."
+    sleep 15
+    
+    echo "Checking app container status..."
+    ssh "${SERVER}" "cd ${REMOTE_DIR} && ${COMPOSE_CMD} ps app"
+    
+    echo "Creating database if needed..."
+    ssh "${SERVER}" "cd ${REMOTE_DIR} && ${COMPOSE_CMD} exec -T app php bin/console doctrine:database:create --if-not-exists --no-interaction"
 
     echo ""
     echo "🔄 Running database migrations..."
-    ssh "${SERVER}" << EOF
-        set -e
-        cd ${REMOTE_DIR}
-        export ETFS_PROJECT_NAME=sitebuilder_preprod
-
-        # Build docker compose command with env files
-        COMPOSE="docker compose --env-file .env.preprod"
-        [ -f ".env.preprod.local" ] && COMPOSE="\$COMPOSE --env-file .env.preprod.local"
-        COMPOSE="\$COMPOSE -f ${COMPOSE_FILE}"
-
-        # Show migration status before running
-        echo "Current migration status:"
-        \$COMPOSE exec -T app php bin/console doctrine:migrations:status
-
-        # Run migrations (do NOT swallow errors - let them propagate)
-        echo "Running database migrations..."
-        \$COMPOSE exec -T app php bin/console doctrine:migrations:migrate --no-interaction
-
-        echo "✓ Migrations completed successfully"
-EOF
+    echo "Current migration status:"
+    ssh "${SERVER}" "cd ${REMOTE_DIR} && ${COMPOSE_CMD} exec -T app php bin/console doctrine:migrations:status"
+    
+    echo "Running database migrations..."
+    ssh "${SERVER}" "cd ${REMOTE_DIR} && ${COMPOSE_CMD} exec -T app php bin/console doctrine:migrations:migrate --no-interaction"
+    
+    echo "✓ Migrations completed successfully"
 fi
 
 # Step 4: Clear cache
