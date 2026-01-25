@@ -137,8 +137,9 @@ final class WorkspaceSetupService
         $this->logger->debug('Creating branch', ['branchName' => $branchName]);
         $this->gitAdapter->checkoutNewBranch($workspacePath, $branchName);
 
-        // Update workspace with branch name
+        // Update workspace with branch name and clear old PR URL
         $workspace->setBranchName($branchName);
+        $workspace->setPullRequestUrl(null);
 
         // Step 4: Run project-type-specific setup steps
         $this->runProjectSetupSteps($projectInfo, $workspacePath);

@@ -134,6 +134,10 @@ final class WorkspaceMgmtFacade implements WorkspaceMgmtFacadeInterface
     {
         $workspace = $this->getWorkspaceOrFail($workspaceId);
 
+        // Clear branch and PR data since workspace will be re-setup
+        $workspace->setBranchName(null);
+        $workspace->setPullRequestUrl(null);
+
         // Use setStatus to bypass transition validation since we're doing a reset
         $this->workspaceService->setStatus($workspace, WorkspaceStatus::AVAILABLE_FOR_SETUP);
     }
@@ -200,15 +204,10 @@ final class WorkspaceMgmtFacade implements WorkspaceMgmtFacadeInterface
 
         if ($branchName !== null) {
             $githubBranchUrl = $this->gitHubUrlService->getBranchUrl($projectInfo->gitUrl, $branchName);
-
-            // Try to find existing PR URL (this is best-effort, may be null if PR doesn't exist yet)
-            try {
-                $githubPrUrl = $this->gitService->findPullRequestUrl($workspace);
-            } catch (Throwable) {
-                // PR might not exist yet, that's okay
-                $githubPrUrl = null;
-            }
         }
+
+        // Use cached PR URL from workspace entity (set when PR is created via ensurePullRequest)
+        $githubPrUrl = $workspace->getPullRequestUrl();
 
         return new WorkspaceInfoDto(
             $id,

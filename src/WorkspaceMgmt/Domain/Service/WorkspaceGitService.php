@@ -9,6 +9,7 @@ use App\WorkspaceMgmt\Domain\Entity\Workspace;
 use App\WorkspaceMgmt\Infrastructure\Adapter\GitAdapterInterface;
 use App\WorkspaceMgmt\Infrastructure\Adapter\GitHubAdapterInterface;
 use App\WorkspaceMgmt\Infrastructure\Service\GitHubUrlServiceInterface;
+use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 use RuntimeException;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
@@ -27,6 +28,7 @@ final class WorkspaceGitService
         private readonly GitHubAdapterInterface     $gitHubAdapter,
         private readonly ProjectMgmtFacadeInterface $projectMgmtFacade,
         private readonly GitHubUrlServiceInterface  $gitHubUrlService,
+        private readonly EntityManagerInterface     $entityManager,
         private readonly LoggerInterface            $logger,
     ) {
     }
@@ -155,6 +157,10 @@ final class WorkspaceGitService
                 'prUrl'       => $existingPrUrl,
             ]);
 
+            // Cache the PR URL in the workspace entity
+            $workspace->setPullRequestUrl($existingPrUrl);
+            $this->entityManager->flush();
+
             return $existingPrUrl;
         }
 
@@ -186,6 +192,10 @@ final class WorkspaceGitService
             'workspaceId' => $workspace->getId(),
             'prUrl'       => $prUrl,
         ]);
+
+        // Cache the PR URL in the workspace entity
+        $workspace->setPullRequestUrl($prUrl);
+        $this->entityManager->flush();
 
         return $prUrl;
     }

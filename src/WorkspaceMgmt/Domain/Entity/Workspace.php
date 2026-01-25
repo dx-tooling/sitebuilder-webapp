@@ -89,6 +89,23 @@ class Workspace
     }
 
     #[ORM\Column(
+        type: Types::STRING,
+        length: 2048,
+        nullable: true
+    )]
+    private ?string $pullRequestUrl = null;
+
+    public function getPullRequestUrl(): ?string
+    {
+        return $this->pullRequestUrl;
+    }
+
+    public function setPullRequestUrl(?string $pullRequestUrl): void
+    {
+        $this->pullRequestUrl = $pullRequestUrl;
+    }
+
+    #[ORM\Column(
         type: Types::DATETIME_IMMUTABLE,
         nullable: false
     )]
