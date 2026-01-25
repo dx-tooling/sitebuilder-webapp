@@ -66,18 +66,34 @@ final readonly class RunEditSessionHandler
             // Set execution context for agent container execution
             $workspace = $this->workspaceMgmtFacade->getWorkspaceById($conversation->getWorkspaceId());
             $project   = $workspace !== null ? $this->projectMgmtFacade->getProjectInfo($workspace->projectId) : null;
+
+            // Ensure we have a valid LLM API key from the project
+            if ($project === null || $project->llmApiKey === '') {
+                $this->logger->error('EditSession failed: no LLM API key configured for project', [
+                    'sessionId'   => $message->sessionId,
+                    'workspaceId' => $conversation->getWorkspaceId(),
+                ]);
+
+                EditSessionChunk::createDoneChunk($session, false, 'No LLM API key configured for this project.');
+                $session->setStatus(EditSessionStatus::Failed);
+                $this->entityManager->flush();
+
+                return;
+            }
+
             $this->executionContext->setContext(
                 $conversation->getWorkspaceId(),
                 $session->getWorkspacePath(),
                 $conversation->getId(),
-                $workspace?->projectName,
-                $project?->agentImage
+                $workspace->projectName,
+                $project->agentImage
             );
 
             $generator = $this->facade->streamEditWithHistory(
                 $session->getWorkspacePath(),
                 $session->getInstruction(),
-                $previousMessages
+                $previousMessages,
+                $project->llmApiKey
             );
 
             foreach ($generator as $chunk) {

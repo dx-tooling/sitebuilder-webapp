@@ -18,6 +18,7 @@ use RuntimeException;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
 
@@ -57,6 +58,12 @@ final class EditContentCommand extends EnhancedCommand
                 'instruction',
                 InputArgument::REQUIRED,
                 'Natural language instruction describing what to edit.'
+            )
+            ->addOption(
+                'api-key',
+                null,
+                InputOption::VALUE_REQUIRED,
+                'The LLM API key (falls back to LLM_CONTENT_EDITOR_OPENAI_API_KEY env var if not provided).'
             );
     }
 
@@ -76,11 +83,25 @@ final class EditContentCommand extends EnhancedCommand
             throw new RuntimeException('Could not resolve folder path.');
         }
 
+        // Get API key from option or fall back to env var for CLI usage
+        /** @var string|null $apiKey */
+        $apiKey = $input->getOption('api-key');
+        if ($apiKey === null || $apiKey === '') {
+            /** @var string $apiKey */
+            $apiKey = $_ENV['LLM_CONTENT_EDITOR_OPENAI_API_KEY'] ?? '';
+        }
+
+        if ($apiKey === '') {
+            throw new RuntimeException(
+                'No API key provided. Use --api-key option or set LLM_CONTENT_EDITOR_OPENAI_API_KEY env var.'
+            );
+        }
+
         $output->writeln("<info>Working folder:</info> {$resolvedFolder}");
         $output->writeln("<info>Instruction:</info> {$instruction}");
         $output->writeln('');
 
-        $agent    = new ContentEditorAgent($this->fileEditingFacade, LlmModelName::defaultForContentEditor());
+        $agent    = new ContentEditorAgent($this->fileEditingFacade, LlmModelName::defaultForContentEditor(), $apiKey);
         $observer = new ConsoleObserver($output);
         $agent->attach($observer);
 

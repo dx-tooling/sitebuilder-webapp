@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\ProjectMgmt\Domain\Entity;
 
+use App\LlmContentEditor\Facade\Enum\LlmModelProvider;
 use App\ProjectMgmt\Facade\Enum\ProjectType;
 use DateTimeImmutable;
 use Doctrine\DBAL\Types\Types;
@@ -22,18 +23,22 @@ class Project
      * @throws Exception
      */
     public function __construct(
-        string      $name,
-        string      $gitUrl,
-        string      $githubToken,
-        ProjectType $projectType = ProjectType::DEFAULT,
-        string      $agentImage = self::DEFAULT_AGENT_IMAGE
+        string           $name,
+        string           $gitUrl,
+        string           $githubToken,
+        LlmModelProvider $llmModelProvider,
+        string           $llmApiKey,
+        ProjectType      $projectType = ProjectType::DEFAULT,
+        string           $agentImage = self::DEFAULT_AGENT_IMAGE
     ) {
-        $this->name        = $name;
-        $this->gitUrl      = $gitUrl;
-        $this->githubToken = $githubToken;
-        $this->projectType = $projectType;
-        $this->agentImage  = $agentImage;
-        $this->createdAt   = DateAndTimeService::getDateTimeImmutable();
+        $this->name             = $name;
+        $this->gitUrl           = $gitUrl;
+        $this->githubToken      = $githubToken;
+        $this->llmModelProvider = $llmModelProvider;
+        $this->llmApiKey        = $llmApiKey;
+        $this->projectType      = $projectType;
+        $this->agentImage       = $agentImage;
+        $this->createdAt        = DateAndTimeService::getDateTimeImmutable();
     }
 
     #[ORM\Id]
@@ -135,6 +140,41 @@ class Project
     public function setAgentImage(string $agentImage): void
     {
         $this->agentImage = $agentImage;
+    }
+
+    #[ORM\Column(
+        type: Types::STRING,
+        length: 32,
+        nullable: false,
+        enumType: LlmModelProvider::class
+    )]
+    private LlmModelProvider $llmModelProvider;
+
+    public function getLlmModelProvider(): LlmModelProvider
+    {
+        return $this->llmModelProvider;
+    }
+
+    public function setLlmModelProvider(LlmModelProvider $llmModelProvider): void
+    {
+        $this->llmModelProvider = $llmModelProvider;
+    }
+
+    #[ORM\Column(
+        type: Types::STRING,
+        length: 1024,
+        nullable: false
+    )]
+    private string $llmApiKey;
+
+    public function getLlmApiKey(): string
+    {
+        return $this->llmApiKey;
+    }
+
+    public function setLlmApiKey(string $llmApiKey): void
+    {
+        $this->llmApiKey = $llmApiKey;
     }
 
     #[ORM\Column(

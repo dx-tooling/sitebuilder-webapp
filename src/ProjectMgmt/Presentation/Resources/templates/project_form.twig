@@ -55,6 +55,87 @@
                 <p class="mt-1 text-xs text-dark-500 dark:text-dark-400">A personal access token so we can open the project and save changes.</p>
             </div>
 
+            {# LLM Model Provider #}
+            <fieldset>
+                <legend class="etfswui-form-label mb-2">LLM Model Provider</legend>
+                <div class="space-y-2">
+                    {% for provider in llmProviders %}
+                        <label class="etfswui-form-radio-wrapper">
+                            <input type="radio"
+                                   name="llm_model_provider"
+                                   value="{{ provider.value }}"
+                                   class="etfswui-form-radio"
+                                   {{ (project and project.llmModelProvider.value == provider.value) or (not project and loop.first) ? 'checked' : '' }}
+                                   required>
+                            <span class="etfswui-form-radio-label">{{ provider.displayName }}</span>
+                        </label>
+                    {% endfor %}
+                </div>
+            </fieldset>
+
+            {# LLM API Key with verification #}
+            <div {{ stimulus_controller('llm-key-verification', {
+                verifyUrl: path('project_mgmt.presentation.verify_llm_key'),
+                csrfToken: csrf_token('verify_llm_key')
+            }) }}>
+                <label for="llm_api_key" class="etfswui-form-label">LLM API Key</label>
+                <input type="password"
+                       name="llm_api_key"
+                       id="llm_api_key"
+                       value="{{ project ? project.llmApiKey : '' }}"
+                       required
+                       placeholder="sk-..."
+                       class="etfswui-form-input"
+                       {{ stimulus_target('llm-key-verification', 'input') }}
+                       {{ stimulus_action('llm-key-verification', 'verify', 'blur') }}>
+
+                {# Verification status area #}
+                <div class="mt-2" {{ stimulus_target('llm-key-verification', 'status') }}>
+                    {# Spinner (hidden by default) #}
+                    <div class="hidden flex items-center gap-2" {{ stimulus_target('llm-key-verification', 'spinner') }}>
+                        <svg class="animate-spin h-4 w-4 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <span class="text-sm text-blue-600 dark:text-blue-400">Verifying key...</span>
+                    </div>
+                    {# Success (hidden by default) #}
+                    <div class="hidden flex items-center gap-2" {{ stimulus_target('llm-key-verification', 'success') }}>
+                        <svg class="h-4 w-4 text-green-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clip-rule="evenodd" />
+                        </svg>
+                        <span class="text-sm text-green-600 dark:text-green-400">Key successfully verified</span>
+                    </div>
+                    {# Error (hidden by default) #}
+                    <div class="hidden flex items-center gap-2" {{ stimulus_target('llm-key-verification', 'error') }}>
+                        <svg class="h-4 w-4 text-red-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clip-rule="evenodd" />
+                        </svg>
+                        <span class="text-sm text-red-600 dark:text-red-400">Key verification failed</span>
+                    </div>
+                </div>
+
+                <p class="mt-1 text-xs text-dark-500 dark:text-dark-400">Your API key for the selected LLM provider.</p>
+
+                {# Reuse existing keys #}
+                {% if existingLlmKeys|length > 0 %}
+                    <div class="mt-4 p-3 bg-dark-50 dark:bg-dark-900 rounded-md border border-dark-200 dark:border-dark-700">
+                        <p class="etfswui-form-label mb-2">Or reuse an existing key:</p>
+                        <div class="space-y-1">
+                            {% for key in existingLlmKeys %}
+                                <button type="button"
+                                        class="flex items-center gap-2 w-full text-left px-2 py-1.5 rounded hover:bg-dark-100 dark:hover:bg-dark-800 transition-colors"
+                                        {{ stimulus_action('llm-key-verification', 'reuseKey') }}
+                                        data-llm-key-verification-key-param="{{ key.apiKey }}">
+                                    <span class="font-mono text-sm text-primary-600 dark:text-primary-400">{{ key.abbreviatedKey }}</span>
+                                    <span class="text-xs text-dark-500 dark:text-dark-400">({{ key.projectNames|join(', ') }})</span>
+                                </button>
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+
             {% set currentImage = project ? project.agentImage : 'node:22-slim' %}
             {% set standardImages = ['node:22-slim', 'node:20-slim', 'node:18-slim', 'python:3.12-slim', 'php:8.4-cli'] %}
             {% set isCustomImage = currentImage not in standardImages %}

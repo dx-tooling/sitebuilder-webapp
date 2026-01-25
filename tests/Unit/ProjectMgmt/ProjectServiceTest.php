@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Unit\ProjectMgmt;
 
+use App\LlmContentEditor\Facade\Enum\LlmModelProvider;
 use App\ProjectMgmt\Domain\Entity\Project;
 use App\ProjectMgmt\Domain\Service\ProjectService;
 use Doctrine\ORM\EntityManagerInterface;
@@ -22,12 +23,15 @@ final class ProjectServiceTest extends TestCase
         $project = $service->create(
             'My Project',
             'https://github.com/org/repo.git',
-            'github-token-123'
+            'github-token-123',
+            LlmModelProvider::OpenAI,
+            'sk-test-key-123'
         );
 
         self::assertSame('My Project', $project->getName());
         self::assertSame('https://github.com/org/repo.git', $project->getGitUrl());
         self::assertSame('github-token-123', $project->getGithubToken());
+        self::assertSame('sk-test-key-123', $project->getLlmApiKey());
     }
 
     public function testUpdateUpdatesAllProjectAttributes(): void
@@ -42,12 +46,15 @@ final class ProjectServiceTest extends TestCase
             $project,
             'New Name',
             'https://new.git',
-            'new-token'
+            'new-token',
+            LlmModelProvider::OpenAI,
+            'sk-new-key'
         );
 
         self::assertSame('New Name', $project->getName());
         self::assertSame('https://new.git', $project->getGitUrl());
         self::assertSame('new-token', $project->getGithubToken());
+        self::assertSame('sk-new-key', $project->getLlmApiKey());
     }
 
     public function testUpdatePreservesCreatedAtTimestamp(): void
@@ -58,7 +65,7 @@ final class ProjectServiceTest extends TestCase
         $entityManager = $this->createMock(EntityManagerInterface::class);
 
         $service = new ProjectService($entityManager);
-        $service->update($project, 'New Name', 'https://new.git', 'new-token');
+        $service->update($project, 'New Name', 'https://new.git', 'new-token', LlmModelProvider::OpenAI, 'sk-key');
 
         self::assertSame($originalCreatedAt, $project->getCreatedAt());
     }
@@ -98,7 +105,7 @@ final class ProjectServiceTest extends TestCase
      */
     private function createProject(string $id, string $name, string $gitUrl, string $githubToken): Project
     {
-        $project = new Project($name, $gitUrl, $githubToken);
+        $project = new Project($name, $gitUrl, $githubToken, LlmModelProvider::OpenAI, 'sk-test-key');
 
         // Use reflection to set the ID since it's normally set by Doctrine
         $reflection = new ReflectionClass($project);

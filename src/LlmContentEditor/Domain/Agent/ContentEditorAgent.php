@@ -18,17 +18,15 @@ class ContentEditorAgent extends BaseCodingAgent
     public function __construct(
         private readonly WorkspaceToolingServiceInterface $sitebuilderFacade,
         private readonly LlmModelName                     $model,
+        private readonly string                           $apiKey,
     ) {
         parent::__construct($sitebuilderFacade);
     }
 
     protected function provider(): AIProviderInterface
     {
-        /** @var string $apiKey */
-        $apiKey = $_ENV['LLM_CONTENT_EDITOR_OPENAI_API_KEY'];
-
         return new OpenAI(
-            $apiKey,
+            $this->apiKey,
             $this->model->value,
         );
     }

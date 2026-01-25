@@ -206,7 +206,13 @@ final class ChatBasedContentEditorFacadeTest extends KernelTestCase
 
     private function createProject(string $name): Project
     {
-        $project = new Project($name, 'https://github.com/org/repo.git', 'token123');
+        $project = new Project(
+            $name,
+            'https://github.com/org/repo.git',
+            'token123',
+            \App\LlmContentEditor\Facade\Enum\LlmModelProvider::OpenAI,
+            'sk-test-key'
+        );
         $this->entityManager->persist($project);
         $this->entityManager->flush();
 

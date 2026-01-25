@@ -6,12 +6,16 @@ namespace App\ProjectMgmt\Presentation\Controller;
 
 use App\Account\Facade\AccountFacadeInterface;
 use App\ChatBasedContentEditor\Facade\ChatBasedContentEditorFacadeInterface;
+use App\LlmContentEditor\Facade\Enum\LlmModelProvider;
+use App\LlmContentEditor\Facade\LlmContentEditorFacadeInterface;
 use App\ProjectMgmt\Domain\Service\ProjectService;
+use App\ProjectMgmt\Facade\Dto\ExistingLlmApiKeyDto;
 use App\ProjectMgmt\Facade\Enum\ProjectType;
 use App\ProjectMgmt\Facade\ProjectMgmtFacadeInterface;
 use App\WorkspaceMgmt\Facade\Enum\WorkspaceStatus;
 use App\WorkspaceMgmt\Facade\WorkspaceMgmtFacadeInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
@@ -31,6 +35,7 @@ final class ProjectController extends AbstractController
         private readonly WorkspaceMgmtFacadeInterface          $workspaceMgmtFacade,
         private readonly ChatBasedContentEditorFacadeInterface $chatBasedContentEditorFacade,
         private readonly AccountFacadeInterface                $accountFacade,
+        private readonly LlmContentEditorFacadeInterface       $llmContentEditorFacade,
     ) {
     }
 
@@ -88,7 +93,9 @@ final class ProjectController extends AbstractController
     public function new(): Response
     {
         return $this->render('@project_mgmt.presentation/project_form.twig', [
-            'project' => null,
+            'project'         => null,
+            'llmProviders'    => LlmModelProvider::cases(),
+            'existingLlmKeys' => $this->projectMgmtFacade->getExistingLlmApiKeys(),
         ]);
     }
 
@@ -105,13 +112,21 @@ final class ProjectController extends AbstractController
             return $this->redirectToRoute('project_mgmt.presentation.new');
         }
 
-        $name        = $request->request->getString('name');
-        $gitUrl      = $request->request->getString('git_url');
-        $githubToken = $request->request->getString('github_token');
-        $agentImage  = $this->resolveAgentImage($request);
+        $name             = $request->request->getString('name');
+        $gitUrl           = $request->request->getString('git_url');
+        $githubToken      = $request->request->getString('github_token');
+        $llmModelProvider = LlmModelProvider::tryFrom($request->request->getString('llm_model_provider'));
+        $llmApiKey        = $request->request->getString('llm_api_key');
+        $agentImage       = $this->resolveAgentImage($request);
 
-        if ($name === '' || $gitUrl === '' || $githubToken === '') {
+        if ($name === '' || $gitUrl === '' || $githubToken === '' || $llmApiKey === '') {
             $this->addFlash('error', 'All fields are required.');
+
+            return $this->redirectToRoute('project_mgmt.presentation.new');
+        }
+
+        if ($llmModelProvider === null) {
+            $this->addFlash('error', 'Please select an LLM model provider.');
 
             return $this->redirectToRoute('project_mgmt.presentation.new');
         }
@@ -122,7 +137,15 @@ final class ProjectController extends AbstractController
             return $this->redirectToRoute('project_mgmt.presentation.new');
         }
 
-        $this->projectService->create($name, $gitUrl, $githubToken, ProjectType::DEFAULT, $agentImage);
+        $this->projectService->create(
+            $name,
+            $gitUrl,
+            $githubToken,
+            $llmModelProvider,
+            $llmApiKey,
+            ProjectType::DEFAULT,
+            $agentImage
+        );
         $this->addFlash('success', 'Project created successfully.');
 
         return $this->redirectToRoute('project_mgmt.presentation.list');
@@ -142,8 +165,17 @@ final class ProjectController extends AbstractController
             throw $this->createNotFoundException('Project not found.');
         }
 
+        // Filter out the current project's key from the reuse list
+        $currentKey      = $project->getLlmApiKey();
+        $existingLlmKeys = array_values(array_filter(
+            $this->projectMgmtFacade->getExistingLlmApiKeys(),
+            static fn (ExistingLlmApiKeyDto $key) => $key->apiKey !== $currentKey
+        ));
+
         return $this->render('@project_mgmt.presentation/project_form.twig', [
-            'project' => $project,
+            'project'         => $project,
+            'llmProviders'    => LlmModelProvider::cases(),
+            'existingLlmKeys' => $existingLlmKeys,
         ]);
     }
 
@@ -167,13 +199,21 @@ final class ProjectController extends AbstractController
             return $this->redirectToRoute('project_mgmt.presentation.edit', ['id' => $id]);
         }
 
-        $name        = $request->request->getString('name');
-        $gitUrl      = $request->request->getString('git_url');
-        $githubToken = $request->request->getString('github_token');
-        $agentImage  = $this->resolveAgentImage($request);
+        $name             = $request->request->getString('name');
+        $gitUrl           = $request->request->getString('git_url');
+        $githubToken      = $request->request->getString('github_token');
+        $llmModelProvider = LlmModelProvider::tryFrom($request->request->getString('llm_model_provider'));
+        $llmApiKey        = $request->request->getString('llm_api_key');
+        $agentImage       = $this->resolveAgentImage($request);
 
-        if ($name === '' || $gitUrl === '' || $githubToken === '') {
+        if ($name === '' || $gitUrl === '' || $githubToken === '' || $llmApiKey === '') {
             $this->addFlash('error', 'All fields are required.');
+
+            return $this->redirectToRoute('project_mgmt.presentation.edit', ['id' => $id]);
+        }
+
+        if ($llmModelProvider === null) {
+            $this->addFlash('error', 'Please select an LLM model provider.');
 
             return $this->redirectToRoute('project_mgmt.presentation.edit', ['id' => $id]);
         }
@@ -184,7 +224,16 @@ final class ProjectController extends AbstractController
             return $this->redirectToRoute('project_mgmt.presentation.edit', ['id' => $id]);
         }
 
-        $this->projectService->update($project, $name, $gitUrl, $githubToken, ProjectType::DEFAULT, $agentImage);
+        $this->projectService->update(
+            $project,
+            $name,
+            $gitUrl,
+            $githubToken,
+            $llmModelProvider,
+            $llmApiKey,
+            ProjectType::DEFAULT,
+            $agentImage
+        );
         $this->addFlash('success', 'Project updated successfully.');
 
         return $this->redirectToRoute('project_mgmt.presentation.list');
@@ -237,6 +286,34 @@ final class ProjectController extends AbstractController
         }
 
         return $this->redirectToRoute('project_mgmt.presentation.list');
+    }
+
+    #[Route(
+        path: '/projects/verify-llm-key',
+        name: 'project_mgmt.presentation.verify_llm_key',
+        methods: [Request::METHOD_POST]
+    )]
+    public function verifyLlmKey(Request $request): JsonResponse
+    {
+        if (!$this->isCsrfTokenValid('verify_llm_key', $request->request->getString('_csrf_token'))) {
+            return new JsonResponse(['success' => false, 'error' => 'Invalid CSRF token.'], 403);
+        }
+
+        $providerValue = $request->request->getString('provider');
+        $apiKey        = $request->request->getString('api_key');
+
+        if ($providerValue === '' || $apiKey === '') {
+            return new JsonResponse(['success' => false, 'error' => 'Provider and API key are required.'], 400);
+        }
+
+        $provider = LlmModelProvider::tryFrom($providerValue);
+        if ($provider === null) {
+            return new JsonResponse(['success' => false, 'error' => 'Invalid provider.'], 400);
+        }
+
+        $isValid = $this->llmContentEditorFacade->verifyApiKey($provider, $apiKey);
+
+        return new JsonResponse(['success' => $isValid]);
     }
 
     /**

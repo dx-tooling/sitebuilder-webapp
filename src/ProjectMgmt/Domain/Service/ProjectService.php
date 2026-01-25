@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\ProjectMgmt\Domain\Service;
 
+use App\LlmContentEditor\Facade\Enum\LlmModelProvider;
 use App\ProjectMgmt\Domain\Entity\Project;
 use App\ProjectMgmt\Facade\Enum\ProjectType;
 use Doctrine\ORM\EntityManagerInterface;
@@ -20,13 +21,23 @@ final class ProjectService
     }
 
     public function create(
-        string      $name,
-        string      $gitUrl,
-        string      $githubToken,
-        ProjectType $projectType = ProjectType::DEFAULT,
-        string      $agentImage = Project::DEFAULT_AGENT_IMAGE
+        string           $name,
+        string           $gitUrl,
+        string           $githubToken,
+        LlmModelProvider $llmModelProvider,
+        string           $llmApiKey,
+        ProjectType      $projectType = ProjectType::DEFAULT,
+        string           $agentImage = Project::DEFAULT_AGENT_IMAGE
     ): Project {
-        $project = new Project($name, $gitUrl, $githubToken, $projectType, $agentImage);
+        $project = new Project(
+            $name,
+            $gitUrl,
+            $githubToken,
+            $llmModelProvider,
+            $llmApiKey,
+            $projectType,
+            $agentImage
+        );
         $this->entityManager->persist($project);
         $this->entityManager->flush();
 
@@ -34,16 +45,20 @@ final class ProjectService
     }
 
     public function update(
-        Project     $project,
-        string      $name,
-        string      $gitUrl,
-        string      $githubToken,
-        ProjectType $projectType = ProjectType::DEFAULT,
-        string      $agentImage = Project::DEFAULT_AGENT_IMAGE
+        Project          $project,
+        string           $name,
+        string           $gitUrl,
+        string           $githubToken,
+        LlmModelProvider $llmModelProvider,
+        string           $llmApiKey,
+        ProjectType      $projectType = ProjectType::DEFAULT,
+        string           $agentImage = Project::DEFAULT_AGENT_IMAGE
     ): void {
         $project->setName($name);
         $project->setGitUrl($gitUrl);
         $project->setGithubToken($githubToken);
+        $project->setLlmModelProvider($llmModelProvider);
+        $project->setLlmApiKey($llmApiKey);
         $project->setProjectType($projectType);
         $project->setAgentImage($agentImage);
         $this->entityManager->flush();

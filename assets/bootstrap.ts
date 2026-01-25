@@ -7,6 +7,7 @@ import ConversationHeartbeatController from "../src/ChatBasedContentEditor/Prese
 import DistFilesController from "../src/ChatBasedContentEditor/Presentation/Resources/assets/controllers/dist_files_controller.ts";
 import MarkdownController from "../src/ChatBasedContentEditor/Presentation/Resources/assets/controllers/markdown_controller.ts";
 import WorkspaceSetupController from "../src/ChatBasedContentEditor/Presentation/Resources/assets/controllers/workspace_setup_controller.ts";
+import LlmKeyVerificationController from "../src/ProjectMgmt/Presentation/Resources/assets/controllers/llm_key_verification_controller.ts";
 
 const app = startStimulusApp();
 
@@ -15,5 +16,6 @@ app.register("conversation-heartbeat", ConversationHeartbeatController);
 app.register("dist-files", DistFilesController);
 app.register("markdown", MarkdownController);
 app.register("workspace-setup", WorkspaceSetupController);
+app.register("llm-key-verification", LlmKeyVerificationController);
 
 webuiBootstrap(app);
