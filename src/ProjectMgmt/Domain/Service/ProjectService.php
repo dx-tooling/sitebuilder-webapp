@@ -89,6 +89,12 @@ final class ProjectService
         return $this->entityManager->find(Project::class, $id);
     }
 
+    public function delete(Project $project): void
+    {
+        $this->entityManager->remove($project);
+        $this->entityManager->flush();
+    }
+
     /**
      * @return list<Project>
      */

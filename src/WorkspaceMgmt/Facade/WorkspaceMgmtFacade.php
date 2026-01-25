@@ -138,6 +138,12 @@ final class WorkspaceMgmtFacade implements WorkspaceMgmtFacadeInterface
         $this->workspaceService->setStatus($workspace, WorkspaceStatus::AVAILABLE_FOR_SETUP);
     }
 
+    public function deleteWorkspace(string $workspaceId): void
+    {
+        $workspace = $this->getWorkspaceOrFail($workspaceId);
+        $this->workspaceService->delete($workspace);
+    }
+
     public function commitAndPush(
         string  $workspaceId,
         string  $message,

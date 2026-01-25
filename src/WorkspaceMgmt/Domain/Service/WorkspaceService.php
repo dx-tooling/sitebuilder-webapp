@@ -90,4 +90,13 @@ final class WorkspaceService
         $workspace->setStatus($newStatus);
         $this->entityManager->flush();
     }
+
+    /**
+     * Delete a workspace.
+     */
+    public function delete(Workspace $workspace): void
+    {
+        $this->entityManager->remove($workspace);
+        $this->entityManager->flush();
+    }
 }

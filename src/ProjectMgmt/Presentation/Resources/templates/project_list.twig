@@ -109,6 +109,16 @@
                                         </button>
                                     </form>
                                 {% endif %}
+                                <form action="{{ path('project_mgmt.presentation.delete', { id: item.project.id }) }}"
+                                      method="post"
+                                      class="inline-block"
+                                      onsubmit="return confirm('Delete this project? This action cannot be undone and will also remove any associated work area.');">
+                                    <input type="hidden" name="_csrf_token" value="{{ csrf_token('delete_project_' ~ item.project.id) }}">
+                                    <button type="submit"
+                                            class="inline-flex items-center px-3 py-1.5 rounded-md border border-red-300 dark:border-red-700 text-red-700 dark:text-red-400 text-sm font-medium hover:bg-red-50 dark:hover:bg-red-900/20">
+                                        Delete
+                                    </button>
+                                </form>
                             </div>
                         </div>
                     </div>

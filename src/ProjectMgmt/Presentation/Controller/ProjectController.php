@@ -264,6 +264,42 @@ final class ProjectController extends AbstractController
     }
 
     #[Route(
+        path: '/projects/{id}/delete',
+        name: 'project_mgmt.presentation.delete',
+        methods: [Request::METHOD_POST],
+        requirements: ['id' => '[a-f0-9-]{36}']
+    )]
+    public function delete(string $id, Request $request): Response
+    {
+        $project = $this->projectService->findById($id);
+
+        if ($project === null) {
+            throw $this->createNotFoundException('Project not found.');
+        }
+
+        if (!$this->isCsrfTokenValid('delete_project_' . $id, $request->request->getString('_csrf_token'))) {
+            $this->addFlash('error', 'Invalid CSRF token.');
+
+            return $this->redirectToRoute('project_mgmt.presentation.list');
+        }
+
+        // Check if project has an active workspace
+        $workspace = $this->workspaceMgmtFacade->getWorkspaceForProject($id);
+        if ($workspace !== null) {
+            // Finish any ongoing conversations first
+            $this->chatBasedContentEditorFacade->finishAllOngoingConversationsForWorkspace($workspace->id);
+            // Delete the workspace
+            $this->workspaceMgmtFacade->deleteWorkspace($workspace->id);
+        }
+
+        $projectName = $project->getName();
+        $this->projectService->delete($project);
+        $this->addFlash('success', sprintf('Project "%s" deleted successfully.', $projectName));
+
+        return $this->redirectToRoute('project_mgmt.presentation.list');
+    }
+
+    #[Route(
         path: '/projects/{id}/reset-workspace',
         name: 'project_mgmt.presentation.reset_workspace',
         methods: [Request::METHOD_POST],

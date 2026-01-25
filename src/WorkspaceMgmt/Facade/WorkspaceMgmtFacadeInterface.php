@@ -61,6 +61,12 @@ interface WorkspaceMgmtFacadeInterface
     public function resetWorkspaceForSetup(string $workspaceId): void;
 
     /**
+     * Delete a workspace entirely.
+     * Used when deleting a project.
+     */
+    public function deleteWorkspace(string $workspaceId): void;
+
+    /**
      * Commit all changes and push to remote.
      * Called after edit sessions complete.
      *
