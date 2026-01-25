@@ -34,3 +34,54 @@
     animation: none;
     background: none;
 }
+
+/* Activity indicator badges - zen pulsing animation */
+@keyframes zen-pulse {
+    0%,
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0.85;
+        transform: scale(1.02);
+    }
+}
+
+.activity-badge-active {
+    animation: zen-pulse 2s ease-in-out infinite;
+}
+
+/* Activity badge base - follows etfswui-badge pattern */
+.activity-badge {
+    @apply inline-flex items-center rounded-sm px-2 py-0.5 text-[10px] font-medium ring-1 ring-inset transition-all duration-150;
+}
+
+.activity-badge-working-active {
+    @apply bg-blue-50 text-blue-700 ring-blue-500/40 dark:bg-blue-900/30 dark:text-blue-300;
+}
+
+.activity-badge-thinking-active {
+    @apply bg-purple-50 text-purple-700 ring-purple-500/40 dark:bg-purple-900/30 dark:text-purple-300;
+}
+
+.activity-badge-inactive {
+    @apply bg-dark-100 text-dark-400 ring-dark-300/30 dark:bg-dark-800/30 dark:text-dark-500 dark:ring-dark-600/30;
+}
+
+/* Seconds counter circle */
+.activity-seconds {
+    @apply ml-1 flex h-4 w-4 items-center justify-center rounded-full text-[9px] font-semibold;
+}
+
+.activity-seconds-working {
+    @apply bg-blue-200 text-blue-800 dark:bg-blue-800 dark:text-blue-200;
+}
+
+.activity-seconds-thinking {
+    @apply bg-purple-200 text-purple-800 dark:bg-purple-800 dark:text-purple-200;
+}
+
+.activity-seconds-inactive {
+    @apply bg-dark-200 text-dark-500 dark:bg-dark-700 dark:text-dark-400;
+}
