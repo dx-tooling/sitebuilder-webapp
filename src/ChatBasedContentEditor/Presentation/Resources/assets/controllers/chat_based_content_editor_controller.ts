@@ -74,6 +74,13 @@ export default class extends Controller {
     private isContextUsagePollingActive: boolean = false;
     private isPollingActive: boolean = false;
 
+    // Activity indicators state (Working/Thinking badges)
+    private activityThinkingTimerId: ReturnType<typeof setInterval> | null = null;
+    private activityWorkingTimeoutId: ReturnType<typeof setTimeout> | null = null;
+    private activityToolCallCount: number = 0;
+    private activityThinkingSeconds: number = 0;
+    private activityWorkingActive: boolean = false;
+
     connect(): void {
         const cu = this.contextUsageValue as ContextUsageData | undefined;
         if (cu && typeof cu.usedTokens === "number" && typeof cu.maxTokens === "number") {
@@ -438,10 +445,14 @@ export default class extends Controller {
         labelWrapper.appendChild(sparkle);
         labelWrapper.appendChild(label);
 
-        const count = document.createElement("span");
-        count.className = `text-[10px] ${style.countColorClass} ml-auto font-medium px-1.5 py-0.5 rounded-full`;
-        count.dataset.count = "1";
-        count.textContent = String(turn.events.length);
+        // Count tool_calling events for the Working badge
+        const toolCallCount = turn.events.filter((e) => {
+            const payload = parseChunkPayload(e.payload);
+            return payload.kind === "tool_calling";
+        }).length;
+
+        // Activity badges (both inactive for completed containers)
+        const badgesWrapper = this.createCompletedActivityBadges(toolCallCount);
 
         const chevron = document.createElement("svg");
         chevron.className = `w-3 h-3 ${style.chevronColorClass} transition-transform duration-300`;
@@ -451,7 +462,7 @@ export default class extends Controller {
 
         header.appendChild(indicatorWrapper);
         header.appendChild(labelWrapper);
-        header.appendChild(count);
+        header.appendChild(badgesWrapper);
         header.appendChild(chevron);
 
         const messagesList = document.createElement("div");
@@ -470,6 +481,45 @@ export default class extends Controller {
         container.appendChild(messagesList);
 
         return container;
+    }
+
+    private createCompletedActivityBadges(toolCallCount: number): HTMLElement {
+        const badgesWrapper = document.createElement("div");
+        badgesWrapper.className = "flex items-center gap-1.5 ml-auto";
+        badgesWrapper.dataset.activityBadges = "1";
+
+        // Working badge (inactive, shows tool call count)
+        const workingBadge = document.createElement("span");
+        workingBadge.className = "activity-badge activity-badge-inactive";
+        workingBadge.dataset.activityWorkingBadge = "1";
+
+        const workingLabel = document.createTextNode("Working");
+        workingBadge.appendChild(workingLabel);
+
+        const workingCount = document.createElement("span");
+        workingCount.className = "activity-seconds activity-seconds-inactive";
+        workingCount.dataset.activityWorkingCount = "1";
+        workingCount.textContent = String(toolCallCount);
+        workingBadge.appendChild(workingCount);
+
+        // Thinking badge (inactive, shows dash for completed)
+        const thinkingBadge = document.createElement("span");
+        thinkingBadge.className = "activity-badge activity-badge-inactive";
+        thinkingBadge.dataset.activityThinkingBadge = "1";
+
+        const thinkingLabel = document.createTextNode("Thinking");
+        thinkingBadge.appendChild(thinkingLabel);
+
+        const thinkingSeconds = document.createElement("span");
+        thinkingSeconds.className = "activity-seconds activity-seconds-inactive";
+        thinkingSeconds.dataset.activityThinkingSeconds = "1";
+        thinkingSeconds.textContent = "—";
+        thinkingBadge.appendChild(thinkingSeconds);
+
+        badgesWrapper.appendChild(workingBadge);
+        badgesWrapper.appendChild(thinkingBadge);
+
+        return badgesWrapper;
     }
 
     private resumeActiveSession(activeSession: ActiveSessionData): void {
@@ -603,10 +653,8 @@ export default class extends Controller {
         labelWrapper.appendChild(sparkle);
         labelWrapper.appendChild(label);
 
-        const count = document.createElement("span");
-        count.className = `text-[10px] ${style.countColorClass} ml-auto font-medium px-1.5 py-0.5 rounded-full`;
-        count.dataset.count = "1";
-        count.textContent = "0";
+        // Activity indicators (Working/Thinking badges) - right-aligned in header
+        const badgesWrapper = this.createActivityBadges(container);
 
         const chevron = document.createElement("svg");
         chevron.className = `w-3 h-3 ${style.chevronColorClass} transition-transform duration-300`;
@@ -616,7 +664,7 @@ export default class extends Controller {
 
         header.appendChild(indicatorWrapper);
         header.appendChild(labelWrapper);
-        header.appendChild(count);
+        header.appendChild(badgesWrapper);
         header.appendChild(chevron);
 
         const messagesList = document.createElement("div");
@@ -627,6 +675,132 @@ export default class extends Controller {
         container.appendChild(messagesList);
 
         return container;
+    }
+
+    private createActivityBadges(container: HTMLElement): HTMLElement {
+        const badgesWrapper = document.createElement("div");
+        badgesWrapper.className = "flex items-center gap-1.5 ml-auto";
+        badgesWrapper.dataset.activityBadges = "1";
+
+        // Working badge (starts inactive, counts tool calls)
+        const workingBadge = document.createElement("span");
+        workingBadge.className = "activity-badge activity-badge-inactive";
+        workingBadge.dataset.activityWorkingBadge = "1";
+
+        const workingLabel = document.createTextNode("Working");
+        workingBadge.appendChild(workingLabel);
+
+        const workingCount = document.createElement("span");
+        workingCount.className = "activity-seconds activity-seconds-inactive";
+        workingCount.dataset.activityWorkingCount = "1";
+        workingCount.textContent = "0";
+        workingBadge.appendChild(workingCount);
+
+        // Thinking badge (starts active, counts seconds)
+        const thinkingBadge = document.createElement("span");
+        thinkingBadge.className = "activity-badge activity-badge-thinking-active activity-badge-active";
+        thinkingBadge.dataset.activityThinkingBadge = "1";
+
+        const thinkingLabel = document.createTextNode("Thinking");
+        thinkingBadge.appendChild(thinkingLabel);
+
+        const thinkingSeconds = document.createElement("span");
+        thinkingSeconds.className = "activity-seconds activity-seconds-thinking";
+        thinkingSeconds.dataset.activityThinkingSeconds = "1";
+        thinkingSeconds.textContent = "0";
+        thinkingBadge.appendChild(thinkingSeconds);
+
+        badgesWrapper.appendChild(workingBadge);
+        badgesWrapper.appendChild(thinkingBadge);
+
+        // Reset activity state and start thinking timer
+        this.resetActivityState();
+        this.startThinkingTimer(container);
+
+        return badgesWrapper;
+    }
+
+    private resetActivityState(): void {
+        this.activityToolCallCount = 0;
+        this.activityThinkingSeconds = 0;
+        this.activityWorkingActive = false;
+        this.stopWorkingTimeout();
+    }
+
+    private startThinkingTimer(container: HTMLElement): void {
+        this.stopThinkingTimer();
+
+        this.activityThinkingTimerId = setInterval(() => {
+            this.tickThinkingTimer(container);
+        }, 1000);
+    }
+
+    private stopThinkingTimer(): void {
+        if (this.activityThinkingTimerId !== null) {
+            clearInterval(this.activityThinkingTimerId);
+            this.activityThinkingTimerId = null;
+        }
+    }
+
+    private stopWorkingTimeout(): void {
+        if (this.activityWorkingTimeoutId !== null) {
+            clearTimeout(this.activityWorkingTimeoutId);
+            this.activityWorkingTimeoutId = null;
+        }
+    }
+
+    private tickThinkingTimer(container: HTMLElement): void {
+        this.activityThinkingSeconds++;
+        const thinkingSecondsEl = container.querySelector<HTMLElement>('[data-activity-thinking-seconds="1"]');
+        if (thinkingSecondsEl) {
+            thinkingSecondsEl.textContent = String(this.activityThinkingSeconds);
+        }
+    }
+
+    private onToolCall(container: HTMLElement): void {
+        // Increment tool call count
+        this.activityToolCallCount++;
+        const workingCountEl = container.querySelector<HTMLElement>('[data-activity-working-count="1"]');
+        if (workingCountEl) {
+            workingCountEl.textContent = String(this.activityToolCallCount);
+        }
+
+        // Make Working badge active
+        if (!this.activityWorkingActive) {
+            this.activityWorkingActive = true;
+            this.setWorkingBadgeActive(container, true);
+        }
+
+        // Reset/start the 2-second timeout
+        this.stopWorkingTimeout();
+        this.activityWorkingTimeoutId = setTimeout(() => {
+            this.activityWorkingActive = false;
+            this.setWorkingBadgeActive(container, false);
+        }, 2000);
+    }
+
+    private setWorkingBadgeActive(container: HTMLElement, active: boolean): void {
+        const workingBadge = container.querySelector<HTMLElement>('[data-activity-working-badge="1"]');
+        const workingCountEl = container.querySelector<HTMLElement>('[data-activity-working-count="1"]');
+
+        if (workingBadge) {
+            if (active) {
+                workingBadge.classList.remove("activity-badge-inactive");
+                workingBadge.classList.add("activity-badge-working-active", "activity-badge-active");
+            } else {
+                workingBadge.classList.remove("activity-badge-working-active", "activity-badge-active");
+                workingBadge.classList.add("activity-badge-inactive");
+            }
+        }
+        if (workingCountEl) {
+            if (active) {
+                workingCountEl.classList.remove("activity-seconds-inactive");
+                workingCountEl.classList.add("activity-seconds-working");
+            } else {
+                workingCountEl.classList.remove("activity-seconds-working");
+                workingCountEl.classList.add("activity-seconds-inactive");
+            }
+        }
     }
 
     private getTechnicalMessagesContainer(container: HTMLElement): HTMLElement | null {
@@ -640,17 +814,12 @@ export default class extends Controller {
         }
 
         const messagesList = technicalContainer.querySelector<HTMLElement>('[data-messages-list="1"]');
-        const countEl = technicalContainer.querySelector<HTMLElement>('[data-count="1"]');
-
-        if (!messagesList || !countEl) {
+        if (!messagesList) {
             return;
         }
 
         const eventEl = this.renderTechnicalEvent(event);
         messagesList.appendChild(eventEl);
-
-        const currentCount = parseInt(countEl.textContent || "0", 10);
-        countEl.textContent = String(currentCount + 1);
 
         // Auto-scroll within the technical messages list if expanded
         if (!messagesList.classList.contains("hidden")) {
@@ -776,8 +945,53 @@ export default class extends Controller {
                 }
             }, 500);
         }
+
+        // Update activity indicators (Working/Thinking badges)
+        this.updateActivityIndicators(container, event);
+
         // Note: agent_error events are not surfaced to the UI since the agent
         // can handle errors gracefully and continue working
+    }
+
+    private updateActivityIndicators(container: HTMLElement, event: AgentEvent): void {
+        // Only react to tool_calling events - Working badge tracks tool calls
+        if (event.kind === "tool_calling") {
+            this.onToolCall(container);
+        }
+    }
+
+    private completeActivityIndicators(container: HTMLElement): void {
+        // Stop all timers
+        this.stopThinkingTimer();
+        this.stopWorkingTimeout();
+
+        // Make both badges inactive (but keep them visible)
+        this.setWorkingBadgeActive(container, false);
+        this.setThinkingBadgeActive(container, false);
+    }
+
+    private setThinkingBadgeActive(container: HTMLElement, active: boolean): void {
+        const thinkingBadge = container.querySelector<HTMLElement>('[data-activity-thinking-badge="1"]');
+        const thinkingSecondsEl = container.querySelector<HTMLElement>('[data-activity-thinking-seconds="1"]');
+
+        if (thinkingBadge) {
+            if (active) {
+                thinkingBadge.classList.remove("activity-badge-inactive");
+                thinkingBadge.classList.add("activity-badge-thinking-active", "activity-badge-active");
+            } else {
+                thinkingBadge.classList.remove("activity-badge-thinking-active", "activity-badge-active");
+                thinkingBadge.classList.add("activity-badge-inactive");
+            }
+        }
+        if (thinkingSecondsEl) {
+            if (active) {
+                thinkingSecondsEl.classList.remove("activity-seconds-inactive");
+                thinkingSecondsEl.classList.add("activity-seconds-thinking");
+            } else {
+                thinkingSecondsEl.classList.remove("activity-seconds-thinking");
+                thinkingSecondsEl.classList.add("activity-seconds-inactive");
+            }
+        }
     }
 
     private markTechnicalContainerComplete(container: HTMLElement): void {
@@ -785,6 +999,9 @@ export default class extends Controller {
         if (!technicalContainer) {
             return;
         }
+
+        // Hide activity indicators (Working/Thinking badges)
+        this.completeActivityIndicators(technicalContainer);
 
         const indicator = technicalContainer.querySelector<HTMLElement>('[data-indicator="1"]');
         const indicatorGlow = indicator?.nextElementSibling as HTMLElement | null;
