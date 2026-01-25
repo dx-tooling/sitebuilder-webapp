@@ -145,6 +145,19 @@ if [ "${SKIP_MIGRATIONS}" != "true" ]; then
         # Create database if it doesn't exist (won't fail if it already exists)
         echo "Creating database if needed..."
         \$COMPOSE exec -T app php bin/console doctrine:database:create --if-not-exists --no-interaction
+EOF
+
+    echo ""
+    echo "🔄 Running database migrations..."
+    ssh "${SERVER}" << EOF
+        set -e
+        cd ${REMOTE_DIR}
+        export ETFS_PROJECT_NAME=sitebuilder_preprod
+
+        # Build docker compose command with env files
+        COMPOSE="docker compose --env-file .env.preprod"
+        [ -f ".env.preprod.local" ] && COMPOSE="\$COMPOSE --env-file .env.preprod.local"
+        COMPOSE="\$COMPOSE -f ${COMPOSE_FILE}"
 
         # Show migration status before running
         echo "Current migration status:"
