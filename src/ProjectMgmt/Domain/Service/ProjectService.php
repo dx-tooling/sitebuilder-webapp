@@ -89,13 +89,18 @@ final class ProjectService
         return $this->entityManager->find(Project::class, $id);
     }
 
+    /**
+     * Soft delete a project by marking it as deleted.
+     */
     public function delete(Project $project): void
     {
-        $this->entityManager->remove($project);
+        $project->markAsDeleted();
         $this->entityManager->flush();
     }
 
     /**
+     * Find all non-deleted projects.
+     *
      * @return list<Project>
      */
     public function findAll(): array
@@ -104,6 +109,7 @@ final class ProjectService
         $projects = $this->entityManager->createQueryBuilder()
             ->select('p')
             ->from(Project::class, 'p')
+            ->where('p.deletedAt IS NULL')
             ->orderBy('p.name', 'ASC')
             ->getQuery()
             ->getResult();

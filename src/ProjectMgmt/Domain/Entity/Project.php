@@ -245,4 +245,25 @@ class Project
     {
         return $this->createdAt;
     }
+
+    #[ORM\Column(
+        type: Types::DATETIME_IMMUTABLE,
+        nullable: true
+    )]
+    private ?DateTimeImmutable $deletedAt = null;
+
+    public function getDeletedAt(): ?DateTimeImmutable
+    {
+        return $this->deletedAt;
+    }
+
+    public function isDeleted(): bool
+    {
+        return $this->deletedAt !== null;
+    }
+
+    public function markAsDeleted(): void
+    {
+        $this->deletedAt = DateAndTimeService::getDateTimeImmutable();
+    }
 }

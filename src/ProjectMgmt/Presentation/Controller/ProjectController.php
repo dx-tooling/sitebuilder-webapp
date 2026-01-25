@@ -173,7 +173,7 @@ final class ProjectController extends AbstractController
     {
         $project = $this->projectService->findById($id);
 
-        if ($project === null) {
+        if ($project === null || $project->isDeleted()) {
             throw $this->createNotFoundException('Project not found.');
         }
 
@@ -205,7 +205,7 @@ final class ProjectController extends AbstractController
     {
         $project = $this->projectService->findById($id);
 
-        if ($project === null) {
+        if ($project === null || $project->isDeleted()) {
             throw $this->createNotFoundException('Project not found.');
         }
 
@@ -273,7 +273,7 @@ final class ProjectController extends AbstractController
     {
         $project = $this->projectService->findById($id);
 
-        if ($project === null) {
+        if ($project === null || $project->isDeleted()) {
             throw $this->createNotFoundException('Project not found.');
         }
 
@@ -283,13 +283,10 @@ final class ProjectController extends AbstractController
             return $this->redirectToRoute('project_mgmt.presentation.list');
         }
 
-        // Check if project has an active workspace
+        // Finish any ongoing conversations for this project's workspace
         $workspace = $this->workspaceMgmtFacade->getWorkspaceForProject($id);
         if ($workspace !== null) {
-            // Finish any ongoing conversations first
             $this->chatBasedContentEditorFacade->finishAllOngoingConversationsForWorkspace($workspace->id);
-            // Delete the workspace
-            $this->workspaceMgmtFacade->deleteWorkspace($workspace->id);
         }
 
         $projectName = $project->getName();
@@ -309,7 +306,7 @@ final class ProjectController extends AbstractController
     {
         $project = $this->projectService->findById($id);
 
-        if ($project === null) {
+        if ($project === null || $project->isDeleted()) {
             throw $this->createNotFoundException('Project not found.');
         }
 

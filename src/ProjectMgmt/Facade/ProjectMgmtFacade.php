@@ -49,6 +49,7 @@ final class ProjectMgmtFacade implements ProjectMgmtFacadeInterface
         $projects = $this->entityManager->createQueryBuilder()
             ->select('p')
             ->from(Project::class, 'p')
+            ->where('p.deletedAt IS NULL')
             ->orderBy('p.name', 'ASC')
             ->getQuery()
             ->getResult();
@@ -64,6 +65,7 @@ final class ProjectMgmtFacade implements ProjectMgmtFacadeInterface
     /**
      * Returns unique LLM API keys with their abbreviated form and associated project names.
      * Used for the "reuse existing key" feature in the project form.
+     * Only includes keys from non-deleted projects.
      *
      * @return list<ExistingLlmApiKeyDto>
      */
@@ -73,6 +75,7 @@ final class ProjectMgmtFacade implements ProjectMgmtFacadeInterface
         $projects = $this->entityManager->createQueryBuilder()
             ->select('p')
             ->from(Project::class, 'p')
+            ->where('p.deletedAt IS NULL')
             ->orderBy('p.name', 'ASC')
             ->getQuery()
             ->getResult();
