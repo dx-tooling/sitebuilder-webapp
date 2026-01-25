@@ -18,6 +18,10 @@ class ContentController extends AbstractController
     )]
     public function homepageAction(): Response
     {
+        if ($this->getUser()) {
+            return $this->redirectToRoute('project_mgmt.presentation.list');
+        }
+
         return $this->render('@static_pages.presentation/homepage.html.twig');
     }
 

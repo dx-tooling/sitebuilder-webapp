@@ -1,1 +1,9 @@
 {% extends '@Webui/base_fullcontent.html.twig' %}
+
+{% block footer %}
+    <span>&copy; {{ "now"|date("Y") }} DX·Tooling</span>
+    <span class="mx-2">·</span>
+    <a href="https://dx-tooling.org/sitebuilder/" class="hover:text-primary-600 dark:hover:text-primary-400 underline">Website</a>
+    <span class="mx-2">·</span>
+    <a href="https://github.com/dx-tooling/sitebuilder-webapp" class="hover:text-primary-600 dark:hover:text-primary-400 underline">GitHub</a>
+{% endblock %}
