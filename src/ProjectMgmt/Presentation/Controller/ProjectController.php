@@ -184,10 +184,14 @@ final class ProjectController extends AbstractController
             static fn (ExistingLlmApiKeyDto $key) => $key->apiKey !== $currentKey
         ));
 
+        // Get agent config template (used as fallback in template, but project values take precedence)
+        $agentConfigTemplate = $this->projectMgmtFacade->getAgentConfigTemplate($project->getProjectType());
+
         return $this->render('@project_mgmt.presentation/project_form.twig', [
-            'project'         => $project,
-            'llmProviders'    => LlmModelProvider::cases(),
-            'existingLlmKeys' => $existingLlmKeys,
+            'project'             => $project,
+            'llmProviders'        => LlmModelProvider::cases(),
+            'existingLlmKeys'     => $existingLlmKeys,
+            'agentConfigTemplate' => $agentConfigTemplate,
         ]);
     }
 
