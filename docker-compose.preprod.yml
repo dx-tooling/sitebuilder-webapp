@@ -72,12 +72,18 @@ services:
     nginx:
         image: nginx:latest
         container_name: sitebuilder_preprod_nginx
+        entrypoint: ["/docker-entrypoint-preprod.sh"]
+        command: ["nginx", "-g", "daemon off;"]
+        environment:
+            - BASIC_AUTH_USER=${BASIC_AUTH_USER:-}
+            - BASIC_AUTH_PASSWORD=${BASIC_AUTH_PASSWORD:-}
         # Don't bind to host ports - Traefik will route to this container
         expose:
             - "80"
         volumes:
             - .:/var/www
             - ./docker/nginx/default.conf.preprod:/etc/nginx/conf.d/default.conf
+            - ./docker/nginx/docker-entrypoint-preprod.sh:/docker-entrypoint-preprod.sh:ro
         depends_on:
             - app
         networks:

@@ -89,30 +89,35 @@ ssh "${SERVER}" << EOF
         exit 1
     fi
 
+    # Build docker compose command with env files
+    COMPOSE="docker compose --env-file .env.preprod"
+    [ -f ".env.preprod.local" ] && COMPOSE="\$COMPOSE --env-file .env.preprod.local"
+    COMPOSE="\$COMPOSE -f ${COMPOSE_FILE}"
+
     # Build images (if not skipped)
     if [ "${SKIP_BUILD}" != "true" ]; then
         echo "Building Docker images..."
-        docker compose -f ${COMPOSE_FILE} build
+        \$COMPOSE build
     fi
 
     # Start services (scale messenger to 3 instances)
     echo "Starting services..."
-    docker compose -f ${COMPOSE_FILE} up -d --scale messenger=3
+    \$COMPOSE up -d --scale messenger=3
 
     # Restart nginx to pick up new container IPs (important after app container recreation)
     echo "Restarting nginx to pick up new container IPs..."
-    docker compose -f ${COMPOSE_FILE} restart nginx
+    \$COMPOSE restart nginx
 
     # Restart messenger
     echo "Restarting messenger to pick up code changes..."
-    docker compose -f ${COMPOSE_FILE} restart messenger
+    \$COMPOSE restart messenger
 
     # Wait for services to be ready
     echo "Waiting for services to start..."
     sleep 5
 
     # Check container status
-    docker compose -f ${COMPOSE_FILE} ps
+    \$COMPOSE ps
 EOF
 
 # Step 3: Create database and run migrations (if not skipped)
@@ -124,25 +129,30 @@ if [ "${SKIP_MIGRATIONS}" != "true" ]; then
         cd ${REMOTE_DIR}
         export ETFS_PROJECT_NAME=sitebuilder_preprod
 
+        # Build docker compose command with env files
+        COMPOSE="docker compose --env-file .env.preprod"
+        [ -f ".env.preprod.local" ] && COMPOSE="\$COMPOSE --env-file .env.preprod.local"
+        COMPOSE="\$COMPOSE -f ${COMPOSE_FILE}"
+
         # Wait for database and app container to be ready
         echo "Waiting for database and app container..."
         sleep 15
 
         # Verify app container is running
         echo "Checking app container status..."
-        docker compose -f ${COMPOSE_FILE} ps app
+        \$COMPOSE ps app
 
         # Create database if it doesn't exist (won't fail if it already exists)
         echo "Creating database if needed..."
-        docker compose -f ${COMPOSE_FILE} exec -T app php bin/console doctrine:database:create --if-not-exists --no-interaction
+        \$COMPOSE exec -T app php bin/console doctrine:database:create --if-not-exists --no-interaction
 
         # Show migration status before running
         echo "Current migration status:"
-        docker compose -f ${COMPOSE_FILE} exec -T app php bin/console doctrine:migrations:status
+        \$COMPOSE exec -T app php bin/console doctrine:migrations:status
 
         # Run migrations (do NOT swallow errors - let them propagate)
         echo "Running database migrations..."
-        docker compose -f ${COMPOSE_FILE} exec -T app php bin/console doctrine:migrations:migrate --no-interaction
+        \$COMPOSE exec -T app php bin/console doctrine:migrations:migrate --no-interaction
 
         echo "✓ Migrations completed successfully"
 EOF
@@ -156,19 +166,24 @@ ssh "${SERVER}" << EOF
     cd ${REMOTE_DIR}
     export ETFS_PROJECT_NAME=sitebuilder_preprod
 
+    # Build docker compose command with env files
+    COMPOSE="docker compose --env-file .env.preprod"
+    [ -f ".env.preprod.local" ] && COMPOSE="\$COMPOSE --env-file .env.preprod.local"
+    COMPOSE="\$COMPOSE -f ${COMPOSE_FILE}"
+
     # Wait a bit more for app container to be fully ready
     echo "Waiting for app container to be ready..."
     sleep 5
 
     # Clear cache (with retry in case container isn't ready)
-    if ! docker compose -f ${COMPOSE_FILE} exec -T app php bin/console cache:clear; then
+    if ! \$COMPOSE exec -T app php bin/console cache:clear; then
         echo "⚠️  Cache clear failed, retrying in 5 seconds..."
         sleep 5
-        docker compose -f ${COMPOSE_FILE} exec -T app php bin/console cache:clear
+        \$COMPOSE exec -T app php bin/console cache:clear
     fi
 
     # Warm up cache
-    docker compose -f ${COMPOSE_FILE} exec -T app php bin/console cache:warmup || {
+    \$COMPOSE exec -T app php bin/console cache:warmup || {
         echo "⚠️  Cache warmup failed, but continuing..."
     }
 EOF
@@ -181,8 +196,13 @@ ssh "${SERVER}" << EOF
     cd ${REMOTE_DIR}
     export ETFS_PROJECT_NAME=sitebuilder_preprod
 
+    # Build docker compose command with env files
+    COMPOSE="docker compose --env-file .env.preprod"
+    [ -f ".env.preprod.local" ] && COMPOSE="\$COMPOSE --env-file .env.preprod.local"
+    COMPOSE="\$COMPOSE -f ${COMPOSE_FILE}"
+
     echo "Container status:"
-    docker compose -f ${COMPOSE_FILE} ps
+    \$COMPOSE ps
 
     echo ""
     echo "Checking if nginx is on outermost_router network:"
@@ -190,7 +210,7 @@ ssh "${SERVER}" << EOF
 
     echo ""
     echo "Recent nginx logs:"
-    docker compose -f ${COMPOSE_FILE} logs --tail=20 nginx
+    \$COMPOSE logs --tail=20 nginx
 EOF
 
 echo ""
