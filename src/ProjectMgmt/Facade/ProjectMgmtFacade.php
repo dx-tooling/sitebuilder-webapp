@@ -5,10 +5,14 @@ declare(strict_types=1);
 namespace App\ProjectMgmt\Facade;
 
 use App\ProjectMgmt\Domain\Entity\Project;
+use App\ProjectMgmt\Facade\Dto\ExistingLlmApiKeyDto;
 use App\ProjectMgmt\Facade\Dto\ProjectInfoDto;
 use App\WorkspaceMgmt\Infrastructure\Service\GitHubUrlServiceInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use RuntimeException;
+
+use function mb_strlen;
+use function mb_substr;
 
 /**
  * Facade implementation for project management.
@@ -54,6 +58,46 @@ final class ProjectMgmtFacade implements ProjectMgmtFacadeInterface
         return $dtos;
     }
 
+    /**
+     * Returns unique LLM API keys with their abbreviated form and associated project names.
+     * Used for the "reuse existing key" feature in the project form.
+     *
+     * @return list<ExistingLlmApiKeyDto>
+     */
+    public function getExistingLlmApiKeys(): array
+    {
+        /** @var list<Project> $projects */
+        $projects = $this->entityManager->createQueryBuilder()
+            ->select('p')
+            ->from(Project::class, 'p')
+            ->orderBy('p.name', 'ASC')
+            ->getQuery()
+            ->getResult();
+
+        // Group projects by API key
+        /** @var array<string, list<string>> $keyToProjects */
+        $keyToProjects = [];
+        foreach ($projects as $project) {
+            $apiKey = $project->getLlmApiKey();
+            if ($apiKey === '') {
+                continue;
+            }
+            $keyToProjects[$apiKey][] = $project->getName();
+        }
+
+        // Convert to DTOs
+        $dtos = [];
+        foreach ($keyToProjects as $apiKey => $projectNames) {
+            $dtos[] = new ExistingLlmApiKeyDto(
+                $apiKey,
+                $this->abbreviateApiKey($apiKey),
+                $projectNames
+            );
+        }
+
+        return $dtos;
+    }
+
     private function toDto(Project $project): ProjectInfoDto
     {
         $id = $project->getId();
@@ -71,6 +115,22 @@ final class ProjectMgmtFacade implements ProjectMgmtFacadeInterface
             $project->getProjectType(),
             $githubUrl,
             $project->getAgentImage(),
+            $project->getLlmModelProvider(),
+            $project->getLlmApiKey(),
         );
+    }
+
+    /**
+     * Abbreviates an API key for display: first 6 chars + "..." + last 6 chars.
+     */
+    private function abbreviateApiKey(string $apiKey): string
+    {
+        $length = mb_strlen($apiKey);
+        if ($length <= 15) {
+            // Too short to abbreviate meaningfully
+            return $apiKey;
+        }
+
+        return mb_substr($apiKey, 0, 6) . '...' . mb_substr($apiKey, -6);
     }
 }

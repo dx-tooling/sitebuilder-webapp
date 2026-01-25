@@ -14,8 +14,12 @@ final class ContentEditorAgentTest extends TestCase
 {
     public function testGetBackgroundInstructionsContainsPathRules(): void
     {
-        $agent = new ContentEditorAgent($this->createMockWorkspaceTooling(), LlmModelName::defaultForContentEditor());
-        $ref   = new ReflectionMethod(ContentEditorAgent::class, 'getBackgroundInstructions');
+        $agent = new ContentEditorAgent(
+            $this->createMockWorkspaceTooling(),
+            LlmModelName::defaultForContentEditor(),
+            'sk-test-key'
+        );
+        $ref = new ReflectionMethod(ContentEditorAgent::class, 'getBackgroundInstructions');
         $ref->setAccessible(true);
 
         /** @var list<string> $instructions */
@@ -30,8 +34,12 @@ final class ContentEditorAgentTest extends TestCase
 
     public function testGetStepInstructionsExploreStepRefersToWorkingFolderFromUserMessage(): void
     {
-        $agent = new ContentEditorAgent($this->createMockWorkspaceTooling(), LlmModelName::defaultForContentEditor());
-        $ref   = new ReflectionMethod(ContentEditorAgent::class, 'getStepInstructions');
+        $agent = new ContentEditorAgent(
+            $this->createMockWorkspaceTooling(),
+            LlmModelName::defaultForContentEditor(),
+            'sk-test-key'
+        );
+        $ref = new ReflectionMethod(ContentEditorAgent::class, 'getStepInstructions');
         $ref->setAccessible(true);
 
         /** @var list<string> $steps */

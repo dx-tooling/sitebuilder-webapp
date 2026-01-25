@@ -8,6 +8,7 @@ use App\LlmContentEditor\Domain\Agent\ContentEditorAgent;
 use App\LlmContentEditor\Domain\Enum\LlmModelName;
 use App\LlmContentEditor\Facade\Dto\ConversationMessageDto;
 use App\LlmContentEditor\Facade\Dto\EditStreamChunkDto;
+use App\LlmContentEditor\Facade\Enum\LlmModelProvider;
 use App\LlmContentEditor\Infrastructure\AgentEventQueue;
 use App\LlmContentEditor\Infrastructure\ChatHistory\CallbackChatHistory;
 use App\LlmContentEditor\Infrastructure\ChatHistory\MessageSerializer;
@@ -19,7 +20,9 @@ use NeuronAI\Chat\Messages\Message;
 use NeuronAI\Chat\Messages\ToolCallMessage;
 use NeuronAI\Chat\Messages\ToolCallResultMessage;
 use NeuronAI\Chat\Messages\UserMessage;
+use Psr\Log\LoggerInterface;
 use SplQueue;
+use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Throwable;
 
 use function is_string;
@@ -29,7 +32,9 @@ final class LlmContentEditorFacade implements LlmContentEditorFacadeInterface
     private readonly MessageSerializer $messageSerializer;
 
     public function __construct(
-        private readonly WorkspaceToolingServiceInterface $workspaceTooling
+        private readonly WorkspaceToolingServiceInterface $workspaceTooling,
+        private readonly HttpClientInterface              $httpClient,
+        private readonly LoggerInterface                  $logger,
     ) {
         $this->messageSerializer = new MessageSerializer();
     }
@@ -41,8 +46,9 @@ final class LlmContentEditorFacade implements LlmContentEditorFacadeInterface
      */
     public function streamEdit(string $workspacePath, string $instruction): Generator
     {
-        // Delegate to streamEditWithHistory with empty history
-        yield from $this->streamEditWithHistory($workspacePath, $instruction, []);
+        // This method is deprecated and should not be used.
+        // Yield an error chunk since we can't proceed without an API key.
+        yield new EditStreamChunkDto('done', null, null, false, 'streamEdit is deprecated. Use streamEditWithHistory with an API key.');
     }
 
     /**
@@ -53,7 +59,8 @@ final class LlmContentEditorFacade implements LlmContentEditorFacadeInterface
     public function streamEditWithHistory(
         string $workspacePath,
         string $instruction,
-        array  $previousMessages = []
+        array  $previousMessages,
+        string $llmApiKey
     ): Generator {
         // Convert previous message DTOs to NeuronAI messages
         $initialMessages = [];
@@ -113,7 +120,11 @@ final class LlmContentEditorFacade implements LlmContentEditorFacadeInterface
             }
         });
 
-        $agent = new ContentEditorAgent($this->workspaceTooling, LlmModelName::defaultForContentEditor());
+        $agent = new ContentEditorAgent(
+            $this->workspaceTooling,
+            LlmModelName::defaultForContentEditor(),
+            $llmApiKey
+        );
         $agent->withChatHistory($chatHistory);
 
         $queue = new AgentEventQueue();
@@ -150,6 +161,41 @@ final class LlmContentEditorFacade implements LlmContentEditorFacadeInterface
         } catch (Throwable $e) {
             yield new EditStreamChunkDto('done', null, null, false, $e->getMessage());
         }
+    }
+
+    public function verifyApiKey(LlmModelProvider $provider, string $apiKey): bool
+    {
+        if ($apiKey === '') {
+            return false;
+        }
+
+        try {
+            return match ($provider) {
+                LlmModelProvider::OpenAI => $this->verifyOpenAiKey($apiKey),
+            };
+        } catch (Throwable $e) {
+            $this->logger->warning('API key verification failed', [
+                'provider' => $provider->value,
+                'error'    => $e->getMessage(),
+            ]);
+
+            return false;
+        }
+    }
+
+    /**
+     * Verifies an OpenAI API key by calling the models endpoint.
+     */
+    private function verifyOpenAiKey(string $apiKey): bool
+    {
+        $response = $this->httpClient->request('GET', 'https://api.openai.com/v1/models', [
+            'headers' => [
+                'Authorization' => 'Bearer ' . $apiKey,
+            ],
+            'timeout' => 10,
+        ]);
+
+        return $response->getStatusCode() === 200;
     }
 
     /**

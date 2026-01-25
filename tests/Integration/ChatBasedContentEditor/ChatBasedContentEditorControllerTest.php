@@ -237,7 +237,13 @@ final class ChatBasedContentEditorControllerTest extends WebTestCase
 
     private function createProject(string $name, string $gitUrl, string $githubToken): Project
     {
-        $project = new Project($name, $gitUrl, $githubToken);
+        $project = new Project(
+            $name,
+            $gitUrl,
+            $githubToken,
+            \App\LlmContentEditor\Facade\Enum\LlmModelProvider::OpenAI,
+            'sk-test-key'
+        );
         $this->entityManager->persist($project);
         $this->entityManager->flush();
 

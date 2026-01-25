@@ -4,12 +4,14 @@ framework:
         paths:
             - assets/
             - src/ChatBasedContentEditor/Presentation/Resources/assets/controllers/
+            - src/ProjectMgmt/Presentation/Resources/assets/controllers/
         missing_import_mode: strict
 
 sensiolabs_typescript:
     source_dir:
         - "%kernel.project_dir%/assets/"
         - "%kernel.project_dir%/src/ChatBasedContentEditor/Presentation/Resources/assets/controllers/"
+        - "%kernel.project_dir%/src/ProjectMgmt/Presentation/Resources/assets/controllers/"
 
 when@prod:
     framework:
