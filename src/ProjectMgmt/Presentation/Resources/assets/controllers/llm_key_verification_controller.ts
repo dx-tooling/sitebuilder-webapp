@@ -25,7 +25,6 @@ export default class extends Controller {
     declare readonly hasErrorTarget: boolean;
     declare readonly errorTarget: HTMLElement;
 
-    private lastVerifiedKey: string = "";
     private isVerifying: boolean = false;
 
     /**
@@ -38,8 +37,8 @@ export default class extends Controller {
 
         const apiKey = this.inputTarget.value.trim();
 
-        // Don't verify if empty or same as last verified
-        if (apiKey === "" || apiKey === this.lastVerifiedKey) {
+        // Don't verify if empty
+        if (apiKey === "") {
             return;
         }
 
@@ -103,7 +102,6 @@ export default class extends Controller {
             const data = (await response.json()) as { success: boolean };
 
             if (data.success) {
-                this.lastVerifiedKey = apiKey;
                 this.showStatus("success");
             } else {
                 this.showStatus("error");

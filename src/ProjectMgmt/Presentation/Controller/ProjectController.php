@@ -9,6 +9,7 @@ use App\ChatBasedContentEditor\Facade\ChatBasedContentEditorFacadeInterface;
 use App\LlmContentEditor\Facade\Enum\LlmModelProvider;
 use App\LlmContentEditor\Facade\LlmContentEditorFacadeInterface;
 use App\ProjectMgmt\Domain\Service\ProjectService;
+use App\ProjectMgmt\Facade\Dto\ExistingLlmApiKeyDto;
 use App\ProjectMgmt\Facade\Enum\ProjectType;
 use App\ProjectMgmt\Facade\ProjectMgmtFacadeInterface;
 use App\WorkspaceMgmt\Facade\Enum\WorkspaceStatus;
@@ -164,10 +165,17 @@ final class ProjectController extends AbstractController
             throw $this->createNotFoundException('Project not found.');
         }
 
+        // Filter out the current project's key from the reuse list
+        $currentKey      = $project->getLlmApiKey();
+        $existingLlmKeys = array_values(array_filter(
+            $this->projectMgmtFacade->getExistingLlmApiKeys(),
+            static fn (ExistingLlmApiKeyDto $key) => $key->apiKey !== $currentKey
+        ));
+
         return $this->render('@project_mgmt.presentation/project_form.twig', [
             'project'         => $project,
             'llmProviders'    => LlmModelProvider::cases(),
-            'existingLlmKeys' => $this->projectMgmtFacade->getExistingLlmApiKeys(),
+            'existingLlmKeys' => $existingLlmKeys,
         ]);
     }
 

@@ -31,9 +31,9 @@ describe("LlmKeyVerificationController", () => {
                        data-action="blur->llm-key-verification#verify"
                        value="${apiKey}">
                 <div data-llm-key-verification-target="status">
-                    <div class="hidden" data-llm-key-verification-target="spinner">Verifying...</div>
-                    <div class="hidden" data-llm-key-verification-target="success">Success!</div>
-                    <div class="hidden" data-llm-key-verification-target="error">Error!</div>
+                    <div class="hidden flex items-center gap-2" data-llm-key-verification-target="spinner">Verifying...</div>
+                    <div class="hidden flex items-center gap-2" data-llm-key-verification-target="success">Success!</div>
+                    <div class="hidden flex items-center gap-2" data-llm-key-verification-target="error">Error!</div>
                 </div>
             </div>
         `;
@@ -163,5 +163,151 @@ describe("LlmKeyVerificationController", () => {
         expect(formData.get("provider")).toBe("openai");
         expect(formData.get("api_key")).toBe("sk-test-key");
         expect(formData.get("_csrf_token")).toBe("test-csrf-token");
+    });
+
+    it("should re-verify after failed verification when key changes", async () => {
+        await createControllerElement("sk-invalid-key");
+
+        // Mock fetch with failure response first
+        const fetchMock = vi.spyOn(global, "fetch").mockResolvedValue(new Response(JSON.stringify({ success: false })));
+
+        // First verification attempt - should fail
+        const input = document.querySelector('[data-llm-key-verification-target="input"]') as HTMLInputElement;
+        input.dispatchEvent(new Event("blur"));
+
+        // Wait for first verification to complete
+        await new Promise((resolve) => setTimeout(resolve, 100));
+
+        // Error should be visible
+        const error = document.querySelector('[data-llm-key-verification-target="error"]') as HTMLElement;
+        expect(error.classList.contains("hidden")).toBe(false);
+        expect(fetchMock).toHaveBeenCalledTimes(1);
+
+        // Now change the key and mock success response
+        fetchMock.mockResolvedValue(new Response(JSON.stringify({ success: true })));
+        input.value = "sk-valid-key";
+        input.dispatchEvent(new Event("blur"));
+
+        // Wait for second verification
+        await new Promise((resolve) => setTimeout(resolve, 100));
+
+        // Fetch should have been called twice (once for each verification)
+        expect(fetchMock).toHaveBeenCalledTimes(2);
+
+        // Success should now be visible
+        const success = document.querySelector('[data-llm-key-verification-target="success"]') as HTMLElement;
+        expect(success.classList.contains("hidden")).toBe(false);
+        expect(error.classList.contains("hidden")).toBe(true);
+    });
+
+    it("should re-verify same key after failed verification (retry scenario)", async () => {
+        await createControllerElement("sk-test-key");
+
+        // Mock fetch with failure response first
+        const fetchMock = vi.spyOn(global, "fetch").mockResolvedValue(new Response(JSON.stringify({ success: false })));
+
+        // First verification attempt - should fail
+        const input = document.querySelector('[data-llm-key-verification-target="input"]') as HTMLInputElement;
+        input.dispatchEvent(new Event("blur"));
+
+        // Wait for first verification to complete
+        await new Promise((resolve) => setTimeout(resolve, 100));
+
+        // Error should be visible
+        const error = document.querySelector('[data-llm-key-verification-target="error"]') as HTMLElement;
+        expect(error.classList.contains("hidden")).toBe(false);
+        expect(fetchMock).toHaveBeenCalledTimes(1);
+
+        // Now mock success response (e.g., user fixed API key on provider side)
+        // and retry with the SAME key
+        fetchMock.mockResolvedValue(new Response(JSON.stringify({ success: true })));
+        input.dispatchEvent(new Event("blur"));
+
+        // Wait for second verification
+        await new Promise((resolve) => setTimeout(resolve, 100));
+
+        // Fetch should have been called twice - same key should be re-verified after failure
+        expect(fetchMock).toHaveBeenCalledTimes(2);
+
+        // Success should now be visible
+        const success = document.querySelector('[data-llm-key-verification-target="success"]') as HTMLElement;
+        expect(success.classList.contains("hidden")).toBe(false);
+        expect(error.classList.contains("hidden")).toBe(true);
+    });
+
+    it("should re-verify after network error (fetch throws)", async () => {
+        await createControllerElement("sk-test-key");
+
+        // Mock fetch to throw network error
+        const fetchMock = vi.spyOn(global, "fetch").mockRejectedValue(new Error("Network error"));
+
+        // First verification attempt - should fail with network error
+        const input = document.querySelector('[data-llm-key-verification-target="input"]') as HTMLInputElement;
+        input.dispatchEvent(new Event("blur"));
+
+        // Wait for first verification to complete
+        await new Promise((resolve) => setTimeout(resolve, 100));
+
+        // Error should be visible
+        const error = document.querySelector('[data-llm-key-verification-target="error"]') as HTMLElement;
+        expect(error.classList.contains("hidden")).toBe(false);
+        expect(fetchMock).toHaveBeenCalledTimes(1);
+
+        // Now mock success response and retry with the same key
+        fetchMock.mockResolvedValue(new Response(JSON.stringify({ success: true })));
+        input.dispatchEvent(new Event("blur"));
+
+        // Wait for second verification
+        await new Promise((resolve) => setTimeout(resolve, 100));
+
+        // Fetch should have been called twice
+        expect(fetchMock).toHaveBeenCalledTimes(2);
+
+        // Success should now be visible
+        const success = document.querySelector('[data-llm-key-verification-target="success"]') as HTMLElement;
+        expect(success.classList.contains("hidden")).toBe(false);
+        expect(error.classList.contains("hidden")).toBe(true);
+    });
+
+    it("should re-verify a previously successful key when re-entered after trying another key", async () => {
+        await createControllerElement("sk-good-key");
+
+        const fetchMock = vi.spyOn(global, "fetch").mockResolvedValue(new Response(JSON.stringify({ success: true })));
+
+        // First verification - key A succeeds
+        const input = document.querySelector('[data-llm-key-verification-target="input"]') as HTMLInputElement;
+        input.dispatchEvent(new Event("blur"));
+
+        await new Promise((resolve) => setTimeout(resolve, 100));
+
+        const success = document.querySelector('[data-llm-key-verification-target="success"]') as HTMLElement;
+        expect(success.classList.contains("hidden")).toBe(false);
+        expect(fetchMock).toHaveBeenCalledTimes(1);
+
+        // User changes to key B (fails)
+        fetchMock.mockResolvedValue(new Response(JSON.stringify({ success: false })));
+        input.value = "sk-bad-key";
+        input.dispatchEvent(new Event("blur"));
+
+        await new Promise((resolve) => setTimeout(resolve, 100));
+
+        const error = document.querySelector('[data-llm-key-verification-target="error"]') as HTMLElement;
+        expect(error.classList.contains("hidden")).toBe(false);
+        expect(fetchMock).toHaveBeenCalledTimes(2);
+
+        // User changes BACK to key A (the previously successful one)
+        // This should trigger re-verification, not skip it
+        fetchMock.mockResolvedValue(new Response(JSON.stringify({ success: true })));
+        input.value = "sk-good-key";
+        input.dispatchEvent(new Event("blur"));
+
+        await new Promise((resolve) => setTimeout(resolve, 100));
+
+        // Fetch should have been called 3 times - key A should be re-verified
+        expect(fetchMock).toHaveBeenCalledTimes(3);
+
+        // Success should be visible again
+        expect(success.classList.contains("hidden")).toBe(false);
+        expect(error.classList.contains("hidden")).toBe(true);
     });
 });
