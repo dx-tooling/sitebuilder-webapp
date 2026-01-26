@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 use ErickSkrauch\PhpCsFixer\Fixers;
 
-putenv('PHP_CS_FIXER_IGNORE_ENV=1');
-
 $finder = (new PhpCsFixer\Finder())
     ->in([
         __DIR__ . DIRECTORY_SEPARATOR . 'src',
@@ -18,6 +16,7 @@ $finder = (new PhpCsFixer\Finder())
 ;
 
 return (new PhpCsFixer\Config())
+    ->setUnsupportedPhpVersionAllowed(true)
     ->setParallelConfig(PhpCsFixer\Runner\Parallel\ParallelConfigFactory::detect())
     ->registerCustomFixers(new Fixers())
     ->setRules([
