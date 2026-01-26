@@ -14,6 +14,14 @@ The app lets users connect set up content management projects backed by Git repo
   <em>Click to watch demo</em>
 </p>
 
+## Latest updates
+
+- [UX Improvements: Conversation History and Reviewer Dashboard](https://dx-tooling.org/sitebuilder/blog/2026-01-26-ux-improvements.html)
+- [Smarter Agent Tools: Better Commits and Preview Links](https://dx-tooling.org/sitebuilder/blog/2026-01-26-smarter-agent-tools.html)
+- [January 2026 Updates: BYOK, Custom Agents, and More](https://dx-tooling.org/sitebuilder/blog/2026-01-26-january-updates.html)
+- [Strong Workspace Isolation with Docker Containers](https://dx-tooling.org/sitebuilder/blog/2026-01-25-docker-workspace-isolation.html)
+- [Deep Dive: Introducing SiteBuilder](https://dx-tooling.org/sitebuilder/blog/2026-01-25-deep-dive-introduction.html)
+
 ## What this repository contains
 
 - A Symfony 7.4 backend that manages projects, workspaces, and conversations
