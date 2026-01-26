@@ -79,6 +79,12 @@ readonly class MainNavigationPresentationService extends AbstractMainNavigationS
             );
         }
 
+        // Workflow docs is visible to all users (public page)
+        $entries[] = $this->generateEntry(
+            $this->translator->trans('navigation.workflow_docs'),
+            'static_pages.presentation.workflow_docs',
+        );
+
         return $entries;
     }
 

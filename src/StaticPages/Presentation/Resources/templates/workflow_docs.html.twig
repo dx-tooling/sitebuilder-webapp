@@ -1,0 +1,429 @@
+{% extends '@common.presentation/base_fullcontent.html.twig' %}
+
+{% block body %}
+<div class="max-w-5xl mx-auto px-4 py-8">
+    <h1 class="text-3xl font-bold mb-2">{{ 'workflow_docs.title'|trans }}</h1>
+    <p class="text-dark-600 dark:text-dark-400 mb-8">{{ 'workflow_docs.intro'|trans }}</p>
+
+    {# Table of Contents #}
+    <nav class="mb-12 p-4 bg-dark-50 dark:bg-dark-800 rounded-lg">
+        <h2 class="text-lg font-semibold mb-3">{{ 'workflow_docs.toc.title'|trans }}</h2>
+        <ul class="space-y-1 text-sm">
+            <li><a href="#state-machine" class="text-primary-600 dark:text-primary-400 hover:underline">{{ 'workflow_docs.sections.state_machine'|trans }}</a></li>
+            <li><a href="#typical-workflow" class="text-primary-600 dark:text-primary-400 hover:underline">{{ 'workflow_docs.sections.typical_workflow'|trans }}</a></li>
+            <li><a href="#send-to-review" class="text-primary-600 dark:text-primary-400 hover:underline">{{ 'workflow_docs.sections.send_to_review'|trans }}</a></li>
+            <li><a href="#edge-cases" class="text-primary-600 dark:text-primary-400 hover:underline">{{ 'workflow_docs.sections.edge_cases'|trans }}</a></li>
+            <li><a href="#external-integrations" class="text-primary-600 dark:text-primary-400 hover:underline">{{ 'workflow_docs.sections.external_integrations'|trans }}</a></li>
+        </ul>
+    </nav>
+
+    {# Section 1: Workspace State Machine #}
+    <section id="state-machine" class="mb-16">
+        <h2 class="text-2xl font-bold mb-4">{{ 'workflow_docs.sections.state_machine'|trans }}</h2>
+        <p class="mb-4 text-dark-600 dark:text-dark-400">{{ 'workflow_docs.state_machine.description'|trans }}</p>
+
+        <div class="mb-6 overflow-x-auto">
+            <pre class="mermaid">
+stateDiagram-v2
+    [*] --> AvailableForSetup: Create workspace
+
+    AvailableForSetup --> InSetup: Start conversation
+    Merged --> InSetup: Start conversation
+
+    InSetup --> AvailableForConversation: Setup succeeds
+    InSetup --> Problem: Setup fails
+
+    AvailableForConversation --> InConversation: Start conversation
+
+    InConversation --> AvailableForConversation: Finish conversation
+    InConversation --> InReview: Send to review
+    InConversation --> Problem: Git operation fails
+
+    InReview --> Merged: Reviewer marks merged
+    InReview --> AvailableForConversation: Reviewer unlocks
+
+    Problem --> AvailableForSetup: User resets workspace
+            </pre>
+        </div>
+
+        <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-4">
+            <h3 class="font-semibold mb-2">{{ 'workflow_docs.state_machine.states_title'|trans }}</h3>
+            <ul class="space-y-2 text-sm">
+                <li><strong class="text-blue-700 dark:text-blue-300">AvailableForSetup</strong> — {{ 'workflow_docs.state_machine.states.available_for_setup'|trans }}</li>
+                <li><strong class="text-blue-700 dark:text-blue-300">InSetup</strong> — {{ 'workflow_docs.state_machine.states.in_setup'|trans }}</li>
+                <li><strong class="text-blue-700 dark:text-blue-300">AvailableForConversation</strong> — {{ 'workflow_docs.state_machine.states.available_for_conversation'|trans }}</li>
+                <li><strong class="text-blue-700 dark:text-blue-300">InConversation</strong> — {{ 'workflow_docs.state_machine.states.in_conversation'|trans }}</li>
+                <li><strong class="text-blue-700 dark:text-blue-300">InReview</strong> — {{ 'workflow_docs.state_machine.states.in_review'|trans }}</li>
+                <li><strong class="text-blue-700 dark:text-blue-300">Merged</strong> — {{ 'workflow_docs.state_machine.states.merged'|trans }}</li>
+                <li><strong class="text-red-700 dark:text-red-300">Problem</strong> — {{ 'workflow_docs.state_machine.states.problem'|trans }}</li>
+            </ul>
+        </div>
+    </section>
+
+    {# Section 2: Typical Workflow #}
+    <section id="typical-workflow" class="mb-16">
+        <h2 class="text-2xl font-bold mb-4">{{ 'workflow_docs.sections.typical_workflow'|trans }}</h2>
+        <p class="mb-4 text-dark-600 dark:text-dark-400">{{ 'workflow_docs.typical_workflow.description'|trans }}</p>
+
+        <div class="mb-6 overflow-x-auto">
+            <pre class="mermaid">
+sequenceDiagram
+    participant User
+    participant SiteBuilder
+    participant GitHub
+
+    User->>SiteBuilder: Select project
+    SiteBuilder->>SiteBuilder: Check workspace status
+
+    alt No workspace or needs setup
+        SiteBuilder->>GitHub: Clone repository
+        SiteBuilder->>GitHub: Create new branch
+        SiteBuilder->>SiteBuilder: Run setup steps
+    end
+
+    SiteBuilder->>User: Show conversation UI
+    User->>SiteBuilder: Make content changes
+    SiteBuilder->>GitHub: Commit and push changes
+
+    User->>SiteBuilder: Click "Send to Review"
+    SiteBuilder->>GitHub: Create Pull Request
+    SiteBuilder->>User: Show PR link
+
+    Note over GitHub: External review process
+
+    GitHub-->>SiteBuilder: PR merged (manual notification)
+    SiteBuilder->>SiteBuilder: Mark workspace as Merged
+            </pre>
+        </div>
+
+        <div class="grid md:grid-cols-3 gap-4">
+            <div class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
+                <h4 class="font-semibold text-green-700 dark:text-green-300 mb-2">{{ 'workflow_docs.typical_workflow.step1_title'|trans }}</h4>
+                <p class="text-sm">{{ 'workflow_docs.typical_workflow.step1_description'|trans }}</p>
+            </div>
+            <div class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
+                <h4 class="font-semibold text-green-700 dark:text-green-300 mb-2">{{ 'workflow_docs.typical_workflow.step2_title'|trans }}</h4>
+                <p class="text-sm">{{ 'workflow_docs.typical_workflow.step2_description'|trans }}</p>
+            </div>
+            <div class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
+                <h4 class="font-semibold text-green-700 dark:text-green-300 mb-2">{{ 'workflow_docs.typical_workflow.step3_title'|trans }}</h4>
+                <p class="text-sm">{{ 'workflow_docs.typical_workflow.step3_description'|trans }}</p>
+            </div>
+        </div>
+    </section>
+
+    {# Section 3: Send to Review Flow #}
+    <section id="send-to-review" class="mb-16">
+        <h2 class="text-2xl font-bold mb-4">{{ 'workflow_docs.sections.send_to_review'|trans }}</h2>
+        <p class="mb-4 text-dark-600 dark:text-dark-400">{{ 'workflow_docs.send_to_review.description'|trans }}</p>
+
+        <div class="mb-6 overflow-x-auto">
+            <pre class="mermaid">
+flowchart TD
+    A[User clicks Send to Review] --> B{Uncommitted changes?}
+    B -->|Yes| C[Auto-commit with message]
+    B -->|No| D{PR already exists?}
+    C --> D
+    D -->|Yes| E[Use existing PR]
+    D -->|No| F{Branch has changes vs main?}
+    F -->|Yes| G[Create new PR on GitHub]
+    F -->|No| H[Skip PR creation]
+    E --> I[Mark conversation FINISHED]
+    G --> I
+    H --> J[Mark workspace AVAILABLE_FOR_CONVERSATION]
+    I --> K[Mark workspace IN_REVIEW]
+    K --> L[Show PR link to user]
+            </pre>
+        </div>
+
+        <div class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+            <h3 class="font-semibold text-yellow-700 dark:text-yellow-300 mb-2">{{ 'workflow_docs.send_to_review.important_title'|trans }}</h3>
+            <ul class="text-sm space-y-1 list-disc list-inside">
+                <li>{{ 'workflow_docs.send_to_review.important_1'|trans }}</li>
+                <li>{{ 'workflow_docs.send_to_review.important_2'|trans }}</li>
+                <li>{{ 'workflow_docs.send_to_review.important_3'|trans }}</li>
+            </ul>
+        </div>
+    </section>
+
+    {# Section 4: Edge Cases #}
+    <section id="edge-cases" class="mb-16">
+        <h2 class="text-2xl font-bold mb-4">{{ 'workflow_docs.sections.edge_cases'|trans }}</h2>
+        <p class="mb-6 text-dark-600 dark:text-dark-400">{{ 'workflow_docs.edge_cases.description'|trans }}</p>
+
+        {# Edge Case 1: Reset while IN_REVIEW #}
+        <div class="mb-8 border border-dark-200 dark:border-dark-700 rounded-lg overflow-hidden">
+            <div class="bg-dark-100 dark:bg-dark-800 px-4 py-3 border-b border-dark-200 dark:border-dark-700">
+                <h3 class="font-semibold">{{ 'workflow_docs.edge_cases.reset_in_review.title'|trans }}</h3>
+            </div>
+            <div class="p-4">
+                <p class="mb-4 text-sm text-dark-600 dark:text-dark-400">{{ 'workflow_docs.edge_cases.reset_in_review.description'|trans }}</p>
+
+                <div class="mb-4 overflow-x-auto">
+                    <pre class="mermaid">
+sequenceDiagram
+    participant User
+    participant SiteBuilder
+    participant GitHub
+
+    Note over SiteBuilder: Workspace is IN_REVIEW
+    Note over GitHub: PR exists for branch ws-abc-123
+
+    User->>SiteBuilder: Reset workspace
+    SiteBuilder->>SiteBuilder: Clear branch name
+    SiteBuilder->>SiteBuilder: Clear PR URL reference
+    SiteBuilder->>SiteBuilder: Set status to AVAILABLE_FOR_SETUP
+
+    Note over GitHub: PR still exists but is now orphaned
+
+    User->>SiteBuilder: Start new conversation
+    SiteBuilder->>GitHub: Clone fresh from main
+    SiteBuilder->>GitHub: Create NEW branch ws-abc-456
+    SiteBuilder->>User: Ready for conversation
+
+    Note over GitHub: Old PR remains open until manually closed
+                    </pre>
+                </div>
+
+                <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3">
+                    <p class="text-sm font-medium text-red-700 dark:text-red-300">{{ 'workflow_docs.edge_cases.reset_in_review.warning'|trans }}</p>
+                </div>
+            </div>
+        </div>
+
+        {# Edge Case 2: Concurrent Access #}
+        <div class="mb-8 border border-dark-200 dark:border-dark-700 rounded-lg overflow-hidden">
+            <div class="bg-dark-100 dark:bg-dark-800 px-4 py-3 border-b border-dark-200 dark:border-dark-700">
+                <h3 class="font-semibold">{{ 'workflow_docs.edge_cases.concurrent_access.title'|trans }}</h3>
+            </div>
+            <div class="p-4">
+                <p class="mb-4 text-sm text-dark-600 dark:text-dark-400">{{ 'workflow_docs.edge_cases.concurrent_access.description'|trans }}</p>
+
+                <div class="mb-4 overflow-x-auto">
+                    <pre class="mermaid">
+sequenceDiagram
+    participant UserA as User A
+    participant UserB as User B
+    participant SiteBuilder
+
+    UserA->>SiteBuilder: Start conversation
+    SiteBuilder->>SiteBuilder: Set workspace IN_CONVERSATION
+    SiteBuilder->>UserA: Show conversation UI
+
+    UserB->>SiteBuilder: Try to start conversation
+    SiteBuilder->>SiteBuilder: Check workspace status
+    SiteBuilder->>UserB: Workspace is busy
+
+    Note over UserA: Working on content...
+
+    UserA->>SiteBuilder: Finish conversation
+    SiteBuilder->>SiteBuilder: Set workspace AVAILABLE_FOR_CONVERSATION
+
+    UserB->>SiteBuilder: Start conversation
+    SiteBuilder->>UserB: Show conversation UI
+                    </pre>
+                </div>
+
+                <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+                    <p class="text-sm">{{ 'workflow_docs.edge_cases.concurrent_access.note'|trans }}</p>
+                </div>
+            </div>
+        </div>
+
+        {# Edge Case 3: Problem Recovery #}
+        <div class="mb-8 border border-dark-200 dark:border-dark-700 rounded-lg overflow-hidden">
+            <div class="bg-dark-100 dark:bg-dark-800 px-4 py-3 border-b border-dark-200 dark:border-dark-700">
+                <h3 class="font-semibold">{{ 'workflow_docs.edge_cases.problem_recovery.title'|trans }}</h3>
+            </div>
+            <div class="p-4">
+                <p class="mb-4 text-sm text-dark-600 dark:text-dark-400">{{ 'workflow_docs.edge_cases.problem_recovery.description'|trans }}</p>
+
+                <div class="mb-4 overflow-x-auto">
+                    <pre class="mermaid">
+flowchart TD
+    A[Git operation fails] --> B[Workspace set to PROBLEM]
+    B --> C[Any ongoing conversation marked FINISHED]
+    C --> D[User sees error state]
+    D --> E{User action}
+    E -->|Reset workspace| F[Status set to AVAILABLE_FOR_SETUP]
+    F --> G[Next conversation triggers fresh setup]
+    G --> H[Clone from main, new branch]
+    H --> I[Ready to work again]
+
+    style B fill:#fee2e2,stroke:#dc2626
+    style F fill:#dbeafe,stroke:#2563eb
+    style I fill:#dcfce7,stroke:#16a34a
+                    </pre>
+                </div>
+
+                <div class="grid md:grid-cols-2 gap-4">
+                    <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3">
+                        <h4 class="font-semibold text-red-700 dark:text-red-300 text-sm mb-1">{{ 'workflow_docs.edge_cases.problem_recovery.lost_title'|trans }}</h4>
+                        <p class="text-sm">{{ 'workflow_docs.edge_cases.problem_recovery.lost_description'|trans }}</p>
+                    </div>
+                    <div class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3">
+                        <h4 class="font-semibold text-green-700 dark:text-green-300 text-sm mb-1">{{ 'workflow_docs.edge_cases.problem_recovery.preserved_title'|trans }}</h4>
+                        <p class="text-sm">{{ 'workflow_docs.edge_cases.problem_recovery.preserved_description'|trans }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {# Edge Case 4: Reviewer Actions #}
+        <div class="border border-dark-200 dark:border-dark-700 rounded-lg overflow-hidden">
+            <div class="bg-dark-100 dark:bg-dark-800 px-4 py-3 border-b border-dark-200 dark:border-dark-700">
+                <h3 class="font-semibold">{{ 'workflow_docs.edge_cases.reviewer_actions.title'|trans }}</h3>
+            </div>
+            <div class="p-4">
+                <p class="mb-4 text-sm text-dark-600 dark:text-dark-400">{{ 'workflow_docs.edge_cases.reviewer_actions.description'|trans }}</p>
+
+                <div class="mb-4 overflow-x-auto">
+                    <pre class="mermaid">
+flowchart LR
+    A[Workspace IN_REVIEW] --> B{Reviewer decision}
+    B -->|Mark as Merged| C[Status: MERGED]
+    B -->|Unlock| D[Status: AVAILABLE_FOR_CONVERSATION]
+
+    C --> E[Next conversation triggers full setup]
+    D --> F[Continue working on same branch]
+
+    style C fill:#dcfce7,stroke:#16a34a
+    style D fill:#dbeafe,stroke:#2563eb
+                    </pre>
+                </div>
+
+                <div class="grid md:grid-cols-2 gap-4">
+                    <div class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3">
+                        <h4 class="font-semibold text-green-700 dark:text-green-300 text-sm mb-1">{{ 'workflow_docs.edge_cases.reviewer_actions.merge_title'|trans }}</h4>
+                        <p class="text-sm">{{ 'workflow_docs.edge_cases.reviewer_actions.merge_description'|trans }}</p>
+                    </div>
+                    <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+                        <h4 class="font-semibold text-blue-700 dark:text-blue-300 text-sm mb-1">{{ 'workflow_docs.edge_cases.reviewer_actions.unlock_title'|trans }}</h4>
+                        <p class="text-sm">{{ 'workflow_docs.edge_cases.reviewer_actions.unlock_description'|trans }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    {# Section 5: External Integrations #}
+    <section id="external-integrations" class="mb-16">
+        <h2 class="text-2xl font-bold mb-4">{{ 'workflow_docs.sections.external_integrations'|trans }}</h2>
+        <p class="mb-4 text-dark-600 dark:text-dark-400">{{ 'workflow_docs.external_integrations.description'|trans }}</p>
+
+        <div class="mb-6 overflow-x-auto">
+            <pre class="mermaid">
+flowchart TB
+    subgraph SiteBuilder [SiteBuilder Application]
+        WS[Workspace Management]
+        CE[Content Editor]
+        RV[Reviewer Dashboard]
+    end
+
+    subgraph GitHub [GitHub]
+        REPO[Repository]
+        BRANCH[Branches]
+        PR[Pull Requests]
+    end
+
+    WS -->|Clone repository| REPO
+    WS -->|Create branch| BRANCH
+    CE -->|Commit and push| BRANCH
+    CE -->|Create PR| PR
+    PR -.->|Manual: Merge PR| REPO
+    PR -.->|Manual: Notify merged| RV
+    RV -->|Mark as merged| WS
+            </pre>
+        </div>
+
+        <div class="grid md:grid-cols-2 gap-4">
+            <div class="border border-dark-200 dark:border-dark-700 rounded-lg p-4">
+                <h3 class="font-semibold mb-3">{{ 'workflow_docs.external_integrations.automated_title'|trans }}</h3>
+                <ul class="text-sm space-y-2">
+                    <li class="flex items-start gap-2">
+                        <span class="text-green-600 dark:text-green-400">&#10003;</span>
+                        <span>{{ 'workflow_docs.external_integrations.automated_1'|trans }}</span>
+                    </li>
+                    <li class="flex items-start gap-2">
+                        <span class="text-green-600 dark:text-green-400">&#10003;</span>
+                        <span>{{ 'workflow_docs.external_integrations.automated_2'|trans }}</span>
+                    </li>
+                    <li class="flex items-start gap-2">
+                        <span class="text-green-600 dark:text-green-400">&#10003;</span>
+                        <span>{{ 'workflow_docs.external_integrations.automated_3'|trans }}</span>
+                    </li>
+                    <li class="flex items-start gap-2">
+                        <span class="text-green-600 dark:text-green-400">&#10003;</span>
+                        <span>{{ 'workflow_docs.external_integrations.automated_4'|trans }}</span>
+                    </li>
+                </ul>
+            </div>
+            <div class="border border-dark-200 dark:border-dark-700 rounded-lg p-4">
+                <h3 class="font-semibold mb-3">{{ 'workflow_docs.external_integrations.manual_title'|trans }}</h3>
+                <ul class="text-sm space-y-2">
+                    <li class="flex items-start gap-2">
+                        <span class="text-yellow-600 dark:text-yellow-400">&#9888;</span>
+                        <span>{{ 'workflow_docs.external_integrations.manual_1'|trans }}</span>
+                    </li>
+                    <li class="flex items-start gap-2">
+                        <span class="text-yellow-600 dark:text-yellow-400">&#9888;</span>
+                        <span>{{ 'workflow_docs.external_integrations.manual_2'|trans }}</span>
+                    </li>
+                    <li class="flex items-start gap-2">
+                        <span class="text-yellow-600 dark:text-yellow-400">&#9888;</span>
+                        <span>{{ 'workflow_docs.external_integrations.manual_3'|trans }}</span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </section>
+</div>
+{% endblock %}
+
+{% block javascripts %}
+    {{ parent() }}
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+
+        // Detect dark mode and set appropriate theme
+        const isDarkMode = document.documentElement.classList.contains('dark') ||
+            window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: isDarkMode ? 'dark' : 'default',
+            securityLevel: 'loose',
+            flowchart: {
+                useMaxWidth: true,
+                htmlLabels: true,
+                curve: 'basis'
+            },
+            sequence: {
+                useMaxWidth: true,
+                wrap: true
+            }
+        });
+
+        // Re-render diagrams when dark mode changes
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                if (mutation.attributeName === 'class') {
+                    const isDark = document.documentElement.classList.contains('dark');
+                    mermaid.initialize({
+                        theme: isDark ? 'dark' : 'default'
+                    });
+                    // Re-render all diagrams
+                    document.querySelectorAll('.mermaid').forEach((el) => {
+                        const code = el.getAttribute('data-original') || el.textContent;
+                        el.setAttribute('data-original', code);
+                        el.removeAttribute('data-processed');
+                        el.innerHTML = code;
+                    });
+                    mermaid.init(undefined, '.mermaid');
+                }
+            });
+        });
+
+        observer.observe(document.documentElement, { attributes: true });
+    </script>
+{% endblock %}

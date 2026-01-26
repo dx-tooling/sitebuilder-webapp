@@ -34,4 +34,14 @@ class ContentController extends AbstractController
     {
         return $this->render('@static_pages.presentation/about.html.twig');
     }
+
+    #[Route(
+        path   : '/workflow-docs',
+        name   : 'static_pages.presentation.workflow_docs',
+        methods: [Request::METHOD_GET]
+    )]
+    public function workflowDocsAction(): Response
+    {
+        return $this->render('@static_pages.presentation/workflow_docs.html.twig');
+    }
 }

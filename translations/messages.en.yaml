@@ -15,6 +15,7 @@ navigation:
     reviewer_dashboard: "Reviewer Dashboard"
     your_account: "Your Account"
     living_styleguide: "Living Styleguide"
+    workflow_docs: "Workflow Docs"
 
 # Common
 common:
@@ -215,6 +216,79 @@ homepage:
     cta_title: "Ready to transform your content workflow?"
     cta_description: "Create your free account and start editing your website with AI today."
     create_free_account: "Create Free Account"
+
+# Workflow Documentation
+workflow_docs:
+    title: "Workflow Documentation"
+    intro: "Understand how SiteBuilder manages your content editing workflow, including workspace states, review processes, and integration with GitHub."
+    toc:
+        title: "On this page"
+    sections:
+        state_machine: "Workspace State Machine"
+        typical_workflow: "Typical Workflow"
+        send_to_review: "Send to Review Flow"
+        edge_cases: "Edge Cases & Special Scenarios"
+        external_integrations: "External Integrations"
+    state_machine:
+        description: "Every workspace goes through a series of states as you work on content. This diagram shows all possible states and the transitions between them."
+        states_title: "State Descriptions"
+        states:
+            available_for_setup: "Workspace is ready to be set up (initial state or after reset)"
+            in_setup: "Workspace is being prepared (cloning, branching)"
+            available_for_conversation: "Workspace is ready for a user to start editing"
+            in_conversation: "A user is actively working on the workspace"
+            in_review: "Changes have been sent for review, PR exists"
+            merged: "The pull request has been merged"
+            problem: "An error occurred that requires manual intervention"
+    typical_workflow:
+        description: "Here's what happens during a typical content editing session, from selecting a project to having your changes merged."
+        step1_title: "1. Select & Setup"
+        step1_description: "Choose your project. SiteBuilder clones the repository and creates a new branch for your changes."
+        step2_title: "2. Edit & Commit"
+        step2_description: "Make changes through the chat interface. Each change is automatically committed and pushed to your branch."
+        step3_title: "3. Review & Merge"
+        step3_description: "Send for review when ready. A pull request is created on GitHub for the review process."
+    send_to_review:
+        description: "When you click 'Send to Review', several things happen to prepare your changes for the review process."
+        important_title: "Important Notes"
+        important_1: "Any uncommitted changes are automatically committed before sending to review"
+        important_2: "If a PR already exists for your branch, it will be reused"
+        important_3: "If your branch has no changes compared to main, no PR is created"
+    edge_cases:
+        description: "Understanding these scenarios will help you know what to expect in less common situations."
+        reset_in_review:
+            title: "Resetting a workspace while in review"
+            description: "What happens if you reset the workspace before the pull request is merged?"
+            warning: "The old PR remains on GitHub but becomes orphaned. You'll need to manually close it. Your next conversation starts with a fresh branch from main."
+        concurrent_access:
+            title: "Multiple users accessing the same workspace"
+            description: "SiteBuilder ensures only one user can actively edit a workspace at a time."
+            note: "The workspace is locked while a user has an active conversation. Other users must wait until the conversation is finished."
+        problem_recovery:
+            title: "Recovering from a PROBLEM state"
+            description: "If a git operation fails, the workspace enters the PROBLEM state. Here's how to recover."
+            lost_title: "What's lost"
+            lost_description: "Any uncommitted local changes that weren't pushed to GitHub."
+            preserved_title: "What's preserved"
+            preserved_description: "All commits that were successfully pushed to your branch remain on GitHub."
+        reviewer_actions:
+            title: "Reviewer actions and their effects"
+            description: "Reviewers can take two actions on a workspace that's in review. Each has different implications for the next conversation."
+            merge_title: "Mark as Merged"
+            merge_description: "Use when the PR is merged. Next conversation will start fresh from the updated main branch."
+            unlock_title: "Unlock for Changes"
+            unlock_description: "Use to continue working on the same branch. No new setup needed."
+    external_integrations:
+        description: "SiteBuilder integrates with GitHub for version control. Some operations are automated, while others require manual action."
+        automated_title: "Automated by SiteBuilder"
+        automated_1: "Repository cloning during workspace setup"
+        automated_2: "Branch creation for each workspace"
+        automated_3: "Committing and pushing changes"
+        automated_4: "Creating pull requests when sending to review"
+        manual_title: "Manual / External"
+        manual_1: "Reviewing and merging pull requests on GitHub"
+        manual_2: "Notifying SiteBuilder when a PR is merged (reviewer action)"
+        manual_3: "Closing orphaned PRs after workspace reset"
 
 # Flash messages
 flash:

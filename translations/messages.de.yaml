@@ -15,6 +15,7 @@ navigation:
     reviewer_dashboard: "Reviewer-Dashboard"
     your_account: "Ihr Konto"
     living_styleguide: "Living Styleguide"
+    workflow_docs: "Workflow-Dokumentation"
 
 # Common
 common:
@@ -215,6 +216,79 @@ homepage:
     cta_title: "Bereit, Ihren Content-Workflow zu transformieren?"
     cta_description: "Erstellen Sie Ihr kostenloses Konto und beginnen Sie noch heute mit der KI-gestützten Bearbeitung Ihrer Website."
     create_free_account: "Kostenloses Konto erstellen"
+
+# Workflow-Dokumentation
+workflow_docs:
+    title: "Workflow-Dokumentation"
+    intro: "Erfahren Sie, wie SiteBuilder Ihren Workflow zur Inhaltsbearbeitung verwaltet, einschließlich Arbeitsbereichszustände, Review-Prozesse und Integration mit GitHub."
+    toc:
+        title: "Auf dieser Seite"
+    sections:
+        state_machine: "Arbeitsbereich-Zustandsautomat"
+        typical_workflow: "Typischer Workflow"
+        send_to_review: "Zum Review senden"
+        edge_cases: "Sonderfälle & spezielle Szenarien"
+        external_integrations: "Externe Integrationen"
+    state_machine:
+        description: "Jeder Arbeitsbereich durchläuft während der Arbeit an Inhalten eine Reihe von Zuständen. Dieses Diagramm zeigt alle möglichen Zustände und die Übergänge zwischen ihnen."
+        states_title: "Zustandsbeschreibungen"
+        states:
+            available_for_setup: "Arbeitsbereich kann eingerichtet werden (Anfangszustand oder nach Reset)"
+            in_setup: "Arbeitsbereich wird vorbereitet (Klonen, Branch erstellen)"
+            available_for_conversation: "Arbeitsbereich ist bereit für Bearbeitung"
+            in_conversation: "Ein Benutzer arbeitet aktiv am Arbeitsbereich"
+            in_review: "Änderungen wurden zur Überprüfung gesendet, PR existiert"
+            merged: "Der Pull Request wurde zusammengeführt"
+            problem: "Ein Fehler ist aufgetreten, der manuelles Eingreifen erfordert"
+    typical_workflow:
+        description: "So läuft eine typische Inhaltsbearbeitungssitzung ab, von der Projektauswahl bis zur Zusammenführung Ihrer Änderungen."
+        step1_title: "1. Auswählen & Einrichten"
+        step1_description: "Wählen Sie Ihr Projekt. SiteBuilder klont das Repository und erstellt einen neuen Branch für Ihre Änderungen."
+        step2_title: "2. Bearbeiten & Committen"
+        step2_description: "Nehmen Sie Änderungen über die Chat-Oberfläche vor. Jede Änderung wird automatisch committed und in Ihren Branch gepusht."
+        step3_title: "3. Review & Merge"
+        step3_description: "Senden Sie zur Überprüfung, wenn Sie fertig sind. Ein Pull Request wird auf GitHub für den Review-Prozess erstellt."
+    send_to_review:
+        description: "Wenn Sie auf 'Zur Überprüfung senden' klicken, passieren mehrere Dinge, um Ihre Änderungen für den Review-Prozess vorzubereiten."
+        important_title: "Wichtige Hinweise"
+        important_1: "Alle nicht committeten Änderungen werden automatisch vor dem Senden committed"
+        important_2: "Wenn bereits ein PR für Ihren Branch existiert, wird dieser wiederverwendet"
+        important_3: "Wenn Ihr Branch keine Änderungen gegenüber main hat, wird kein PR erstellt"
+    edge_cases:
+        description: "Das Verständnis dieser Szenarien hilft Ihnen zu wissen, was in weniger häufigen Situationen zu erwarten ist."
+        reset_in_review:
+            title: "Arbeitsbereich während Review zurücksetzen"
+            description: "Was passiert, wenn Sie den Arbeitsbereich zurücksetzen, bevor der Pull Request zusammengeführt wurde?"
+            warning: "Der alte PR bleibt auf GitHub, wird aber verwaist. Sie müssen ihn manuell schließen. Ihre nächste Unterhaltung beginnt mit einem frischen Branch von main."
+        concurrent_access:
+            title: "Mehrere Benutzer greifen auf denselben Arbeitsbereich zu"
+            description: "SiteBuilder stellt sicher, dass immer nur ein Benutzer einen Arbeitsbereich aktiv bearbeiten kann."
+            note: "Der Arbeitsbereich ist gesperrt, während ein Benutzer eine aktive Unterhaltung hat. Andere Benutzer müssen warten, bis die Unterhaltung beendet ist."
+        problem_recovery:
+            title: "Wiederherstellung aus dem PROBLEM-Zustand"
+            description: "Wenn eine Git-Operation fehlschlägt, wechselt der Arbeitsbereich in den PROBLEM-Zustand. So können Sie ihn wiederherstellen."
+            lost_title: "Was verloren geht"
+            lost_description: "Alle nicht committeten lokalen Änderungen, die nicht zu GitHub gepusht wurden."
+            preserved_title: "Was erhalten bleibt"
+            preserved_description: "Alle Commits, die erfolgreich in Ihren Branch gepusht wurden, bleiben auf GitHub erhalten."
+        reviewer_actions:
+            title: "Reviewer-Aktionen und ihre Auswirkungen"
+            description: "Reviewer können zwei Aktionen für einen Arbeitsbereich im Review ausführen. Jede hat unterschiedliche Auswirkungen auf die nächste Unterhaltung."
+            merge_title: "Als zusammengeführt markieren"
+            merge_description: "Verwenden, wenn der PR zusammengeführt wurde. Die nächste Unterhaltung startet neu vom aktualisierten main-Branch."
+            unlock_title: "Für Änderungen freigeben"
+            unlock_description: "Verwenden, um am selben Branch weiterzuarbeiten. Kein neues Setup erforderlich."
+    external_integrations:
+        description: "SiteBuilder integriert sich mit GitHub für Versionskontrolle. Einige Operationen sind automatisiert, andere erfordern manuelle Aktionen."
+        automated_title: "Von SiteBuilder automatisiert"
+        automated_1: "Repository-Klonen während der Arbeitsbereichseinrichtung"
+        automated_2: "Branch-Erstellung für jeden Arbeitsbereich"
+        automated_3: "Committen und Pushen von Änderungen"
+        automated_4: "Erstellen von Pull Requests beim Senden zur Überprüfung"
+        manual_title: "Manuell / Extern"
+        manual_1: "Überprüfen und Zusammenführen von Pull Requests auf GitHub"
+        manual_2: "SiteBuilder benachrichtigen, wenn ein PR zusammengeführt wurde (Reviewer-Aktion)"
+        manual_3: "Verwaiste PRs nach Arbeitsbereich-Reset schließen"
 
 # Flash messages
 flash:
