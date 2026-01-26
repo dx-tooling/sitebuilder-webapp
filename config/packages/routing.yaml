@@ -7,7 +7,7 @@ framework:
 when@preprod:
     framework:
         router:
-            default_uri: 'https://sitebuilder-preprod.dx-tooling.org'
+            default_uri: "https://sitebuilder-preprod.dx-tooling.org"
 
 when@prod:
     framework:
