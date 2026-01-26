@@ -94,6 +94,129 @@ final class WorkspaceToolingFacadeTest extends TestCase
         self::assertSame('Second message', $this->executionContext->getSuggestedCommitMessage());
     }
 
+    public function testGetPreviewUrlReturnsCorrectUrlForDistFile(): void
+    {
+        $this->executionContext->setContext(
+            '019bf530-efa6-77a6-b076-2923c7a579d2',
+            '/path/to/workspace',
+            'conv-id',
+            'project',
+            'image'
+        );
+        $facade = $this->createFacade();
+
+        $result = $facade->getPreviewUrl('/workspace/dist/handwerk.html');
+
+        self::assertSame(
+            '/workspaces/019bf530-efa6-77a6-b076-2923c7a579d2/dist/handwerk.html',
+            $result
+        );
+    }
+
+    public function testGetPreviewUrlHandlesNestedPaths(): void
+    {
+        $this->executionContext->setContext(
+            '019bf530-efa6-77a6-b076-2923c7a579d2',
+            '/path/to/workspace',
+            'conv-id',
+            'project',
+            'image'
+        );
+        $facade = $this->createFacade();
+
+        $result = $facade->getPreviewUrl('/workspace/dist/pages/about/index.html');
+
+        self::assertSame(
+            '/workspaces/019bf530-efa6-77a6-b076-2923c7a579d2/dist/pages/about/index.html',
+            $result
+        );
+    }
+
+    public function testGetPreviewUrlHandlesNonDistPaths(): void
+    {
+        $this->executionContext->setContext(
+            '019bf530-efa6-77a6-b076-2923c7a579d2',
+            '/path/to/workspace',
+            'conv-id',
+            'project',
+            'image'
+        );
+        $facade = $this->createFacade();
+
+        $result = $facade->getPreviewUrl('/workspace/src/index.html');
+
+        self::assertSame(
+            '/workspaces/019bf530-efa6-77a6-b076-2923c7a579d2/src/index.html',
+            $result
+        );
+    }
+
+    public function testGetPreviewUrlReturnsErrorWhenContextNotSet(): void
+    {
+        $facade = $this->createFacade();
+        // Context NOT set
+
+        $result = $facade->getPreviewUrl('/workspace/dist/foo.html');
+
+        self::assertStringContainsString('Error', $result);
+        self::assertStringContainsString('context not set', strtolower($result));
+    }
+
+    public function testGetPreviewUrlReturnsErrorForPathTraversal(): void
+    {
+        $this->executionContext->setContext(
+            '019bf530-efa6-77a6-b076-2923c7a579d2',
+            '/path/to/workspace',
+            'conv-id',
+            'project',
+            'image'
+        );
+        $facade = $this->createFacade();
+
+        $result = $facade->getPreviewUrl('/workspace/../../../etc/passwd');
+
+        self::assertStringContainsString('Error', $result);
+        self::assertStringContainsString('path traversal', strtolower($result));
+    }
+
+    public function testGetPreviewUrlHandlesPathWithoutWorkspacePrefix(): void
+    {
+        $this->executionContext->setContext(
+            '019bf530-efa6-77a6-b076-2923c7a579d2',
+            '/path/to/workspace',
+            'conv-id',
+            'project',
+            'image'
+        );
+        $facade = $this->createFacade();
+
+        $result = $facade->getPreviewUrl('dist/foo.html');
+
+        self::assertSame(
+            '/workspaces/019bf530-efa6-77a6-b076-2923c7a579d2/dist/foo.html',
+            $result
+        );
+    }
+
+    public function testGetPreviewUrlNormalizesDoubleSlashes(): void
+    {
+        $this->executionContext->setContext(
+            '019bf530-efa6-77a6-b076-2923c7a579d2',
+            '/path/to/workspace',
+            'conv-id',
+            'project',
+            'image'
+        );
+        $facade = $this->createFacade();
+
+        $result = $facade->getPreviewUrl('/workspace//dist//foo.html');
+
+        self::assertSame(
+            '/workspaces/019bf530-efa6-77a6-b076-2923c7a579d2/dist/foo.html',
+            $result
+        );
+    }
+
     private function createFacade(): WorkspaceToolingFacade
     {
         $fileOps  = new FileOperationsService();

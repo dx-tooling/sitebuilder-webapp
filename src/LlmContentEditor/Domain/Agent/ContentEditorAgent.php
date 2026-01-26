@@ -155,6 +155,7 @@ class ContentEditorAgent extends BaseCodingAgent
             'Summarize what changes were made and why.',
             'If quality checks, tests, or build fail, analyze the errors and fix them.',
             'Always verify your changes with quality checks, tests, and build before finishing.',
+            'After a successful build, use get_preview_url to get browser links for the pages you modified or created, and share these links with the user so they can preview their changes. You will receive this as a relative URI, e.g. `/workspaces/019bf523-245b-7982-9a07-e6f69e3a0099/dist/aerzte.html`; render this as a relative Markdown link, like so: `[Ärzte-Seite](/workspaces/019bf523-245b-7982-9a07-e6f69e3a0099/dist/aerzte.html)`.',
             'After making file changes, call suggest_commit_message with a concise commit message (50-72 chars, imperative mood) in the same language the user is speaking. Examples: "Add hero section to homepage", "Füge Hero-Bereich zur Startseite hinzu", "Ajouter une section héros à la page d\'accueil". You must not tell the user about your commit message suggestions.',
         ];
     }
@@ -212,6 +213,18 @@ class ContentEditorAgent extends BaseCodingAgent
                     true
                 )
             )->setCallable(fn (string $message): string => $this->sitebuilderFacade->suggestCommitMessage($message)),
+
+            Tool::make(
+                'get_preview_url',
+                'Get the browser preview URL for a file in the workspace. Use this after building to provide the user with clickable links to view their changes. The tool translates workspace paths (like /workspace/dist/page.html) into browser-accessible preview URLs.',
+            )->addProperty(
+                new ToolProperty(
+                    'path',
+                    PropertyType::STRING,
+                    'The path to the file as seen in the workspace (e.g., /workspace/dist/index.html or dist/about.html)',
+                    true
+                )
+            )->setCallable(fn (string $path): string => $this->sitebuilderFacade->getPreviewUrl($path)),
         ]);
     }
 }

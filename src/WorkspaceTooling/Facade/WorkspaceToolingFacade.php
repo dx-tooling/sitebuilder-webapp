@@ -64,4 +64,41 @@ final class WorkspaceToolingFacade extends BaseWorkspaceToolingFacade implements
 
         return 'Commit message recorded: ' . $message;
     }
+
+    public function getPreviewUrl(string $sandboxPath): string
+    {
+        $workspaceId = $this->executionContext->getWorkspaceId();
+
+        if ($workspaceId === null) {
+            return 'Error: Execution context not set. Cannot generate preview URL.';
+        }
+
+        // Normalize the path: remove leading/trailing whitespace
+        $path = trim($sandboxPath);
+
+        // Strip the /workspace prefix (the Docker mount point)
+        $workspacePrefix = '/workspace/';
+        if (str_starts_with($path, $workspacePrefix)) {
+            $relativePath = substr($path, strlen($workspacePrefix));
+        } elseif (str_starts_with($path, '/workspace')) {
+            // Handle /workspace without trailing slash (e.g., /workspacefoo should not match)
+            $relativePath = substr($path, strlen('/workspace'));
+            $relativePath = ltrim($relativePath, '/');
+        } else {
+            // Path doesn't start with /workspace - could be already relative
+            $relativePath = ltrim($path, '/');
+        }
+
+        // Security check: prevent path traversal
+        if (str_contains($relativePath, '..')) {
+            return 'Error: Invalid path - path traversal not allowed.';
+        }
+
+        // Normalize double slashes and remove leading slash
+        $relativePath = preg_replace('#/+#', '/', $relativePath) ?? $relativePath;
+        $relativePath = ltrim($relativePath, '/');
+
+        // Build the browser preview URL
+        return '/workspaces/' . $workspaceId . '/' . $relativePath;
+    }
 }

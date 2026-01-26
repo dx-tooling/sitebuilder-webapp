@@ -25,4 +25,16 @@ interface WorkspaceToolingServiceInterface extends BaseWorkspaceToolingFacadeInt
      * @return string Confirmation that the message was recorded
      */
     public function suggestCommitMessage(string $message): string;
+
+    /**
+     * Get the browser preview URL for a file in the workspace.
+     *
+     * Translates a sandbox path (e.g., /workspace/dist/page.html) to a browser-accessible
+     * preview URL (e.g., /workspaces/{uuid}/dist/page.html).
+     *
+     * @param string $sandboxPath The path as seen from inside the sandbox (e.g., /workspace/dist/foo.html)
+     *
+     * @return string The browser preview URL, or an error message if context is not set
+     */
+    public function getPreviewUrl(string $sandboxPath): string;
 }
