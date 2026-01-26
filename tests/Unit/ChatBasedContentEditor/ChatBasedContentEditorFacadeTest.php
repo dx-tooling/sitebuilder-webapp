@@ -161,6 +161,76 @@ final class ChatBasedContentEditorFacadeTest extends TestCase
         self::assertSame(['workspace-1'], $result);
     }
 
+    public function testGetLatestConversationIdReturnsIdWhenConversationExists(): void
+    {
+        // Arrange
+        $conversation = $this->createConversation(
+            'conv-123',
+            'workspace-1',
+            'user-1',
+            ConversationStatus::FINISHED,
+            null
+        );
+
+        $query = $this->getMockBuilder(Query::class)
+            ->disableOriginalConstructor()
+            ->onlyMethods(['getOneOrNullResult'])
+            ->getMock();
+        $query->method('getOneOrNullResult')->willReturn($conversation);
+
+        $queryBuilder = $this->createMock(QueryBuilder::class);
+        $queryBuilder->method('select')->willReturnSelf();
+        $queryBuilder->method('from')->willReturnSelf();
+        $queryBuilder->method('where')->willReturnSelf();
+        $queryBuilder->method('setParameter')->willReturnSelf();
+        $queryBuilder->method('orderBy')->willReturnSelf();
+        $queryBuilder->method('setMaxResults')->willReturnSelf();
+        $queryBuilder->method('getQuery')->willReturn($query);
+
+        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager->method('createQueryBuilder')->willReturn($queryBuilder);
+
+        $workspaceFacade = $this->createMock(WorkspaceMgmtFacadeInterface::class);
+
+        // Act
+        $facade = new ChatBasedContentEditorFacade($entityManager, $workspaceFacade);
+        $result = $facade->getLatestConversationId('workspace-1');
+
+        // Assert
+        self::assertSame('conv-123', $result);
+    }
+
+    public function testGetLatestConversationIdReturnsNullWhenNoConversationExists(): void
+    {
+        // Arrange
+        $query = $this->getMockBuilder(Query::class)
+            ->disableOriginalConstructor()
+            ->onlyMethods(['getOneOrNullResult'])
+            ->getMock();
+        $query->method('getOneOrNullResult')->willReturn(null);
+
+        $queryBuilder = $this->createMock(QueryBuilder::class);
+        $queryBuilder->method('select')->willReturnSelf();
+        $queryBuilder->method('from')->willReturnSelf();
+        $queryBuilder->method('where')->willReturnSelf();
+        $queryBuilder->method('setParameter')->willReturnSelf();
+        $queryBuilder->method('orderBy')->willReturnSelf();
+        $queryBuilder->method('setMaxResults')->willReturnSelf();
+        $queryBuilder->method('getQuery')->willReturn($query);
+
+        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager->method('createQueryBuilder')->willReturn($queryBuilder);
+
+        $workspaceFacade = $this->createMock(WorkspaceMgmtFacadeInterface::class);
+
+        // Act
+        $facade = new ChatBasedContentEditorFacade($entityManager, $workspaceFacade);
+        $result = $facade->getLatestConversationId('workspace-1');
+
+        // Assert
+        self::assertNull($result);
+    }
+
     /**
      * Helper to create a Conversation with reflection to set properties.
      */

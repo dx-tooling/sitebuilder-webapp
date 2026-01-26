@@ -34,4 +34,10 @@ interface ChatBasedContentEditorFacadeInterface
      * @return list<string> list of workspace IDs that were released
      */
     public function releaseStaleConversations(int $timeoutMinutes = 5): array;
+
+    /**
+     * Get the ID of the latest conversation for a workspace.
+     * Returns the most recent conversation regardless of status.
+     */
+    public function getLatestConversationId(string $workspaceId): ?string;
 }

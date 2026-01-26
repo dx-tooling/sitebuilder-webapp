@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\WorkspaceMgmt\Presentation\Controller;
 
+use App\ChatBasedContentEditor\Facade\ChatBasedContentEditorFacadeInterface;
 use App\ProjectMgmt\Facade\ProjectMgmtFacadeInterface;
 use App\WorkspaceMgmt\Domain\Service\WorkspaceService;
 use App\WorkspaceMgmt\Facade\Enum\WorkspaceStatus;
@@ -21,8 +22,9 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 final class ReviewerController extends AbstractController
 {
     public function __construct(
-        private readonly WorkspaceService           $workspaceService,
-        private readonly ProjectMgmtFacadeInterface $projectMgmtFacade,
+        private readonly WorkspaceService                      $workspaceService,
+        private readonly ProjectMgmtFacadeInterface            $projectMgmtFacade,
+        private readonly ChatBasedContentEditorFacadeInterface $chatBasedContentEditorFacade,
     ) {
     }
 
@@ -37,11 +39,16 @@ final class ReviewerController extends AbstractController
 
         $workspacesWithProject = [];
         foreach ($workspacesInReview as $workspace) {
-            $projectInfo = $this->projectMgmtFacade->getProjectInfo($workspace->getProjectId());
+            $projectInfo    = $this->projectMgmtFacade->getProjectInfo($workspace->getProjectId());
+            $workspaceId    = $workspace->getId();
+            $conversationId = $workspaceId !== null
+                ? $this->chatBasedContentEditorFacade->getLatestConversationId($workspaceId)
+                : null;
 
             $workspacesWithProject[] = [
-                'workspace' => $workspace,
-                'project'   => $projectInfo,
+                'workspace'      => $workspace,
+                'project'        => $projectInfo,
+                'conversationId' => $conversationId,
             ];
         }
 

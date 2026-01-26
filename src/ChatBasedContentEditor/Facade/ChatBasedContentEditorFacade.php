@@ -103,4 +103,20 @@ final class ChatBasedContentEditorFacade implements ChatBasedContentEditorFacade
 
         return $releasedWorkspaceIds;
     }
+
+    public function getLatestConversationId(string $workspaceId): ?string
+    {
+        /** @var Conversation|null $conversation */
+        $conversation = $this->entityManager->createQueryBuilder()
+            ->select('c')
+            ->from(Conversation::class, 'c')
+            ->where('c.workspaceId = :workspaceId')
+            ->setParameter('workspaceId', $workspaceId)
+            ->orderBy('c.createdAt', 'DESC')
+            ->setMaxResults(1)
+            ->getQuery()
+            ->getOneOrNullResult();
+
+        return $conversation?->getId();
+    }
 }
