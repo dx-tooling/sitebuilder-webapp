@@ -164,7 +164,7 @@ final class ChatBasedContentEditorControllerTest extends WebTestCase
         $this->client->loginUser($otherUser);
         $conversationId = $conversation->getId();
         self::assertNotNull($conversationId);
-        $crawler = $this->client->request('GET', '/conversation/' . $conversationId);
+        $crawler = $this->client->request('GET', '/en/conversation/' . $conversationId);
 
         // Assert: Page renders successfully in read-only mode
         self::assertResponseIsSuccessful();
