@@ -1,20 +1,20 @@
 {% extends '@common.presentation/base_appshell.html.twig' %}
 
 {% block content %}
-    <h1 class="etfswui-pagetitle mb-10">Your account</h1>
+    <h1 class="etfswui-pagetitle mb-10">{{ 'account.dashboard.title'|trans }}</h1>
     <div class="etfswui-card max-w-2xl mb-8">
         <div class="etfswui-card-title">
-            <h2 class="etfswui-card-title-text">Account details</h2>
+            <h2 class="etfswui-card-title-text">{{ 'account.dashboard.account_details'|trans }}</h2>
         </div>
         <div class="etfswui-card-content">
-            <p class="mb-6 text-gray-500">Welcome back, {{ app.user.email }}!</p>
+            <p class="mb-6 text-gray-500">{{ 'account.dashboard.welcome_back'|trans({'%email%': app.user.email}) }}</p>
             <dl class="etfswui-description-list">
                 <div class="etfswui-description-list-item">
-                    <dt class="etfswui-description-list-term">Email</dt>
+                    <dt class="etfswui-description-list-term">{{ 'common.email'|trans }}</dt>
                     <dd class="etfswui-description-list-description">{{ app.user.email }}</dd>
                 </div>
                 <div class="etfswui-description-list-item">
-                    <dt class="etfswui-description-list-term">Member since</dt>
+                    <dt class="etfswui-description-list-term">{{ 'account.dashboard.member_since'|trans }}</dt>
                     <dd class="etfswui-description-list-description">{{ app.user.createdAt|date('Y-m-d H:i:s') }}</dd>
                 </div>
             </dl>
@@ -22,7 +22,7 @@
                 <form action="{{ path('account.presentation.sign_out') }}" method="post" class="inline">
                     <input type="hidden" name="_csrf_token" value="{{ csrf_token('logout') }}">
                     <button type="submit" class="etfswui-button-danger">
-                        Sign out
+                        {{ 'account.dashboard.sign_out'|trans }}
                     </button>
                 </form>
             </div>

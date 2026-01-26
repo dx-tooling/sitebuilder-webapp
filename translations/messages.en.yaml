@@ -1,0 +1,296 @@
+# English translations
+# Domain: messages (default)
+
+# Navigation
+navigation:
+    primary:
+        title: "Main"
+    secondary:
+        title: "Account"
+    tertiary:
+        title: "Utilities"
+    sign_in: "Sign In"
+    sign_up: "Sign Up"
+    projects: "Projects"
+    reviewer_dashboard: "Reviewer Dashboard"
+    your_account: "Your Account"
+    living_styleguide: "Living Styleguide"
+
+# Common
+common:
+    back_to_projects: "Back to projects"
+    cancel: "Cancel"
+    delete: "Delete"
+    save: "Save"
+    email: "Email"
+    password: "Password"
+    continue: "Continue"
+
+# Account vertical
+account:
+    sign_in:
+        title: "Welcome back"
+        placeholder_email: "Enter your email"
+        placeholder_password: "Enter your password"
+        create_account: "Create an account"
+        early_access: "<strong>Early access:</strong> This product is evolving quickly. It is safe to try, but still changing often. Thanks for your patience and feedback while we improve it."
+    sign_up:
+        title: "Create your account"
+        confirm_password: "Confirm password"
+        placeholder_confirm_password: "Confirm your password"
+        back_to_sign_in: "Back to sign in"
+        create_account: "Create account"
+    dashboard:
+        title: "Your account"
+        account_details: "Account details"
+        welcome_back: "Welcome back, %email%!"
+        member_since: "Member since"
+        sign_out: "Sign out"
+
+# Project Management vertical
+project:
+    list:
+        title: "Projects"
+        heading: "Your projects"
+        description: "Pick a project to update, or add a new one."
+        add_project: "Add project"
+        no_projects: "No projects yet"
+        no_projects_description: "Add your first project to get started."
+        no_workspace: "No work area yet"
+        in_conversation_with: "with %email%"
+        view_on_github: "View on GitHub"
+        work_area: "Work area"
+        review: "Review"
+        edit_content: "Edit content"
+        edit_details: "Edit details"
+        reset_work_area: "Reset work area"
+        reset_confirm: "Reset this work area? This will end any active sessions and create a fresh work area next time."
+        delete_confirm: "Delete this project? It will be removed from the list."
+        deleted_projects: "Deleted projects (%count%)"
+        deleted_projects_info: "These projects have been soft-deleted. You can permanently delete them to free up resources."
+        deleted_at: "Deleted %date%"
+        restore: "Restore"
+        delete_permanently: "Delete permanently"
+        delete_permanently_confirm: "Permanently delete this project? This action cannot be undone and will remove all associated data."
+    form:
+        title_add: "Add project"
+        title_edit: "Edit project"
+        description_add: "Add a project so we can start making changes."
+        description_edit: "Update the details below."
+        project_name: "Project name"
+        placeholder_project_name: "My Website"
+        project_link: "Project link"
+        placeholder_project_link: "https://github.com/org/repo.git"
+        project_link_help: "Paste the GitHub repository URL for this project."
+        github_access_key: "GitHub access key"
+        placeholder_github_token: "ghp_xxxxxxxxxxxx"
+        github_access_key_help: "A personal access token so we can open the project and save changes."
+        llm_provider: "LLM Model Provider"
+        llm_api_key: "LLM API Key"
+        placeholder_llm_api_key: "sk-..."
+        llm_api_key_help: "Your API key for the selected LLM provider."
+        verifying_key: "Verifying key..."
+        key_verified: "Key successfully verified"
+        key_verification_failed: "Key verification failed"
+        reuse_existing_key: "Or reuse an existing key:"
+        runtime_environment: "Runtime environment"
+        runtime_help: "Select the runtime environment for building and running your project."
+        node_22_recommended: "Node.js 22 (recommended)"
+        node_20: "Node.js 20"
+        node_18: "Node.js 18"
+        python_312: "Python 3.12"
+        php_84: "PHP 8.4"
+        custom_image: "Custom image..."
+        custom_docker_image: "Custom Docker image"
+        placeholder_custom_image: "myregistry/myimage:tag"
+        custom_image_help: "Enter a Docker image name with tag (e.g., node:latest, myregistry.io/myimage:v1)."
+        agent_config_advanced: "Agent Configuration (Advanced)"
+        agent_config_description: "Customize how the AI agent behaves when editing this project. These settings control the agent's instructions and workflow."
+        background_instructions: "Background Instructions"
+        background_instructions_placeholder: "System context and workspace conventions..."
+        background_instructions_help: "System context about the workspace, conventions, and rules the agent should follow."
+        step_instructions: "Step Instructions"
+        step_instructions_placeholder: "Workflow steps..."
+        step_instructions_help: "The workflow steps the agent should follow when making changes."
+        output_instructions: "Output Instructions"
+        output_instructions_placeholder: "Output format instructions..."
+        output_instructions_help: "Instructions for how the agent should format its output and summaries."
+        github_token_info: "Need a GitHub access key? Create a <strong>Personal Access Token</strong> so the app can read and update your project."
+        required_permissions: "Required permissions (fine-grained token):"
+        contents_permission: "<strong>Contents</strong>: Read and write"
+        pull_requests_permission: "<strong>Pull requests</strong>: Read and write"
+        classic_token_alternative: "Alternative: classic token"
+        repo_scope: "Select the <strong>repo</strong> scope"
+        create_token_link: "Create a token at:"
+        add_project_button: "Add project"
+        update_project_button: "Update project"
+
+# Chat-Based Content Editor vertical
+editor:
+    title: "Content editor"
+    working_on: "Working on <strong>%project%</strong>"
+    description: "Describe what you want changed in plain language. The assistant will take care of the edits and show progress."
+    end_session: "End session"
+    send_for_review: "Send for review"
+    conversation_placeholder: "Your conversation will show up here. Describe a change below to get started."
+    auto_scroll: "Keep newest message in view"
+    ai_budget: "AI budget: %used% of %max% used"
+    estimated_cost: "Est. $%cost%"
+    input_label: "What should we change?"
+    input_placeholder: "e.g. Add a contact section to the homepage"
+    make_changes: "Make changes"
+    submit_on_enter: "Press Enter to send"
+    session_finished: "This session is finished. You can review the history above."
+    cannot_edit: "You cannot edit this session."
+    preview_pages: "Preview pages"
+    details_troubleshooting: "Details (for troubleshooting)"
+    session_label: "Session:"
+    work_area_label: "Work area:"
+    work_area_name: "Work area name:"
+    review_link: "Review link:"
+    project_link: "Project link:"
+    open_on_github: "Open on GitHub"
+    problem:
+        title: "We hit a snag"
+        description: "Something went wrong while preparing your work area. You can reset it and try again."
+        reset_work_area: "Reset work area"
+    review:
+        title: "Review in progress"
+        description: "Your changes are being reviewed. You can start a new edit session after the review is done."
+        open_link: "Open the review link"
+
+# Workspace Setup
+workspace:
+    setup:
+        title: "Getting Your Work Area Ready"
+        heading: "Getting your work area ready"
+        description: "Getting a clean, safe copy of <strong>%project%</strong> ready for edits. This usually takes a minute."
+        whats_happening: "What's happening?"
+        step_clone: "Getting a clean copy of the project"
+        step_branch: "Creating a safe work area for your changes"
+        step_tools: "Preparing tools and previews"
+        technical_details: "Technical details"
+        work_area_id: "Work area ID:"
+        project_label: "Project:"
+        status_label: "Status:"
+    problem:
+        title: "Work Area Problem"
+        heading: "We couldn't set up the work area"
+        description: "There was a problem preparing the work area for <strong>%project%</strong>."
+        reasons_intro: "This can happen if:"
+        reason_unreachable: "We can't reach the project right now"
+        reason_no_access: "We don't have access to the project"
+        reason_timeout: "Something timed out during setup"
+        what_to_do: "What would you like to do?"
+        try_again: "Try again"
+
+# Review Center
+review:
+    title: "Review Center"
+    heading: "Review center"
+    description: "Review changes and decide what happens next."
+    nothing_to_review: "Nothing to review"
+    all_caught_up: "All caught up. No changes are waiting for review."
+    work_area_label: "Work area:"
+    view_pull_request: "View Pull Request"
+    view_conversation: "View Conversation"
+    in_progress: "Review in progress"
+    mark_as_done: "Mark as done"
+    reopen_for_changes: "Reopen for changes"
+
+# Static Pages
+homepage:
+    title: "Sitebuilder - AI-Powered Website Content Editing"
+    hero_title: "AI-Powered Website Content Editing"
+    hero_description: "Sitebuilder helps you create and edit website content using natural language. Simply describe what you want, and let AI handle the rest."
+    get_started: "Get Started"
+    sign_in: "Sign In"
+    feature_chat_title: "Chat-Based Editing"
+    feature_chat_description: "Edit your website content through natural conversation. Just describe what changes you want to make."
+    feature_ai_title: "AI-Powered"
+    feature_ai_description: "Leverage advanced AI models to generate, rewrite, and improve your website content automatically."
+    feature_review_title: "Review Workflow"
+    feature_review_description: "Built-in review and approval workflow ensures quality control before any changes go live."
+    cta_title: "Ready to transform your content workflow?"
+    cta_description: "Create your free account and start editing your website with AI today."
+    create_free_account: "Create Free Account"
+
+# Flash messages
+flash:
+    error:
+        invalid_csrf: "Invalid CSRF token."
+        all_fields_required: "All fields are required."
+        select_llm_provider: "Please select an LLM model provider."
+        invalid_docker_image: "Invalid Docker image format. Expected format: name:tag"
+        no_workspace: "No workspace exists for this project."
+        workspace_reset_failed: "Failed to reset workspace: %error%"
+        workspace_not_in_review: "Workspace is not in review."
+        start_conversation_failed: "Failed to start conversation: %error%"
+        finish_conversation_failed: "Failed to finish conversation: %error%"
+        send_to_review_failed: "Failed to send to review: %error%"
+        provide_email_password: "Please provide both email and password."
+        registration_failed: "Registration failed: %error%"
+        workspace_in_review: "This workspace is currently in review. No conversations can be started."
+        workspace_busy: "%email% is currently working on this workspace."
+    success:
+        project_created: "Project created successfully."
+        project_updated: "Project updated successfully."
+        project_deleted: 'Project "%name%" deleted successfully.'
+        project_permanently_deleted: 'Project "%name%" permanently deleted.'
+        project_restored: 'Project "%name%" restored successfully.'
+        workspace_reset: "Workspace reset successfully."
+        workspace_reset_with_conversations: "Workspace reset successfully. %count% conversation(s) were finished."
+        workspace_marked_merged: "Workspace marked as merged."
+        workspace_unlocked: "Workspace unlocked for further conversations."
+        conversation_finished: "Conversation finished. Workspace is now available for new conversations."
+        conversation_finished_no_changes: "Conversation finished. No changes to review."
+        conversation_sent_to_review: "Conversation sent to review. Pull request: %url%"
+        workspace_reset_conversation_ready: "Workspace reset. You can now start a new conversation."
+        registration_successful: "Registration successful. Please sign in."
+
+# JSON API error responses
+api:
+    error:
+        invalid_csrf: "Invalid CSRF token."
+        workspace_not_found: "Workspace not found."
+        conversation_not_found: "Conversation not found."
+        not_authorized: "Not authorized."
+        conversation_not_ongoing: "Conversation is not ongoing."
+        instruction_required: "Instruction is required."
+        provider_and_key_required: "Provider and API key are required."
+        invalid_provider: "Invalid provider."
+        invalid_project_type: "Invalid project type."
+        session_not_found: "Session not found."
+        failed_to_create_session: "Failed to create session."
+        not_authorized_to_run: "Not authorized to run edits in this conversation."
+        conversation_not_active: "Conversation is no longer active."
+
+# Frontend JavaScript translations (passed via data attributes)
+js:
+    editor:
+        ai_budget: "AI budget: %used% of %max% used"
+        estimated_cost: "Est. $%cost%"
+        send_error: "We couldn't send that request (%status%)."
+        network_error: "Network error. Please try again."
+        poll_error: "We lost the update feed (%status%)."
+        connection_retry: "Connection hiccup. Retrying..."
+        make_changes: "Make changes"
+        making_changes: "Making changes..."
+        no_response: "(No response)"
+        working: "Working"
+        thinking: "Thinking"
+        asking_ai: "Asking the AI..."
+        ai_response_received: "AI response received"
+        unknown_error: "Unknown error"
+        all_set: "All set"
+        in_progress: "In progress"
+    workspace:
+        taking_longer: "This is taking longer than expected. Please try again."
+        setup_failed: "We couldn't finish setup. Please try resetting the work area."
+        hit_a_snag: "We hit a snag"
+
+# Language switcher
+language:
+    en: "EN"
+    de: "DE"
+    switch: "Switch language"

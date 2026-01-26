@@ -17,6 +17,25 @@ import {
 } from "./chat_editor_helpers.ts";
 import { renderMarkdown } from "./markdown_renderer.ts";
 
+interface TranslationsData {
+    aiBudget: string;
+    estimatedCost: string;
+    sendError: string;
+    networkError: string;
+    pollError: string;
+    connectionRetry: string;
+    makeChanges: string;
+    makingChanges: string;
+    noResponse: string;
+    working: string;
+    thinking: string;
+    askingAi: string;
+    aiResponseReceived: string;
+    unknownError: string;
+    allSet: string;
+    inProgress: string;
+}
+
 export default class extends Controller {
     static values = {
         runUrl: String,
@@ -27,6 +46,7 @@ export default class extends Controller {
         activeSession: Object,
         turns: Array,
         readOnly: { type: Boolean, default: false },
+        translations: Object,
     };
 
     static targets = [
@@ -49,6 +69,7 @@ export default class extends Controller {
     declare readonly activeSessionValue: ActiveSessionData | null;
     declare readonly turnsValue: TurnData[];
     declare readonly readOnlyValue: boolean;
+    declare readonly translationsValue: TranslationsData;
 
     declare readonly hasMessagesTarget: boolean;
     declare readonly messagesTarget: HTMLElement;
@@ -147,14 +168,19 @@ export default class extends Controller {
 
     private updateContextBar(usage: ContextUsageData): void {
         if (this.hasContextUsageTextTarget) {
-            this.contextUsageTextTarget.textContent = `AI budget: ${formatInt(usage.usedTokens)} of ${formatInt(usage.maxTokens)} used`;
+            const t = this.translationsValue;
+            const text = t.aiBudget
+                .replace("%used%", formatInt(usage.usedTokens))
+                .replace("%max%", formatInt(usage.maxTokens));
+            this.contextUsageTextTarget.textContent = text;
         }
         if (this.hasContextUsageBarTarget) {
             const pct = usage.maxTokens > 0 ? Math.min(100, (100 * usage.usedTokens) / usage.maxTokens) : 0;
             this.contextUsageBarTarget.style.width = `${pct}%`;
         }
         if (this.hasContextUsageCostTarget) {
-            this.contextUsageCostTarget.textContent = `Est. $${usage.totalCost.toFixed(4)}`;
+            const t = this.translationsValue;
+            this.contextUsageCostTarget.textContent = t.estimatedCost.replace("%cost%", usage.totalCost.toFixed(4));
         }
     }
 
@@ -246,7 +272,8 @@ export default class extends Controller {
             const data = (await response.json()) as RunResponse;
 
             if (!response.ok || !data.sessionId) {
-                const msg = data.error || `We couldn't send that request (${response.status}).`;
+                const t = this.translationsValue;
+                const msg = data.error || t.sendError.replace("%status%", String(response.status));
                 this.appendError(inner, msg);
                 this.resetSubmitButton();
 
@@ -255,7 +282,8 @@ export default class extends Controller {
 
             this.startPolling(data.sessionId, inner);
         } catch (err) {
-            const msg = err instanceof Error ? err.message : "Network error. Please try again.";
+            const t = this.translationsValue;
+            const msg = err instanceof Error ? err.message : t.networkError;
             this.appendError(inner, msg);
             this.resetSubmitButton();
         }
@@ -292,7 +320,8 @@ export default class extends Controller {
             });
 
             if (!response.ok) {
-                this.appendError(container, `We lost the update feed (${response.status}).`);
+                const t = this.translationsValue;
+                this.appendError(container, t.pollError.replace("%status%", String(response.status)));
                 this.stopPolling();
                 this.resetSubmitButton();
 
@@ -323,7 +352,8 @@ export default class extends Controller {
                 return;
             }
         } catch (err) {
-            const msg = err instanceof Error ? err.message : "Connection hiccup. Retrying...";
+            const t = this.translationsValue;
+            const msg = err instanceof Error ? err.message : t.connectionRetry;
             this.appendError(container, msg);
             this.stopPolling();
             this.resetSubmitButton();
@@ -347,15 +377,17 @@ export default class extends Controller {
     }
 
     private resetSubmitButton(): void {
+        const t = this.translationsValue;
         this.submitTarget.disabled = false;
-        this.submitTarget.textContent = "Make changes";
+        this.submitTarget.textContent = t.makeChanges;
         this.submitTarget.classList.remove("!bg-gradient-to-r", "!from-purple-500", "!to-blue-500", "animate-pulse");
     }
 
     private setWorkingState(): void {
         if (this.hasSubmitTarget) {
+            const t = this.translationsValue;
             this.submitTarget.disabled = true;
-            this.submitTarget.innerHTML = '<span class="inline-flex items-center gap-1.5">✨ Making changes...</span>';
+            this.submitTarget.innerHTML = `<span class="inline-flex items-center gap-1.5">✨ ${escapeHtml(t.makingChanges)}</span>`;
             this.submitTarget.classList.add("!bg-gradient-to-r", "!from-purple-500", "!to-blue-500", "animate-pulse");
         }
     }
@@ -405,9 +437,10 @@ export default class extends Controller {
                 textEl.innerHTML = renderMarkdown(responseText, { streaming: false });
                 innerContainer.appendChild(textEl);
             } else {
+                const t = this.translationsValue;
                 const textEl = document.createElement("div");
                 textEl.className = "whitespace-pre-wrap text-dark-500 dark:text-dark-400";
-                textEl.textContent = "(No response)";
+                textEl.textContent = t.noResponse;
                 innerContainer.appendChild(textEl);
             }
         });
@@ -495,12 +528,14 @@ export default class extends Controller {
         badgesWrapper.className = "flex items-center gap-1.5 ml-auto";
         badgesWrapper.dataset.activityBadges = "1";
 
+        const t = this.translationsValue;
+
         // Working badge (inactive, shows tool call count)
         const workingBadge = document.createElement("span");
         workingBadge.className = "activity-badge activity-badge-inactive";
         workingBadge.dataset.activityWorkingBadge = "1";
 
-        const workingLabel = document.createTextNode("Working");
+        const workingLabel = document.createTextNode(t.working);
         workingBadge.appendChild(workingLabel);
 
         const workingCount = document.createElement("span");
@@ -514,7 +549,7 @@ export default class extends Controller {
         thinkingBadge.className = "activity-badge activity-badge-inactive";
         thinkingBadge.dataset.activityThinkingBadge = "1";
 
-        const thinkingLabel = document.createTextNode("Thinking");
+        const thinkingLabel = document.createTextNode(t.thinking);
         thinkingBadge.appendChild(thinkingLabel);
 
         const thinkingSeconds = document.createElement("span");
@@ -689,12 +724,14 @@ export default class extends Controller {
         badgesWrapper.className = "flex items-center gap-1.5 ml-auto";
         badgesWrapper.dataset.activityBadges = "1";
 
+        const t = this.translationsValue;
+
         // Working badge (starts inactive, counts tool calls)
         const workingBadge = document.createElement("span");
         workingBadge.className = "activity-badge activity-badge-inactive";
         workingBadge.dataset.activityWorkingBadge = "1";
 
-        const workingLabel = document.createTextNode("Working");
+        const workingLabel = document.createTextNode(t.working);
         workingBadge.appendChild(workingLabel);
 
         const workingCount = document.createElement("span");
@@ -708,7 +745,7 @@ export default class extends Controller {
         thinkingBadge.className = "activity-badge activity-badge-thinking-active activity-badge-active";
         thinkingBadge.dataset.activityThinkingBadge = "1";
 
-        const thinkingLabel = document.createTextNode("Thinking");
+        const thinkingLabel = document.createTextNode(t.thinking);
         thinkingBadge.appendChild(thinkingLabel);
 
         const thinkingSeconds = document.createElement("span");
@@ -840,14 +877,15 @@ export default class extends Controller {
     private renderTechnicalEvent(e: AgentEvent): HTMLElement {
         const wrap = document.createElement("div");
         wrap.className = "text-[10px] font-mono leading-relaxed";
+        const tr = this.translationsValue;
 
         switch (e.kind) {
             case "inference_start":
-                wrap.textContent = "→ Asking the AI…";
+                wrap.textContent = `→ ${tr.askingAi}`;
                 wrap.classList.add("text-amber-600/70", "dark:text-amber-400/70");
                 break;
             case "inference_stop":
-                wrap.textContent = "← AI response received";
+                wrap.textContent = `← ${tr.aiResponseReceived}`;
                 wrap.classList.add("text-amber-600/70", "dark:text-amber-400/70");
                 break;
             case "tool_calling":
@@ -855,11 +893,11 @@ export default class extends Controller {
                 if (e.toolInputs && e.toolInputs.length > 0) {
                     const ul = document.createElement("ul");
                     ul.className = "mt-0.5 ml-3 list-disc space-y-0.5";
-                    for (const t of e.toolInputs) {
+                    for (const ti of e.toolInputs) {
                         const li = document.createElement("li");
                         li.className = "text-[9px]";
-                        const displayValue = t.value.length > 50 ? t.value.slice(0, 50) + "…" : t.value;
-                        li.textContent = `${t.key}: ${displayValue}`;
+                        const displayValue = ti.value.length > 50 ? ti.value.slice(0, 50) + "…" : ti.value;
+                        li.textContent = `${ti.key}: ${displayValue}`;
                         ul.appendChild(li);
                     }
                     wrap.appendChild(ul);
@@ -873,7 +911,7 @@ export default class extends Controller {
                 break;
             }
             case "agent_error":
-                wrap.textContent = `✖ ${e.errorMessage ?? "Unknown error"}`;
+                wrap.textContent = `✖ ${e.errorMessage ?? tr.unknownError}`;
                 wrap.classList.add("text-red-600/70", "dark:text-red-400/70");
                 break;
             default:

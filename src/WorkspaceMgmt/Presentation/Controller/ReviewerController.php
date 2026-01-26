@@ -13,6 +13,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
+use Symfony\Contracts\Translation\TranslatorInterface;
 
 /**
  * Controller for reviewer actions.
@@ -25,6 +26,7 @@ final class ReviewerController extends AbstractController
         private readonly WorkspaceService                      $workspaceService,
         private readonly ProjectMgmtFacadeInterface            $projectMgmtFacade,
         private readonly ChatBasedContentEditorFacadeInterface $chatBasedContentEditorFacade,
+        private readonly TranslatorInterface                   $translator,
     ) {
     }
 
@@ -66,7 +68,7 @@ final class ReviewerController extends AbstractController
     public function merge(string $workspaceId, Request $request): Response
     {
         if (!$this->isCsrfTokenValid('review_merge', $request->request->getString('_csrf_token'))) {
-            $this->addFlash('error', 'Invalid CSRF token.');
+            $this->addFlash('error', $this->translator->trans('flash.error.invalid_csrf'));
 
             return $this->redirectToRoute('workspace_mgmt.presentation.review_list');
         }
@@ -78,13 +80,13 @@ final class ReviewerController extends AbstractController
         }
 
         if ($workspace->getStatus() !== WorkspaceStatus::IN_REVIEW) {
-            $this->addFlash('error', 'Workspace is not in review.');
+            $this->addFlash('error', $this->translator->trans('flash.error.workspace_not_in_review'));
 
             return $this->redirectToRoute('workspace_mgmt.presentation.review_list');
         }
 
         $this->workspaceService->transitionTo($workspace, WorkspaceStatus::MERGED);
-        $this->addFlash('success', 'Workspace marked as merged.');
+        $this->addFlash('success', $this->translator->trans('flash.success.workspace_marked_merged'));
 
         return $this->redirectToRoute('workspace_mgmt.presentation.review_list');
     }
@@ -98,7 +100,7 @@ final class ReviewerController extends AbstractController
     public function unlock(string $workspaceId, Request $request): Response
     {
         if (!$this->isCsrfTokenValid('review_unlock', $request->request->getString('_csrf_token'))) {
-            $this->addFlash('error', 'Invalid CSRF token.');
+            $this->addFlash('error', $this->translator->trans('flash.error.invalid_csrf'));
 
             return $this->redirectToRoute('workspace_mgmt.presentation.review_list');
         }
@@ -110,13 +112,13 @@ final class ReviewerController extends AbstractController
         }
 
         if ($workspace->getStatus() !== WorkspaceStatus::IN_REVIEW) {
-            $this->addFlash('error', 'Workspace is not in review.');
+            $this->addFlash('error', $this->translator->trans('flash.error.workspace_not_in_review'));
 
             return $this->redirectToRoute('workspace_mgmt.presentation.review_list');
         }
 
         $this->workspaceService->transitionTo($workspace, WorkspaceStatus::AVAILABLE_FOR_CONVERSATION);
-        $this->addFlash('success', 'Workspace unlocked for further conversations.');
+        $this->addFlash('success', $this->translator->trans('flash.success.workspace_unlocked'));
 
         return $this->redirectToRoute('workspace_mgmt.presentation.review_list');
     }

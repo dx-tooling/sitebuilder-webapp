@@ -1,0 +1,12 @@
+# German validation messages
+# Domain: validators
+
+# Common validation messages
+This value should not be blank.: "Dieser Wert sollte nicht leer sein."
+This value is not a valid email address.: "Dieser Wert ist keine gültige E-Mail-Adresse."
+This value is too short. It should have {{ limit }} character or more.|This value is too short. It should have {{ limit }} characters or more.: "Dieser Wert ist zu kurz. Er sollte mindestens {{ limit }} Zeichen haben."
+This value is too long. It should have {{ limit }} character or less.|This value is too long. It should have {{ limit }} characters or less.: "Dieser Wert ist zu lang. Er sollte höchstens {{ limit }} Zeichen haben."
+This value should be a valid URL.: "Dieser Wert sollte eine gültige URL sein."
+The password fields must match.: "Die Passwortfelder müssen übereinstimmen."
+This field is required.: "Dieses Feld ist erforderlich."
+Please enter a valid value.: "Bitte geben Sie einen gültigen Wert ein."

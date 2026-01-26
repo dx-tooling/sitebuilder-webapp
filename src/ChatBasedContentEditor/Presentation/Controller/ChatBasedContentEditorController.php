@@ -28,6 +28,7 @@ use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Core\User\UserInterface;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
+use Symfony\Contracts\Translation\TranslatorInterface;
 use Throwable;
 
 use function array_key_exists;
@@ -51,6 +52,7 @@ final class ChatBasedContentEditorController extends AbstractController
         private readonly MessageBusInterface             $messageBus,
         private readonly DistFileScannerInterface        $distFileScanner,
         private readonly ConversationContextUsageService $contextUsageService,
+        private readonly TranslatorInterface             $translator,
     ) {
     }
 
@@ -88,7 +90,7 @@ final class ChatBasedContentEditorController extends AbstractController
         if ($workspace !== null) {
             // Handle special statuses
             if ($workspace->status === WorkspaceStatus::IN_REVIEW) {
-                $this->addFlash('warning', 'This workspace is currently in review. No conversations can be started.');
+                $this->addFlash('warning', $this->translator->trans('flash.error.workspace_in_review'));
 
                 return $this->redirectToRoute('project_mgmt.presentation.list');
             }
@@ -129,7 +131,7 @@ final class ChatBasedContentEditorController extends AbstractController
                         }
                     }
 
-                    $this->addFlash('warning', sprintf('%s is currently working on this workspace.', $otherUserEmail));
+                    $this->addFlash('warning', $this->translator->trans('flash.error.workspace_busy', ['%email%' => $otherUserEmail]));
 
                     return $this->redirectToRoute('project_mgmt.presentation.list');
                 }
@@ -157,7 +159,7 @@ final class ChatBasedContentEditorController extends AbstractController
                 'conversationId' => $conversationInfo->id,
             ]);
         } catch (Throwable $e) {
-            $this->addFlash('error', 'Failed to start conversation: ' . $e->getMessage());
+            $this->addFlash('error', $this->translator->trans('flash.error.start_conversation_failed', ['%error%' => $e->getMessage()]));
 
             return $this->redirectToRoute('project_mgmt.presentation.list');
         }
@@ -373,7 +375,7 @@ final class ChatBasedContentEditorController extends AbstractController
         #[CurrentUser] UserInterface $user
     ): Response {
         if (!$this->isCsrfTokenValid('conversation_finish', $request->request->getString('_csrf_token'))) {
-            $this->addFlash('error', 'Invalid CSRF token.');
+            $this->addFlash('error', $this->translator->trans('flash.error.invalid_csrf'));
 
             return $this->redirectToRoute('chat_based_content_editor.presentation.show', [
                 'conversationId' => $conversationId,
@@ -384,9 +386,9 @@ final class ChatBasedContentEditorController extends AbstractController
 
         try {
             $this->conversationService->finishConversation($conversationId, $accountInfo->id);
-            $this->addFlash('success', 'Conversation finished. Workspace is now available for new conversations.');
+            $this->addFlash('success', $this->translator->trans('flash.success.conversation_finished'));
         } catch (Throwable $e) {
-            $this->addFlash('error', 'Failed to finish conversation: ' . $e->getMessage());
+            $this->addFlash('error', $this->translator->trans('flash.error.finish_conversation_failed', ['%error%' => $e->getMessage()]));
         }
 
         return $this->redirectToRoute('project_mgmt.presentation.list');
@@ -404,7 +406,7 @@ final class ChatBasedContentEditorController extends AbstractController
         #[CurrentUser] UserInterface $user
     ): Response {
         if (!$this->isCsrfTokenValid('conversation_review', $request->request->getString('_csrf_token'))) {
-            $this->addFlash('error', 'Invalid CSRF token.');
+            $this->addFlash('error', $this->translator->trans('flash.error.invalid_csrf'));
 
             return $this->redirectToRoute('chat_based_content_editor.presentation.show', [
                 'conversationId' => $conversationId,
@@ -416,12 +418,12 @@ final class ChatBasedContentEditorController extends AbstractController
         try {
             $prUrl = $this->conversationService->sendToReview($conversationId, $accountInfo->id);
             if ($prUrl === '') {
-                $this->addFlash('success', 'Conversation finished. No changes to review.');
+                $this->addFlash('success', $this->translator->trans('flash.success.conversation_finished_no_changes'));
             } else {
-                $this->addFlash('success', 'Conversation sent to review. Pull request: ' . $prUrl);
+                $this->addFlash('success', $this->translator->trans('flash.success.conversation_sent_to_review', ['%url%' => $prUrl]));
             }
         } catch (Throwable $e) {
-            $this->addFlash('error', 'Failed to send to review: ' . $e->getMessage());
+            $this->addFlash('error', $this->translator->trans('flash.error.send_to_review_failed', ['%error%' => $e->getMessage()]));
         }
 
         return $this->redirectToRoute('project_mgmt.presentation.list');
@@ -436,16 +438,16 @@ final class ChatBasedContentEditorController extends AbstractController
     public function resetWorkspace(string $workspaceId, Request $request): Response
     {
         if (!$this->isCsrfTokenValid('workspace_reset', $request->request->getString('_csrf_token'))) {
-            $this->addFlash('error', 'Invalid CSRF token.');
+            $this->addFlash('error', $this->translator->trans('flash.error.invalid_csrf'));
 
             return $this->redirectToRoute('project_mgmt.presentation.list');
         }
 
         try {
             $this->workspaceMgmtFacade->resetProblemWorkspace($workspaceId);
-            $this->addFlash('success', 'Workspace reset. You can now start a new conversation.');
+            $this->addFlash('success', $this->translator->trans('flash.success.workspace_reset_conversation_ready'));
         } catch (Throwable $e) {
-            $this->addFlash('error', 'Failed to reset workspace: ' . $e->getMessage());
+            $this->addFlash('error', $this->translator->trans('flash.error.workspace_reset_failed', ['%error%' => $e->getMessage()]));
         }
 
         return $this->redirectToRoute('project_mgmt.presentation.list');

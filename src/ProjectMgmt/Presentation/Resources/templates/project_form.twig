@@ -1,12 +1,12 @@
 {% extends '@common.presentation/base_appshell.html.twig' %}
 
-{% block title %}{{ project ? 'Edit Project' : 'Add Project' }}{% endblock %}
+{% block title %}{{ project ? 'project.form.title_edit'|trans : 'project.form.title_add'|trans }}{% endblock %}
 
 {% block content %}
     <div class="max-w-2xl mx-auto space-y-6">
         <div>
-            <h1 class="text-2xl font-semibold text-dark-900 dark:text-dark-100">{{ project ? 'Edit project' : 'Add project' }}</h1>
-            <p class="text-dark-600 dark:text-dark-400 mt-1">{{ project ? 'Update the details below.' : 'Add a project so we can start making changes.' }}</p>
+            <h1 class="text-2xl font-semibold text-dark-900 dark:text-dark-100">{{ project ? 'project.form.title_edit'|trans : 'project.form.title_add'|trans }}</h1>
+            <p class="text-dark-600 dark:text-dark-400 mt-1">{{ project ? 'project.form.description_edit'|trans : 'project.form.description_add'|trans }}</p>
         </div>
 
         {% for message in app.flashes('error') %}
@@ -21,43 +21,43 @@
             <input type="hidden" name="_csrf_token" value="{{ csrf_token(project ? 'project_update' : 'project_create') }}">
 
             <div>
-                <label for="name" class="block text-sm font-medium text-dark-700 dark:text-dark-300 mb-1">Project name</label>
+                <label for="name" class="block text-sm font-medium text-dark-700 dark:text-dark-300 mb-1">{{ 'project.form.project_name'|trans }}</label>
                 <input type="text"
                        name="name"
                        id="name"
                        value="{{ project ? project.name : '' }}"
                        required
-                       placeholder="My Website"
+                       placeholder="{{ 'project.form.placeholder_project_name'|trans }}"
                        class="w-full px-3 py-2 border border-dark-300 dark:border-dark-600 rounded-md bg-white dark:bg-dark-800 text-dark-900 dark:text-dark-100 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
             </div>
 
             <div>
-                <label for="git_url" class="block text-sm font-medium text-dark-700 dark:text-dark-300 mb-1">Project link</label>
+                <label for="git_url" class="block text-sm font-medium text-dark-700 dark:text-dark-300 mb-1">{{ 'project.form.project_link'|trans }}</label>
                 <input type="url"
                        name="git_url"
                        id="git_url"
                        value="{{ project ? project.gitUrl : '' }}"
                        required
-                       placeholder="https://github.com/org/repo.git"
+                       placeholder="{{ 'project.form.placeholder_project_link'|trans }}"
                        class="w-full px-3 py-2 border border-dark-300 dark:border-dark-600 rounded-md bg-white dark:bg-dark-800 text-dark-900 dark:text-dark-100 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
-                <p class="mt-1 text-xs text-dark-500 dark:text-dark-400">Paste the GitHub repository URL for this project.</p>
+                <p class="mt-1 text-xs text-dark-500 dark:text-dark-400">{{ 'project.form.project_link_help'|trans }}</p>
             </div>
 
             <div>
-                <label for="github_token" class="block text-sm font-medium text-dark-700 dark:text-dark-300 mb-1">GitHub access key</label>
+                <label for="github_token" class="block text-sm font-medium text-dark-700 dark:text-dark-300 mb-1">{{ 'project.form.github_access_key'|trans }}</label>
                 <input type="password"
                        name="github_token"
                        id="github_token"
                        value="{{ project ? project.githubToken : '' }}"
                        required
-                       placeholder="ghp_xxxxxxxxxxxx"
+                       placeholder="{{ 'project.form.placeholder_github_token'|trans }}"
                        class="w-full px-3 py-2 border border-dark-300 dark:border-dark-600 rounded-md bg-white dark:bg-dark-800 text-dark-900 dark:text-dark-100 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
-                <p class="mt-1 text-xs text-dark-500 dark:text-dark-400">A personal access token so we can open the project and save changes.</p>
+                <p class="mt-1 text-xs text-dark-500 dark:text-dark-400">{{ 'project.form.github_access_key_help'|trans }}</p>
             </div>
 
             {# LLM Model Provider #}
             <fieldset>
-                <legend class="etfswui-form-label mb-2">LLM Model Provider</legend>
+                <legend class="etfswui-form-label mb-2">{{ 'project.form.llm_provider'|trans }}</legend>
                 <div class="space-y-2">
                     {% for provider in llmProviders %}
                         <label class="etfswui-form-radio-wrapper">
@@ -78,13 +78,13 @@
                 verifyUrl: path('project_mgmt.presentation.verify_llm_key'),
                 csrfToken: csrf_token('verify_llm_key')
             }) }}>
-                <label for="llm_api_key" class="etfswui-form-label">LLM API Key</label>
+                <label for="llm_api_key" class="etfswui-form-label">{{ 'project.form.llm_api_key'|trans }}</label>
                 <input type="password"
                        name="llm_api_key"
                        id="llm_api_key"
                        value="{{ project ? project.llmApiKey : '' }}"
                        required
-                       placeholder="sk-..."
+                       placeholder="{{ 'project.form.placeholder_llm_api_key'|trans }}"
                        class="etfswui-form-input"
                        {{ stimulus_target('llm-key-verification', 'input') }}
                        {{ stimulus_action('llm-key-verification', 'verify', 'blur') }}>
@@ -97,30 +97,30 @@
                             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                         </svg>
-                        <span class="text-sm text-blue-600 dark:text-blue-400">Verifying key...</span>
+                        <span class="text-sm text-blue-600 dark:text-blue-400">{{ 'project.form.verifying_key'|trans }}</span>
                     </div>
                     {# Success (hidden by default) #}
                     <div class="hidden flex items-center gap-2" {{ stimulus_target('llm-key-verification', 'success') }}>
                         <svg class="h-4 w-4 text-green-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
                             <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clip-rule="evenodd" />
                         </svg>
-                        <span class="text-sm text-green-600 dark:text-green-400">Key successfully verified</span>
+                        <span class="text-sm text-green-600 dark:text-green-400">{{ 'project.form.key_verified'|trans }}</span>
                     </div>
                     {# Error (hidden by default) #}
                     <div class="hidden flex items-center gap-2" {{ stimulus_target('llm-key-verification', 'error') }}>
                         <svg class="h-4 w-4 text-red-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
                             <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clip-rule="evenodd" />
                         </svg>
-                        <span class="text-sm text-red-600 dark:text-red-400">Key verification failed</span>
+                        <span class="text-sm text-red-600 dark:text-red-400">{{ 'project.form.key_verification_failed'|trans }}</span>
                     </div>
                 </div>
 
-                <p class="mt-1 text-xs text-dark-500 dark:text-dark-400">Your API key for the selected LLM provider.</p>
+                <p class="mt-1 text-xs text-dark-500 dark:text-dark-400">{{ 'project.form.llm_api_key_help'|trans }}</p>
 
                 {# Reuse existing keys #}
                 {% if existingLlmKeys|length > 0 %}
                     <div class="mt-4 p-3 bg-dark-50 dark:bg-dark-900 rounded-md border border-dark-200 dark:border-dark-700">
-                        <p class="etfswui-form-label mb-2">Or reuse an existing key:</p>
+                        <p class="etfswui-form-label mb-2">{{ 'project.form.reuse_existing_key'|trans }}</p>
                         <div class="space-y-1">
                             {% for key in existingLlmKeys %}
                                 <button type="button"
@@ -141,29 +141,29 @@
             {% set isCustomImage = currentImage not in standardImages %}
 
             <div>
-                <label for="agent_image" class="block text-sm font-medium text-dark-700 dark:text-dark-300 mb-1">Runtime environment</label>
+                <label for="agent_image" class="block text-sm font-medium text-dark-700 dark:text-dark-300 mb-1">{{ 'project.form.runtime_environment'|trans }}</label>
                 <select name="agent_image"
                         id="agent_image"
                         class="w-full px-3 py-2 border border-dark-300 dark:border-dark-600 rounded-md bg-white dark:bg-dark-800 text-dark-900 dark:text-dark-100 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
-                    <option value="node:22-slim" {{ currentImage == 'node:22-slim' ? 'selected' : '' }}>Node.js 22 (recommended)</option>
-                    <option value="node:20-slim" {{ currentImage == 'node:20-slim' ? 'selected' : '' }}>Node.js 20</option>
-                    <option value="node:18-slim" {{ currentImage == 'node:18-slim' ? 'selected' : '' }}>Node.js 18</option>
-                    <option value="python:3.12-slim" {{ currentImage == 'python:3.12-slim' ? 'selected' : '' }}>Python 3.12</option>
-                    <option value="php:8.4-cli" {{ currentImage == 'php:8.4-cli' ? 'selected' : '' }}>PHP 8.4</option>
-                    <option value="custom" {{ isCustomImage ? 'selected' : '' }}>Custom image...</option>
+                    <option value="node:22-slim" {{ currentImage == 'node:22-slim' ? 'selected' : '' }}>{{ 'project.form.node_22_recommended'|trans }}</option>
+                    <option value="node:20-slim" {{ currentImage == 'node:20-slim' ? 'selected' : '' }}>{{ 'project.form.node_20'|trans }}</option>
+                    <option value="node:18-slim" {{ currentImage == 'node:18-slim' ? 'selected' : '' }}>{{ 'project.form.node_18'|trans }}</option>
+                    <option value="python:3.12-slim" {{ currentImage == 'python:3.12-slim' ? 'selected' : '' }}>{{ 'project.form.python_312'|trans }}</option>
+                    <option value="php:8.4-cli" {{ currentImage == 'php:8.4-cli' ? 'selected' : '' }}>{{ 'project.form.php_84'|trans }}</option>
+                    <option value="custom" {{ isCustomImage ? 'selected' : '' }}>{{ 'project.form.custom_image'|trans }}</option>
                 </select>
-                <p class="mt-1 text-xs text-dark-500 dark:text-dark-400">Select the runtime environment for building and running your project.</p>
+                <p class="mt-1 text-xs text-dark-500 dark:text-dark-400">{{ 'project.form.runtime_help'|trans }}</p>
             </div>
 
             <div id="custom_image_container" class="{{ isCustomImage ? '' : 'hidden' }}">
-                <label for="custom_agent_image" class="block text-sm font-medium text-dark-700 dark:text-dark-300 mb-1">Custom Docker image</label>
+                <label for="custom_agent_image" class="block text-sm font-medium text-dark-700 dark:text-dark-300 mb-1">{{ 'project.form.custom_docker_image'|trans }}</label>
                 <input type="text"
                        name="custom_agent_image"
                        id="custom_agent_image"
                        value="{{ isCustomImage ? currentImage : '' }}"
-                       placeholder="myregistry/myimage:tag"
+                       placeholder="{{ 'project.form.placeholder_custom_image'|trans }}"
                        class="w-full px-3 py-2 border border-dark-300 dark:border-dark-600 rounded-md bg-white dark:bg-dark-800 text-dark-900 dark:text-dark-100 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
-                <p class="mt-1 text-xs text-dark-500 dark:text-dark-400">Enter a Docker image name with tag (e.g., node:latest, myregistry.io/myimage:v1).</p>
+                <p class="mt-1 text-xs text-dark-500 dark:text-dark-400">{{ 'project.form.custom_image_help'|trans }}</p>
             </div>
 
             <script>
@@ -183,46 +183,46 @@
             {# Agent Configuration (Advanced) - collapsible section #}
             <details class="border border-dark-200 dark:border-dark-700 rounded-lg">
                 <summary class="px-4 py-3 cursor-pointer select-none text-sm font-medium text-dark-700 dark:text-dark-300 hover:bg-dark-50 dark:hover:bg-dark-900/50 rounded-lg">
-                    Agent Configuration (Advanced)
+                    {{ 'project.form.agent_config_advanced'|trans }}
                 </summary>
                 <div class="px-4 pb-4 pt-2 space-y-4 border-t border-dark-200 dark:border-dark-700">
                     <p class="text-xs text-dark-500 dark:text-dark-400">
-                        Customize how the AI agent behaves when editing this project. These settings control the agent's instructions and workflow.
+                        {{ 'project.form.agent_config_description'|trans }}
                     </p>
 
                     <div>
-                        <label for="agent_background_instructions" class="etfswui-form-label">Background Instructions</label>
+                        <label for="agent_background_instructions" class="etfswui-form-label">{{ 'project.form.background_instructions'|trans }}</label>
                         <textarea name="agent_background_instructions"
                                   id="agent_background_instructions"
                                   rows="10"
                                   class="etfswui-form-textarea font-mono text-xs"
-                                  placeholder="System context and workspace conventions...">{{ project ? project.agentBackgroundInstructions : agentConfigTemplate.backgroundInstructions }}</textarea>
+                                  placeholder="{{ 'project.form.background_instructions_placeholder'|trans }}">{{ project ? project.agentBackgroundInstructions : agentConfigTemplate.backgroundInstructions }}</textarea>
                         <p class="mt-1 text-xs text-dark-500 dark:text-dark-400">
-                            System context about the workspace, conventions, and rules the agent should follow.
+                            {{ 'project.form.background_instructions_help'|trans }}
                         </p>
                     </div>
 
                     <div>
-                        <label for="agent_step_instructions" class="etfswui-form-label">Step Instructions</label>
+                        <label for="agent_step_instructions" class="etfswui-form-label">{{ 'project.form.step_instructions'|trans }}</label>
                         <textarea name="agent_step_instructions"
                                   id="agent_step_instructions"
                                   rows="6"
                                   class="etfswui-form-textarea font-mono text-xs"
-                                  placeholder="Workflow steps...">{{ project ? project.agentStepInstructions : agentConfigTemplate.stepInstructions }}</textarea>
+                                  placeholder="{{ 'project.form.step_instructions_placeholder'|trans }}">{{ project ? project.agentStepInstructions : agentConfigTemplate.stepInstructions }}</textarea>
                         <p class="mt-1 text-xs text-dark-500 dark:text-dark-400">
-                            The workflow steps the agent should follow when making changes.
+                            {{ 'project.form.step_instructions_help'|trans }}
                         </p>
                     </div>
 
                     <div>
-                        <label for="agent_output_instructions" class="etfswui-form-label">Output Instructions</label>
+                        <label for="agent_output_instructions" class="etfswui-form-label">{{ 'project.form.output_instructions'|trans }}</label>
                         <textarea name="agent_output_instructions"
                                   id="agent_output_instructions"
                                   rows="4"
                                   class="etfswui-form-textarea font-mono text-xs"
-                                  placeholder="Output format instructions...">{{ project ? project.agentOutputInstructions : agentConfigTemplate.outputInstructions }}</textarea>
+                                  placeholder="{{ 'project.form.output_instructions_placeholder'|trans }}">{{ project ? project.agentOutputInstructions : agentConfigTemplate.outputInstructions }}</textarea>
                         <p class="mt-1 text-xs text-dark-500 dark:text-dark-400">
-                            Instructions for how the agent should format its output and summaries.
+                            {{ 'project.form.output_instructions_help'|trans }}
                         </p>
                     </div>
                 </div>
@@ -230,34 +230,34 @@
 
             <div class="rounded-lg border border-dark-200 dark:border-dark-700 bg-dark-50 dark:bg-dark-800 p-4 text-sm text-dark-600 dark:text-dark-400 space-y-3">
                 <p>
-                    Need a GitHub access key? Create a <strong>Personal Access Token</strong> so the app can read and update your project.
+                    {{ 'project.form.github_token_info'|trans|raw }}
                 </p>
                 <div class="bg-white dark:bg-dark-900 rounded-md p-3 border border-dark-200 dark:border-dark-600">
-                    <p class="font-medium text-dark-800 dark:text-dark-200 mb-2">Required permissions (fine-grained token):</p>
+                    <p class="font-medium text-dark-800 dark:text-dark-200 mb-2">{{ 'project.form.required_permissions'|trans }}</p>
                     <ul class="list-disc list-inside space-y-1 text-dark-600 dark:text-dark-400">
-                        <li><strong>Contents</strong>: Read and write</li>
-                        <li><strong>Pull requests</strong>: Read and write</li>
+                        <li>{{ 'project.form.contents_permission'|trans|raw }}</li>
+                        <li>{{ 'project.form.pull_requests_permission'|trans|raw }}</li>
                     </ul>
                 </div>
                 <div class="bg-white dark:bg-dark-900 rounded-md p-3 border border-dark-200 dark:border-dark-600">
-                    <p class="font-medium text-dark-800 dark:text-dark-200 mb-2">Alternative: classic token</p>
+                    <p class="font-medium text-dark-800 dark:text-dark-200 mb-2">{{ 'project.form.classic_token_alternative'|trans }}</p>
                     <ul class="list-disc list-inside space-y-1 text-dark-600 dark:text-dark-400">
-                        <li>Select the <strong>repo</strong> scope</li>
+                        <li>{{ 'project.form.repo_scope'|trans|raw }}</li>
                     </ul>
                 </div>
                 <p class="text-xs text-dark-500 dark:text-dark-500">
-                    Create a token at: <a href="https://github.com/settings/tokens" target="_blank" rel="noopener noreferrer" class="text-primary-600 dark:text-primary-400 hover:underline">github.com/settings/tokens</a>
+                    {{ 'project.form.create_token_link'|trans }} <a href="https://github.com/settings/tokens" target="_blank" rel="noopener noreferrer" class="text-primary-600 dark:text-primary-400 hover:underline">github.com/settings/tokens</a>
                 </p>
             </div>
 
             <div class="flex items-center justify-end gap-3 pt-4 border-t border-dark-200 dark:border-dark-700">
                 <a href="{{ path('project_mgmt.presentation.list') }}"
                    class="px-4 py-2 rounded-md border border-dark-300 dark:border-dark-600 text-dark-700 dark:text-dark-300 text-sm font-medium hover:bg-dark-100 dark:hover:bg-dark-700 focus:outline-none focus:ring-2 focus:ring-primary-500">
-                    Cancel
+                    {{ 'common.cancel'|trans }}
                 </a>
                 <button type="submit"
                         class="px-4 py-2 rounded-md bg-primary-600 text-white text-sm font-medium hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:focus:ring-offset-dark-900">
-                    {{ project ? 'Update project' : 'Add project' }}
+                    {{ project ? 'project.form.update_project_button'|trans : 'project.form.add_project_button'|trans }}
                 </button>
             </div>
         </form>

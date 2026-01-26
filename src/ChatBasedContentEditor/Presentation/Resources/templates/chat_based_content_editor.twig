@@ -1,6 +1,6 @@
 {% extends '@common.presentation/base_appshell.html.twig' %}
 
-{% block title %}Content editor{% endblock %}
+{% block title %}{{ 'editor.title'|trans }}{% endblock %}
 
 {% block content %}
     {# Heartbeat controller to track user presence (prevents stale conversation locks) - skip for read-only #}
@@ -20,7 +20,25 @@
              contextUsageUrl: contextUsageUrl,
              activeSession: activeSession,
              turns: turns,
-             readOnly: readOnly
+             readOnly: readOnly,
+             translations: {
+                 aiBudget: 'js.editor.ai_budget'|trans,
+                 estimatedCost: 'js.editor.estimated_cost'|trans,
+                 sendError: 'js.editor.send_error'|trans,
+                 networkError: 'js.editor.network_error'|trans,
+                 pollError: 'js.editor.poll_error'|trans,
+                 connectionRetry: 'js.editor.connection_retry'|trans,
+                 makeChanges: 'js.editor.make_changes'|trans,
+                 makingChanges: 'js.editor.making_changes'|trans,
+                 noResponse: 'js.editor.no_response'|trans,
+                 working: 'js.editor.working'|trans,
+                 thinking: 'js.editor.thinking'|trans,
+                 askingAi: 'js.editor.asking_ai'|trans,
+                 aiResponseReceived: 'js.editor.ai_response_received'|trans,
+                 unknownError: 'js.editor.unknown_error'|trans,
+                 allSet: 'js.editor.all_set'|trans,
+                 inProgress: 'js.editor.in_progress'|trans
+             }
          }) }}>
 
         {# Flash messages #}
@@ -46,12 +64,12 @@
                         </svg>
                     </div>
                     <div class="ml-3">
-                        <h3 class="text-sm font-medium text-red-800 dark:text-red-200">We hit a snag</h3>
-                        <p class="mt-1 text-sm text-red-700 dark:text-red-300">Something went wrong while preparing your work area. You can reset it and try again.</p>
+                        <h3 class="text-sm font-medium text-red-800 dark:text-red-200">{{ 'editor.problem.title'|trans }}</h3>
+                        <p class="mt-1 text-sm text-red-700 dark:text-red-300">{{ 'editor.problem.description'|trans }}</p>
                         <form method="POST" action="{{ path('chat_based_content_editor.presentation.reset_workspace', { workspaceId: workspace.id }) }}" class="mt-2">
                             <input type="hidden" name="_csrf_token" value="{{ csrf_token('workspace_reset') }}">
                             <button type="submit" class="text-sm font-medium text-red-800 dark:text-red-200 hover:text-red-700 dark:hover:text-red-100 underline">
-                                Reset work area
+                                {{ 'editor.problem.reset_work_area'|trans }}
                             </button>
                         </form>
                     </div>
@@ -68,15 +86,15 @@
                         </svg>
                     </div>
                     <div class="ml-3 flex-1">
-                        <h3 class="text-sm font-medium text-purple-800 dark:text-purple-200">Review in progress</h3>
-                        <p class="mt-1 text-sm text-purple-700 dark:text-purple-300">Your changes are being reviewed. You can start a new edit session after the review is done.</p>
+                        <h3 class="text-sm font-medium text-purple-800 dark:text-purple-200">{{ 'editor.review.title'|trans }}</h3>
+                        <p class="mt-1 text-sm text-purple-700 dark:text-purple-300">{{ 'editor.review.description'|trans }}</p>
                         {% if workspace.githubPrUrl %}
                             <p class="mt-2">
                                 <a href="{{ workspace.githubPrUrl }}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 text-sm font-medium text-purple-800 dark:text-purple-200 hover:text-purple-900 dark:hover:text-purple-100 underline">
                                     <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
                                         <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
                                     </svg>
-                                    Open the review link
+                                    {{ 'editor.review.open_link'|trans }}
                                 </a>
                             </p>
                         {% endif %}
@@ -89,13 +107,13 @@
         <div>
             <div class="flex flex-col xl:flex-row xl:items-start xl:justify-between gap-4">
                 <div>
-                    <h1 class="text-2xl font-semibold text-dark-900 dark:text-dark-100">Content editor</h1>
+                    <h1 class="text-2xl font-semibold text-dark-900 dark:text-dark-100">{{ 'editor.title'|trans }}</h1>
                     {% if project %}
                         <p class="text-dark-600 dark:text-dark-400 mt-1">
-                            Working on <strong>{{ project.name }}</strong>
+                            {{ 'editor.working_on'|trans({'%project%': project.name})|raw }}
                         </p>
                     {% else %}
-                        <p class="text-dark-600 dark:text-dark-400 mt-1">Describe what you want changed in plain language. The assistant will take care of the edits and show progress.</p>
+                        <p class="text-dark-600 dark:text-dark-400 mt-1">{{ 'editor.description'|trans }}</p>
                     {% endif %}
                 </div>
                 <div class="flex flex-wrap items-center gap-2 xl:justify-end">
@@ -104,20 +122,20 @@
                             <input type="hidden" name="_csrf_token" value="{{ csrf_token('conversation_finish') }}">
                             <button type="submit"
                                     class="px-3 py-1.5 rounded-md border border-dark-300 dark:border-dark-600 text-dark-700 dark:text-dark-300 text-sm font-medium hover:bg-dark-100 dark:hover:bg-dark-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:focus:ring-offset-dark-900">
-                                End session
+                                {{ 'editor.end_session'|trans }}
                             </button>
                         </form>
                         <form method="POST" action="{{ path('chat_based_content_editor.presentation.send_to_review', { conversationId: conversation.id }) }}" class="inline">
                             <input type="hidden" name="_csrf_token" value="{{ csrf_token('conversation_review') }}">
                             <button type="submit"
                                     class="px-3 py-1.5 rounded-md bg-primary-600 text-white text-sm font-medium hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:focus:ring-offset-dark-900">
-                                Send for review
+                                {{ 'editor.send_for_review'|trans }}
                             </button>
                         </form>
                     {% endif %}
                     <a href="{{ path('project_mgmt.presentation.list') }}"
                        class="px-3 py-1.5 rounded-md border border-dark-300 dark:border-dark-600 text-dark-700 dark:text-dark-300 text-sm font-medium hover:bg-dark-100 dark:hover:bg-dark-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:focus:ring-offset-dark-900">
-                        Back to projects
+                        {{ 'common.back_to_projects'|trans }}
                     </a>
                 </div>
             </div>
@@ -127,7 +145,7 @@
             <div {{ stimulus_target('chat-based-content-editor', 'messages') }}
                  class="rounded-lg border border-dark-200 dark:border-dark-700 bg-white dark:bg-dark-800 p-4 min-h-[320px] max-h-[500px] overflow-y-auto space-y-4">
                 {% if turns is empty %}
-                    <p class="text-dark-500 dark:text-dark-400 text-sm">Your conversation will show up here. Describe a change below to get started.</p>
+                    <p class="text-dark-500 dark:text-dark-400 text-sm">{{ 'editor.conversation_placeholder'|trans }}</p>
                 {% else %}
                     {% for turn in turns %}
                         <div class="flex justify-end">
@@ -149,7 +167,7 @@
                            {{ stimulus_action('chat-based-content-editor', 'toggleAutoScroll', 'change') }}
                            checked
                            class="rounded border-dark-300 dark:border-dark-600 text-primary-600 focus:ring-primary-500 dark:focus:ring-offset-dark-800 w-3.5 h-3.5">
-                    <span>Keep newest message in view</span>
+                    <span>{{ 'editor.auto_scroll'|trans }}</span>
                 </label>
             </div>
         </div>
@@ -174,21 +192,21 @@
                   class="space-y-4">
                 <input type="hidden" name="_csrf_token" value="{{ csrf_token('chat_based_content_editor_run') }}">
                 <div>
-                    <label for="instruction" class="block text-sm font-medium text-dark-700 dark:text-dark-300 mb-1">What should we change?</label>
+                    <label for="instruction" class="block text-sm font-medium text-dark-700 dark:text-dark-300 mb-1">{{ 'editor.input_label'|trans }}</label>
                     <textarea {{ stimulus_target('chat-based-content-editor', 'instruction') }}
                               {{ stimulus_action('chat-based-content-editor', 'handleKeydown', 'keydown') }}
                               name="instruction"
                               id="instruction"
                               rows="3"
                               required
-                              placeholder="e.g. Add a contact section to the homepage"
+                              placeholder="{{ 'editor.input_placeholder'|trans }}"
                               class="w-full px-3 py-2 border border-dark-300 dark:border-dark-600 rounded-md bg-white dark:bg-dark-800 text-dark-900 dark:text-dark-100 text-sm"></textarea>
                 </div>
                 <div class="flex items-center gap-4">
                     <button type="submit"
                             {{ stimulus_target('chat-based-content-editor', 'submit') }}
                             class="px-4 py-2 rounded-md bg-primary-600 text-white text-sm font-medium hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:focus:ring-offset-dark-900 disabled:opacity-50 disabled:cursor-not-allowed">
-                        Make changes
+                        {{ 'editor.make_changes'|trans }}
                     </button>
                     <label class="inline-flex items-center gap-1.5 text-sm text-dark-600 dark:text-dark-400 cursor-pointer select-none">
                         <input type="checkbox"
@@ -196,7 +214,7 @@
                                {{ stimulus_action('chat-based-content-editor', 'toggleSubmitOnEnter', 'change') }}
                                checked
                                class="rounded border-dark-300 dark:border-dark-600 text-primary-600 focus:ring-primary-500 dark:focus:ring-offset-dark-800">
-                        <span>Press Enter to send</span>
+                        <span>{{ 'editor.submit_on_enter'|trans }}</span>
                     </label>
                 </div>
             </form>
@@ -204,9 +222,9 @@
             <div class="rounded-md bg-dark-100 dark:bg-dark-700/50 p-4">
                 <p class="text-sm text-dark-600 dark:text-dark-400">
                     {% if conversation.status.value == 'finished' %}
-                        This session is finished. You can review the history above.
+                        {{ 'editor.session_finished'|trans }}
                     {% else %}
-                        You cannot edit this session.
+                        {{ 'editor.cannot_edit'|trans }}
                     {% endif %}
                 </p>
             </div>
@@ -220,7 +238,7 @@
                  }) }}
                  {{ stimulus_target('dist-files', 'container') }}
                  class="border-t border-dark-200 dark:border-dark-700 pt-6 hidden">
-                <h2 class="text-lg font-medium text-dark-900 dark:text-dark-100 mb-3">Preview pages</h2>
+                <h2 class="text-lg font-medium text-dark-900 dark:text-dark-100 mb-3">{{ 'editor.preview_pages'|trans }}</h2>
                 <ul {{ stimulus_target('dist-files', 'list') }} class="space-y-1"></ul>
             </div>
         {% endif %}
@@ -229,24 +247,24 @@
         {% if workspace or project or conversation %}
             <details class="border-t border-dark-200 dark:border-dark-700 pt-4">
                 <summary class="text-xs font-medium text-dark-500 dark:text-dark-400 cursor-pointer hover:text-dark-600 dark:hover:text-dark-300 select-none">
-                    Details (for troubleshooting)
+                    {{ 'editor.details_troubleshooting'|trans }}
                 </summary>
                 <div class="mt-3 bg-dark-50 dark:bg-dark-800/50 rounded-lg border border-dark-200 dark:border-dark-700 p-3">
                     <dl class="text-xs space-y-1.5">
                         {% if conversation %}
                             <div class="flex justify-between items-center">
-                                <dt class="text-dark-500 dark:text-dark-400">Session:</dt>
+                                <dt class="text-dark-500 dark:text-dark-400">{{ 'editor.session_label'|trans }}</dt>
                                 <dd class="text-dark-900 dark:text-dark-100 font-mono">{{ conversation.id }}</dd>
                             </div>
                         {% endif %}
                         {% if workspace %}
                             <div class="flex justify-between items-center">
-                                <dt class="text-dark-500 dark:text-dark-400">Work area:</dt>
+                                <dt class="text-dark-500 dark:text-dark-400">{{ 'editor.work_area_label'|trans }}</dt>
                                 <dd class="text-dark-900 dark:text-dark-100 font-mono">{{ workspace.id }}</dd>
                             </div>
                             {% if workspace.branchName %}
                                 <div class="flex justify-between items-center">
-                                    <dt class="text-dark-500 dark:text-dark-400">Work area name:</dt>
+                                    <dt class="text-dark-500 dark:text-dark-400">{{ 'editor.work_area_name'|trans }}</dt>
                                     <dd class="text-dark-900 dark:text-dark-100">
                                         <span class="font-mono">{{ workspace.branchName }}</span>
                                         {% if workspace.githubBranchUrl %}
@@ -261,13 +279,13 @@
                             {% endif %}
                             {% if workspace.githubPrUrl %}
                                 <div class="flex justify-between items-center">
-                                    <dt class="text-dark-500 dark:text-dark-400">Review link:</dt>
+                                    <dt class="text-dark-500 dark:text-dark-400">{{ 'editor.review_link'|trans }}</dt>
                                     <dd class="text-dark-900 dark:text-dark-100">
                                         <a href="{{ workspace.githubPrUrl }}" target="_blank" rel="noopener noreferrer" class="text-primary-600 dark:text-primary-400 hover:underline inline-flex items-center gap-0.5">
                                             <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
                                                 <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
                                             </svg>
-                                            Open on GitHub
+                                            {{ 'editor.open_on_github'|trans }}
                                         </a>
                                     </dd>
                                 </div>
@@ -275,13 +293,13 @@
                         {% endif %}
                         {% if project and project.githubUrl %}
                             <div class="flex justify-between items-center">
-                                <dt class="text-dark-500 dark:text-dark-400">Project link:</dt>
+                                <dt class="text-dark-500 dark:text-dark-400">{{ 'editor.project_link'|trans }}</dt>
                                 <dd class="text-dark-900 dark:text-dark-100">
                                     <a href="{{ project.githubUrl }}" target="_blank" rel="noopener noreferrer" class="text-primary-600 dark:text-primary-400 hover:underline inline-flex items-center gap-0.5">
                                         <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
                                             <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
                                         </svg>
-                                        Open on GitHub
+                                        {{ 'editor.open_on_github'|trans }}
                                     </a>
                                 </dd>
                             </div>

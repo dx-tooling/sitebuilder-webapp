@@ -1,0 +1,12 @@
+# English validation messages
+# Domain: validators
+
+# Common validation messages
+This value should not be blank.: "This value should not be blank."
+This value is not a valid email address.: "This value is not a valid email address."
+This value is too short. It should have {{ limit }} character or more.|This value is too short. It should have {{ limit }} characters or more.: "This value is too short. It should have {{ limit }} character or more.|This value is too short. It should have {{ limit }} characters or more."
+This value is too long. It should have {{ limit }} character or less.|This value is too long. It should have {{ limit }} characters or less.: "This value is too long. It should have {{ limit }} character or less.|This value is too long. It should have {{ limit }} characters or less."
+This value should be a valid URL.: "This value should be a valid URL."
+The password fields must match.: "The password fields must match."
+This field is required.: "This field is required."
+Please enter a valid value.: "Please enter a valid value."

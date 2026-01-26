@@ -1,26 +1,25 @@
 {% extends '@common.presentation/base_fullcontent.html.twig' %}
 
-{% block title %}Sitebuilder - AI-Powered Website Content Editing{% endblock %}
+{% block title %}{{ 'homepage.title'|trans }}{% endblock %}
 
 {% block body %}
     <div class="max-w-4xl mx-auto">
         {# Hero Section #}
         <div class="text-center mb-16">
             <h1 class="text-4xl sm:text-5xl font-bold text-dark-900 dark:text-white mb-6">
-                AI-Powered Website Content Editing
+                {{ 'homepage.hero_title'|trans }}
             </h1>
             <p class="text-xl text-dark-600 dark:text-dark-300 mb-8 max-w-2xl mx-auto">
-                Sitebuilder helps you create and edit website content using natural language.
-                Simply describe what you want, and let AI handle the rest.
+                {{ 'homepage.hero_description'|trans }}
             </p>
             <div class="flex flex-col sm:flex-row gap-4 justify-center">
                 <a href="{{ path('account.presentation.sign_up') }}"
                    class="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors">
-                    Get Started
+                    {{ 'homepage.get_started'|trans }}
                 </a>
                 <a href="{{ path('account.presentation.sign_in') }}"
                    class="inline-flex items-center justify-center px-6 py-3 border border-dark-300 dark:border-dark-600 text-base font-medium rounded-md text-dark-700 dark:text-dark-200 bg-white dark:bg-dark-800 hover:bg-dark-50 dark:hover:bg-dark-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors">
-                    Sign In
+                    {{ 'homepage.sign_in'|trans }}
                 </a>
             </div>
         </div>
@@ -33,9 +32,9 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
                     </svg>
                 </div>
-                <h3 class="text-lg font-semibold text-dark-900 dark:text-white mb-2">Chat-Based Editing</h3>
+                <h3 class="text-lg font-semibold text-dark-900 dark:text-white mb-2">{{ 'homepage.feature_chat_title'|trans }}</h3>
                 <p class="text-dark-600 dark:text-dark-400">
-                    Edit your website content through natural conversation. Just describe what changes you want to make.
+                    {{ 'homepage.feature_chat_description'|trans }}
                 </p>
             </div>
 
@@ -45,9 +44,9 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
                     </svg>
                 </div>
-                <h3 class="text-lg font-semibold text-dark-900 dark:text-white mb-2">AI-Powered</h3>
+                <h3 class="text-lg font-semibold text-dark-900 dark:text-white mb-2">{{ 'homepage.feature_ai_title'|trans }}</h3>
                 <p class="text-dark-600 dark:text-dark-400">
-                    Leverage advanced AI models to generate, rewrite, and improve your website content automatically.
+                    {{ 'homepage.feature_ai_description'|trans }}
                 </p>
             </div>
 
@@ -57,9 +56,9 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
                     </svg>
                 </div>
-                <h3 class="text-lg font-semibold text-dark-900 dark:text-white mb-2">Review Workflow</h3>
+                <h3 class="text-lg font-semibold text-dark-900 dark:text-white mb-2">{{ 'homepage.feature_review_title'|trans }}</h3>
                 <p class="text-dark-600 dark:text-dark-400">
-                    Built-in review and approval workflow ensures quality control before any changes go live.
+                    {{ 'homepage.feature_review_description'|trans }}
                 </p>
             </div>
         </div>
@@ -67,14 +66,14 @@
         {# CTA Section #}
         <div class="bg-primary-50 dark:bg-primary-900/20 rounded-2xl p-8 text-center border border-primary-100 dark:border-primary-800">
             <h2 class="text-2xl font-bold text-dark-900 dark:text-white mb-4">
-                Ready to transform your content workflow?
+                {{ 'homepage.cta_title'|trans }}
             </h2>
             <p class="text-dark-600 dark:text-dark-300 mb-6">
-                Create your free account and start editing your website with AI today.
+                {{ 'homepage.cta_description'|trans }}
             </p>
             <a href="{{ path('account.presentation.sign_up') }}"
                class="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors">
-                Create Free Account
+                {{ 'homepage.create_free_account'|trans }}
             </a>
         </div>
     </div>

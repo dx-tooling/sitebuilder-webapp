@@ -1,7 +1,7 @@
 {% extends '@common.presentation/base_appshell.html.twig' %}
 
 {% block content %}
-    <h1 class="etfswui-pagetitle mb-10 text-center">Create your account</h1>
+    <h1 class="etfswui-pagetitle mb-10 text-center">{{ 'account.sign_up.title'|trans }}</h1>
     <div class="etfswui-card max-w-md mx-auto mb-8">
         <div class="etfswui-card-content">
             {% for message in app.flashes('error') %}
@@ -24,32 +24,32 @@
                 <input type="hidden" name="_csrf_token" value="{{ csrf_token('sign_up') }}">
 
                 <div>
-                    <label for="email" class="etfswui-form-label">Email</label>
+                    <label for="email" class="etfswui-form-label">{{ 'common.email'|trans }}</label>
                     <input id="email" name="email" type="email" required
                            class="etfswui-form-input"
-                           placeholder="Enter your email">
+                           placeholder="{{ 'account.sign_in.placeholder_email'|trans }}">
                 </div>
 
                 <div>
-                    <label for="password" class="etfswui-form-label">Password</label>
+                    <label for="password" class="etfswui-form-label">{{ 'common.password'|trans }}</label>
                     <input id="password" name="password" type="password" required
                            class="etfswui-form-input"
-                           placeholder="Enter your password">
+                           placeholder="{{ 'account.sign_in.placeholder_password'|trans }}">
                 </div>
 
                 <div>
-                    <label for="password_confirm" class="etfswui-form-label">Confirm password</label>
+                    <label for="password_confirm" class="etfswui-form-label">{{ 'account.sign_up.confirm_password'|trans }}</label>
                     <input id="password_confirm" name="password_confirm" type="password" required
                            class="etfswui-form-input"
-                           placeholder="Confirm your password">
+                           placeholder="{{ 'account.sign_up.placeholder_confirm_password'|trans }}">
                 </div>
 
                 <div class="etfswui-card-actions">
                     <a href="{{ path('account.presentation.sign_in') }}" class="etfswui-link-as-button-secondary">
-                        Back to sign in
+                        {{ 'account.sign_up.back_to_sign_in'|trans }}
                     </a>
                     <button type="submit" class="etfswui-button-default">
-                        Create account
+                        {{ 'account.sign_up.create_account'|trans }}
                     </button>
                 </div>
             </form>
@@ -59,8 +59,7 @@
     <div class="etfswui-alert etfswui-alert-info max-w-md mx-auto">
         <div class="etfswui-alert-body">
             <p class="etfswui-alert-info-text font-normal">
-                <strong>Early access:</strong> This product is evolving quickly. It is safe to try,
-                but still changing often. Thanks for your patience and feedback while we improve it.
+                {{ 'account.sign_in.early_access'|trans|raw }}
             </p>
         </div>
     </div>

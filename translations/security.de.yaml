@@ -1,0 +1,8 @@
+# German security messages
+# Domain: security
+
+Invalid credentials.: "Ungültige Anmeldedaten."
+Invalid or expired login link.: "Ungültiger oder abgelaufener Anmeldelink."
+Too many failed login attempts, please try again later.: "Zu viele fehlgeschlagene Anmeldeversuche, bitte versuchen Sie es später erneut."
+Account is disabled.: "Konto ist deaktiviert."
+Account is locked.: "Konto ist gesperrt."

@@ -20,6 +20,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
+use Symfony\Contracts\Translation\TranslatorInterface;
 use Throwable;
 
 /**
@@ -36,6 +37,7 @@ final class ProjectController extends AbstractController
         private readonly ChatBasedContentEditorFacadeInterface $chatBasedContentEditorFacade,
         private readonly AccountFacadeInterface                $accountFacade,
         private readonly LlmContentEditorFacadeInterface       $llmContentEditorFacade,
+        private readonly TranslatorInterface                   $translator,
     ) {
     }
 
@@ -115,7 +117,7 @@ final class ProjectController extends AbstractController
     public function create(Request $request): Response
     {
         if (!$this->isCsrfTokenValid('project_create', $request->request->getString('_csrf_token'))) {
-            $this->addFlash('error', 'Invalid CSRF token.');
+            $this->addFlash('error', $this->translator->trans('flash.error.invalid_csrf'));
 
             return $this->redirectToRoute('project_mgmt.presentation.new');
         }
@@ -133,19 +135,19 @@ final class ProjectController extends AbstractController
         $agentOutputInstructions     = $this->nullIfEmpty($request->request->getString('agent_output_instructions'));
 
         if ($name === '' || $gitUrl === '' || $githubToken === '' || $llmApiKey === '') {
-            $this->addFlash('error', 'All fields are required.');
+            $this->addFlash('error', $this->translator->trans('flash.error.all_fields_required'));
 
             return $this->redirectToRoute('project_mgmt.presentation.new');
         }
 
         if ($llmModelProvider === null) {
-            $this->addFlash('error', 'Please select an LLM model provider.');
+            $this->addFlash('error', $this->translator->trans('flash.error.select_llm_provider'));
 
             return $this->redirectToRoute('project_mgmt.presentation.new');
         }
 
         if ($agentImage === '' || !$this->isValidDockerImageName($agentImage)) {
-            $this->addFlash('error', 'Invalid Docker image format. Expected format: name:tag');
+            $this->addFlash('error', $this->translator->trans('flash.error.invalid_docker_image'));
 
             return $this->redirectToRoute('project_mgmt.presentation.new');
         }
@@ -162,7 +164,7 @@ final class ProjectController extends AbstractController
             $agentStepInstructions,
             $agentOutputInstructions
         );
-        $this->addFlash('success', 'Project created successfully.');
+        $this->addFlash('success', $this->translator->trans('flash.success.project_created'));
 
         return $this->redirectToRoute('project_mgmt.presentation.list');
     }
@@ -214,7 +216,7 @@ final class ProjectController extends AbstractController
         }
 
         if (!$this->isCsrfTokenValid('project_update', $request->request->getString('_csrf_token'))) {
-            $this->addFlash('error', 'Invalid CSRF token.');
+            $this->addFlash('error', $this->translator->trans('flash.error.invalid_csrf'));
 
             return $this->redirectToRoute('project_mgmt.presentation.edit', ['id' => $id]);
         }
@@ -232,19 +234,19 @@ final class ProjectController extends AbstractController
         $agentOutputInstructions     = $this->nullIfEmpty($request->request->getString('agent_output_instructions'));
 
         if ($name === '' || $gitUrl === '' || $githubToken === '' || $llmApiKey === '') {
-            $this->addFlash('error', 'All fields are required.');
+            $this->addFlash('error', $this->translator->trans('flash.error.all_fields_required'));
 
             return $this->redirectToRoute('project_mgmt.presentation.edit', ['id' => $id]);
         }
 
         if ($llmModelProvider === null) {
-            $this->addFlash('error', 'Please select an LLM model provider.');
+            $this->addFlash('error', $this->translator->trans('flash.error.select_llm_provider'));
 
             return $this->redirectToRoute('project_mgmt.presentation.edit', ['id' => $id]);
         }
 
         if ($agentImage === '' || !$this->isValidDockerImageName($agentImage)) {
-            $this->addFlash('error', 'Invalid Docker image format. Expected format: name:tag');
+            $this->addFlash('error', $this->translator->trans('flash.error.invalid_docker_image'));
 
             return $this->redirectToRoute('project_mgmt.presentation.edit', ['id' => $id]);
         }
@@ -262,7 +264,7 @@ final class ProjectController extends AbstractController
             $agentStepInstructions,
             $agentOutputInstructions
         );
-        $this->addFlash('success', 'Project updated successfully.');
+        $this->addFlash('success', $this->translator->trans('flash.success.project_updated'));
 
         return $this->redirectToRoute('project_mgmt.presentation.list');
     }
@@ -282,7 +284,7 @@ final class ProjectController extends AbstractController
         }
 
         if (!$this->isCsrfTokenValid('delete_project_' . $id, $request->request->getString('_csrf_token'))) {
-            $this->addFlash('error', 'Invalid CSRF token.');
+            $this->addFlash('error', $this->translator->trans('flash.error.invalid_csrf'));
 
             return $this->redirectToRoute('project_mgmt.presentation.list');
         }
@@ -295,7 +297,7 @@ final class ProjectController extends AbstractController
 
         $projectName = $project->getName();
         $this->projectService->delete($project);
-        $this->addFlash('success', sprintf('Project "%s" deleted successfully.', $projectName));
+        $this->addFlash('success', $this->translator->trans('flash.success.project_deleted', ['%name%' => $projectName]));
 
         return $this->redirectToRoute('project_mgmt.presentation.list');
     }
@@ -315,7 +317,7 @@ final class ProjectController extends AbstractController
         }
 
         if (!$this->isCsrfTokenValid('permanently_delete_project_' . $id, $request->request->getString('_csrf_token'))) {
-            $this->addFlash('error', 'Invalid CSRF token.');
+            $this->addFlash('error', $this->translator->trans('flash.error.invalid_csrf'));
 
             return $this->redirectToRoute('project_mgmt.presentation.list');
         }
@@ -329,7 +331,7 @@ final class ProjectController extends AbstractController
 
         $projectName = $project->getName();
         $this->projectService->permanentlyDelete($project);
-        $this->addFlash('success', sprintf('Project "%s" permanently deleted.', $projectName));
+        $this->addFlash('success', $this->translator->trans('flash.success.project_permanently_deleted', ['%name%' => $projectName]));
 
         return $this->redirectToRoute('project_mgmt.presentation.list');
     }
@@ -349,14 +351,14 @@ final class ProjectController extends AbstractController
         }
 
         if (!$this->isCsrfTokenValid('restore_project_' . $id, $request->request->getString('_csrf_token'))) {
-            $this->addFlash('error', 'Invalid CSRF token.');
+            $this->addFlash('error', $this->translator->trans('flash.error.invalid_csrf'));
 
             return $this->redirectToRoute('project_mgmt.presentation.list');
         }
 
         $projectName = $project->getName();
         $this->projectService->restore($project);
-        $this->addFlash('success', sprintf('Project "%s" restored successfully.', $projectName));
+        $this->addFlash('success', $this->translator->trans('flash.success.project_restored', ['%name%' => $projectName]));
 
         return $this->redirectToRoute('project_mgmt.presentation.list');
     }
@@ -376,7 +378,7 @@ final class ProjectController extends AbstractController
         }
 
         if (!$this->isCsrfTokenValid('reset_workspace_' . $id, $request->request->getString('_csrf_token'))) {
-            $this->addFlash('error', 'Invalid CSRF token.');
+            $this->addFlash('error', $this->translator->trans('flash.error.invalid_csrf'));
 
             return $this->redirectToRoute('project_mgmt.presentation.list');
         }
@@ -384,7 +386,7 @@ final class ProjectController extends AbstractController
         $workspace = $this->workspaceMgmtFacade->getWorkspaceForProject($id);
 
         if ($workspace === null) {
-            $this->addFlash('warning', 'No workspace exists for this project.');
+            $this->addFlash('warning', $this->translator->trans('flash.error.no_workspace'));
 
             return $this->redirectToRoute('project_mgmt.presentation.list');
         }
@@ -398,13 +400,13 @@ final class ProjectController extends AbstractController
             // Reset workspace to AVAILABLE_FOR_SETUP
             $this->workspaceMgmtFacade->resetWorkspaceForSetup($workspace->id);
 
-            $message = 'Workspace reset successfully.';
             if ($finishedCount > 0) {
-                $message .= sprintf(' %d conversation(s) were finished.', $finishedCount);
+                $this->addFlash('success', $this->translator->trans('flash.success.workspace_reset_with_conversations', ['%count%' => $finishedCount]));
+            } else {
+                $this->addFlash('success', $this->translator->trans('flash.success.workspace_reset'));
             }
-            $this->addFlash('success', $message);
         } catch (Throwable $e) {
-            $this->addFlash('error', 'Failed to reset workspace: ' . $e->getMessage());
+            $this->addFlash('error', $this->translator->trans('flash.error.workspace_reset_failed', ['%error%' => $e->getMessage()]));
         }
 
         return $this->redirectToRoute('project_mgmt.presentation.list');
@@ -418,19 +420,19 @@ final class ProjectController extends AbstractController
     public function verifyLlmKey(Request $request): JsonResponse
     {
         if (!$this->isCsrfTokenValid('verify_llm_key', $request->request->getString('_csrf_token'))) {
-            return new JsonResponse(['success' => false, 'error' => 'Invalid CSRF token.'], 403);
+            return new JsonResponse(['success' => false, 'error' => $this->translator->trans('api.error.invalid_csrf')], 403);
         }
 
         $providerValue = $request->request->getString('provider');
         $apiKey        = $request->request->getString('api_key');
 
         if ($providerValue === '' || $apiKey === '') {
-            return new JsonResponse(['success' => false, 'error' => 'Provider and API key are required.'], 400);
+            return new JsonResponse(['success' => false, 'error' => $this->translator->trans('api.error.provider_and_key_required')], 400);
         }
 
         $provider = LlmModelProvider::tryFrom($providerValue);
         if ($provider === null) {
-            return new JsonResponse(['success' => false, 'error' => 'Invalid provider.'], 400);
+            return new JsonResponse(['success' => false, 'error' => $this->translator->trans('api.error.invalid_provider')], 400);
         }
 
         $isValid = $this->llmContentEditorFacade->verifyApiKey($provider, $apiKey);
@@ -466,7 +468,7 @@ final class ProjectController extends AbstractController
     {
         $projectType = ProjectType::tryFrom($type);
         if ($projectType === null) {
-            return new JsonResponse(['error' => 'Invalid project type.'], 400);
+            return new JsonResponse(['error' => $this->translator->trans('api.error.invalid_project_type')], 400);
         }
 
         $template = $this->projectMgmtFacade->getAgentConfigTemplate($projectType);

@@ -65,14 +65,14 @@ final class ProjectDeleteTest extends WebTestCase
 
         // Act: Log in and visit the projects page to get CSRF token, then soft delete
         $this->client->loginUser($user);
-        $crawler = $this->client->request('GET', '/projects');
+        $crawler = $this->client->request('GET', '/en/projects');
 
         // Find and submit the delete form
-        $deleteForm = $crawler->filter('form[action="/projects/' . $projectId . '/delete"]')->form();
+        $deleteForm = $crawler->filter('form[action="/en/projects/' . $projectId . '/delete"]')->form();
         $this->client->submit($deleteForm);
 
         // Assert: Redirects to list
-        self::assertResponseRedirects('/projects');
+        self::assertResponseRedirects('/en/projects');
 
         // Assert: Project is marked as deleted but still exists in DB
         $this->entityManager->clear();
@@ -98,7 +98,7 @@ final class ProjectDeleteTest extends WebTestCase
 
         // Act: Visit project list
         $this->client->loginUser($user);
-        $crawler = $this->client->request('GET', '/projects');
+        $crawler = $this->client->request('GET', '/en/projects');
 
         // Assert
         self::assertResponseIsSuccessful();
@@ -117,7 +117,7 @@ final class ProjectDeleteTest extends WebTestCase
 
         // Act: Visit project list
         $this->client->loginUser($user);
-        $crawler = $this->client->request('GET', '/projects');
+        $crawler = $this->client->request('GET', '/en/projects');
 
         // Assert: Deleted projects section exists and contains the project
         self::assertResponseIsSuccessful();
@@ -140,14 +140,14 @@ final class ProjectDeleteTest extends WebTestCase
 
         // Act: Visit projects page and find permanent delete form in deleted section
         $this->client->loginUser($user);
-        $crawler = $this->client->request('GET', '/projects');
+        $crawler = $this->client->request('GET', '/en/projects');
 
         // Find and submit the permanent delete form
-        $deleteForm = $crawler->filter('form[action="/projects/' . $projectId . '/permanently-delete"]')->form();
+        $deleteForm = $crawler->filter('form[action="/en/projects/' . $projectId . '/permanently-delete"]')->form();
         $this->client->submit($deleteForm);
 
         // Assert: Redirects to list
-        self::assertResponseRedirects('/projects');
+        self::assertResponseRedirects('/en/projects');
 
         // Assert: Project no longer exists in DB
         $this->entityManager->clear();
@@ -167,7 +167,7 @@ final class ProjectDeleteTest extends WebTestCase
         // Act: Log in and try to permanently delete without soft delete first
         // Note: Controller checks project state before CSRF validation, so we use a dummy token
         $this->client->loginUser($user);
-        $this->client->request('POST', '/projects/' . $projectId . '/permanently-delete', [
+        $this->client->request('POST', '/en/projects/' . $projectId . '/permanently-delete', [
             '_csrf_token' => 'dummy-token',
         ]);
 
@@ -194,14 +194,14 @@ final class ProjectDeleteTest extends WebTestCase
 
         // Act: Visit projects page and find permanent delete form
         $this->client->loginUser($user);
-        $crawler = $this->client->request('GET', '/projects');
+        $crawler = $this->client->request('GET', '/en/projects');
 
         // Find and submit the permanent delete form
-        $deleteForm = $crawler->filter('form[action="/projects/' . $projectId . '/permanently-delete"]')->form();
+        $deleteForm = $crawler->filter('form[action="/en/projects/' . $projectId . '/permanently-delete"]')->form();
         $this->client->submit($deleteForm);
 
         // Assert: Both project and workspace are deleted
-        self::assertResponseRedirects('/projects');
+        self::assertResponseRedirects('/en/projects');
 
         $this->entityManager->clear();
         self::assertNull($this->entityManager->find(Project::class, $projectId));
@@ -222,7 +222,7 @@ final class ProjectDeleteTest extends WebTestCase
 
         // Act: Try to access edit page
         $this->client->loginUser($user);
-        $this->client->request('GET', '/projects/' . $projectId . '/edit');
+        $this->client->request('GET', '/en/projects/' . $projectId . '/edit');
 
         // Assert: Returns 404
         self::assertResponseStatusCodeSame(404);
@@ -243,7 +243,7 @@ final class ProjectDeleteTest extends WebTestCase
         // Act: Log in and try to soft delete again
         // Note: Controller checks project state before CSRF validation, so we use a dummy token
         $this->client->loginUser($user);
-        $this->client->request('POST', '/projects/' . $projectId . '/delete', [
+        $this->client->request('POST', '/en/projects/' . $projectId . '/delete', [
             '_csrf_token' => 'dummy-token',
         ]);
 
@@ -266,14 +266,14 @@ final class ProjectDeleteTest extends WebTestCase
 
         // Act: Visit projects page and find restore form in deleted section
         $this->client->loginUser($user);
-        $crawler = $this->client->request('GET', '/projects');
+        $crawler = $this->client->request('GET', '/en/projects');
 
         // Find and submit the restore form
-        $restoreForm = $crawler->filter('form[action="/projects/' . $projectId . '/restore"]')->form();
+        $restoreForm = $crawler->filter('form[action="/en/projects/' . $projectId . '/restore"]')->form();
         $this->client->submit($restoreForm);
 
         // Assert: Redirects to list
-        self::assertResponseRedirects('/projects');
+        self::assertResponseRedirects('/en/projects');
 
         // Assert: Project is no longer deleted
         $this->entityManager->clear();
@@ -295,7 +295,7 @@ final class ProjectDeleteTest extends WebTestCase
         // Act: Try to restore an active project
         // Note: Controller checks project state before CSRF validation, so we use a dummy token
         $this->client->loginUser($user);
-        $this->client->request('POST', '/projects/' . $projectId . '/restore', [
+        $this->client->request('POST', '/en/projects/' . $projectId . '/restore', [
             '_csrf_token' => 'dummy-token',
         ]);
 
@@ -317,9 +317,9 @@ final class ProjectDeleteTest extends WebTestCase
         $this->entityManager->flush();
 
         $this->client->loginUser($user);
-        $crawler = $this->client->request('GET', '/projects');
+        $crawler = $this->client->request('GET', '/en/projects');
 
-        $restoreForm = $crawler->filter('form[action="/projects/' . $projectId . '/restore"]')->form();
+        $restoreForm = $crawler->filter('form[action="/en/projects/' . $projectId . '/restore"]')->form();
         $this->client->submit($restoreForm);
         $this->client->followRedirect();
 

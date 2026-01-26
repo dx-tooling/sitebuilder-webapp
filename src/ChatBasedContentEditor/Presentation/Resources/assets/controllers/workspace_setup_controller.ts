@@ -6,6 +6,12 @@ interface StatusResponse {
     error: boolean;
 }
 
+interface TranslationsData {
+    takingLonger: string;
+    setupFailed: string;
+    hitASnag: string;
+}
+
 /**
  * Stimulus controller for polling workspace setup status.
  * Automatically redirects when workspace becomes ready.
@@ -17,12 +23,14 @@ export default class extends Controller {
     static values = {
         pollUrl: String,
         redirectUrl: String,
+        translations: Object,
     };
 
     static targets = ["spinner", "errorIcon", "title", "message", "status", "actions"];
 
     declare readonly pollUrlValue: string;
     declare readonly redirectUrlValue: string;
+    declare readonly translationsValue: TranslationsData;
 
     declare readonly hasSpinnerTarget: boolean;
     declare readonly spinnerTarget: HTMLElement;
@@ -71,7 +79,7 @@ export default class extends Controller {
         // Stop polling if we've exceeded the max
         if (this.pollCount > this.maxPollCount) {
             this.isActive = false;
-            this.showError("This is taking longer than expected. Please try again.");
+            this.showError(this.translationsValue.takingLonger);
 
             return;
         }
@@ -106,7 +114,7 @@ export default class extends Controller {
             if (data.error) {
                 // Setup failed - show error state
                 this.isActive = false;
-                this.showError("We couldn't finish setup. Please try resetting the work area.");
+                this.showError(this.translationsValue.setupFailed);
 
                 return;
             }
@@ -128,7 +136,7 @@ export default class extends Controller {
         }
 
         if (this.hasTitleTarget) {
-            this.titleTarget.textContent = "We hit a snag";
+            this.titleTarget.textContent = this.translationsValue.hitASnag;
             this.titleTarget.classList.remove("text-blue-800", "dark:text-blue-200");
             this.titleTarget.classList.add("text-red-800", "dark:text-red-200");
         }

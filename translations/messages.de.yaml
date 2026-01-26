@@ -1,0 +1,296 @@
+# German translations
+# Domain: messages (default)
+
+# Navigation
+navigation:
+    primary:
+        title: "Hauptmenü"
+    secondary:
+        title: "Konto"
+    tertiary:
+        title: "Werkzeuge"
+    sign_in: "Anmelden"
+    sign_up: "Registrieren"
+    projects: "Projekte"
+    reviewer_dashboard: "Reviewer-Dashboard"
+    your_account: "Ihr Konto"
+    living_styleguide: "Living Styleguide"
+
+# Common
+common:
+    back_to_projects: "Zurück zu Projekten"
+    cancel: "Abbrechen"
+    delete: "Löschen"
+    save: "Speichern"
+    email: "E-Mail"
+    password: "Passwort"
+    continue: "Weiter"
+
+# Account vertical
+account:
+    sign_in:
+        title: "Willkommen zurück"
+        placeholder_email: "E-Mail-Adresse eingeben"
+        placeholder_password: "Passwort eingeben"
+        create_account: "Konto erstellen"
+        early_access: "<strong>Early Access:</strong> Dieses Produkt entwickelt sich schnell weiter. Es ist sicher zum Ausprobieren, ändert sich aber noch oft. Vielen Dank für Ihre Geduld und Ihr Feedback, während wir es verbessern."
+    sign_up:
+        title: "Konto erstellen"
+        confirm_password: "Passwort bestätigen"
+        placeholder_confirm_password: "Passwort bestätigen"
+        back_to_sign_in: "Zurück zur Anmeldung"
+        create_account: "Konto erstellen"
+    dashboard:
+        title: "Ihr Konto"
+        account_details: "Kontodetails"
+        welcome_back: "Willkommen zurück, %email%!"
+        member_since: "Mitglied seit"
+        sign_out: "Abmelden"
+
+# Project Management vertical
+project:
+    list:
+        title: "Projekte"
+        heading: "Ihre Projekte"
+        description: "Wählen Sie ein Projekt zum Aktualisieren oder fügen Sie ein neues hinzu."
+        add_project: "Projekt hinzufügen"
+        no_projects: "Noch keine Projekte"
+        no_projects_description: "Fügen Sie Ihr erstes Projekt hinzu, um loszulegen."
+        no_workspace: "Noch kein Arbeitsbereich"
+        in_conversation_with: "mit %email%"
+        view_on_github: "Auf GitHub ansehen"
+        work_area: "Arbeitsbereich"
+        review: "Review"
+        edit_content: "Inhalt bearbeiten"
+        edit_details: "Details bearbeiten"
+        reset_work_area: "Arbeitsbereich zurücksetzen"
+        reset_confirm: "Arbeitsbereich zurücksetzen? Dies beendet alle aktiven Sitzungen und erstellt beim nächsten Mal einen neuen Arbeitsbereich."
+        delete_confirm: "Dieses Projekt löschen? Es wird aus der Liste entfernt."
+        deleted_projects: "Gelöschte Projekte (%count%)"
+        deleted_projects_info: "Diese Projekte wurden vorläufig gelöscht. Sie können sie endgültig löschen, um Ressourcen freizugeben."
+        deleted_at: "Gelöscht am %date%"
+        restore: "Wiederherstellen"
+        delete_permanently: "Endgültig löschen"
+        delete_permanently_confirm: "Dieses Projekt endgültig löschen? Diese Aktion kann nicht rückgängig gemacht werden und entfernt alle zugehörigen Daten."
+    form:
+        title_add: "Projekt hinzufügen"
+        title_edit: "Projekt bearbeiten"
+        description_add: "Fügen Sie ein Projekt hinzu, damit wir mit Änderungen beginnen können."
+        description_edit: "Aktualisieren Sie die folgenden Details."
+        project_name: "Projektname"
+        placeholder_project_name: "Meine Website"
+        project_link: "Projektlink"
+        placeholder_project_link: "https://github.com/org/repo.git"
+        project_link_help: "Fügen Sie die GitHub-Repository-URL für dieses Projekt ein."
+        github_access_key: "GitHub-Zugriffsschlüssel"
+        placeholder_github_token: "ghp_xxxxxxxxxxxx"
+        github_access_key_help: "Ein persönlicher Zugriffstoken, damit wir das Projekt öffnen und Änderungen speichern können."
+        llm_provider: "LLM-Modellanbieter"
+        llm_api_key: "LLM-API-Schlüssel"
+        placeholder_llm_api_key: "sk-..."
+        llm_api_key_help: "Ihr API-Schlüssel für den ausgewählten LLM-Anbieter."
+        verifying_key: "Schlüssel wird überprüft..."
+        key_verified: "Schlüssel erfolgreich überprüft"
+        key_verification_failed: "Schlüsselüberprüfung fehlgeschlagen"
+        reuse_existing_key: "Oder vorhandenen Schlüssel verwenden:"
+        runtime_environment: "Laufzeitumgebung"
+        runtime_help: "Wählen Sie die Laufzeitumgebung zum Erstellen und Ausführen Ihres Projekts."
+        node_22_recommended: "Node.js 22 (empfohlen)"
+        node_20: "Node.js 20"
+        node_18: "Node.js 18"
+        python_312: "Python 3.12"
+        php_84: "PHP 8.4"
+        custom_image: "Benutzerdefiniertes Image..."
+        custom_docker_image: "Benutzerdefiniertes Docker-Image"
+        placeholder_custom_image: "myregistry/myimage:tag"
+        custom_image_help: "Geben Sie einen Docker-Image-Namen mit Tag ein (z.B. node:latest, myregistry.io/myimage:v1)."
+        agent_config_advanced: "Agentenkonfiguration (Erweitert)"
+        agent_config_description: "Passen Sie an, wie sich der KI-Agent beim Bearbeiten dieses Projekts verhält. Diese Einstellungen steuern die Anweisungen und den Workflow des Agenten."
+        background_instructions: "Hintergrundanweisungen"
+        background_instructions_placeholder: "Systemkontext und Workspace-Konventionen..."
+        background_instructions_help: "Systemkontext über den Workspace, Konventionen und Regeln, die der Agent befolgen sollte."
+        step_instructions: "Schrittanweisungen"
+        step_instructions_placeholder: "Workflow-Schritte..."
+        step_instructions_help: "Die Workflow-Schritte, die der Agent bei Änderungen befolgen sollte."
+        output_instructions: "Ausgabeanweisungen"
+        output_instructions_placeholder: "Anweisungen zum Ausgabeformat..."
+        output_instructions_help: "Anweisungen, wie der Agent seine Ausgabe und Zusammenfassungen formatieren sollte."
+        github_token_info: "Benötigen Sie einen GitHub-Zugriffsschlüssel? Erstellen Sie einen <strong>Personal Access Token</strong>, damit die App Ihr Projekt lesen und aktualisieren kann."
+        required_permissions: "Erforderliche Berechtigungen (feingranularer Token):"
+        contents_permission: "<strong>Contents</strong>: Lesen und Schreiben"
+        pull_requests_permission: "<strong>Pull Requests</strong>: Lesen und Schreiben"
+        classic_token_alternative: "Alternative: klassischer Token"
+        repo_scope: "Wählen Sie den <strong>repo</strong>-Bereich"
+        create_token_link: "Token erstellen unter:"
+        add_project_button: "Projekt hinzufügen"
+        update_project_button: "Projekt aktualisieren"
+
+# Chat-Based Content Editor vertical
+editor:
+    title: "Inhaltseditor"
+    working_on: "Arbeitet an <strong>%project%</strong>"
+    description: "Beschreiben Sie, was Sie ändern möchten, in einfacher Sprache. Der Assistent kümmert sich um die Änderungen und zeigt den Fortschritt an."
+    end_session: "Sitzung beenden"
+    send_for_review: "Zur Überprüfung senden"
+    conversation_placeholder: "Ihre Unterhaltung wird hier angezeigt. Beschreiben Sie unten eine Änderung, um zu beginnen."
+    auto_scroll: "Neueste Nachricht im Blick behalten"
+    ai_budget: "KI-Budget: %used% von %max% verwendet"
+    estimated_cost: "Gesch. $%cost%"
+    input_label: "Was sollen wir ändern?"
+    input_placeholder: "z.B. Füge einen Kontaktbereich zur Startseite hinzu"
+    make_changes: "Änderungen vornehmen"
+    submit_on_enter: "Enter drücken zum Senden"
+    session_finished: "Diese Sitzung ist beendet. Sie können den Verlauf oben einsehen."
+    cannot_edit: "Sie können diese Sitzung nicht bearbeiten."
+    preview_pages: "Vorschauseiten"
+    details_troubleshooting: "Details (zur Fehlerbehebung)"
+    session_label: "Sitzung:"
+    work_area_label: "Arbeitsbereich:"
+    work_area_name: "Arbeitsbereichsname:"
+    review_link: "Review-Link:"
+    project_link: "Projektlink:"
+    open_on_github: "Auf GitHub öffnen"
+    problem:
+        title: "Es gab ein Problem"
+        description: "Beim Vorbereiten Ihres Arbeitsbereichs ist etwas schiefgelaufen. Sie können ihn zurücksetzen und es erneut versuchen."
+        reset_work_area: "Arbeitsbereich zurücksetzen"
+    review:
+        title: "Review läuft"
+        description: "Ihre Änderungen werden überprüft. Sie können nach Abschluss des Reviews eine neue Bearbeitungssitzung starten."
+        open_link: "Review-Link öffnen"
+
+# Workspace Setup
+workspace:
+    setup:
+        title: "Arbeitsbereich wird vorbereitet"
+        heading: "Arbeitsbereich wird vorbereitet"
+        description: "Eine saubere, sichere Kopie von <strong>%project%</strong> wird für Änderungen vorbereitet. Dies dauert normalerweise eine Minute."
+        whats_happening: "Was passiert gerade?"
+        step_clone: "Eine saubere Kopie des Projekts wird erstellt"
+        step_branch: "Ein sicherer Arbeitsbereich für Ihre Änderungen wird erstellt"
+        step_tools: "Tools und Vorschauen werden vorbereitet"
+        technical_details: "Technische Details"
+        work_area_id: "Arbeitsbereich-ID:"
+        project_label: "Projekt:"
+        status_label: "Status:"
+    problem:
+        title: "Problem mit dem Arbeitsbereich"
+        heading: "Der Arbeitsbereich konnte nicht eingerichtet werden"
+        description: "Bei der Vorbereitung des Arbeitsbereichs für <strong>%project%</strong> ist ein Problem aufgetreten."
+        reasons_intro: "Das kann passieren, wenn:"
+        reason_unreachable: "Das Projekt gerade nicht erreichbar ist"
+        reason_no_access: "Wir keinen Zugriff auf das Projekt haben"
+        reason_timeout: "Ein Timeout während der Einrichtung aufgetreten ist"
+        what_to_do: "Was möchten Sie tun?"
+        try_again: "Erneut versuchen"
+
+# Review Center
+review:
+    title: "Review-Center"
+    heading: "Review-Center"
+    description: "Überprüfen Sie Änderungen und entscheiden Sie, was als nächstes passiert."
+    nothing_to_review: "Nichts zu überprüfen"
+    all_caught_up: "Alles erledigt. Es warten keine Änderungen auf Überprüfung."
+    work_area_label: "Arbeitsbereich:"
+    view_pull_request: "Pull Request ansehen"
+    view_conversation: "Unterhaltung ansehen"
+    in_progress: "Review läuft"
+    mark_as_done: "Als erledigt markieren"
+    reopen_for_changes: "Für Änderungen freigeben"
+
+# Static Pages
+homepage:
+    title: "Sitebuilder - KI-gestützte Website-Inhaltserstellung"
+    hero_title: "KI-gestützte Website-Inhaltserstellung"
+    hero_description: "Sitebuilder hilft Ihnen, Website-Inhalte in natürlicher Sprache zu erstellen und zu bearbeiten. Beschreiben Sie einfach, was Sie möchten, und lassen Sie die KI den Rest erledigen."
+    get_started: "Loslegen"
+    sign_in: "Anmelden"
+    feature_chat_title: "Chat-basierte Bearbeitung"
+    feature_chat_description: "Bearbeiten Sie Ihre Website-Inhalte durch natürliche Unterhaltung. Beschreiben Sie einfach, welche Änderungen Sie vornehmen möchten."
+    feature_ai_title: "KI-gestützt"
+    feature_ai_description: "Nutzen Sie fortschrittliche KI-Modelle, um Ihre Website-Inhalte automatisch zu generieren, umzuschreiben und zu verbessern."
+    feature_review_title: "Review-Workflow"
+    feature_review_description: "Integrierter Review- und Genehmigungsworkflow gewährleistet Qualitätskontrolle, bevor Änderungen live gehen."
+    cta_title: "Bereit, Ihren Content-Workflow zu transformieren?"
+    cta_description: "Erstellen Sie Ihr kostenloses Konto und beginnen Sie noch heute mit der KI-gestützten Bearbeitung Ihrer Website."
+    create_free_account: "Kostenloses Konto erstellen"
+
+# Flash messages
+flash:
+    error:
+        invalid_csrf: "Ungültiges CSRF-Token."
+        all_fields_required: "Alle Felder sind erforderlich."
+        select_llm_provider: "Bitte wählen Sie einen LLM-Modellanbieter."
+        invalid_docker_image: "Ungültiges Docker-Image-Format. Erwartetes Format: name:tag"
+        no_workspace: "Für dieses Projekt existiert kein Arbeitsbereich."
+        workspace_reset_failed: "Arbeitsbereich konnte nicht zurückgesetzt werden: %error%"
+        workspace_not_in_review: "Der Arbeitsbereich befindet sich nicht im Review."
+        start_conversation_failed: "Unterhaltung konnte nicht gestartet werden: %error%"
+        finish_conversation_failed: "Unterhaltung konnte nicht beendet werden: %error%"
+        send_to_review_failed: "Senden zum Review fehlgeschlagen: %error%"
+        provide_email_password: "Bitte geben Sie E-Mail und Passwort an."
+        registration_failed: "Registrierung fehlgeschlagen: %error%"
+        workspace_in_review: "Dieser Arbeitsbereich wird gerade überprüft. Es können keine Unterhaltungen gestartet werden."
+        workspace_busy: "%email% arbeitet gerade an diesem Arbeitsbereich."
+    success:
+        project_created: "Projekt erfolgreich erstellt."
+        project_updated: "Projekt erfolgreich aktualisiert."
+        project_deleted: 'Projekt "%name%" erfolgreich gelöscht.'
+        project_permanently_deleted: 'Projekt "%name%" endgültig gelöscht.'
+        project_restored: 'Projekt "%name%" erfolgreich wiederhergestellt.'
+        workspace_reset: "Arbeitsbereich erfolgreich zurückgesetzt."
+        workspace_reset_with_conversations: "Arbeitsbereich erfolgreich zurückgesetzt. %count% Unterhaltung(en) wurden beendet."
+        workspace_marked_merged: "Arbeitsbereich als zusammengeführt markiert."
+        workspace_unlocked: "Arbeitsbereich für weitere Unterhaltungen freigegeben."
+        conversation_finished: "Unterhaltung beendet. Der Arbeitsbereich ist jetzt für neue Unterhaltungen verfügbar."
+        conversation_finished_no_changes: "Unterhaltung beendet. Keine Änderungen zur Überprüfung."
+        conversation_sent_to_review: "Unterhaltung zur Überprüfung gesendet. Pull Request: %url%"
+        workspace_reset_conversation_ready: "Arbeitsbereich zurückgesetzt. Sie können jetzt eine neue Unterhaltung starten."
+        registration_successful: "Registrierung erfolgreich. Bitte melden Sie sich an."
+
+# JSON API error responses
+api:
+    error:
+        invalid_csrf: "Ungültiges CSRF-Token."
+        workspace_not_found: "Arbeitsbereich nicht gefunden."
+        conversation_not_found: "Unterhaltung nicht gefunden."
+        not_authorized: "Nicht autorisiert."
+        conversation_not_ongoing: "Die Unterhaltung ist nicht aktiv."
+        instruction_required: "Anweisung ist erforderlich."
+        provider_and_key_required: "Anbieter und API-Schlüssel sind erforderlich."
+        invalid_provider: "Ungültiger Anbieter."
+        invalid_project_type: "Ungültiger Projekttyp."
+        session_not_found: "Sitzung nicht gefunden."
+        failed_to_create_session: "Sitzung konnte nicht erstellt werden."
+        not_authorized_to_run: "Nicht berechtigt, Änderungen in dieser Unterhaltung auszuführen."
+        conversation_not_active: "Die Unterhaltung ist nicht mehr aktiv."
+
+# Frontend JavaScript translations (passed via data attributes)
+js:
+    editor:
+        ai_budget: "KI-Budget: %used% von %max% verwendet"
+        estimated_cost: "Gesch. $%cost%"
+        send_error: "Diese Anfrage konnte nicht gesendet werden (%status%)."
+        network_error: "Netzwerkfehler. Bitte versuchen Sie es erneut."
+        poll_error: "Die Aktualisierungsverbindung wurde unterbrochen (%status%)."
+        connection_retry: "Verbindungsproblem. Wird erneut versucht..."
+        make_changes: "Änderungen vornehmen"
+        making_changes: "Änderungen werden vorgenommen..."
+        no_response: "(Keine Antwort)"
+        working: "Arbeitet"
+        thinking: "Denkt nach"
+        asking_ai: "KI wird befragt..."
+        ai_response_received: "KI-Antwort erhalten"
+        unknown_error: "Unbekannter Fehler"
+        all_set: "Fertig"
+        in_progress: "In Bearbeitung"
+    workspace:
+        taking_longer: "Das dauert länger als erwartet. Bitte versuchen Sie es erneut."
+        setup_failed: "Die Einrichtung konnte nicht abgeschlossen werden. Bitte setzen Sie den Arbeitsbereich zurück."
+        hit_a_snag: "Es gab ein Problem"
+
+# Language switcher
+language:
+    en: "EN"
+    de: "DE"
+    switch: "Sprache wechseln"

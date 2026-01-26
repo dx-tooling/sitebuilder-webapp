@@ -10,6 +10,7 @@ use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\Routing\RouterInterface;
+use Symfony\Contracts\Translation\TranslatorInterface;
 use ValueError;
 
 readonly class MainNavigationPresentationService extends AbstractMainNavigationService
@@ -19,6 +20,7 @@ readonly class MainNavigationPresentationService extends AbstractMainNavigationS
         RequestStack                  $requestStack,
         private ParameterBagInterface $parameterBag,
         private Security              $security,
+        private TranslatorInterface   $translator,
     ) {
         $symfonyEnvironment = $this->parameterBag->get('kernel.environment');
 
@@ -40,7 +42,7 @@ readonly class MainNavigationPresentationService extends AbstractMainNavigationS
 
     public function getPrimaryMainNavigationTitle(): string
     {
-        return 'Main';
+        return $this->translator->trans('navigation.primary.title');
     }
 
     /**
@@ -53,11 +55,11 @@ readonly class MainNavigationPresentationService extends AbstractMainNavigationS
         if (!$this->security->isGranted('ROLE_USER')) {
             $entries = [
                 $this->generateEntry(
-                    'Sign In',
+                    $this->translator->trans('navigation.sign_in'),
                     'account.presentation.sign_in',
                 ),
                 $this->generateEntry(
-                    'Sign Up',
+                    $this->translator->trans('navigation.sign_up'),
                     'account.presentation.sign_up',
                 )
             ];
@@ -65,14 +67,14 @@ readonly class MainNavigationPresentationService extends AbstractMainNavigationS
 
         if ($this->security->isGranted('ROLE_USER')) {
             $entries[] = $this->generateEntry(
-                'Projects',
+                $this->translator->trans('navigation.projects'),
                 'project_mgmt.presentation.list',
             );
         }
 
         if ($this->security->isGranted('ROLE_REVIEWER')) {
             $entries[] = $this->generateEntry(
-                'Reviewer Dashboard',
+                $this->translator->trans('navigation.reviewer_dashboard'),
                 'workspace_mgmt.presentation.review_list',
             );
         }
@@ -82,7 +84,7 @@ readonly class MainNavigationPresentationService extends AbstractMainNavigationS
 
     public function getSecondaryMainNavigationTitle(): string
     {
-        return 'Other';
+        return $this->translator->trans('navigation.secondary.title');
     }
 
     /**
@@ -94,7 +96,7 @@ readonly class MainNavigationPresentationService extends AbstractMainNavigationS
 
         if ($this->security->isGranted('ROLE_USER')) {
             $entries[] = $this->generateEntry(
-                'Your Account',
+                $this->translator->trans('navigation.your_account'),
                 'account.presentation.dashboard',
             );
         }
@@ -112,7 +114,7 @@ readonly class MainNavigationPresentationService extends AbstractMainNavigationS
 
     public function getTertiaryMainNavigationTitle(): string
     {
-        return 'Utilities';
+        return $this->translator->trans('navigation.tertiary.title');
     }
 
     /**
@@ -122,7 +124,7 @@ readonly class MainNavigationPresentationService extends AbstractMainNavigationS
     {
         $entries = [
             $this->generateEntry(
-                'Living Styleguide',
+                $this->translator->trans('navigation.living_styleguide'),
                 'webui.living_styleguide.show',
             ),
         ];

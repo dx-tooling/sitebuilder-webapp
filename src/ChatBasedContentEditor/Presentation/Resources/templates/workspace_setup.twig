@@ -1,11 +1,16 @@
 {% extends '@common.presentation/base_appshell.html.twig' %}
 
-{% block title %}Getting Your Work Area Ready{% endblock %}
+{% block title %}{{ 'workspace.setup.title'|trans }}{% endblock %}
 
 {% block content %}
     <div class="max-w-2xl mx-auto space-y-6" {{ stimulus_controller('workspace-setup', {
         pollUrl: pollUrl,
-        redirectUrl: redirectUrl
+        redirectUrl: redirectUrl,
+        translations: {
+            takingLonger: 'js.workspace.taking_longer'|trans,
+            setupFailed: 'js.workspace.setup_failed'|trans,
+            hitASnag: 'js.workspace.hit_a_snag'|trans
+        }
     }) }}>
         <div class="bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800 p-6">
             <div class="flex">
@@ -19,11 +24,10 @@
                     </svg>
                 </div>
                 <div class="ml-3">
-                    <h3 {{ stimulus_target('workspace-setup', 'title') }} class="text-lg font-medium text-blue-800 dark:text-blue-200">Getting your work area ready</h3>
+                    <h3 {{ stimulus_target('workspace-setup', 'title') }} class="text-lg font-medium text-blue-800 dark:text-blue-200">{{ 'workspace.setup.heading'|trans }}</h3>
                     <div class="mt-2 text-sm text-blue-700 dark:text-blue-300">
                         <p {{ stimulus_target('workspace-setup', 'message') }}>
-                            Getting a clean, safe copy of <strong>{{ project.name }}</strong> ready for edits.
-                            This usually takes a minute.
+                            {{ 'workspace.setup.description'|trans({'%project%': project.name})|raw }}
                         </p>
                     </div>
                 </div>
@@ -31,26 +35,26 @@
         </div>
 
         <div class="bg-white dark:bg-dark-800 rounded-lg border border-dark-200 dark:border-dark-700 p-6">
-            <h4 class="text-sm font-medium text-dark-900 dark:text-dark-100 mb-4">What's happening?</h4>
+            <h4 class="text-sm font-medium text-dark-900 dark:text-dark-100 mb-4">{{ 'workspace.setup.whats_happening'|trans }}</h4>
             <ul class="space-y-3 text-sm text-dark-600 dark:text-dark-400">
                 <li class="flex items-start">
                     <svg class="h-5 w-5 text-blue-500 mr-2 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
                     </svg>
-                    <span>Getting a clean copy of the project</span>
+                    <span>{{ 'workspace.setup.step_clone'|trans }}</span>
                 </li>
                 <li class="flex items-start">
                     <svg class="h-5 w-5 text-blue-500 mr-2 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
                     </svg>
-                    <span>Creating a safe work area for your changes</span>
+                    <span>{{ 'workspace.setup.step_branch'|trans }}</span>
                 </li>
                 <li class="flex items-start">
                     <svg class="h-5 w-5 text-blue-500 mr-2 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                     </svg>
-                    <span>Preparing tools and previews</span>
+                    <span>{{ 'workspace.setup.step_tools'|trans }}</span>
                 </li>
             </ul>
         </div>
@@ -58,33 +62,33 @@
         <div {{ stimulus_target('workspace-setup', 'actions') }} class="hidden">
             <a href="{{ path('project_mgmt.presentation.list') }}"
                class="w-full flex items-center justify-center px-4 py-3 rounded-md border border-dark-300 dark:border-dark-600 text-dark-700 dark:text-dark-300 text-sm font-medium hover:bg-dark-100 dark:hover:bg-dark-700">
-                Back to projects
+                {{ 'common.back_to_projects'|trans }}
             </a>
         </div>
 
         <div class="bg-dark-50 dark:bg-dark-800/50 rounded-lg border border-dark-200 dark:border-dark-700 p-4">
-            <h4 class="text-xs font-medium text-dark-500 dark:text-dark-400 uppercase tracking-wider mb-2">Technical details</h4>
+            <h4 class="text-xs font-medium text-dark-500 dark:text-dark-400 uppercase tracking-wider mb-2">{{ 'workspace.setup.technical_details'|trans }}</h4>
             <dl class="text-sm space-y-1">
                 <div class="flex justify-between">
-                    <dt class="text-dark-500 dark:text-dark-400">Work area ID:</dt>
+                    <dt class="text-dark-500 dark:text-dark-400">{{ 'workspace.setup.work_area_id'|trans }}</dt>
                     <dd class="text-dark-900 dark:text-dark-100 font-mono text-xs">{{ workspace.id }}</dd>
                 </div>
                 <div class="flex justify-between">
-                    <dt class="text-dark-500 dark:text-dark-400">Project:</dt>
+                    <dt class="text-dark-500 dark:text-dark-400">{{ 'workspace.setup.project_label'|trans }}</dt>
                     <dd class="text-dark-900 dark:text-dark-100">{{ project.name }}</dd>
                 </div>
                 {% if project.githubUrl %}
                     <div class="flex justify-between items-center">
-                        <dt class="text-dark-500 dark:text-dark-400">Project link:</dt>
+                        <dt class="text-dark-500 dark:text-dark-400">{{ 'editor.project_link'|trans }}</dt>
                         <dd class="text-dark-900 dark:text-dark-100">
                             <a href="{{ project.githubUrl }}" target="_blank" rel="noopener noreferrer" class="text-primary-600 dark:text-primary-400 hover:underline text-xs">
-                                Open on GitHub
+                                {{ 'editor.open_on_github'|trans }}
                             </a>
                         </dd>
                     </div>
                 {% endif %}
                 <div class="flex justify-between">
-                    <dt class="text-dark-500 dark:text-dark-400">Status:</dt>
+                    <dt class="text-dark-500 dark:text-dark-400">{{ 'workspace.setup.status_label'|trans }}</dt>
                     <dd {{ stimulus_target('workspace-setup', 'status') }} class="text-dark-900 dark:text-dark-100 font-mono text-xs">{{ workspace.status.name | replace({'_': ' '}) | lower | capitalize }}</dd>
                 </div>
             </dl>

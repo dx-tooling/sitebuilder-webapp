@@ -40,7 +40,7 @@ final class SignInTest extends WebTestCase
         $this->createTestUser($email, $plainPassword);
 
         // Act: Submit the login form
-        $crawler = $this->client->request('GET', '/account/sign-in');
+        $crawler = $this->client->request('GET', '/en/account/sign-in');
 
         $form = $crawler->selectButton('Continue')->form([
             'email'    => $email,
@@ -50,7 +50,7 @@ final class SignInTest extends WebTestCase
         $this->client->submit($form);
 
         // Assert: User is redirected to projects page (successful login)
-        self::assertResponseRedirects('/projects');
+        self::assertResponseRedirects('/en/projects');
 
         // Follow redirect and verify we're authenticated
         $this->client->followRedirect();
@@ -67,7 +67,7 @@ final class SignInTest extends WebTestCase
         $this->createTestUser($email, $plainPassword);
 
         // Act: Submit the login form with wrong password
-        $crawler = $this->client->request('GET', '/account/sign-in');
+        $crawler = $this->client->request('GET', '/en/account/sign-in');
 
         $form = $crawler->selectButton('Continue')->form([
             'email'    => $email,
@@ -77,7 +77,7 @@ final class SignInTest extends WebTestCase
         $this->client->submit($form);
 
         // Assert: User is redirected back to login (failed login)
-        self::assertResponseRedirects('/account/sign-in');
+        self::assertResponseRedirects('/en/account/sign-in');
 
         // Follow redirect and verify error is shown
         $this->client->followRedirect();
@@ -88,7 +88,7 @@ final class SignInTest extends WebTestCase
     public function testSignInFormHasCorrectFieldNames(): void
     {
         // Act: Request the login page
-        $crawler = $this->client->request('GET', '/account/sign-in');
+        $crawler = $this->client->request('GET', '/en/account/sign-in');
 
         // Assert: Form has 'email' and 'password' fields (not '_username' and '_password')
         self::assertCount(1, $crawler->filter('input[name="email"]'));

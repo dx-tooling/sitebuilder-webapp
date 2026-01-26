@@ -11,11 +11,13 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Authentication\AuthenticationUtils;
+use Symfony\Contracts\Translation\TranslatorInterface;
 
 final class AccountController extends AbstractController
 {
     public function __construct(
-        private readonly AccountDomainService $accountService
+        private readonly AccountDomainService $accountService,
+        private readonly TranslatorInterface  $translator
     ) {
     }
 
@@ -55,18 +57,18 @@ final class AccountController extends AbstractController
             $password = $request->request->get('password');
 
             if (!$email || !$password) {
-                $this->addFlash('error', 'Please provide both email and password.');
+                $this->addFlash('error', $this->translator->trans('flash.error.provide_email_password'));
 
                 return $this->render('@account.presentation/sign_up.html.twig');
             }
 
             try {
                 $this->accountService->register((string) $email, (string) $password);
-                $this->addFlash('success', 'Registration successful. Please sign in.');
+                $this->addFlash('success', $this->translator->trans('flash.success.registration_successful'));
 
                 return $this->redirectToRoute('account.presentation.sign_in');
             } catch (Exception $e) {
-                $this->addFlash('error', 'Registration failed: ' . $e->getMessage());
+                $this->addFlash('error', $this->translator->trans('flash.error.registration_failed', ['%error%' => $e->getMessage()]));
             }
         }
 

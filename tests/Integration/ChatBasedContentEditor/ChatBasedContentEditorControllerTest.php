@@ -91,7 +91,7 @@ final class ChatBasedContentEditorControllerTest extends WebTestCase
         $this->client->loginUser($otherUser);
         $conversationId = $conversation->getId();
         self::assertNotNull($conversationId);
-        $this->client->request('GET', '/conversation/' . $conversationId);
+        $this->client->request('GET', '/en/conversation/' . $conversationId);
 
         // Assert: Access denied
         self::assertResponseStatusCodeSame(403);
@@ -121,7 +121,7 @@ final class ChatBasedContentEditorControllerTest extends WebTestCase
         $this->client->loginUser($user);
         $conversationId = $conversation->getId();
         self::assertNotNull($conversationId);
-        $crawler = $this->client->request('GET', '/conversation/' . $conversationId);
+        $crawler = $this->client->request('GET', '/en/conversation/' . $conversationId);
 
         // Assert: Page renders successfully in read-only mode
         self::assertResponseIsSuccessful();
@@ -162,7 +162,7 @@ final class ChatBasedContentEditorControllerTest extends WebTestCase
         $this->client->loginUser($user);
         $conversationId = $conversation->getId();
         self::assertNotNull($conversationId);
-        $this->client->request('GET', '/conversation/' . $conversationId);
+        $this->client->request('GET', '/en/conversation/' . $conversationId);
 
         // Assert: Successfully accessed
         self::assertResponseIsSuccessful();
@@ -176,7 +176,7 @@ final class ChatBasedContentEditorControllerTest extends WebTestCase
 
         // Act: Try to access a non-existent conversation
         $this->client->loginUser($user);
-        $this->client->request('GET', '/conversation/00000000-0000-0000-0000-000000000000');
+        $this->client->request('GET', '/en/conversation/00000000-0000-0000-0000-000000000000');
 
         // Assert: 404 Not Found
         self::assertResponseStatusCodeSame(404);
@@ -219,7 +219,7 @@ final class ChatBasedContentEditorControllerTest extends WebTestCase
         $this->client->loginUser($user);
         $conversationId = $ongoingConversation->getId();
         self::assertNotNull($conversationId);
-        $crawler = $this->client->request('GET', '/conversation/' . $conversationId);
+        $crawler = $this->client->request('GET', '/en/conversation/' . $conversationId);
 
         // Assert: No "Past Conversations" section in the rendered HTML
         self::assertResponseIsSuccessful();
@@ -315,7 +315,7 @@ final class ChatBasedContentEditorControllerTest extends WebTestCase
         $this->client->loginUser($user);
         $conversationId = $conversation->getId();
         self::assertNotNull($conversationId);
-        $this->client->request('POST', '/conversation/' . $conversationId . '/heartbeat');
+        $this->client->request('POST', '/en/conversation/' . $conversationId . '/heartbeat');
 
         // Assert: Heartbeat successful
         self::assertResponseIsSuccessful();
@@ -355,7 +355,7 @@ final class ChatBasedContentEditorControllerTest extends WebTestCase
         $this->client->loginUser($otherUser);
         $conversationId = $conversation->getId();
         self::assertNotNull($conversationId);
-        $this->client->request('POST', '/conversation/' . $conversationId . '/heartbeat');
+        $this->client->request('POST', '/en/conversation/' . $conversationId . '/heartbeat');
 
         // Assert: Access denied
         self::assertResponseStatusCodeSame(403);
@@ -385,7 +385,7 @@ final class ChatBasedContentEditorControllerTest extends WebTestCase
         $this->client->loginUser($user);
         $conversationId = $conversation->getId();
         self::assertNotNull($conversationId);
-        $this->client->request('POST', '/conversation/' . $conversationId . '/heartbeat');
+        $this->client->request('POST', '/en/conversation/' . $conversationId . '/heartbeat');
 
         // Assert: Bad request
         self::assertResponseStatusCodeSame(400);
@@ -398,7 +398,7 @@ final class ChatBasedContentEditorControllerTest extends WebTestCase
 
         // Act: Try to send heartbeat to non-existent conversation
         $this->client->loginUser($user);
-        $this->client->request('POST', '/conversation/00000000-0000-0000-0000-000000000000/heartbeat');
+        $this->client->request('POST', '/en/conversation/00000000-0000-0000-0000-000000000000/heartbeat');
 
         // Assert: 404 Not Found
         self::assertResponseStatusCodeSame(404);

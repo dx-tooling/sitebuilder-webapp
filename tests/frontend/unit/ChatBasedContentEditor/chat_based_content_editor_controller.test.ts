@@ -4,6 +4,12 @@ import ChatBasedContentEditorController from "../../../../src/ChatBasedContentEd
 describe("ChatBasedContentEditorController activity indicators", () => {
     let controller: ChatBasedContentEditorController | null = null;
 
+    const testTranslations = {
+        working: "Working",
+        thinking: "Thinking",
+        filesModified: "files modified",
+    };
+
     const createControllerInstance = (): ChatBasedContentEditorController => {
         const instance = Object.create(ChatBasedContentEditorController.prototype) as ChatBasedContentEditorController;
         const state = instance as unknown as {
@@ -12,6 +18,7 @@ describe("ChatBasedContentEditorController activity indicators", () => {
             activityToolCallCount: number;
             activityThinkingSeconds: number;
             activityWorkingActive: boolean;
+            translationsValue: typeof testTranslations;
         };
 
         state.activityThinkingTimerId = null;
@@ -19,6 +26,7 @@ describe("ChatBasedContentEditorController activity indicators", () => {
         state.activityToolCallCount = 0;
         state.activityThinkingSeconds = 0;
         state.activityWorkingActive = false;
+        state.translationsValue = testTranslations;
 
         controller = instance;
 

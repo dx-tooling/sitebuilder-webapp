@@ -1,6 +1,19 @@
+# Redirect root to default locale
+root_redirect:
+    path: /
+    controller: Symfony\Bundle\FrameworkBundle\Controller\RedirectController::urlRedirectAction
+    defaults:
+        path: /en/
+        permanent: false
+
 controller:
     resource: "../src/**/*Controller.php"
     type: attribute
+    prefix: /{_locale}
+    requirements:
+        _locale: en|de
+    defaults:
+        _locale: en
 
 shared:
     resource: "@SharedBundle/config/routes.yaml"

@@ -1,0 +1,8 @@
+# English security messages
+# Domain: security
+
+Invalid credentials.: "Invalid credentials."
+Invalid or expired login link.: "Invalid or expired login link."
+Too many failed login attempts, please try again later.: "Too many failed login attempts, please try again later."
+Account is disabled.: "Account is disabled."
+Account is locked.: "Account is locked."
