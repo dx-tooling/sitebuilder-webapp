@@ -51,6 +51,7 @@ RUN docker-php-ext-install \
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
 COPY ./docker/app/php.ini /usr/local/etc/php/conf.d/custom.ini
+COPY ./docker/app/www.conf /usr/local/etc/php-fpm.d/zzz-www.conf
 
 # Set working directory
 WORKDIR /var/www
