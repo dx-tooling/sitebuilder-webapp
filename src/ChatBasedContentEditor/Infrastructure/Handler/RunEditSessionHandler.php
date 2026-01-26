@@ -218,7 +218,9 @@ final readonly class RunEditSessionHandler
                 return;
             }
 
-            $commitMessage = 'Edit session: ' . $this->truncateMessage($session->getInstruction(), 50);
+            // Use agent-suggested commit message if available, otherwise fall back to instruction-based message
+            $suggestedMessage = $this->executionContext->getSuggestedCommitMessage();
+            $commitMessage    = $suggestedMessage ?? 'Edit session: ' . $this->truncateMessage($session->getInstruction(), 50);
 
             // Generate conversation URL for linking
             $conversationId  = $conversation->getId();

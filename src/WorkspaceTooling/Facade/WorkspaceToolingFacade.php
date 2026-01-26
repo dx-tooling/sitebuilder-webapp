@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\WorkspaceTooling\Facade;
 
+use App\WorkspaceTooling\Infrastructure\Execution\AgentExecutionContext;
 use EtfsCodingAgent\Service\FileOperationsServiceInterface;
 use EtfsCodingAgent\Service\ShellOperationsServiceInterface;
 use EtfsCodingAgent\Service\TextOperationsService;
@@ -12,9 +13,10 @@ use EtfsCodingAgent\Service\WorkspaceToolingService as BaseWorkspaceToolingFacad
 final class WorkspaceToolingFacade extends BaseWorkspaceToolingFacade implements WorkspaceToolingServiceInterface
 {
     public function __construct(
-        FileOperationsServiceInterface  $fileOperationsService,
-        TextOperationsService           $textOperationsService,
-        ShellOperationsServiceInterface $shellOperationsService
+        FileOperationsServiceInterface         $fileOperationsService,
+        TextOperationsService                  $textOperationsService,
+        ShellOperationsServiceInterface        $shellOperationsService,
+        private readonly AgentExecutionContext $executionContext
     ) {
         parent::__construct(
             $fileOperationsService,
@@ -54,5 +56,12 @@ final class WorkspaceToolingFacade extends BaseWorkspaceToolingFacade implements
         $lineCount = substr_count($modifiedContent, "\n") + 1;
 
         return "Applied. File now has {$lineCount} lines.";
+    }
+
+    public function suggestCommitMessage(string $message): string
+    {
+        $this->executionContext->setSuggestedCommitMessage($message);
+
+        return 'Commit message recorded: ' . $message;
     }
 }

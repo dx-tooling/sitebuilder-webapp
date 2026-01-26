@@ -27,11 +27,12 @@ final class AgentExecutionContext implements AgentExecutionContextInterface
     private const int MAX_PROJECT_NAME_LENGTH = 20;
     private const int ID_SHORT_LENGTH         = 8;
 
-    private ?string $workspaceId    = null;
-    private ?string $workspacePath  = null;
-    private ?string $conversationId = null;
-    private ?string $projectName    = null;
-    private ?string $agentImage     = null;
+    private ?string $workspaceId            = null;
+    private ?string $workspacePath          = null;
+    private ?string $conversationId         = null;
+    private ?string $projectName            = null;
+    private ?string $agentImage             = null;
+    private ?string $suggestedCommitMessage = null;
 
     /**
      * Set the execution context for the current agent run.
@@ -61,11 +62,12 @@ final class AgentExecutionContext implements AgentExecutionContextInterface
      */
     public function clearContext(): void
     {
-        $this->workspaceId    = null;
-        $this->workspacePath  = null;
-        $this->conversationId = null;
-        $this->projectName    = null;
-        $this->agentImage     = null;
+        $this->workspaceId            = null;
+        $this->workspacePath          = null;
+        $this->conversationId         = null;
+        $this->projectName            = null;
+        $this->agentImage             = null;
+        $this->suggestedCommitMessage = null;
     }
 
     public function getWorkspaceId(): ?string
@@ -94,6 +96,27 @@ final class AgentExecutionContext implements AgentExecutionContextInterface
     public function getAgentImage(): ?string
     {
         return $this->agentImage;
+    }
+
+    /**
+     * Set a suggested commit message from the agent.
+     *
+     * The agent can call this to suggest an optimal commit message
+     * describing the changes made during the edit session.
+     */
+    public function setSuggestedCommitMessage(string $message): void
+    {
+        $this->suggestedCommitMessage = $message;
+    }
+
+    /**
+     * Get the suggested commit message, if any.
+     *
+     * @return string|null The suggested message, or null if none was set
+     */
+    public function getSuggestedCommitMessage(): ?string
+    {
+        return $this->suggestedCommitMessage;
     }
 
     /**

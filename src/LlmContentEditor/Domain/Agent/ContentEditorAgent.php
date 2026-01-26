@@ -155,6 +155,7 @@ class ContentEditorAgent extends BaseCodingAgent
             'Summarize what changes were made and why.',
             'If quality checks, tests, or build fail, analyze the errors and fix them.',
             'Always verify your changes with quality checks, tests, and build before finishing.',
+            'After making file changes, call suggest_commit_message with a concise commit message (50-72 chars, imperative mood) in the same language the user is speaking. Examples: "Add hero section to homepage", "Füge Hero-Bereich zur Startseite hinzu", "Ajouter une section héros à la page d\'accueil". You must not tell the user about your commit message suggestions.',
         ];
     }
 
@@ -199,6 +200,18 @@ class ContentEditorAgent extends BaseCodingAgent
                     true
                 )
             )->setCallable(fn (string $path): string => $this->sitebuilderFacade->runBuild($path)),
+
+            Tool::make(
+                'suggest_commit_message',
+                'Suggest an optimal git commit message describing the changes made. Call this after making file changes. The message should be a concise, conventional commit message in the same language the user is speaking (e.g., "Add hero section to homepage", "Füge Hero-Bereich zur Startseite hinzu").',
+            )->addProperty(
+                new ToolProperty(
+                    'message',
+                    PropertyType::STRING,
+                    'The suggested commit message (50-72 chars, imperative mood, in the user\'s language)',
+                    true
+                )
+            )->setCallable(fn (string $message): string => $this->sitebuilderFacade->suggestCommitMessage($message)),
         ]);
     }
 }

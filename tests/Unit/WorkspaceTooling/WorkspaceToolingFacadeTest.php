@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Unit\WorkspaceTooling;
 
 use App\WorkspaceTooling\Facade\WorkspaceToolingFacade;
+use App\WorkspaceTooling\Infrastructure\Execution\AgentExecutionContext;
 use EtfsCodingAgent\Service\FileOperationsService;
 use EtfsCodingAgent\Service\ShellOperationsServiceInterface;
 use EtfsCodingAgent\Service\TextOperationsService;
@@ -13,11 +14,13 @@ use PHPUnit\Framework\TestCase;
 final class WorkspaceToolingFacadeTest extends TestCase
 {
     private string $tempDir;
+    private AgentExecutionContext $executionContext;
 
     protected function setUp(): void
     {
         parent::setUp();
-        $this->tempDir = sys_get_temp_dir() . '/wstest_' . uniqid();
+        $this->tempDir          = sys_get_temp_dir() . '/wstest_' . uniqid();
+        $this->executionContext = new AgentExecutionContext();
         mkdir($this->tempDir, 0755, true);
     }
 
@@ -63,13 +66,41 @@ final class WorkspaceToolingFacadeTest extends TestCase
         self::assertSame('Applied. File now has 1 lines.', $result);
     }
 
+    public function testSuggestCommitMessageStoresMessageInContext(): void
+    {
+        $facade = $this->createFacade();
+
+        $facade->suggestCommitMessage('Add hero section to homepage');
+
+        self::assertSame('Add hero section to homepage', $this->executionContext->getSuggestedCommitMessage());
+    }
+
+    public function testSuggestCommitMessageReturnsConfirmation(): void
+    {
+        $facade = $this->createFacade();
+
+        $result = $facade->suggestCommitMessage('Fix broken navigation links');
+
+        self::assertSame('Commit message recorded: Fix broken navigation links', $result);
+    }
+
+    public function testSuggestCommitMessageOverwritesPreviousMessage(): void
+    {
+        $facade = $this->createFacade();
+
+        $facade->suggestCommitMessage('First message');
+        $facade->suggestCommitMessage('Second message');
+
+        self::assertSame('Second message', $this->executionContext->getSuggestedCommitMessage());
+    }
+
     private function createFacade(): WorkspaceToolingFacade
     {
         $fileOps  = new FileOperationsService();
         $textOps  = new TextOperationsService($fileOps);
         $shellOps = $this->createMock(ShellOperationsServiceInterface::class);
 
-        return new WorkspaceToolingFacade($fileOps, $textOps, $shellOps);
+        return new WorkspaceToolingFacade($fileOps, $textOps, $shellOps, $this->executionContext);
     }
 
     private function removeDirectory(string $dir): void

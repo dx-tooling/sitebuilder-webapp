@@ -33,4 +33,19 @@ interface AgentExecutionContextInterface
      * Clear the execution context.
      */
     public function clearContext(): void;
+
+    /**
+     * Set a suggested commit message from the agent.
+     *
+     * The agent can call this to suggest an optimal commit message
+     * describing the changes made during the edit session.
+     */
+    public function setSuggestedCommitMessage(string $message): void;
+
+    /**
+     * Get the suggested commit message, if any.
+     *
+     * @return string|null The suggested message, or null if none was set
+     */
+    public function getSuggestedCommitMessage(): ?string;
 }

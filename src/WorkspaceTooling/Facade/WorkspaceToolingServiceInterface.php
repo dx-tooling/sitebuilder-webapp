@@ -13,4 +13,16 @@ interface WorkspaceToolingServiceInterface extends BaseWorkspaceToolingFacadeInt
     public function runTests(string $pathToFolder): string;
 
     public function runBuild(string $pathToFolder): string;
+
+    /**
+     * Suggest a commit message for the changes made during the edit session.
+     *
+     * The agent should call this after making file changes to suggest an optimal
+     * git commit message. The message will be used when committing to the work branch.
+     *
+     * @param string $message The suggested commit message (50-72 chars, imperative mood)
+     *
+     * @return string Confirmation that the message was recorded
+     */
+    public function suggestCommitMessage(string $message): string;
 }
