@@ -243,13 +243,9 @@ final class ChatBasedContentEditorController extends AbstractController
             throw $this->createAccessDeniedException('You do not have access to this conversation.');
         }
 
-        // Authorization: Only ONGOING conversations can be viewed
-        // Finished conversations should not be accessible - users should start new conversations instead
-        if ($conversation->getStatus() !== ConversationStatus::ONGOING) {
-            $this->addFlash('info', 'This conversation has been finished. Please start a new conversation to continue working.');
-
-            return $this->redirectToRoute('project_mgmt.presentation.list');
-        }
+        // Determine if this is a read-only view (finished conversation)
+        $readOnly = $conversation->getStatus() !== ConversationStatus::ONGOING;
+        $canEdit  = !$readOnly;
 
         // Get workspace info for status display
         $workspace   = $this->workspaceMgmtFacade->getWorkspaceById($conversation->getWorkspaceId());
@@ -306,9 +302,6 @@ final class ChatBasedContentEditorController extends AbstractController
             ];
         }
 
-        // Since we already verified ownership and status above, canEdit is always true here
-        $canEdit = true;
-
         $contextUsage = $this->contextUsageService->getContextUsage($conversation);
 
         return $this->render('@chat_based_content_editor.presentation/chat_based_content_editor.twig', [
@@ -316,9 +309,10 @@ final class ChatBasedContentEditorController extends AbstractController
             'workspace'       => $workspace,
             'project'         => $projectInfo,
             'turns'           => $turns,
+            'readOnly'        => $readOnly,
             'canEdit'         => $canEdit,
-            'runUrl'          => $this->generateUrl('chat_based_content_editor.presentation.run'),
-            'pollUrlTemplate' => $this->generateUrl('chat_based_content_editor.presentation.poll', ['sessionId' => '__SESSION_ID__']),
+            'runUrl'          => $readOnly ? '' : $this->generateUrl('chat_based_content_editor.presentation.run'),
+            'pollUrlTemplate' => $readOnly ? '' : $this->generateUrl('chat_based_content_editor.presentation.poll', ['sessionId' => '__SESSION_ID__']),
             'contextUsage'    => [
                 'usedTokens'   => $contextUsage->usedTokens,
                 'maxTokens'    => $contextUsage->maxTokens,
@@ -329,7 +323,7 @@ final class ChatBasedContentEditorController extends AbstractController
                 'outputCost'   => $contextUsage->outputCost,
                 'totalCost'    => $contextUsage->totalCost,
             ],
-            'contextUsageUrl' => $this->generateUrl('chat_based_content_editor.presentation.context_usage', ['conversationId' => $conversation->getId()]),
+            'contextUsageUrl' => $readOnly ? '' : $this->generateUrl('chat_based_content_editor.presentation.context_usage', ['conversationId' => $conversation->getId()]),
             'activeSession'   => $activeSession !== null ? [
                 'id'          => $activeSession->getId(),
                 'status'      => $activeSession->getStatus()->value,

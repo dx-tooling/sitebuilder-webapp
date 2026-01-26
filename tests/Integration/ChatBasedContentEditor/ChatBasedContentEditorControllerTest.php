@@ -24,8 +24,8 @@ use Throwable;
  * These tests ensure:
  * - Users cannot jump between conversations for a given workflow
  * - Only the conversation owner can view their conversation
- * - Only ONGOING conversations can be accessed
- * - Finished conversations redirect to project list
+ * - ONGOING conversations are fully interactive
+ * - Finished conversations are displayed in read-only mode
  */
 final class ChatBasedContentEditorControllerTest extends WebTestCase
 {
@@ -97,7 +97,7 @@ final class ChatBasedContentEditorControllerTest extends WebTestCase
         self::assertResponseStatusCodeSame(403);
     }
 
-    public function testShowConversationRedirectsWhenConversationIsFinished(): void
+    public function testShowConversationDisplaysFinishedConversationInReadOnlyMode(): void
     {
         // Arrange: Create a user and a finished conversation
         $user = $this->createTestUser('user@example.com', 'password123');
@@ -117,16 +117,25 @@ final class ChatBasedContentEditorControllerTest extends WebTestCase
             ConversationStatus::FINISHED
         );
 
-        // Act: Try to access the finished conversation
+        // Act: Access the finished conversation
         $this->client->loginUser($user);
         $conversationId = $conversation->getId();
         self::assertNotNull($conversationId);
-        $this->client->request('GET', '/conversation/' . $conversationId);
+        $crawler = $this->client->request('GET', '/conversation/' . $conversationId);
 
-        // Assert: Redirected to project list with info message
-        self::assertResponseRedirects('/projects');
-        $this->client->followRedirect();
-        self::assertSelectorExists('.alert-info, [role="alert"]');
+        // Assert: Page renders successfully in read-only mode
+        self::assertResponseIsSuccessful();
+        self::assertSelectorTextContains('h1', 'Content editor');
+
+        // Assert: Read-only indicator is shown (the "session is finished" message)
+        $pageText = $crawler->text();
+        self::assertStringContainsString('session is finished', $pageText);
+
+        // Assert: No chat input form (no "Make changes" button)
+        self::assertSelectorNotExists('button:contains("Make changes")');
+
+        // Assert: No heartbeat controller (check that the heartbeat div is not present)
+        self::assertSelectorNotExists('[data-controller="conversation-heartbeat"]');
     }
 
     public function testShowConversationAllowsAccessWhenUserIsOwnerAndConversationIsOngoing(): void

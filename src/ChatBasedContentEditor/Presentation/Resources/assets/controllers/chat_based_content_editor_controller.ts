@@ -26,6 +26,7 @@ export default class extends Controller {
         contextUsage: Object,
         activeSession: Object,
         turns: Array,
+        readOnly: { type: Boolean, default: false },
     };
 
     static targets = [
@@ -47,6 +48,7 @@ export default class extends Controller {
     declare readonly contextUsageValue: ContextUsageData;
     declare readonly activeSessionValue: ActiveSessionData | null;
     declare readonly turnsValue: TurnData[];
+    declare readonly readOnlyValue: boolean;
 
     declare readonly hasMessagesTarget: boolean;
     declare readonly messagesTarget: HTMLElement;
@@ -82,14 +84,19 @@ export default class extends Controller {
     private activityWorkingActive: boolean = false;
 
     connect(): void {
+        // Render technical containers for completed turns (always, shared between editor and read-only)
+        this.renderCompletedTurnsTechnicalContainers();
+
+        // Skip interactive features in read-only mode
+        if (this.readOnlyValue) {
+            return;
+        }
+
         const cu = this.contextUsageValue as ContextUsageData | undefined;
         if (cu && typeof cu.usedTokens === "number" && typeof cu.maxTokens === "number") {
             this.updateContextBar(cu);
         }
         this.startContextUsagePolling();
-
-        // Render technical containers for completed turns
-        this.renderCompletedTurnsTechnicalContainers();
 
         // Check for active session and resume if needed
         const activeSession = this.activeSessionValue as ActiveSessionData | null;

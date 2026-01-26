@@ -3,11 +3,13 @@
 {% block title %}Content editor{% endblock %}
 
 {% block content %}
-    {# Heartbeat controller to track user presence (prevents stale conversation locks) #}
-    <div {{ stimulus_controller('conversation-heartbeat', {
-             heartbeatUrl: path('chat_based_content_editor.presentation.heartbeat', { conversationId: conversation.id }),
-             interval: 10000
-         }) }}></div>
+    {# Heartbeat controller to track user presence (prevents stale conversation locks) - skip for read-only #}
+    {% if not readOnly %}
+        <div {{ stimulus_controller('conversation-heartbeat', {
+                 heartbeatUrl: path('chat_based_content_editor.presentation.heartbeat', { conversationId: conversation.id }),
+                 interval: 10000
+             }) }}></div>
+    {% endif %}
 
     <div class="space-y-6"
          {{ stimulus_controller('chat-based-content-editor', {
@@ -17,7 +19,8 @@
              contextUsage: contextUsage,
              contextUsageUrl: contextUsageUrl,
              activeSession: activeSession,
-             turns: turns
+             turns: turns,
+             readOnly: readOnly
          }) }}>
 
         {# Flash messages #}
@@ -151,17 +154,20 @@
             </div>
         </div>
 
-        <div {{ stimulus_target('chat-based-content-editor', 'contextUsage') }} class="space-y-1">
-            <div class="flex items-center justify-between text-xs text-dark-600 dark:text-dark-400">
-                <span {{ stimulus_target('chat-based-content-editor', 'contextUsageText') }}>AI budget: {{ contextUsage.usedTokens|number_format(0, '', ',') }} of {{ contextUsage.maxTokens|number_format(0, '', ',') }} used</span>
-                <span {{ stimulus_target('chat-based-content-editor', 'contextUsageCost') }} class="font-medium">Est. ${{ contextUsage.totalCost|number_format(4, '.', ',') }}</span>
+        {# Context usage indicator - hide for read-only (no ongoing budget tracking) #}
+        {% if not readOnly %}
+            <div {{ stimulus_target('chat-based-content-editor', 'contextUsage') }} class="space-y-1">
+                <div class="flex items-center justify-between text-xs text-dark-600 dark:text-dark-400">
+                    <span {{ stimulus_target('chat-based-content-editor', 'contextUsageText') }}>AI budget: {{ contextUsage.usedTokens|number_format(0, '', ',') }} of {{ contextUsage.maxTokens|number_format(0, '', ',') }} used</span>
+                    <span {{ stimulus_target('chat-based-content-editor', 'contextUsageCost') }} class="font-medium">Est. ${{ contextUsage.totalCost|number_format(4, '.', ',') }}</span>
+                </div>
+                <div class="h-1.5 w-full rounded-full bg-dark-200 dark:bg-dark-600 overflow-hidden">
+                    <div {{ stimulus_target('chat-based-content-editor', 'contextUsageBar') }}
+                         class="h-full rounded-full bg-primary-500 dark:bg-primary-400 transition-[width] duration-300"
+                         style="width: {{ contextUsage.maxTokens > 0 ? min(100 * contextUsage.usedTokens / contextUsage.maxTokens, 100) : 0 }}%"></div>
+                </div>
             </div>
-            <div class="h-1.5 w-full rounded-full bg-dark-200 dark:bg-dark-600 overflow-hidden">
-                <div {{ stimulus_target('chat-based-content-editor', 'contextUsageBar') }}
-                     class="h-full rounded-full bg-primary-500 dark:bg-primary-400 transition-[width] duration-300"
-                     style="width: {{ contextUsage.maxTokens > 0 ? min(100 * contextUsage.usedTokens / contextUsage.maxTokens, 100) : 0 }}%"></div>
-            </div>
-        </div>
+        {% endif %}
 
         {% if canEdit %}
             <form {{ stimulus_action('chat-based-content-editor', 'handleSubmit', 'submit') }}
@@ -206,8 +212,8 @@
             </div>
         {% endif %}
 
-        {# Preview pages section #}
-        {% if workspace %}
+        {# Preview pages section - hide for read-only #}
+        {% if workspace and not readOnly %}
             <div {{ stimulus_controller('dist-files', {
                      pollUrl: path('chat_based_content_editor.presentation.dist_files', { workspaceId: workspace.id }),
                      pollInterval: 3000
