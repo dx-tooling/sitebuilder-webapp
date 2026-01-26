@@ -138,6 +138,43 @@ final class ChatBasedContentEditorControllerTest extends WebTestCase
         self::assertSelectorNotExists('[data-controller="conversation-heartbeat"]');
     }
 
+    public function testShowConversationAllowsAnyUserToAccessFinishedConversation(): void
+    {
+        // Arrange: Create two users - owner and another user
+        $ownerUser = $this->createTestUser('owner@example.com', 'password123');
+        $otherUser = $this->createTestUser('other@example.com', 'password123');
+
+        $project   = $this->createProject('Test Project', 'https://github.com/org/repo.git', 'token123');
+        $projectId = $project->getId();
+        self::assertNotNull($projectId);
+        $workspace = $this->createWorkspace($projectId, WorkspaceStatus::AVAILABLE_FOR_CONVERSATION);
+
+        // Create a finished conversation owned by ownerUser
+        $workspaceId = $workspace->getId();
+        $ownerUserId = $ownerUser->getId();
+        self::assertNotNull($workspaceId);
+        self::assertNotNull($ownerUserId);
+        $conversation = $this->createConversation(
+            $workspaceId,
+            $ownerUserId,
+            ConversationStatus::FINISHED
+        );
+
+        // Act: Access the finished conversation as otherUser (not the owner)
+        $this->client->loginUser($otherUser);
+        $conversationId = $conversation->getId();
+        self::assertNotNull($conversationId);
+        $crawler = $this->client->request('GET', '/conversation/' . $conversationId);
+
+        // Assert: Page renders successfully in read-only mode
+        self::assertResponseIsSuccessful();
+        self::assertSelectorTextContains('h1', 'Content editor');
+
+        // Assert: Read-only indicator is shown
+        $pageText = $crawler->text();
+        self::assertStringContainsString('session is finished', $pageText);
+    }
+
     public function testShowConversationAllowsAccessWhenUserIsOwnerAndConversationIsOngoing(): void
     {
         // Arrange: Create a user and an ongoing conversation

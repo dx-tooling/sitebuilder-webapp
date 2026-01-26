@@ -62,6 +62,7 @@ project:
         work_area: "Arbeitsbereich"
         review: "Review"
         edit_content: "Inhalt bearbeiten"
+        view_conversation: "Konversation ansehen"
         edit_details: "Details bearbeiten"
         reset_work_area: "Arbeitsbereich zurücksetzen"
         reset_confirm: "Arbeitsbereich zurücksetzen? Dies beendet alle aktiven Sitzungen und erstellt beim nächsten Mal einen neuen Arbeitsbereich."

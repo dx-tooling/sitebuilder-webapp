@@ -240,8 +240,11 @@ final class ChatBasedContentEditorController extends AbstractController
 
         $accountInfo = $this->getAccountInfo($user);
 
-        // Authorization: Only the conversation owner can view it
-        if ($conversation->getUserId() !== $accountInfo->id) {
+        // Authorization: Owner can access any conversation; anyone can access finished (read-only) conversations
+        $isOwner    = $conversation->getUserId() === $accountInfo->id;
+        $isFinished = $conversation->getStatus() !== ConversationStatus::ONGOING;
+
+        if (!$isOwner && !$isFinished) {
             throw $this->createAccessDeniedException('You do not have access to this conversation.');
         }
 

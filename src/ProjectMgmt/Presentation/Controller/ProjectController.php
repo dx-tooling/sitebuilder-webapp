@@ -75,10 +75,17 @@ final class ProjectController extends AbstractController
                 }
             }
 
+            // If workspace is in review, get the conversation ID for read-only view
+            $conversationId = null;
+            if ($workspace !== null && $workspace->status === WorkspaceStatus::IN_REVIEW) {
+                $conversationId = $this->chatBasedContentEditorFacade->getLatestConversationId($workspace->id);
+            }
+
             $projectsWithStatus[] = [
                 'project'          => $projectInfo,
                 'workspace'        => $workspace,
                 'inConversationBy' => $inConversationBy,
+                'conversationId'   => $conversationId,
             ];
         }
 

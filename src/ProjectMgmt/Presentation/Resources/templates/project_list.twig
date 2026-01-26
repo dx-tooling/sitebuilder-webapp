@@ -91,10 +91,17 @@
 
                             {# Actions section #}
                             <div class="flex flex-wrap gap-2">
-                                <a href="{{ path('chat_based_content_editor.presentation.start', { projectId: item.project.id }) }}"
-                                   class="inline-flex items-center px-3 py-1.5 rounded-md bg-primary-600 text-white text-sm font-medium hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500">
-                                    {{ 'project.list.edit_content'|trans }}
-                                </a>
+                                {% if item.workspace and item.workspace.status.name == 'IN_REVIEW' and item.conversationId %}
+                                    <a href="{{ path('chat_based_content_editor.presentation.show', { conversationId: item.conversationId }) }}"
+                                       class="inline-flex items-center px-3 py-1.5 rounded-md bg-primary-600 text-white text-sm font-medium hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500">
+                                        {{ 'project.list.view_conversation'|trans }}
+                                    </a>
+                                {% else %}
+                                    <a href="{{ path('chat_based_content_editor.presentation.start', { projectId: item.project.id }) }}"
+                                       class="inline-flex items-center px-3 py-1.5 rounded-md bg-primary-600 text-white text-sm font-medium hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500">
+                                        {{ 'project.list.edit_content'|trans }}
+                                    </a>
+                                {% endif %}
                                 <a href="{{ path('project_mgmt.presentation.edit', { id: item.project.id }) }}"
                                    class="inline-flex items-center px-3 py-1.5 rounded-md border border-dark-300 dark:border-dark-600 text-dark-700 dark:text-dark-300 text-sm font-medium hover:bg-dark-100 dark:hover:bg-dark-700">
                                     {{ 'project.list.edit_details'|trans }}
