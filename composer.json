@@ -16,7 +16,7 @@
         "enterprise-tooling-for-symfony/shared-bundle": "dev-main",
         "enterprise-tooling-for-symfony/webui-bundle": "dev-main",
         "googleads/google-ads-php": "^25.0",
-        "neuron-core/neuron-ai": "^2.11.1",
+        "neuron-core/neuron-ai": "^2.11.2",
         "orhanerday/open-ai": "^5.3",
         "phpdocumentor/reflection-docblock": "^5.6.6",
         "sensiolabs/minify-bundle": "^0.9.5",

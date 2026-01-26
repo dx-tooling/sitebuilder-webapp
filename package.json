@@ -20,7 +20,7 @@
         "@tailwindcss/cli": "^4.1.4",
         "@tailwindcss/forms": "^0.5.10",
         "@testing-library/dom": "^10.4.0",
-        "@types/node": "^22.0.0",
+        "@types/node": "^24.10.9",
         "@typescript-eslint/eslint-plugin": "^8.17.0",
         "eslint": "^9.16.0",
         "jsdom": "^25.0.0",
