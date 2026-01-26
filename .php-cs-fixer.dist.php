@@ -18,6 +18,9 @@ $finder = (new PhpCsFixer\Finder())
 return (new PhpCsFixer\Config())
     ->setUnsupportedPhpVersionAllowed(true)
     ->setParallelConfig(PhpCsFixer\Runner\Parallel\ParallelConfigFactory::detect())
+    // Use container cache directory for better performance in Docker
+    // This avoids slow writes to the mounted project directory
+    ->setCacheFile('/tmp/container-home/.cache/.php-cs-fixer.cache')
     ->registerCustomFixers(new Fixers())
     ->setRules([
         '@Symfony'                                   => true,
