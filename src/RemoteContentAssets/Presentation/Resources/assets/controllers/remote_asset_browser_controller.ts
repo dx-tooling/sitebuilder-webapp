@@ -169,6 +169,8 @@ export default class extends Controller {
 
             if (data.success && data.url) {
                 this.showUploadStatus("success");
+                // Notify chat controller about the upload
+                this.dispatch("uploadComplete", { detail: { url: data.url } });
                 // Re-fetch the asset list to show updated manifests
                 await this.fetchAssets();
                 // Auto-hide success message after 3 seconds

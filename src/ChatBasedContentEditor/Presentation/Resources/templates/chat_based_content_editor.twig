@@ -255,7 +255,7 @@
                      uploadCsrfToken: project.hasS3UploadConfigured() ? csrf_token('remote_asset_upload') : '',
                      workspaceId: workspace.id
                  }) }}
-                 data-action="remote-asset-browser:insert->chat-based-content-editor#handleAssetInsert">
+                 data-action="remote-asset-browser:insert->chat-based-content-editor#handleAssetInsert remote-asset-browser:uploadComplete->chat-based-content-editor#handleUploadComplete">
                 <details>
                     <summary class="cursor-pointer flex items-center gap-2 select-none">
                         <h2 class="text-lg font-medium text-dark-900 dark:text-dark-100">

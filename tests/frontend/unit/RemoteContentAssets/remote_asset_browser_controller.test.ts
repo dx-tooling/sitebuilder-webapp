@@ -418,4 +418,113 @@ describe("RemoteAssetBrowserController", () => {
         // All items visible again
         expect(listEl.querySelectorAll('button[title="Add to chat"]').length).toBe(2);
     });
+
+    describe("upload functionality", () => {
+        const createControllerElementWithUpload = async (): Promise<HTMLElement> => {
+            const html = `
+                <div data-controller="remote-asset-browser"
+                     data-remote-asset-browser-fetch-url-value="/api/projects/test-id/remote-assets"
+                     data-remote-asset-browser-upload-url-value="/api/projects/test-id/remote-assets/upload"
+                     data-remote-asset-browser-upload-csrf-token-value="csrf-token-123"
+                     data-remote-asset-browser-workspace-id-value="workspace-123"
+                     data-remote-asset-browser-window-size-value="50">
+                    <div data-remote-asset-browser-target="dropzone" class="dropzone"></div>
+                    <div data-remote-asset-browser-target="uploadProgress" class="hidden">Uploading...</div>
+                    <div data-remote-asset-browser-target="uploadSuccess" class="hidden">Success!</div>
+                    <div data-remote-asset-browser-target="uploadError" class="hidden"><span data-error-text></span></div>
+                    <div data-remote-asset-browser-target="loading">Loading...</div>
+                    <div data-remote-asset-browser-target="empty" class="hidden">No assets</div>
+                    <span data-remote-asset-browser-target="count"></span>
+                    <div data-remote-asset-browser-target="list"></div>
+                </div>
+            `;
+            document.body.innerHTML = html;
+            await new Promise((resolve) => setTimeout(resolve, 50));
+
+            return document.body.querySelector('[data-controller="remote-asset-browser"]') as HTMLElement;
+        };
+
+        /**
+         * Helper to create a mock drop event with files.
+         * DragEvent and DataTransfer are not available in jsdom, so we mock them.
+         */
+        const createMockDropEvent = (files: File[]): Event => {
+            const event = new Event("drop", { bubbles: true, cancelable: true });
+            Object.defineProperty(event, "dataTransfer", {
+                value: {
+                    files: files,
+                },
+            });
+
+            return event;
+        };
+
+        it("dispatches uploadComplete event on successful upload", async () => {
+            // First fetch for initial asset list
+            const mockFetch = vi
+                .fn()
+                .mockResolvedValueOnce({
+                    ok: true,
+                    json: () => Promise.resolve({ urls: [] }),
+                })
+                // Upload response
+                .mockResolvedValueOnce({
+                    ok: true,
+                    json: () => Promise.resolve({ success: true, url: "https://example.com/uploaded.jpg" }),
+                })
+                // Re-fetch after upload
+                .mockResolvedValueOnce({
+                    ok: true,
+                    json: () => Promise.resolve({ urls: ["https://example.com/uploaded.jpg"] }),
+                });
+            vi.stubGlobal("fetch", mockFetch);
+
+            const controller = await createControllerElementWithUpload();
+            await new Promise((resolve) => setTimeout(resolve, 100));
+
+            const eventListener = vi.fn();
+            controller.addEventListener("remote-asset-browser:uploadComplete", eventListener);
+
+            // Simulate drop event with mocked DataTransfer
+            const dropzone = document.querySelector('[data-remote-asset-browser-target="dropzone"]') as HTMLElement;
+            const file = new File(["test"], "test.jpg", { type: "image/jpeg" });
+            const dropEvent = createMockDropEvent([file]);
+            dropzone.dispatchEvent(dropEvent);
+
+            await new Promise((resolve) => setTimeout(resolve, 200));
+
+            expect(eventListener).toHaveBeenCalled();
+            const event = eventListener.mock.calls[0][0] as CustomEvent;
+            expect(event.detail.url).toBe("https://example.com/uploaded.jpg");
+        });
+
+        it("does not dispatch uploadComplete event on failed upload", async () => {
+            const mockFetch = vi
+                .fn()
+                .mockResolvedValueOnce({
+                    ok: true,
+                    json: () => Promise.resolve({ urls: [] }),
+                })
+                .mockResolvedValueOnce({
+                    ok: true,
+                    json: () => Promise.resolve({ success: false, error: "Upload failed" }),
+                });
+            vi.stubGlobal("fetch", mockFetch);
+
+            const controller = await createControllerElementWithUpload();
+            await new Promise((resolve) => setTimeout(resolve, 100));
+
+            const eventListener = vi.fn();
+            controller.addEventListener("remote-asset-browser:uploadComplete", eventListener);
+
+            const dropzone = document.querySelector('[data-remote-asset-browser-target="dropzone"]') as HTMLElement;
+            const file = new File(["test"], "test.jpg", { type: "image/jpeg" });
+            const dropEvent = createMockDropEvent([file]);
+            dropzone.dispatchEvent(dropEvent);
+
+            await new Promise((resolve) => setTimeout(resolve, 200));
+
+            expect(eventListener).not.toHaveBeenCalled();
+        });
+    });
 });
