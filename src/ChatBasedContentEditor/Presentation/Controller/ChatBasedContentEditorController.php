@@ -244,13 +244,13 @@ final class ChatBasedContentEditorController extends AbstractController
         $isOwner    = $conversation->getUserId() === $accountInfo->id;
         $isFinished = $conversation->getStatus() !== ConversationStatus::ONGOING;
 
-        if (!$isOwner && !$isFinished) {
-            throw $this->createAccessDeniedException('You do not have access to this conversation.');
-        }
-
         // Determine if this is a read-only view (finished conversation)
         $readOnly = $conversation->getStatus() !== ConversationStatus::ONGOING;
         $canEdit  = !$readOnly;
+        if (!$isOwner && !$isFinished) {
+            $readOnly = true;
+            $canEdit  = false;
+        }
 
         // Get workspace info for status display
         $workspace   = $this->workspaceMgmtFacade->getWorkspaceById($conversation->getWorkspaceId());
