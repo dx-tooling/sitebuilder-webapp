@@ -46,6 +46,17 @@ interface WorkspaceToolingServiceInterface extends BaseWorkspaceToolingFacadeInt
     public function listRemoteContentAssetUrls(): string;
 
     /**
+     * Search remote content asset URLs using a regex pattern on filenames.
+     * Fetches all URLs from configured manifests, then filters by pattern.
+     * Returns JSON-encoded array of matching URLs. Never throws.
+     *
+     * @param string $regexPattern PCRE regex pattern (without delimiters) to match filenames
+     *
+     * @return string JSON array of matching URLs, or error JSON for invalid regex
+     */
+    public function searchRemoteContentAssetUrls(string $regexPattern): string;
+
+    /**
      * Get information about a remote asset (e.g. image) by URL.
      * Returns JSON with url, width, height, mimeType, sizeInBytes (null when unknown).
      * On failure returns JSON object with an "error" key. Never throws.

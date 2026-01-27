@@ -121,6 +121,58 @@ final class WorkspaceToolingFacade extends BaseWorkspaceToolingFacade implements
         }
     }
 
+    public function searchRemoteContentAssetUrls(string $regexPattern): string
+    {
+        $manifestUrls = $this->executionContext->getRemoteContentAssetsManifestUrls();
+        if ($manifestUrls === []) {
+            return '[]';
+        }
+
+        // Validate regex pattern by attempting a test match
+        $fullPattern = '#' . $regexPattern . '#i';
+        if (!$this->isValidRegexPattern($fullPattern)) {
+            return json_encode(['error' => 'Invalid regex pattern: ' . $regexPattern], JSON_THROW_ON_ERROR);
+        }
+
+        try {
+            $urls = $this->remoteContentAssetsFacade->fetchAndMergeAssetUrls($manifestUrls);
+        } catch (Throwable) {
+            return '[]';
+        }
+
+        $matchingUrls = [];
+        foreach ($urls as $url) {
+            $filename = $this->extractFilenameFromUrl($url);
+            if (preg_match($fullPattern, $filename) === 1) {
+                $matchingUrls[] = $url;
+            }
+        }
+
+        return json_encode($matchingUrls, JSON_THROW_ON_ERROR);
+    }
+
+    private function extractFilenameFromUrl(string $url): string
+    {
+        $path = parse_url($url, PHP_URL_PATH);
+        if ($path === null || $path === false) {
+            return '';
+        }
+
+        return basename($path);
+    }
+
+    private function isValidRegexPattern(string $pattern): bool
+    {
+        set_error_handler(static fn () => true);
+        try {
+            $result = preg_match($pattern, '');
+
+            return $result !== false;
+        } finally {
+            restore_error_handler();
+        }
+    }
+
     public function getRemoteAssetInfo(string $url): string
     {
         $info = $this->remoteContentAssetsFacade->getRemoteAssetInfo($url);

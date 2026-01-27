@@ -237,6 +237,18 @@ class ContentEditorAgent extends BaseCodingAgent
             )->setCallable(fn (): string => $this->sitebuilderFacade->listRemoteContentAssetUrls()),
 
             Tool::make(
+                'search_remote_content_asset_urls',
+                'Search remote content asset URLs using a regex pattern. Matches against filenames (not full URLs). Returns JSON array of matching URLs. Use for precise filtering when you need specific assets. Examples: "hero" matches files containing hero, "^banner_" matches files starting with banner_, "\\.png$" matches PNG files.'
+            )->addProperty(
+                new ToolProperty(
+                    'regex_pattern',
+                    PropertyType::STRING,
+                    'PCRE regex pattern to match against filenames (without delimiters). Examples: "hero", "^banner_", "\\.jpg$"',
+                    true
+                )
+            )->setCallable(fn (string $regex_pattern): string => $this->sitebuilderFacade->searchRemoteContentAssetUrls($regex_pattern)),
+
+            Tool::make(
                 'get_remote_asset_info',
                 'Get metadata (width, height, mimeType, sizeInBytes) for a remote image URL without downloading the full file. Returns JSON; on failure returns an object with an "error" key. Use for remote assets from list_remote_content_asset_urls when you need dimensions or format.'
             )->addProperty(
