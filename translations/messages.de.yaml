@@ -26,6 +26,7 @@ common:
     email: "E-Mail"
     password: "Passwort"
     continue: "Weiter"
+    loading: "Wird geladen..."
 
 # Account vertical
 account:
@@ -130,6 +131,12 @@ project:
         create_token_link: "Token erstellen unter:"
         add_project_button: "Projekt hinzufügen"
         update_project_button: "Projekt aktualisieren"
+        remote_content_assets_manifest_urls: "Remote-Content-Asset-Manifest-URLs"
+        remote_content_assets_manifest_urls_help: "Optional. Eine URL pro Zeile zu manifest.json (oder ähnlichen) Dateien, die Content-Asset-URLs (Bilder usw.) auflisten. Der Agent kann diese zur Einbettung nutzen. Leer lassen, wenn nicht verwendet."
+        remote_content_assets_manifest_urls_placeholder: "https://example.com/.well-known/manifest.json"
+        remote_content_assets_manifest_urls_syntax_error: "Eine URL pro Zeile; jede Zeile muss eine gültige http- oder https-URL sein."
+        remote_content_assets_manifest_urls_warning: 'Eine oder mehrere URLs lieferten kein gültiges Manifest (erwartet: JSON mit "urls"-Liste). Sie können trotzdem speichern.'
+        remote_content_assets_manifest_urls_verified: "Alle Manifest-URLs haben ein gültiges Format."
 
 # Chat-Based Content Editor vertical
 editor:
@@ -340,6 +347,7 @@ api:
         provider_and_key_required: "Anbieter und API-Schlüssel sind erforderlich."
         invalid_provider: "Ungültiger Anbieter."
         invalid_project_type: "Ungültiger Projekttyp."
+        url_required: "URL ist erforderlich."
         session_not_found: "Sitzung nicht gefunden."
         failed_to_create_session: "Sitzung konnte nicht erstellt werden."
         not_authorized_to_run: "Nicht berechtigt, Änderungen in dieser Unterhaltung auszuführen."
@@ -368,6 +376,14 @@ js:
         taking_longer: "Das dauert länger als erwartet. Bitte versuchen Sie es erneut."
         setup_failed: "Die Einrichtung konnte nicht abgeschlossen werden. Bitte setzen Sie den Arbeitsbereich zurück."
         hit_a_snag: "Es gab ein Problem"
+
+# Remote Content Assets vertical
+remote_content_assets:
+    browser_title: "Remote-Assets"
+    browser_empty: "Keine Remote-Assets verfügbar"
+    browser_search_placeholder: "Assets suchen..."
+    browser_add_to_chat: "Zum Chat hinzufügen"
+    browser_open_in_new_tab: "In neuem Tab öffnen"
 
 # Language switcher
 language:

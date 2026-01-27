@@ -37,26 +37,29 @@ final class AgentExecutionContext implements AgentExecutionContextInterface
     private ?Closure $outputCallback        = null;
 
     /**
+     * @var list<string>|null
+     */
+    private ?array $remoteContentAssetsManifestUrls = null;
+
+    /**
      * Set the execution context for the current agent run.
      *
-     * @param string      $workspaceId    Workspace UUID
-     * @param string      $workspacePath  Actual filesystem path to the workspace
-     * @param string|null $conversationId Conversation UUID
-     * @param string|null $projectName    Project name for container naming
-     * @param string|null $agentImage     Docker image to use for agent containers
+     * @param list<string>|null $remoteContentAssetsManifestUrls
      */
     public function setContext(
         string  $workspaceId,
         string  $workspacePath,
         ?string $conversationId,
         ?string $projectName,
-        ?string $agentImage
+        ?string $agentImage,
+        ?array  $remoteContentAssetsManifestUrls = null
     ): void {
-        $this->workspaceId    = $workspaceId;
-        $this->workspacePath  = $workspacePath;
-        $this->conversationId = $conversationId;
-        $this->projectName    = $projectName;
-        $this->agentImage     = $agentImage;
+        $this->workspaceId                     = $workspaceId;
+        $this->workspacePath                   = $workspacePath;
+        $this->conversationId                  = $conversationId;
+        $this->projectName                     = $projectName;
+        $this->agentImage                      = $agentImage;
+        $this->remoteContentAssetsManifestUrls = $remoteContentAssetsManifestUrls;
     }
 
     /**
@@ -64,13 +67,22 @@ final class AgentExecutionContext implements AgentExecutionContextInterface
      */
     public function clearContext(): void
     {
-        $this->workspaceId            = null;
-        $this->workspacePath          = null;
-        $this->conversationId         = null;
-        $this->projectName            = null;
-        $this->agentImage             = null;
-        $this->suggestedCommitMessage = null;
+        $this->workspaceId                     = null;
+        $this->workspacePath                   = null;
+        $this->conversationId                  = null;
+        $this->projectName                     = null;
+        $this->agentImage                      = null;
+        $this->suggestedCommitMessage          = null;
+        $this->remoteContentAssetsManifestUrls = null;
         $this->outputCallback         = null;
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function getRemoteContentAssetsManifestUrls(): array
+    {
+        return $this->remoteContentAssetsManifestUrls ?? [];
     }
 
     public function setOutputCallback(?callable $callback): void

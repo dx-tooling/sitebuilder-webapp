@@ -24,6 +24,9 @@ class Project
     /**
      * @throws Exception
      */
+    /**
+     * @param list<string>|null $remoteContentAssetsManifestUrls
+     */
     public function __construct(
         string           $name,
         string           $gitUrl,
@@ -35,17 +38,19 @@ class Project
         string           $agentImage = self::DEFAULT_AGENT_IMAGE,
         ?string          $agentBackgroundInstructions = null,
         ?string          $agentStepInstructions = null,
-        ?string          $agentOutputInstructions = null
+        ?string          $agentOutputInstructions = null,
+        ?array           $remoteContentAssetsManifestUrls = null
     ) {
-        $this->name             = $name;
-        $this->gitUrl           = $gitUrl;
-        $this->githubToken      = $githubToken;
-        $this->llmModelProvider = $llmModelProvider;
-        $this->llmApiKey        = $llmApiKey;
-        $this->projectType      = $projectType;
+        $this->name                            = $name;
+        $this->gitUrl                          = $gitUrl;
+        $this->githubToken                     = $githubToken;
+        $this->llmModelProvider                = $llmModelProvider;
+        $this->llmApiKey                       = $llmApiKey;
+        $this->projectType                     = $projectType;
         $this->contentEditorBackend = $contentEditorBackend;
-        $this->agentImage       = $agentImage;
-        $this->createdAt        = DateAndTimeService::getDateTimeImmutable();
+        $this->agentImage                      = $agentImage;
+        $this->createdAt                       = DateAndTimeService::getDateTimeImmutable();
+        $this->remoteContentAssetsManifestUrls = $remoteContentAssetsManifestUrls !== null && $remoteContentAssetsManifestUrls !== [] ? $remoteContentAssetsManifestUrls : null;
 
         // Initialize agent config from template if not provided
         $template                          = AgentConfigTemplate::forProjectType($projectType);
@@ -254,6 +259,31 @@ class Project
     public function setAgentOutputInstructions(string $agentOutputInstructions): void
     {
         $this->agentOutputInstructions = $agentOutputInstructions;
+    }
+
+    /**
+     * @var list<string>|null
+     */
+    #[ORM\Column(
+        type: Types::JSON,
+        nullable: true
+    )]
+    private ?array $remoteContentAssetsManifestUrls = null;
+
+    /**
+     * @return list<string>
+     */
+    public function getRemoteContentAssetsManifestUrls(): array
+    {
+        return $this->remoteContentAssetsManifestUrls ?? [];
+    }
+
+    /**
+     * @param list<string> $remoteContentAssetsManifestUrls
+     */
+    public function setRemoteContentAssetsManifestUrls(array $remoteContentAssetsManifestUrls): void
+    {
+        $this->remoteContentAssetsManifestUrls = $remoteContentAssetsManifestUrls === [] ? null : $remoteContentAssetsManifestUrls;
     }
 
     #[ORM\Column(
