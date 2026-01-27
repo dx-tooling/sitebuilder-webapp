@@ -26,6 +26,7 @@ common:
     email: "E-Mail"
     password: "Passwort"
     continue: "Weiter"
+    loading: "Wird geladen..."
 
 # Account vertical
 account:
@@ -370,6 +371,14 @@ js:
         taking_longer: "Das dauert länger als erwartet. Bitte versuchen Sie es erneut."
         setup_failed: "Die Einrichtung konnte nicht abgeschlossen werden. Bitte setzen Sie den Arbeitsbereich zurück."
         hit_a_snag: "Es gab ein Problem"
+
+# Remote Content Assets vertical
+remote_content_assets:
+    browser_title: "Remote-Assets"
+    browser_empty: "Keine Remote-Assets verfügbar"
+    browser_search_placeholder: "Assets suchen..."
+    browser_add_to_chat: "Zum Chat hinzufügen"
+    browser_open_in_new_tab: "In neuem Tab öffnen"
 
 # Language switcher
 language:

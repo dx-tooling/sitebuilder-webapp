@@ -1102,4 +1102,25 @@ export default class extends Controller {
         container.appendChild(div);
         this.scrollToBottom();
     }
+
+    /**
+     * Handle remote asset insertion from remote-asset-browser controller.
+     * Inserts the asset URL at the cursor position in the instruction textarea.
+     */
+    handleAssetInsert(event: CustomEvent<{ url: string }>): void {
+        const url = event.detail?.url;
+        if (!url || !this.hasInstructionTarget) {
+            return;
+        }
+
+        const textarea = this.instructionTarget;
+        const start = textarea.selectionStart;
+        const end = textarea.selectionEnd;
+
+        textarea.value = textarea.value.slice(0, start) + url + textarea.value.slice(end);
+
+        const newPos = start + url.length;
+        textarea.setSelectionRange(newPos, newPos);
+        textarea.focus();
+    }
 }

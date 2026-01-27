@@ -16,6 +16,7 @@ use App\ChatBasedContentEditor\Infrastructure\Adapter\DistFileScannerInterface;
 use App\ChatBasedContentEditor\Infrastructure\Message\RunEditSessionMessage;
 use App\ChatBasedContentEditor\Presentation\Service\ConversationContextUsageService;
 use App\ProjectMgmt\Facade\ProjectMgmtFacadeInterface;
+use App\RemoteContentAssets\Facade\RemoteContentAssetsFacadeInterface;
 use App\WorkspaceMgmt\Facade\Enum\WorkspaceStatus;
 use App\WorkspaceMgmt\Facade\WorkspaceMgmtFacadeInterface;
 use Doctrine\ORM\EntityManagerInterface;
@@ -336,6 +337,7 @@ final class ChatBasedContentEditorController extends AbstractController
                 'chunks'      => $activeSessionChunks,
                 'lastChunkId' => count($activeSessionChunks) > 0 ? $activeSessionChunks[count($activeSessionChunks) - 1]['id'] : 0,
             ] : null,
+            'remoteAssetBrowserWindowSize' => RemoteContentAssetsFacadeInterface::BROWSER_WINDOW_SIZE,
         ]);
     }
 
