@@ -26,6 +26,7 @@ common:
     email: "Email"
     password: "Password"
     continue: "Continue"
+    loading: "Loading..."
 
 # Account vertical
 account:
@@ -370,6 +371,11 @@ js:
         taking_longer: "This is taking longer than expected. Please try again."
         setup_failed: "We couldn't finish setup. Please try resetting the work area."
         hit_a_snag: "We hit a snag"
+
+# Remote Content Assets vertical
+remote_content_assets:
+    browser_title: "Remote Assets"
+    browser_empty: "No remote assets available"
 
 # Language switcher
 language:

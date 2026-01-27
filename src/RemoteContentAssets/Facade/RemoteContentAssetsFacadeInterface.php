@@ -13,6 +13,11 @@ use App\RemoteContentAssets\Facade\Dto\RemoteContentAssetInfoDto;
 interface RemoteContentAssetsFacadeInterface
 {
     /**
+     * Number of assets to display at a time in the browser UI (windowed rendering).
+     */
+    public const int BROWSER_WINDOW_SIZE = 10;
+
+    /**
      * Fetch information about a remote image/asset by URL.
      * Uses an efficient approach (HEAD and/or Range request + header parsing) where possible.
      *

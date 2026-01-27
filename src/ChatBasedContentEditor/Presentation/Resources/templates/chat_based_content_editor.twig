@@ -243,6 +243,36 @@
             </div>
         {% endif %}
 
+        {# Remote assets browser - only show if project has manifest URLs configured #}
+        {% if workspace and not readOnly and project and project.remoteContentAssetsManifestUrls|length > 0 %}
+            <div class="border-t border-dark-200 dark:border-dark-700 pt-6"
+                 {{ stimulus_controller('remote-asset-browser', {
+                     fetchUrl: path('remote_content_assets.presentation.list', { projectId: project.id }),
+                     windowSize: remoteAssetBrowserWindowSize
+                 }) }}
+                 data-action="remote-asset-browser:insert->chat-based-content-editor#handleAssetInsert">
+                <details>
+                    <summary class="cursor-pointer flex items-center gap-2 select-none">
+                        <h2 class="text-lg font-medium text-dark-900 dark:text-dark-100">
+                            {{ 'remote_content_assets.browser_title'|trans }}
+                        </h2>
+                        <span {{ stimulus_target('remote-asset-browser', 'count') }}
+                              class="text-sm text-dark-500 dark:text-dark-400"></span>
+                    </summary>
+                    <div {{ stimulus_target('remote-asset-browser', 'loading') }}
+                         class="py-4 text-center text-dark-500 dark:text-dark-400">
+                        {{ 'common.loading'|trans }}
+                    </div>
+                    <div {{ stimulus_target('remote-asset-browser', 'empty') }}
+                         class="py-4 text-center text-dark-500 dark:text-dark-400 hidden">
+                        {{ 'remote_content_assets.browser_empty'|trans }}
+                    </div>
+                    <div {{ stimulus_target('remote-asset-browser', 'list') }}
+                         class="mt-3"></div>
+                </details>
+            </div>
+        {% endif %}
+
         {# Info section with cross-links - subtle placement at bottom #}
         {% if workspace or project or conversation %}
             <details class="border-t border-dark-200 dark:border-dark-700 pt-4">
