@@ -108,9 +108,8 @@ ssh "${SERVER}" << EOF
     echo "Restarting nginx to pick up new container IPs..."
     \$COMPOSE restart nginx
 
-    # Restart messenger
-    echo "Restarting messenger to pick up code changes..."
-    \$COMPOSE restart messenger
+    # NOTE: Messenger workers are restarted AFTER cache is cleared (Step 4)
+    # to ensure they don't start with stale Symfony cache
 
     # Wait for services to be ready
     echo "Waiting for services to start..."
@@ -175,6 +174,11 @@ ssh "${SERVER}" << EOF
     \$COMPOSE exec -T app php bin/console cache:warmup || {
         echo "⚠️  Cache warmup failed, but continuing..."
     }
+
+    # NOW restart messenger workers - they need fresh cache to work correctly
+    # This must happen AFTER cache:clear to avoid workers running with stale compiled container
+    echo "Restarting messenger workers with fresh cache..."
+    \$COMPOSE restart messenger
 EOF
 
 # Step 5: Verify deployment

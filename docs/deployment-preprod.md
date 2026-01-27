@@ -193,6 +193,8 @@ docker compose -f docker-compose.preprod.yml up -d --scale messenger=3
 docker compose -f docker-compose.preprod.yml exec app php bin/console doctrine:database:create --if-not-exists --no-interaction
 docker compose -f docker-compose.preprod.yml exec app php bin/console doctrine:migrations:migrate --no-interaction
 docker compose -f docker-compose.preprod.yml exec app php bin/console cache:clear
+# IMPORTANT: Restart messenger workers AFTER cache:clear to ensure they use fresh cache
+docker compose -f docker-compose.preprod.yml restart messenger
 ```
 
 ## Troubleshooting
