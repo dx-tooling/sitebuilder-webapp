@@ -100,7 +100,7 @@ final class ProjectController extends AbstractController
         $deletedProjects = $this->projectService->findAllDeleted();
 
         return $this->render('@project_mgmt.presentation/project_list.twig', [
-            'user' => $user,
+            'user'               => $user,
             'projectsWithStatus' => $projectsWithStatus,
             'deletedProjects'    => $deletedProjects,
         ]);

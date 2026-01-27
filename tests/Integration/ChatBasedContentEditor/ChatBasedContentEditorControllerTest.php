@@ -22,10 +22,11 @@ use Throwable;
  * conversation access restrictions per workflow requirements.
  *
  * These tests ensure:
- * - Users cannot jump between conversations for a given workflow
- * - Only the conversation owner can view their conversation
- * - ONGOING conversations are fully interactive
- * - Finished conversations are displayed in read-only mode
+ * - Users can view conversations in read-only mode (including ongoing conversations)
+ * - Only the conversation owner can edit their conversation
+ * - ONGOING conversations are fully interactive for owners
+ * - ONGOING conversations are read-only for non-owners
+ * - Finished conversations are displayed in read-only mode for everyone
  */
 final class ChatBasedContentEditorControllerTest extends WebTestCase
 {
@@ -64,7 +65,11 @@ final class ChatBasedContentEditorControllerTest extends WebTestCase
         }
     }
 
-    public function testShowConversationDeniesAccessWhenUserIsNotOwner(): void
+    /**
+     * Test that non-owners can view ongoing conversations in read-only mode.
+     * This allows other users to see the conversation (e.g., for review purposes).
+     */
+    public function testShowConversationAllowsReadOnlyAccessWhenUserIsNotOwner(): void
     {
         // Arrange: Create two users
         $ownerUser = $this->createTestUser('owner@example.com', 'password123');
@@ -87,14 +92,22 @@ final class ChatBasedContentEditorControllerTest extends WebTestCase
             ConversationStatus::ONGOING
         );
 
-        // Act: Try to access the conversation as otherUser
+        // Act: Access the conversation as otherUser (should be read-only)
         $this->client->loginUser($otherUser);
         $conversationId = $conversation->getId();
         self::assertNotNull($conversationId);
-        $this->client->request('GET', '/en/conversation/' . $conversationId);
+        $crawler = $this->client->request('GET', '/en/conversation/' . $conversationId);
 
-        // Assert: Access denied
-        self::assertResponseStatusCodeSame(403);
+        // Assert: Page renders successfully in read-only mode
+        self::assertResponseIsSuccessful();
+        self::assertSelectorTextContains('h1', 'Content editor');
+
+        // Assert: User cannot edit (no "Make changes" button)
+        $pageText = $crawler->text();
+        self::assertStringNotContainsString('Make changes', $pageText);
+
+        // Assert: Read-only message is shown
+        self::assertStringContainsString('cannot edit', $pageText);
     }
 
     public function testShowConversationDisplaysFinishedConversationInReadOnlyMode(): void
