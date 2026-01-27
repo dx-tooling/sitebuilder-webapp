@@ -20,6 +20,9 @@ final class ProjectService
     ) {
     }
 
+    /**
+     * @param list<string>|null $remoteContentAssetsManifestUrls
+     */
     public function create(
         string           $name,
         string           $gitUrl,
@@ -30,7 +33,8 @@ final class ProjectService
         string           $agentImage = Project::DEFAULT_AGENT_IMAGE,
         ?string          $agentBackgroundInstructions = null,
         ?string          $agentStepInstructions = null,
-        ?string          $agentOutputInstructions = null
+        ?string          $agentOutputInstructions = null,
+        ?array           $remoteContentAssetsManifestUrls = null
     ): Project {
         $project = new Project(
             $name,
@@ -42,7 +46,8 @@ final class ProjectService
             $agentImage,
             $agentBackgroundInstructions,
             $agentStepInstructions,
-            $agentOutputInstructions
+            $agentOutputInstructions,
+            $remoteContentAssetsManifestUrls
         );
         $this->entityManager->persist($project);
         $this->entityManager->flush();
@@ -50,6 +55,9 @@ final class ProjectService
         return $project;
     }
 
+    /**
+     * @param list<string>|null $remoteContentAssetsManifestUrls
+     */
     public function update(
         Project          $project,
         string           $name,
@@ -61,7 +69,8 @@ final class ProjectService
         string           $agentImage = Project::DEFAULT_AGENT_IMAGE,
         ?string          $agentBackgroundInstructions = null,
         ?string          $agentStepInstructions = null,
-        ?string          $agentOutputInstructions = null
+        ?string          $agentOutputInstructions = null,
+        ?array           $remoteContentAssetsManifestUrls = null
     ): void {
         $project->setName($name);
         $project->setGitUrl($gitUrl);
@@ -79,6 +88,9 @@ final class ProjectService
         }
         if ($agentOutputInstructions !== null) {
             $project->setAgentOutputInstructions($agentOutputInstructions);
+        }
+        if ($remoteContentAssetsManifestUrls !== null) {
+            $project->setRemoteContentAssetsManifestUrls($remoteContentAssetsManifestUrls);
         }
 
         $this->entityManager->flush();

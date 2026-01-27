@@ -15,24 +15,33 @@ interface AgentExecutionContextInterface
     /**
      * Set the execution context for the current agent run.
      *
-     * @param string      $workspaceId    Workspace UUID
-     * @param string      $workspacePath  Actual filesystem path to the workspace
-     * @param string|null $conversationId Conversation UUID
-     * @param string|null $projectName    Project name for container naming
-     * @param string|null $agentImage     Docker image to use for agent containers
+     * @param string            $workspaceId                     Workspace UUID
+     * @param string            $workspacePath                   Actual filesystem path to the workspace
+     * @param string|null       $conversationId                  Conversation UUID
+     * @param string|null       $projectName                     Project name for container naming
+     * @param string|null       $agentImage                      Docker image to use for agent containers
+     * @param list<string>|null $remoteContentAssetsManifestUrls URLs to manifest.json (or similar) for remote content assets
      */
     public function setContext(
         string  $workspaceId,
         string  $workspacePath,
         ?string $conversationId,
         ?string $projectName,
-        ?string $agentImage
+        ?string $agentImage,
+        ?array  $remoteContentAssetsManifestUrls = null
     ): void;
 
     /**
      * Clear the execution context.
      */
     public function clearContext(): void;
+
+    /**
+     * Get remote content assets manifest URLs configured for the current project.
+     *
+     * @return list<string>
+     */
+    public function getRemoteContentAssetsManifestUrls(): array;
 
     /**
      * Set a suggested commit message from the agent.

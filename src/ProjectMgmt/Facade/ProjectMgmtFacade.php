@@ -126,6 +126,7 @@ final class ProjectMgmtFacade implements ProjectMgmtFacadeInterface
             $project->getAgentBackgroundInstructions(),
             $project->getAgentStepInstructions(),
             $project->getAgentOutputInstructions(),
+            $project->getRemoteContentAssetsManifestUrls(),
         );
     }
 

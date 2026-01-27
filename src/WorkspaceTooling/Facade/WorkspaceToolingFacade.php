@@ -4,19 +4,22 @@ declare(strict_types=1);
 
 namespace App\WorkspaceTooling\Facade;
 
+use App\RemoteContentAssets\Facade\RemoteContentAssetsFacadeInterface;
 use App\WorkspaceTooling\Infrastructure\Execution\AgentExecutionContext;
 use EtfsCodingAgent\Service\FileOperationsServiceInterface;
 use EtfsCodingAgent\Service\ShellOperationsServiceInterface;
 use EtfsCodingAgent\Service\TextOperationsService;
 use EtfsCodingAgent\Service\WorkspaceToolingService as BaseWorkspaceToolingFacade;
+use Throwable;
 
 final class WorkspaceToolingFacade extends BaseWorkspaceToolingFacade implements WorkspaceToolingServiceInterface
 {
     public function __construct(
-        FileOperationsServiceInterface         $fileOperationsService,
-        TextOperationsService                  $textOperationsService,
-        ShellOperationsServiceInterface        $shellOperationsService,
-        private readonly AgentExecutionContext $executionContext
+        FileOperationsServiceInterface                      $fileOperationsService,
+        TextOperationsService                               $textOperationsService,
+        ShellOperationsServiceInterface                     $shellOperationsService,
+        private readonly AgentExecutionContext              $executionContext,
+        private readonly RemoteContentAssetsFacadeInterface $remoteContentAssetsFacade
     ) {
         parent::__construct(
             $fileOperationsService,
@@ -100,5 +103,38 @@ final class WorkspaceToolingFacade extends BaseWorkspaceToolingFacade implements
 
         // Build the browser preview URL
         return '/workspaces/' . $workspaceId . '/' . $relativePath;
+    }
+
+    public function listRemoteContentAssetUrls(): string
+    {
+        $manifestUrls = $this->executionContext->getRemoteContentAssetsManifestUrls();
+        if ($manifestUrls === []) {
+            return '[]';
+        }
+
+        try {
+            $urls = $this->remoteContentAssetsFacade->fetchAndMergeAssetUrls($manifestUrls);
+
+            return json_encode($urls, JSON_THROW_ON_ERROR);
+        } catch (Throwable) {
+            return '[]';
+        }
+    }
+
+    public function getRemoteAssetInfo(string $url): string
+    {
+        $info = $this->remoteContentAssetsFacade->getRemoteAssetInfo($url);
+        if ($info === null) {
+            return '{"error":"Could not retrieve asset info"}';
+        }
+        $payload = [
+            'url'         => $info->url,
+            'width'       => $info->width,
+            'height'      => $info->height,
+            'mimeType'    => $info->mimeType,
+            'sizeInBytes' => $info->sizeInBytes,
+        ];
+
+        return json_encode($payload, JSON_THROW_ON_ERROR);
     }
 }

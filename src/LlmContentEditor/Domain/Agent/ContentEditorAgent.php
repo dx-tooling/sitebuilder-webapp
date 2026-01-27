@@ -121,6 +121,11 @@ class ContentEditorAgent extends BaseCodingAgent
             '- Look for styleguides, examples, or documentation in the workspace',
             '- Examine existing files to understand patterns before creating new ones',
             '',
+            'REMOTE CONTENT ASSETS:',
+            '- In addition to files in the workspace, the project may have "remote" content assets (images, etc.) that can be embedded as-is.',
+            '- Call list_remote_content_asset_urls to get a JSON array of all remote asset URLs configured for this project. Use these URLs directly (e.g. in img src). If the tool returns an empty array, no remote manifests are configured.',
+            '- Call get_remote_asset_info with a URL to retrieve metadata (width, height, mimeType, sizeInBytes) for a remote image without downloading it. Use this when you need dimensions or format for embedding.',
+            '',
             'WORK SCOPE:',
             '- Modify existing pages, remove existing pages, create new pages, as the user wishes',
             '- If specifically requested, modify the styleguide, too',
@@ -225,6 +230,23 @@ class ContentEditorAgent extends BaseCodingAgent
                     true
                 )
             )->setCallable(fn (string $path): string => $this->sitebuilderFacade->getPreviewUrl($path)),
+
+            Tool::make(
+                'list_remote_content_asset_urls',
+                'Get the list of remote content asset URLs (images, etc.) from manifests configured for this project. Returns a JSON array of URLs that can be embedded as-is (e.g. in img src). Returns an empty array if no manifests are configured or all fetches fail.'
+            )->setCallable(fn (): string => $this->sitebuilderFacade->listRemoteContentAssetUrls()),
+
+            Tool::make(
+                'get_remote_asset_info',
+                'Get metadata (width, height, mimeType, sizeInBytes) for a remote image URL without downloading the full file. Returns JSON; on failure returns an object with an "error" key. Use for remote assets from list_remote_content_asset_urls when you need dimensions or format.'
+            )->addProperty(
+                new ToolProperty(
+                    'url',
+                    PropertyType::STRING,
+                    'The full URL of the remote image (e.g. from list_remote_content_asset_urls)',
+                    true
+                )
+            )->setCallable(fn (string $url): string => $this->sitebuilderFacade->getRemoteAssetInfo($url)),
         ]);
     }
 }
