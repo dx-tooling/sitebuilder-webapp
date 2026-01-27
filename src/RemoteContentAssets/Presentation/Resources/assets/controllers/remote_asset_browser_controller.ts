@@ -234,16 +234,17 @@ export default class extends Controller {
 
             const data = (await response.json()) as { urls?: string[] };
             this.urls = data.urls ?? [];
-            this.filteredUrls = this.urls;
 
-            this.updateCount();
             this.showLoading(false);
 
             if (this.urls.length === 0) {
+                this.filteredUrls = [];
+                this.updateCount();
                 this.showEmpty(true);
             } else {
-                this.showEmpty(false);
-                this.renderItems();
+                // Re-apply current search filter (if any) to the new URL list
+                this.filter();
+                this.showEmpty(this.filteredUrls.length === 0);
             }
         } catch {
             this.showLoading(false);
