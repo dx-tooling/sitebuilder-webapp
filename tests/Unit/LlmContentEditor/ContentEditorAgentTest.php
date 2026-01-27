@@ -108,6 +108,8 @@ final class ContentEditorAgentTest extends TestCase
         self::assertNotEmpty($instructions);
         $text = implode("\n", $instructions);
         self::assertStringContainsString('WORKSPACE CONVENTIONS', $text);
+        self::assertStringContainsString('REMOTE CONTENT ASSETS', $text);
+        self::assertStringContainsString('list_remote_content_asset_urls', $text);
     }
 
     private function createMockWorkspaceTooling(): WorkspaceToolingServiceInterface

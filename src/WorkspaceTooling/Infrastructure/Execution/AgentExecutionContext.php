@@ -35,26 +35,29 @@ final class AgentExecutionContext implements AgentExecutionContextInterface
     private ?string $suggestedCommitMessage = null;
 
     /**
+     * @var list<string>|null
+     */
+    private ?array $contentAssetsManifestUrls = null;
+
+    /**
      * Set the execution context for the current agent run.
      *
-     * @param string      $workspaceId    Workspace UUID
-     * @param string      $workspacePath  Actual filesystem path to the workspace
-     * @param string|null $conversationId Conversation UUID
-     * @param string|null $projectName    Project name for container naming
-     * @param string|null $agentImage     Docker image to use for agent containers
+     * @param list<string>|null $contentAssetsManifestUrls
      */
     public function setContext(
         string  $workspaceId,
         string  $workspacePath,
         ?string $conversationId,
         ?string $projectName,
-        ?string $agentImage
+        ?string $agentImage,
+        ?array  $contentAssetsManifestUrls = null
     ): void {
-        $this->workspaceId    = $workspaceId;
-        $this->workspacePath  = $workspacePath;
-        $this->conversationId = $conversationId;
-        $this->projectName    = $projectName;
-        $this->agentImage     = $agentImage;
+        $this->workspaceId               = $workspaceId;
+        $this->workspacePath             = $workspacePath;
+        $this->conversationId            = $conversationId;
+        $this->projectName               = $projectName;
+        $this->agentImage                = $agentImage;
+        $this->contentAssetsManifestUrls = $contentAssetsManifestUrls;
     }
 
     /**
@@ -62,12 +65,21 @@ final class AgentExecutionContext implements AgentExecutionContextInterface
      */
     public function clearContext(): void
     {
-        $this->workspaceId            = null;
-        $this->workspacePath          = null;
-        $this->conversationId         = null;
-        $this->projectName            = null;
-        $this->agentImage             = null;
-        $this->suggestedCommitMessage = null;
+        $this->workspaceId               = null;
+        $this->workspacePath             = null;
+        $this->conversationId            = null;
+        $this->projectName               = null;
+        $this->agentImage                = null;
+        $this->suggestedCommitMessage    = null;
+        $this->contentAssetsManifestUrls = null;
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function getContentAssetsManifestUrls(): array
+    {
+        return $this->contentAssetsManifestUrls ?? [];
     }
 
     public function getWorkspaceId(): ?string

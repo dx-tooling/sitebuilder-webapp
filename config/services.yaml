@@ -93,6 +93,8 @@ services:
             - "@EtfsCodingAgent\\Service\\FileOperationsServiceInterface"
             - "@EtfsCodingAgent\\Service\\TextOperationsService"
             - "@EtfsCodingAgent\\Service\\ShellOperationsServiceInterface"
+            - "@App\\WorkspaceTooling\\Infrastructure\\Execution\\AgentExecutionContext"
+            - "@App\\WorkspaceTooling\\Infrastructure\\RemoteManifestFetcher"
 
     # Facade bindings
     App\ProjectMgmt\Facade\ProjectMgmtFacadeInterface:

@@ -12,6 +12,7 @@ use App\ProjectMgmt\Domain\Service\ProjectService;
 use App\ProjectMgmt\Facade\Dto\ExistingLlmApiKeyDto;
 use App\ProjectMgmt\Facade\Enum\ProjectType;
 use App\ProjectMgmt\Facade\ProjectMgmtFacadeInterface;
+use App\ProjectMgmt\Infrastructure\Service\RemoteManifestValidatorInterface;
 use App\WorkspaceMgmt\Facade\Enum\WorkspaceStatus;
 use App\WorkspaceMgmt\Facade\WorkspaceMgmtFacadeInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -37,6 +38,7 @@ final class ProjectController extends AbstractController
         private readonly ChatBasedContentEditorFacadeInterface $chatBasedContentEditorFacade,
         private readonly AccountFacadeInterface                $accountFacade,
         private readonly LlmContentEditorFacadeInterface       $llmContentEditorFacade,
+        private readonly RemoteManifestValidatorInterface      $remoteManifestValidator,
         private readonly TranslatorInterface                   $translator,
     ) {
     }
@@ -140,6 +142,7 @@ final class ProjectController extends AbstractController
         $agentBackgroundInstructions = $this->nullIfEmpty($request->request->getString('agent_background_instructions'));
         $agentStepInstructions       = $this->nullIfEmpty($request->request->getString('agent_step_instructions'));
         $agentOutputInstructions     = $this->nullIfEmpty($request->request->getString('agent_output_instructions'));
+        $contentAssetsManifestUrls   = $this->parseContentAssetsManifestUrls($request);
 
         if ($name === '' || $gitUrl === '' || $githubToken === '' || $llmApiKey === '') {
             $this->addFlash('error', $this->translator->trans('flash.error.all_fields_required'));
@@ -169,7 +172,8 @@ final class ProjectController extends AbstractController
             $agentImage,
             $agentBackgroundInstructions,
             $agentStepInstructions,
-            $agentOutputInstructions
+            $agentOutputInstructions,
+            $contentAssetsManifestUrls
         );
         $this->addFlash('success', $this->translator->trans('flash.success.project_created'));
 
@@ -239,6 +243,7 @@ final class ProjectController extends AbstractController
         $agentBackgroundInstructions = $this->nullIfEmpty($request->request->getString('agent_background_instructions'));
         $agentStepInstructions       = $this->nullIfEmpty($request->request->getString('agent_step_instructions'));
         $agentOutputInstructions     = $this->nullIfEmpty($request->request->getString('agent_output_instructions'));
+        $contentAssetsManifestUrls   = $this->parseContentAssetsManifestUrls($request);
 
         if ($name === '' || $gitUrl === '' || $githubToken === '' || $llmApiKey === '') {
             $this->addFlash('error', $this->translator->trans('flash.error.all_fields_required'));
@@ -269,7 +274,8 @@ final class ProjectController extends AbstractController
             $agentImage,
             $agentBackgroundInstructions,
             $agentStepInstructions,
-            $agentOutputInstructions
+            $agentOutputInstructions,
+            $contentAssetsManifestUrls
         );
         $this->addFlash('success', $this->translator->trans('flash.success.project_updated'));
 
@@ -447,6 +453,27 @@ final class ProjectController extends AbstractController
         return new JsonResponse(['success' => $isValid]);
     }
 
+    #[Route(
+        path: '/projects/verify-manifest-url',
+        name: 'project_mgmt.presentation.verify_manifest_url',
+        methods: [Request::METHOD_POST]
+    )]
+    public function verifyManifestUrl(Request $request): JsonResponse
+    {
+        if (!$this->isCsrfTokenValid('verify_manifest_url', $request->request->getString('_csrf_token'))) {
+            return new JsonResponse(['valid' => false, 'error' => $this->translator->trans('api.error.invalid_csrf')], 403);
+        }
+
+        $url = trim($request->request->getString('url'));
+        if ($url === '') {
+            return new JsonResponse(['valid' => false, 'error' => $this->translator->trans('api.error.url_required')], 400);
+        }
+
+        $valid = $this->remoteManifestValidator->isValidManifestUrl($url);
+
+        return new JsonResponse(['valid' => $valid]);
+    }
+
     /**
      * Resolve the agent image from the request.
      * If "custom" is selected, use the custom_agent_image field.
@@ -504,5 +531,42 @@ final class ProjectController extends AbstractController
     private function nullIfEmpty(string $value): ?string
     {
         return $value === '' ? null : $value;
+    }
+
+    /**
+     * Parse content assets manifest URLs from request (textarea, one URL per line).
+     * Returns only valid http/https URLs; invalid lines are skipped.
+     *
+     * @return list<string>
+     */
+    private function parseContentAssetsManifestUrls(Request $request): array
+    {
+        $raw   = $request->request->getString('content_assets_manifest_urls');
+        $lines = preg_split('/\r\n|\r|\n/', $raw, -1, PREG_SPLIT_NO_EMPTY) ?: [];
+        $urls  = [];
+        foreach ($lines as $line) {
+            $line = trim($line);
+            if ($line === '') {
+                continue;
+            }
+            if ($this->isValidManifestUrlSyntax($line)) {
+                $urls[] = $line;
+            }
+        }
+
+        return $urls;
+    }
+
+    /**
+     * Check that the string is a valid http or https URL (syntax only).
+     */
+    private function isValidManifestUrlSyntax(string $url): bool
+    {
+        $parsed = parse_url($url);
+        if ($parsed === false || !array_key_exists('scheme', $parsed) || !array_key_exists('host', $parsed)) {
+            return false;
+        }
+
+        return $parsed['scheme'] === 'http' || $parsed['scheme'] === 'https';
     }
 }

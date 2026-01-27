@@ -121,6 +121,10 @@ class ContentEditorAgent extends BaseCodingAgent
             '- Look for styleguides, examples, or documentation in the workspace',
             '- Examine existing files to understand patterns before creating new ones',
             '',
+            'REMOTE CONTENT ASSETS:',
+            '- In addition to files in the workspace, the project may have "remote" content assets (images, etc.) that can be embedded as-is.',
+            '- Call list_remote_content_asset_urls to get a JSON array of all remote asset URLs configured for this project. Use these URLs directly (e.g. in img src). If the tool returns an empty array, no remote manifests are configured.',
+            '',
             'WORK SCOPE:',
             '- Modify existing pages, remove existing pages, create new pages, as the user wishes',
             '- If specifically requested, modify the styleguide, too',
@@ -225,6 +229,11 @@ class ContentEditorAgent extends BaseCodingAgent
                     true
                 )
             )->setCallable(fn (string $path): string => $this->sitebuilderFacade->getPreviewUrl($path)),
+
+            Tool::make(
+                'list_remote_content_asset_urls',
+                'Get the list of remote content asset URLs (images, etc.) from manifests configured for this project. Returns a JSON array of URLs that can be embedded as-is (e.g. in img src). Returns an empty array if no manifests are configured or all fetches fail.'
+            )->setCallable(fn (): string => $this->sitebuilderFacade->listRemoteContentAssetUrls()),
         ]);
     }
 }

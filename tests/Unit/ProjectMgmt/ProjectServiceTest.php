@@ -32,6 +32,32 @@ final class ProjectServiceTest extends TestCase
         self::assertSame('https://github.com/org/repo.git', $project->getGitUrl());
         self::assertSame('github-token-123', $project->getGithubToken());
         self::assertSame('sk-test-key-123', $project->getLlmApiKey());
+        self::assertSame([], $project->getContentAssetsManifestUrls());
+    }
+
+    public function testCreateStoresContentAssetsManifestUrlsWhenProvided(): void
+    {
+        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager->expects($this->once())->method('persist');
+        $entityManager->expects($this->once())->method('flush');
+
+        $service      = new ProjectService($entityManager);
+        $manifestUrls = ['https://cdn.example.com/manifest.json'];
+        $project      = $service->create(
+            'My Project',
+            'https://github.com/org/repo.git',
+            'token',
+            LlmModelProvider::OpenAI,
+            'sk-key',
+            \App\ProjectMgmt\Facade\Enum\ProjectType::DEFAULT,
+            'node:22-slim',
+            null,
+            null,
+            null,
+            $manifestUrls
+        );
+
+        self::assertSame($manifestUrls, $project->getContentAssetsManifestUrls());
     }
 
     public function testUpdateUpdatesAllProjectAttributes(): void

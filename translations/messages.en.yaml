@@ -126,6 +126,12 @@ project:
         create_token_link: "Create a token at:"
         add_project_button: "Add project"
         update_project_button: "Update project"
+        content_assets_manifest_urls: "Content assets manifest URLs"
+        content_assets_manifest_urls_help: "Optional. One URL per line to manifest.json (or similar) files that list content asset URLs (images, etc.). The agent can use these to embed remote assets. Leave empty if not used."
+        content_assets_manifest_urls_placeholder: "https://example.com/.well-known/manifest.json"
+        content_assets_manifest_urls_syntax_error: "Enter one URL per line; each line must be a valid http or https URL."
+        content_assets_manifest_urls_warning: 'One or more URLs did not return a valid manifest (expected JSON with an "urls" list). You can still save.'
+        content_assets_manifest_urls_verified: "All manifest URLs returned a valid format."
 
 # Chat-Based Content Editor vertical
 editor:
@@ -335,6 +341,7 @@ api:
         provider_and_key_required: "Provider and API key are required."
         invalid_provider: "Invalid provider."
         invalid_project_type: "Invalid project type."
+        url_required: "URL is required."
         session_not_found: "Session not found."
         failed_to_create_session: "Failed to create session."
         not_authorized_to_run: "Not authorized to run edits in this conversation."

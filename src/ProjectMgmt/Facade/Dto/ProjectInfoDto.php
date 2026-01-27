@@ -9,6 +9,9 @@ use App\ProjectMgmt\Facade\Enum\ProjectType;
 
 final readonly class ProjectInfoDto
 {
+    /**
+     * @param list<string> $contentAssetsManifestUrls
+     */
     public function __construct(
         public string           $id,
         public string           $name,
@@ -22,6 +25,7 @@ final readonly class ProjectInfoDto
         public string           $agentBackgroundInstructions,
         public string           $agentStepInstructions,
         public string           $agentOutputInstructions,
+        public array            $contentAssetsManifestUrls = [],
     ) {
     }
 }

@@ -23,6 +23,9 @@ class Project
     /**
      * @throws Exception
      */
+    /**
+     * @param list<string>|null $contentAssetsManifestUrls
+     */
     public function __construct(
         string           $name,
         string           $gitUrl,
@@ -33,16 +36,18 @@ class Project
         string           $agentImage = self::DEFAULT_AGENT_IMAGE,
         ?string          $agentBackgroundInstructions = null,
         ?string          $agentStepInstructions = null,
-        ?string          $agentOutputInstructions = null
+        ?string          $agentOutputInstructions = null,
+        ?array           $contentAssetsManifestUrls = null
     ) {
-        $this->name             = $name;
-        $this->gitUrl           = $gitUrl;
-        $this->githubToken      = $githubToken;
-        $this->llmModelProvider = $llmModelProvider;
-        $this->llmApiKey        = $llmApiKey;
-        $this->projectType      = $projectType;
-        $this->agentImage       = $agentImage;
-        $this->createdAt        = DateAndTimeService::getDateTimeImmutable();
+        $this->name                      = $name;
+        $this->gitUrl                    = $gitUrl;
+        $this->githubToken               = $githubToken;
+        $this->llmModelProvider          = $llmModelProvider;
+        $this->llmApiKey                 = $llmApiKey;
+        $this->projectType               = $projectType;
+        $this->agentImage                = $agentImage;
+        $this->createdAt                 = DateAndTimeService::getDateTimeImmutable();
+        $this->contentAssetsManifestUrls = $contentAssetsManifestUrls !== null && $contentAssetsManifestUrls !== [] ? $contentAssetsManifestUrls : null;
 
         // Initialize agent config from template if not provided
         $template                          = AgentConfigTemplate::forProjectType($projectType);
@@ -233,6 +238,31 @@ class Project
     public function setAgentOutputInstructions(string $agentOutputInstructions): void
     {
         $this->agentOutputInstructions = $agentOutputInstructions;
+    }
+
+    /**
+     * @var list<string>|null
+     */
+    #[ORM\Column(
+        type: Types::JSON,
+        nullable: true
+    )]
+    private ?array $contentAssetsManifestUrls = null;
+
+    /**
+     * @return list<string>
+     */
+    public function getContentAssetsManifestUrls(): array
+    {
+        return $this->contentAssetsManifestUrls ?? [];
+    }
+
+    /**
+     * @param list<string> $contentAssetsManifestUrls
+     */
+    public function setContentAssetsManifestUrls(array $contentAssetsManifestUrls): void
+    {
+        $this->contentAssetsManifestUrls = $contentAssetsManifestUrls === [] ? null : $contentAssetsManifestUrls;
     }
 
     #[ORM\Column(

@@ -39,7 +39,7 @@ final class AgentExecutionContextTest extends TestCase
     {
         $context = new AgentExecutionContext();
 
-        $context->setContext('workspace-id', '/path/to/workspace', 'conversation-id', 'project-name', 'agent-image');
+        $context->setContext('workspace-id', '/path/to/workspace', 'conversation-id', 'project-name', 'agent-image', null);
         $context->setSuggestedCommitMessage('Some commit message');
         $context->clearContext();
 
@@ -55,5 +55,31 @@ final class AgentExecutionContextTest extends TestCase
 
         self::assertSame('Standalone commit message', $context->getSuggestedCommitMessage());
         self::assertNull($context->getWorkspaceId());
+    }
+
+    public function testGetContentAssetsManifestUrlsReturnsEmptyByDefault(): void
+    {
+        $context = new AgentExecutionContext();
+
+        self::assertSame([], $context->getContentAssetsManifestUrls());
+    }
+
+    public function testSetContextStoresContentAssetsManifestUrls(): void
+    {
+        $context = new AgentExecutionContext();
+        $urls    = ['https://cdn.example.com/manifest.json'];
+
+        $context->setContext('ws-id', '/path', null, 'project', 'image', $urls);
+
+        self::assertSame($urls, $context->getContentAssetsManifestUrls());
+    }
+
+    public function testClearContextResetsContentAssetsManifestUrls(): void
+    {
+        $context = new AgentExecutionContext();
+        $context->setContext('ws-id', '/path', null, 'project', 'image', ['https://a.com/m.json']);
+        $context->clearContext();
+
+        self::assertSame([], $context->getContentAssetsManifestUrls());
     }
 }

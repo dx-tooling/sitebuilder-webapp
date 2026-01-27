@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace App\WorkspaceTooling\Facade;
 
 use App\WorkspaceTooling\Infrastructure\Execution\AgentExecutionContext;
+use App\WorkspaceTooling\Infrastructure\RemoteManifestFetcher;
 use EtfsCodingAgent\Service\FileOperationsServiceInterface;
 use EtfsCodingAgent\Service\ShellOperationsServiceInterface;
 use EtfsCodingAgent\Service\TextOperationsService;
 use EtfsCodingAgent\Service\WorkspaceToolingService as BaseWorkspaceToolingFacade;
+use Throwable;
 
 final class WorkspaceToolingFacade extends BaseWorkspaceToolingFacade implements WorkspaceToolingServiceInterface
 {
@@ -16,7 +18,8 @@ final class WorkspaceToolingFacade extends BaseWorkspaceToolingFacade implements
         FileOperationsServiceInterface         $fileOperationsService,
         TextOperationsService                  $textOperationsService,
         ShellOperationsServiceInterface        $shellOperationsService,
-        private readonly AgentExecutionContext $executionContext
+        private readonly AgentExecutionContext $executionContext,
+        private readonly RemoteManifestFetcher $remoteManifestFetcher
     ) {
         parent::__construct(
             $fileOperationsService,
@@ -100,5 +103,21 @@ final class WorkspaceToolingFacade extends BaseWorkspaceToolingFacade implements
 
         // Build the browser preview URL
         return '/workspaces/' . $workspaceId . '/' . $relativePath;
+    }
+
+    public function listRemoteContentAssetUrls(): string
+    {
+        $manifestUrls = $this->executionContext->getContentAssetsManifestUrls();
+        if ($manifestUrls === []) {
+            return '[]';
+        }
+
+        try {
+            $urls = $this->remoteManifestFetcher->fetchAndMergeAssetUrls($manifestUrls);
+
+            return json_encode($urls, JSON_THROW_ON_ERROR);
+        } catch (Throwable) {
+            return '[]';
+        }
     }
 }
