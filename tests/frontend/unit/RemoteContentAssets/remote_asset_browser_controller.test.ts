@@ -23,7 +23,13 @@ describe("RemoteAssetBrowserController", () => {
         const html = `
             <div data-controller="remote-asset-browser"
                  data-remote-asset-browser-fetch-url-value="${fetchUrl}"
-                 data-remote-asset-browser-window-size-value="50">
+                 data-remote-asset-browser-window-size-value="50"
+                 data-remote-asset-browser-add-to-chat-label-value="Add to chat"
+                 data-remote-asset-browser-open-in-new-tab-label-value="Open in new tab">
+                <input type="text"
+                       data-remote-asset-browser-target="search"
+                       data-action="input->remote-asset-browser#filter"
+                       placeholder="Search...">
                 <div data-remote-asset-browser-target="loading">Loading...</div>
                 <div data-remote-asset-browser-target="empty" class="hidden">No assets</div>
                 <span data-remote-asset-browser-target="count"></span>
@@ -289,5 +295,127 @@ describe("RemoteAssetBrowserController", () => {
 
         // All URLs should render as images
         expect(images.length).toBe(7);
+    });
+
+    it("filters assets by search query", async () => {
+        const mockFetch = vi.fn().mockResolvedValue({
+            ok: true,
+            json: () =>
+                Promise.resolve({
+                    urls: [
+                        "https://example.com/photo.jpg",
+                        "https://example.com/banner.png",
+                        "https://example.com/logo.svg",
+                    ],
+                }),
+        });
+        vi.stubGlobal("fetch", mockFetch);
+
+        await createControllerElement();
+        await new Promise((resolve) => setTimeout(resolve, 100));
+
+        const searchInput = document.querySelector('[data-remote-asset-browser-target="search"]') as HTMLInputElement;
+        const listEl = document.querySelector('[data-remote-asset-browser-target="list"]') as HTMLElement;
+
+        // Initially shows all 3 items
+        expect(listEl.querySelectorAll('button[title="Add to chat"]').length).toBe(3);
+
+        // Type search query
+        searchInput.value = "logo";
+        searchInput.dispatchEvent(new Event("input", { bubbles: true }));
+
+        await new Promise((resolve) => setTimeout(resolve, 50));
+
+        // Now shows only 1 item
+        expect(listEl.querySelectorAll('button[title="Add to chat"]').length).toBe(1);
+    });
+
+    it("shows filtered count when searching", async () => {
+        const mockFetch = vi.fn().mockResolvedValue({
+            ok: true,
+            json: () =>
+                Promise.resolve({
+                    urls: [
+                        "https://example.com/photo.jpg",
+                        "https://example.com/banner.png",
+                        "https://example.com/logo.svg",
+                    ],
+                }),
+        });
+        vi.stubGlobal("fetch", mockFetch);
+
+        await createControllerElement();
+        await new Promise((resolve) => setTimeout(resolve, 100));
+
+        const searchInput = document.querySelector('[data-remote-asset-browser-target="search"]') as HTMLInputElement;
+        const countEl = document.querySelector('[data-remote-asset-browser-target="count"]') as HTMLElement;
+
+        // Initially shows total count
+        expect(countEl.textContent).toBe("(3)");
+
+        // Type search query
+        searchInput.value = "photo";
+        searchInput.dispatchEvent(new Event("input", { bubbles: true }));
+
+        await new Promise((resolve) => setTimeout(resolve, 50));
+
+        // Shows filtered/total count
+        expect(countEl.textContent).toBe("(1/3)");
+    });
+
+    it("shows empty state when search has no matches", async () => {
+        const mockFetch = vi.fn().mockResolvedValue({
+            ok: true,
+            json: () =>
+                Promise.resolve({
+                    urls: ["https://example.com/photo.jpg", "https://example.com/banner.png"],
+                }),
+        });
+        vi.stubGlobal("fetch", mockFetch);
+
+        await createControllerElement();
+        await new Promise((resolve) => setTimeout(resolve, 100));
+
+        const searchInput = document.querySelector('[data-remote-asset-browser-target="search"]') as HTMLInputElement;
+        const emptyEl = document.querySelector('[data-remote-asset-browser-target="empty"]') as HTMLElement;
+
+        // Type search query that matches nothing
+        searchInput.value = "nonexistent";
+        searchInput.dispatchEvent(new Event("input", { bubbles: true }));
+
+        await new Promise((resolve) => setTimeout(resolve, 50));
+
+        expect(emptyEl.classList.contains("hidden")).toBe(false);
+    });
+
+    it("clears filter when search is emptied", async () => {
+        const mockFetch = vi.fn().mockResolvedValue({
+            ok: true,
+            json: () =>
+                Promise.resolve({
+                    urls: ["https://example.com/photo.jpg", "https://example.com/banner.png"],
+                }),
+        });
+        vi.stubGlobal("fetch", mockFetch);
+
+        await createControllerElement();
+        await new Promise((resolve) => setTimeout(resolve, 100));
+
+        const searchInput = document.querySelector('[data-remote-asset-browser-target="search"]') as HTMLInputElement;
+        const listEl = document.querySelector('[data-remote-asset-browser-target="list"]') as HTMLElement;
+
+        // Filter down to 1 item
+        searchInput.value = "photo";
+        searchInput.dispatchEvent(new Event("input", { bubbles: true }));
+        await new Promise((resolve) => setTimeout(resolve, 50));
+        expect(listEl.querySelectorAll('button[title="Add to chat"]').length).toBe(1);
+
+        // Clear search
+        searchInput.value = "";
+        searchInput.dispatchEvent(new Event("input", { bubbles: true }));
+        await new Promise((resolve) => setTimeout(resolve, 50));
+
+        // All items visible again
+        expect(listEl.querySelectorAll('button[title="Add to chat"]').length).toBe(2);
     });
 });

@@ -376,6 +376,9 @@ js:
 remote_content_assets:
     browser_title: "Remote Assets"
     browser_empty: "No remote assets available"
+    browser_search_placeholder: "Search assets..."
+    browser_add_to_chat: "Add to chat"
+    browser_open_in_new_tab: "Open in new tab"
 
 # Language switcher
 language:

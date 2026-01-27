@@ -4,6 +4,7 @@ import { Controller } from "@hotwired/stimulus";
  * Stimulus controller for browsing remote content assets.
  * Features:
  * - Fetches asset URLs from configured manifest endpoint
+ * - Search/filter by filename
  * - Scrollable list with configurable visible window size
  * - Image preview for image URLs
  * - Click to open asset in new tab
@@ -13,12 +14,16 @@ export default class extends Controller {
     static values = {
         fetchUrl: String,
         windowSize: { type: Number, default: 20 },
+        addToChatLabel: { type: String, default: "Add to chat" },
+        openInNewTabLabel: { type: String, default: "Open in new tab" },
     };
 
-    static targets = ["list", "count", "loading", "empty"];
+    static targets = ["list", "count", "loading", "empty", "search"];
 
     declare readonly fetchUrlValue: string;
     declare readonly windowSizeValue: number;
+    declare readonly addToChatLabelValue: string;
+    declare readonly openInNewTabLabelValue: string;
 
     declare readonly hasListTarget: boolean;
     declare readonly listTarget: HTMLElement;
@@ -28,8 +33,11 @@ export default class extends Controller {
     declare readonly loadingTarget: HTMLElement;
     declare readonly hasEmptyTarget: boolean;
     declare readonly emptyTarget: HTMLElement;
+    declare readonly hasSearchTarget: boolean;
+    declare readonly searchTarget: HTMLInputElement;
 
     private urls: string[] = [];
+    private filteredUrls: string[] = [];
     private itemHeight: number = 64;
     private isLoading: boolean = false;
 
@@ -56,6 +64,7 @@ export default class extends Controller {
 
             const data = (await response.json()) as { urls?: string[] };
             this.urls = data.urls ?? [];
+            this.filteredUrls = this.urls;
 
             this.updateCount();
             this.showLoading(false);
@@ -88,12 +97,40 @@ export default class extends Controller {
 
     private updateCount(): void {
         if (this.hasCountTarget) {
-            this.countTarget.textContent = `(${this.urls.length})`;
+            if (this.filteredUrls.length === this.urls.length) {
+                this.countTarget.textContent = `(${this.urls.length})`;
+            } else {
+                this.countTarget.textContent = `(${this.filteredUrls.length}/${this.urls.length})`;
+            }
         }
     }
 
+    /**
+     * Filter assets by search query. Triggered by input event on search field.
+     */
+    filter(): void {
+        if (!this.hasSearchTarget) {
+            return;
+        }
+
+        const query = this.searchTarget.value.trim().toLowerCase();
+
+        if (query === "") {
+            this.filteredUrls = this.urls;
+        } else {
+            this.filteredUrls = this.urls.filter((url) => {
+                const filename = this.extractFilename(url).toLowerCase();
+
+                return filename.includes(query);
+            });
+        }
+
+        this.updateCount();
+        this.renderItems();
+    }
+
     private renderItems(): void {
-        if (!this.hasListTarget || this.urls.length === 0) {
+        if (!this.hasListTarget) {
             return;
         }
 
@@ -101,10 +138,20 @@ export default class extends Controller {
         this.listTarget.style.maxHeight = `${this.windowSizeValue * this.itemHeight}px`;
         this.listTarget.style.overflowY = "auto";
 
-        // Render all items - native scrolling handles the rest
+        // Clear list
         this.listTarget.innerHTML = "";
 
-        for (const url of this.urls) {
+        // Show empty state if no filtered results
+        if (this.filteredUrls.length === 0) {
+            this.showEmpty(true);
+
+            return;
+        }
+
+        this.showEmpty(false);
+
+        // Render filtered items
+        for (const url of this.filteredUrls) {
             const itemEl = this.createAssetItem(url);
             this.listTarget.appendChild(itemEl);
         }
@@ -127,7 +174,7 @@ export default class extends Controller {
         previewLink.rel = "noopener noreferrer";
         previewLink.className =
             "w-12 h-12 flex-shrink-0 rounded bg-dark-100 dark:bg-dark-700 overflow-hidden flex items-center justify-center";
-        previewLink.title = "Open in new tab";
+        previewLink.title = this.openInNewTabLabelValue;
         previewLink.addEventListener("click", (e) => {
             e.stopPropagation(); // Prevent row click from firing
         });
@@ -168,7 +215,7 @@ export default class extends Controller {
         const addButton = document.createElement("button");
         addButton.type = "button";
         addButton.className = "p-1.5 text-dark-400 hover:text-primary-600 dark:hover:text-primary-400 flex-shrink-0";
-        addButton.title = "Add to chat";
+        addButton.title = this.addToChatLabelValue;
         addButton.innerHTML = `<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>`;
