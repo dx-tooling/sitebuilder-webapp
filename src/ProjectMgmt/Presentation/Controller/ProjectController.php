@@ -162,6 +162,14 @@ final class ProjectController extends AbstractController
             return $this->redirectToRoute('project_mgmt.presentation.new');
         }
 
+        // S3 upload configuration (all optional)
+        $s3BucketName      = $this->nullIfEmpty($request->request->getString('s3_bucket_name'));
+        $s3Region          = $this->nullIfEmpty($request->request->getString('s3_region'));
+        $s3AccessKeyId     = $this->nullIfEmpty($request->request->getString('s3_access_key_id'));
+        $s3SecretAccessKey = $this->nullIfEmpty($request->request->getString('s3_secret_access_key'));
+        $s3IamRoleArn      = $this->nullIfEmpty($request->request->getString('s3_iam_role_arn'));
+        $s3KeyPrefix       = $this->nullIfEmpty($request->request->getString('s3_key_prefix'));
+
         $this->projectService->create(
             $name,
             $gitUrl,
@@ -173,7 +181,13 @@ final class ProjectController extends AbstractController
             $agentBackgroundInstructions,
             $agentStepInstructions,
             $agentOutputInstructions,
-            $remoteContentAssetsManifestUrls
+            $remoteContentAssetsManifestUrls,
+            $s3BucketName,
+            $s3Region,
+            $s3AccessKeyId,
+            $s3SecretAccessKey,
+            $s3IamRoleArn,
+            $s3KeyPrefix
         );
         $this->addFlash('success', $this->translator->trans('flash.success.project_created'));
 
@@ -263,6 +277,14 @@ final class ProjectController extends AbstractController
             return $this->redirectToRoute('project_mgmt.presentation.edit', ['id' => $id]);
         }
 
+        // S3 upload configuration (all optional)
+        $s3BucketName      = $this->nullIfEmpty($request->request->getString('s3_bucket_name'));
+        $s3Region          = $this->nullIfEmpty($request->request->getString('s3_region'));
+        $s3AccessKeyId     = $this->nullIfEmpty($request->request->getString('s3_access_key_id'));
+        $s3SecretAccessKey = $this->nullIfEmpty($request->request->getString('s3_secret_access_key'));
+        $s3IamRoleArn      = $this->nullIfEmpty($request->request->getString('s3_iam_role_arn'));
+        $s3KeyPrefix       = $this->nullIfEmpty($request->request->getString('s3_key_prefix'));
+
         $this->projectService->update(
             $project,
             $name,
@@ -275,7 +297,13 @@ final class ProjectController extends AbstractController
             $agentBackgroundInstructions,
             $agentStepInstructions,
             $agentOutputInstructions,
-            $remoteContentAssetsManifestUrls
+            $remoteContentAssetsManifestUrls,
+            $s3BucketName,
+            $s3Region,
+            $s3AccessKeyId,
+            $s3SecretAccessKey,
+            $s3IamRoleArn,
+            $s3KeyPrefix
         );
         $this->addFlash('success', $this->translator->trans('flash.success.project_updated'));
 
@@ -470,6 +498,38 @@ final class ProjectController extends AbstractController
         }
 
         $valid = $this->remoteContentAssetsFacade->isValidManifestUrl($url);
+
+        return new JsonResponse(['valid' => $valid]);
+    }
+
+    #[Route(
+        path: '/projects/verify-s3-credentials',
+        name: 'project_mgmt.presentation.verify_s3_credentials',
+        methods: [Request::METHOD_POST]
+    )]
+    public function verifyS3Credentials(Request $request): JsonResponse
+    {
+        if (!$this->isCsrfTokenValid('verify_s3_credentials', $request->request->getString('_csrf_token'))) {
+            return new JsonResponse(['valid' => false, 'error' => $this->translator->trans('api.error.invalid_csrf')], 403);
+        }
+
+        $bucketName      = trim($request->request->getString('bucket_name'));
+        $region          = trim($request->request->getString('region'));
+        $accessKeyId     = trim($request->request->getString('access_key_id'));
+        $secretAccessKey = trim($request->request->getString('secret_access_key'));
+        $iamRoleArn      = trim($request->request->getString('iam_role_arn'));
+
+        if ($bucketName === '' || $region === '' || $accessKeyId === '' || $secretAccessKey === '') {
+            return new JsonResponse(['valid' => false, 'error' => $this->translator->trans('api.error.s3_required_fields')], 400);
+        }
+
+        $valid = $this->remoteContentAssetsFacade->verifyS3Credentials(
+            $bucketName,
+            $region,
+            $accessKeyId,
+            $secretAccessKey,
+            $iamRoleArn === '' ? null : $iamRoleArn
+        );
 
         return new JsonResponse(['valid' => $valid]);
     }

@@ -41,4 +41,50 @@ interface RemoteContentAssetsFacadeInterface
      * @return list<string>
      */
     public function fetchAndMergeAssetUrls(array $manifestUrls): array;
+
+    /**
+     * Verify that S3 credentials are valid and the bucket is accessible.
+     *
+     * @param string      $bucketName      The S3 bucket name
+     * @param string      $region          The AWS region
+     * @param string      $accessKeyId     The AWS access key ID
+     * @param string      $secretAccessKey The AWS secret access key
+     * @param string|null $iamRoleArn      Optional IAM role to assume
+     *
+     * @return bool True if credentials are valid and bucket is accessible
+     */
+    public function verifyS3Credentials(
+        string  $bucketName,
+        string  $region,
+        string  $accessKeyId,
+        string  $secretAccessKey,
+        ?string $iamRoleArn
+    ): bool;
+
+    /**
+     * Upload an asset to S3.
+     *
+     * @param string      $bucketName      The S3 bucket name
+     * @param string      $region          The AWS region
+     * @param string      $accessKeyId     The AWS access key ID
+     * @param string      $secretAccessKey The AWS secret access key
+     * @param string|null $iamRoleArn      Optional IAM role to assume
+     * @param string|null $keyPrefix       Optional key prefix (folder) for uploads
+     * @param string      $filename        The original filename
+     * @param string      $contents        The file contents
+     * @param string      $mimeType        The MIME type of the file
+     *
+     * @return string The public URL of the uploaded file
+     */
+    public function uploadAsset(
+        string  $bucketName,
+        string  $region,
+        string  $accessKeyId,
+        string  $secretAccessKey,
+        ?string $iamRoleArn,
+        ?string $keyPrefix,
+        string  $filename,
+        string  $contents,
+        string  $mimeType
+    ): string;
 }

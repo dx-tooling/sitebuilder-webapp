@@ -27,6 +27,7 @@ common:
     password: "Password"
     continue: "Continue"
     loading: "Loading..."
+    optional: "optional"
 
 # Account vertical
 account:
@@ -133,6 +134,26 @@ project:
         remote_content_assets_manifest_urls_syntax_error: "Enter one URL per line; each line must be a valid http or https URL."
         remote_content_assets_manifest_urls_warning: 'One or more URLs did not return a valid manifest (expected JSON with an "urls" list). You can still save.'
         remote_content_assets_manifest_urls_verified: "All manifest URLs returned a valid format."
+        # S3 Upload Configuration
+        s3_upload_config: "S3 Upload Configuration"
+        s3_upload_description: "Configure AWS S3 credentials to enable uploading new assets directly from the chat editor. This is optional - you can still use manifest URLs without S3 upload."
+        s3_bucket_name: "Bucket Name"
+        s3_bucket_name_placeholder: "my-assets-bucket"
+        s3_region: "AWS Region"
+        s3_region_placeholder: "Select a region..."
+        s3_access_key_id: "Access Key ID"
+        s3_access_key_id_placeholder: "AKIAIOSFODNN7EXAMPLE"
+        s3_secret_access_key: "Secret Access Key"
+        s3_secret_access_key_placeholder: "Enter your AWS secret key"
+        s3_iam_role_arn: "IAM Role ARN"
+        s3_iam_role_arn_placeholder: "arn:aws:iam::123456789012:role/MyRole"
+        s3_iam_role_arn_help: "If your credentials need to assume a different role to access the bucket, enter the role ARN here."
+        s3_key_prefix: "Key Prefix (Folder)"
+        s3_key_prefix_placeholder: "uploads/assets"
+        s3_key_prefix_help: "Optional path prefix for uploaded files. Files will be stored in this 'folder' within the bucket."
+        verifying_s3_credentials: "Verifying S3 credentials..."
+        s3_credentials_verified: "S3 credentials verified successfully"
+        s3_credentials_failed: "Could not verify S3 credentials. Check bucket name, region, and permissions."
 
 # Chat-Based Content Editor vertical
 editor:
@@ -347,6 +368,7 @@ api:
         failed_to_create_session: "Failed to create session."
         not_authorized_to_run: "Not authorized to run edits in this conversation."
         conversation_not_active: "Conversation is no longer active."
+        s3_required_fields: "Bucket name, region, access key ID, and secret access key are required."
 
 # Frontend JavaScript translations (passed via data attributes)
 js:
@@ -379,6 +401,11 @@ remote_content_assets:
     browser_search_placeholder: "Search assets..."
     browser_add_to_chat: "Add to chat"
     browser_open_in_new_tab: "Open in new tab"
+    browser_upload_dropzone: "Drop image here to upload"
+    browser_upload_hint: "JPEG, PNG, GIF, WebP, SVG, AVIF (max 10MB)"
+    browser_uploading: "Uploading..."
+    browser_upload_success: "Upload complete. Refreshing asset list..."
+    browser_upload_error: "Upload failed. Please try again."
 
 # Language switcher
 language:

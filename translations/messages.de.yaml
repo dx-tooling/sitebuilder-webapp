@@ -27,6 +27,7 @@ common:
     password: "Passwort"
     continue: "Weiter"
     loading: "Wird geladen..."
+    optional: "optional"
 
 # Account vertical
 account:
@@ -133,6 +134,26 @@ project:
         remote_content_assets_manifest_urls_syntax_error: "Eine URL pro Zeile; jede Zeile muss eine gültige http- oder https-URL sein."
         remote_content_assets_manifest_urls_warning: 'Eine oder mehrere URLs lieferten kein gültiges Manifest (erwartet: JSON mit "urls"-Liste). Sie können trotzdem speichern.'
         remote_content_assets_manifest_urls_verified: "Alle Manifest-URLs haben ein gültiges Format."
+        # S3 Upload Configuration
+        s3_upload_config: "S3-Upload-Konfiguration"
+        s3_upload_description: "Konfigurieren Sie AWS S3-Anmeldedaten, um das Hochladen neuer Assets direkt aus dem Chat-Editor zu ermöglichen. Dies ist optional - Sie können weiterhin Manifest-URLs ohne S3-Upload verwenden."
+        s3_bucket_name: "Bucket-Name"
+        s3_bucket_name_placeholder: "mein-assets-bucket"
+        s3_region: "AWS-Region"
+        s3_region_placeholder: "Region auswählen..."
+        s3_access_key_id: "Zugriffsschlüssel-ID"
+        s3_access_key_id_placeholder: "AKIAIOSFODNN7EXAMPLE"
+        s3_secret_access_key: "Geheimer Zugriffsschlüssel"
+        s3_secret_access_key_placeholder: "AWS-Geheimschlüssel eingeben"
+        s3_iam_role_arn: "IAM-Rollen-ARN"
+        s3_iam_role_arn_placeholder: "arn:aws:iam::123456789012:role/MeineRolle"
+        s3_iam_role_arn_help: "Wenn Ihre Anmeldedaten eine andere Rolle annehmen müssen, um auf den Bucket zuzugreifen, geben Sie hier den Rollen-ARN ein."
+        s3_key_prefix: "Schlüsselpräfix (Ordner)"
+        s3_key_prefix_placeholder: "uploads/assets"
+        s3_key_prefix_help: "Optionaler Pfadpräfix für hochgeladene Dateien. Dateien werden in diesem 'Ordner' innerhalb des Buckets gespeichert."
+        verifying_s3_credentials: "S3-Anmeldedaten werden überprüft..."
+        s3_credentials_verified: "S3-Anmeldedaten erfolgreich verifiziert"
+        s3_credentials_failed: "S3-Anmeldedaten konnten nicht verifiziert werden. Überprüfen Sie Bucket-Name, Region und Berechtigungen."
 
 # Chat-Based Content Editor vertical
 editor:
@@ -347,6 +368,7 @@ api:
         failed_to_create_session: "Sitzung konnte nicht erstellt werden."
         not_authorized_to_run: "Nicht berechtigt, Änderungen in dieser Unterhaltung auszuführen."
         conversation_not_active: "Die Unterhaltung ist nicht mehr aktiv."
+        s3_required_fields: "Bucket-Name, Region, Zugriffsschlüssel-ID und geheimer Zugriffsschlüssel sind erforderlich."
 
 # Frontend JavaScript translations (passed via data attributes)
 js:
@@ -379,6 +401,11 @@ remote_content_assets:
     browser_search_placeholder: "Assets suchen..."
     browser_add_to_chat: "Zum Chat hinzufügen"
     browser_open_in_new_tab: "In neuem Tab öffnen"
+    browser_upload_dropzone: "Bild hier ablegen zum Hochladen"
+    browser_upload_hint: "JPEG, PNG, GIF, WebP, SVG, AVIF (max. 10MB)"
+    browser_uploading: "Wird hochgeladen..."
+    browser_upload_success: "Upload abgeschlossen. Asset-Liste wird aktualisiert..."
+    browser_upload_error: "Upload fehlgeschlagen. Bitte erneut versuchen."
 
 # Language switcher
 language:

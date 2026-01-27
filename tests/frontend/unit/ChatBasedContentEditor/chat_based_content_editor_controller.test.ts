@@ -1,6 +1,66 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import ChatBasedContentEditorController from "../../../../src/ChatBasedContentEditor/Presentation/Resources/assets/controllers/chat_based_content_editor_controller.ts";
 
+describe("ChatBasedContentEditorController handleUploadComplete", () => {
+    const createControllerWithInstructionTarget = (): {
+        controller: ChatBasedContentEditorController;
+        textarea: HTMLTextAreaElement;
+    } => {
+        const textarea = document.createElement("textarea");
+        textarea.id = "instruction";
+
+        const controller = Object.create(
+            ChatBasedContentEditorController.prototype,
+        ) as ChatBasedContentEditorController;
+        const state = controller as unknown as {
+            hasInstructionTarget: boolean;
+            instructionTarget: HTMLTextAreaElement;
+        };
+        state.hasInstructionTarget = true;
+        state.instructionTarget = textarea;
+
+        return { controller, textarea };
+    };
+
+    it("prepends system note to empty textarea", () => {
+        const { controller, textarea } = createControllerWithInstructionTarget();
+        textarea.value = "";
+
+        controller.handleUploadComplete();
+
+        expect(textarea.value).toBe("[System Note: a new remote asset has been uploaded]\n\n");
+    });
+
+    it("prepends system note to existing text", () => {
+        const { controller, textarea } = createControllerWithInstructionTarget();
+        textarea.value = "Please add an image here";
+
+        controller.handleUploadComplete();
+
+        expect(textarea.value).toBe("[System Note: a new remote asset has been uploaded]\n\nPlease add an image here");
+    });
+
+    it("does not duplicate system note if already present", () => {
+        const { controller, textarea } = createControllerWithInstructionTarget();
+        textarea.value = "[System Note: a new remote asset has been uploaded]\n\nSome text";
+
+        controller.handleUploadComplete();
+
+        expect(textarea.value).toBe("[System Note: a new remote asset has been uploaded]\n\nSome text");
+    });
+
+    it("does nothing without instruction target", () => {
+        const controller = Object.create(
+            ChatBasedContentEditorController.prototype,
+        ) as ChatBasedContentEditorController;
+        const state = controller as unknown as { hasInstructionTarget: boolean };
+        state.hasInstructionTarget = false;
+
+        // Should not throw
+        expect(() => controller.handleUploadComplete()).not.toThrow();
+    });
+});
+
 describe("ChatBasedContentEditorController activity indicators", () => {
     let controller: ChatBasedContentEditorController | null = null;
 

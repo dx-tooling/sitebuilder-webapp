@@ -127,6 +127,12 @@ final class ProjectMgmtFacade implements ProjectMgmtFacadeInterface
             $project->getAgentStepInstructions(),
             $project->getAgentOutputInstructions(),
             $project->getRemoteContentAssetsManifestUrls(),
+            $project->getS3BucketName(),
+            $project->getS3Region(),
+            $project->getS3AccessKeyId(),
+            $project->getS3SecretAccessKey(),
+            $project->getS3IamRoleArn(),
+            $project->getS3KeyPrefix(),
         );
     }
 

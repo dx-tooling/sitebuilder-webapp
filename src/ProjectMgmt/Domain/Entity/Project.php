@@ -265,6 +265,121 @@ class Project
         $this->remoteContentAssetsManifestUrls = $remoteContentAssetsManifestUrls === [] ? null : $remoteContentAssetsManifestUrls;
     }
 
+    // S3 Upload Configuration (all optional)
+
+    #[ORM\Column(
+        type: Types::STRING,
+        length: 255,
+        nullable: true
+    )]
+    private ?string $s3BucketName = null;
+
+    public function getS3BucketName(): ?string
+    {
+        return $this->s3BucketName;
+    }
+
+    public function setS3BucketName(?string $s3BucketName): void
+    {
+        $this->s3BucketName = $s3BucketName;
+    }
+
+    #[ORM\Column(
+        type: Types::STRING,
+        length: 64,
+        nullable: true
+    )]
+    private ?string $s3Region = null;
+
+    public function getS3Region(): ?string
+    {
+        return $this->s3Region;
+    }
+
+    public function setS3Region(?string $s3Region): void
+    {
+        $this->s3Region = $s3Region;
+    }
+
+    #[ORM\Column(
+        type: Types::STRING,
+        length: 256,
+        nullable: true
+    )]
+    private ?string $s3AccessKeyId = null;
+
+    public function getS3AccessKeyId(): ?string
+    {
+        return $this->s3AccessKeyId;
+    }
+
+    public function setS3AccessKeyId(?string $s3AccessKeyId): void
+    {
+        $this->s3AccessKeyId = $s3AccessKeyId;
+    }
+
+    #[ORM\Column(
+        type: Types::STRING,
+        length: 256,
+        nullable: true
+    )]
+    private ?string $s3SecretAccessKey = null;
+
+    public function getS3SecretAccessKey(): ?string
+    {
+        return $this->s3SecretAccessKey;
+    }
+
+    public function setS3SecretAccessKey(?string $s3SecretAccessKey): void
+    {
+        $this->s3SecretAccessKey = $s3SecretAccessKey;
+    }
+
+    #[ORM\Column(
+        type: Types::STRING,
+        length: 2048,
+        nullable: true
+    )]
+    private ?string $s3IamRoleArn = null;
+
+    public function getS3IamRoleArn(): ?string
+    {
+        return $this->s3IamRoleArn;
+    }
+
+    public function setS3IamRoleArn(?string $s3IamRoleArn): void
+    {
+        $this->s3IamRoleArn = $s3IamRoleArn;
+    }
+
+    #[ORM\Column(
+        type: Types::STRING,
+        length: 1024,
+        nullable: true
+    )]
+    private ?string $s3KeyPrefix = null;
+
+    public function getS3KeyPrefix(): ?string
+    {
+        return $this->s3KeyPrefix;
+    }
+
+    public function setS3KeyPrefix(?string $s3KeyPrefix): void
+    {
+        $this->s3KeyPrefix = $s3KeyPrefix;
+    }
+
+    /**
+     * Check if S3 upload is configured (all required fields present).
+     */
+    public function hasS3UploadConfigured(): bool
+    {
+        return $this->s3BucketName      !== null
+            && $this->s3Region          !== null
+            && $this->s3AccessKeyId     !== null
+            && $this->s3SecretAccessKey !== null;
+    }
+
     #[ORM\Column(
         type: Types::DATETIME_IMMUTABLE,
         nullable: false

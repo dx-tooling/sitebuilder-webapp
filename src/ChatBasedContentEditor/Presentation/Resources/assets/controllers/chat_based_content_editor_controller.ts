@@ -1123,4 +1123,23 @@ export default class extends Controller {
         textarea.setSelectionRange(newPos, newPos);
         textarea.focus();
     }
+
+    /**
+     * Handle upload complete event from remote-asset-browser controller.
+     * Prepends a system note to the instruction textarea to inform the agent.
+     */
+    handleUploadComplete(): void {
+        if (!this.hasInstructionTarget) {
+            return;
+        }
+
+        const systemNote = "[System Note: a new remote asset has been uploaded]\n\n";
+        const textarea = this.instructionTarget;
+        const currentValue = textarea.value;
+
+        // Only prepend if not already present
+        if (!currentValue.startsWith(systemNote)) {
+            textarea.value = systemNote + currentValue;
+        }
+    }
 }
