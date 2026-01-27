@@ -83,12 +83,20 @@ final readonly class RunEditSessionHandler
                 return;
             }
 
+            $agentImage = $project->agentImage;
+            if ($conversation->getContentEditorBackend() === ContentEditorBackend::CursorAgent) {
+                $cursorAgentImage = $_ENV['CURSOR_AGENT_IMAGE'] ?? null;
+                if (is_string($cursorAgentImage) && $cursorAgentImage !== '') {
+                    $agentImage = $cursorAgentImage;
+                }
+            }
+
             $this->executionContext->setContext(
                 $conversation->getWorkspaceId(),
                 $session->getWorkspacePath(),
                 $conversation->getId(),
                 $workspace->projectName,
-                $project->agentImage,
+                $agentImage,
                 $project->remoteContentAssetsManifestUrls
             );
 

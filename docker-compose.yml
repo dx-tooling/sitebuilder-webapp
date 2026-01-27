@@ -1,5 +1,6 @@
 services:
     app:
+        image: etfs_${ETFS_PROJECT_NAME}_app
         build:
             context: .
             dockerfile: docker/app/Dockerfile
@@ -7,6 +8,7 @@ services:
         volumes:
             - .:/var/www
             - mise_data:/opt/mise
+            - /var/run/docker.sock:/var/run/docker.sock
         environment:
             # Redirect cache and config directories to /tmp to avoid polluting the mounted project directory
             HOME: /tmp/container-home
@@ -19,6 +21,8 @@ services:
             MISE_DATA_DIR: /opt/mise/data
             MISE_CACHE_DIR: /opt/mise/cache
             MISE_STATE_DIR: /opt/mise/state
+            # Use the app image (includes Cursor Agent CLI) for agent runs
+            CURSOR_AGENT_IMAGE: etfs_${ETFS_PROJECT_NAME}_app
         networks:
             - default
         depends_on:
@@ -26,6 +30,7 @@ services:
         restart: unless-stopped
 
     messenger:
+        image: etfs_${ETFS_PROJECT_NAME}_app
         build:
             context: .
             dockerfile: docker/app/Dockerfile
@@ -49,6 +54,8 @@ services:
             # The messenger runs Docker commands via the host socket, so paths must be host paths
             # Uses PWD as default, which is set by docker-compose to the project directory
             HOST_PROJECT_PATH: ${HOST_PROJECT_PATH:-${PWD}}
+            # Use the app image (includes Cursor Agent CLI) for agent runs
+            CURSOR_AGENT_IMAGE: etfs_${ETFS_PROJECT_NAME}_app
         networks:
             - default
         depends_on:

@@ -20,21 +20,17 @@ class ContentEditorAgent extends BaseCodingAgent
         string  $prompt,
         string  $apiKey,
         ?string $resumeSessionId = null
-    ): string
-    {
-        $agentBinary = $_ENV['CURSOR_AGENT_BINARY'] ?? 'agent';
-        if (!is_string($agentBinary) || $agentBinary === '') {
-            $agentBinary = 'agent';
-        }
-
+    ): string {
         $sessionArg = '';
         if ($resumeSessionId !== null && $resumeSessionId !== '') {
             $sessionArg = '--resume ' . escapeshellarg($resumeSessionId);
         }
 
         $command = sprintf(
-            '%s --output-format stream-json --stream-partial-output %s --api-key %s -p %s',
-            escapeshellcmd($agentBinary),
+            'AGENT_BIN=%s; ' .
+            'if [ ! -x "$AGENT_BIN" ]; then echo "agent not found" >&2; exit 127; fi; ' .
+            '"$AGENT_BIN" --output-format stream-json --stream-partial-output %s --api-key %s -p %s',
+            escapeshellarg('/root/.local/bin/agent'),
             $sessionArg,
             escapeshellarg($apiKey),
             escapeshellarg($prompt)

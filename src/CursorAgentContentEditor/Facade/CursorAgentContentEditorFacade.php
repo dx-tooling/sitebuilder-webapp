@@ -7,6 +7,7 @@ namespace App\CursorAgentContentEditor\Facade;
 use App\CursorAgentContentEditor\Domain\Agent\ContentEditorAgent;
 use App\CursorAgentContentEditor\Infrastructure\Streaming\CursorAgentStreamCollector;
 use App\LlmContentEditor\Facade\Dto\AgentConfigDto;
+use App\LlmContentEditor\Facade\Dto\AgentEventDto;
 use App\LlmContentEditor\Facade\Dto\ConversationMessageDto;
 use App\LlmContentEditor\Facade\Dto\EditStreamChunkDto;
 use App\WorkspaceTooling\Facade\AgentExecutionContextInterface;
@@ -20,7 +21,7 @@ final class CursorAgentContentEditorFacade implements CursorAgentContentEditorFa
 
     public function __construct(
         private readonly WorkspaceToolingServiceInterface $workspaceTooling,
-        private readonly AgentExecutionContextInterface  $executionContext,
+        private readonly AgentExecutionContextInterface   $executionContext,
     ) {
     }
 
@@ -45,6 +46,8 @@ final class CursorAgentContentEditorFacade implements CursorAgentContentEditorFa
         try {
             $prompt = $this->buildPrompt($instruction, $previousMessages, $cursorAgentSessionId === null);
 
+            yield new EditStreamChunkDto('event', null, new AgentEventDto('inference_start'));
+
             $agent = new ContentEditorAgent($this->workspaceTooling);
             $agent->run('/workspace', $prompt, $apiKey, $cursorAgentSessionId);
 
@@ -54,6 +57,8 @@ final class CursorAgentContentEditorFacade implements CursorAgentContentEditorFa
                 yield $chunk;
             }
 
+            yield new EditStreamChunkDto('event', null, new AgentEventDto('inference_stop'));
+
             yield new EditStreamChunkDto(
                 'done',
                 null,
@@ -62,6 +67,7 @@ final class CursorAgentContentEditorFacade implements CursorAgentContentEditorFa
                 $collector->getErrorMessage()
             );
         } catch (Throwable $e) {
+            yield new EditStreamChunkDto('event', null, new AgentEventDto('inference_stop'));
             yield new EditStreamChunkDto('done', null, null, false, $e->getMessage());
         } finally {
             $this->executionContext->setOutputCallback(null);

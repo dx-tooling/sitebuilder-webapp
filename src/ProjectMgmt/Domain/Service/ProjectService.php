@@ -25,18 +25,18 @@ final class ProjectService
      * @param list<string>|null $remoteContentAssetsManifestUrls
      */
     public function create(
-        string           $name,
-        string           $gitUrl,
-        string           $githubToken,
-        LlmModelProvider $llmModelProvider,
-        string           $llmApiKey,
-        ProjectType      $projectType = ProjectType::DEFAULT,
+        string               $name,
+        string               $gitUrl,
+        string               $githubToken,
+        LlmModelProvider     $llmModelProvider,
+        string               $llmApiKey,
+        ProjectType          $projectType = ProjectType::DEFAULT,
         ContentEditorBackend $contentEditorBackend = ContentEditorBackend::Llm,
-        string           $agentImage = Project::DEFAULT_AGENT_IMAGE,
-        ?string          $agentBackgroundInstructions = null,
-        ?string          $agentStepInstructions = null,
-        ?string          $agentOutputInstructions = null,
-        ?array           $remoteContentAssetsManifestUrls = null
+        string               $agentImage = Project::DEFAULT_AGENT_IMAGE,
+        ?string              $agentBackgroundInstructions = null,
+        ?string              $agentStepInstructions = null,
+        ?string              $agentOutputInstructions = null,
+        ?array               $remoteContentAssetsManifestUrls = null
     ): Project {
         $project = new Project(
             $name,
@@ -62,19 +62,19 @@ final class ProjectService
      * @param list<string>|null $remoteContentAssetsManifestUrls
      */
     public function update(
-        Project          $project,
-        string           $name,
-        string           $gitUrl,
-        string           $githubToken,
-        LlmModelProvider $llmModelProvider,
-        string           $llmApiKey,
-        ProjectType      $projectType = ProjectType::DEFAULT,
+        Project              $project,
+        string               $name,
+        string               $gitUrl,
+        string               $githubToken,
+        LlmModelProvider     $llmModelProvider,
+        string               $llmApiKey,
+        ProjectType          $projectType = ProjectType::DEFAULT,
         ContentEditorBackend $contentEditorBackend = ContentEditorBackend::Llm,
-        string           $agentImage = Project::DEFAULT_AGENT_IMAGE,
-        ?string          $agentBackgroundInstructions = null,
-        ?string          $agentStepInstructions = null,
-        ?string          $agentOutputInstructions = null,
-        ?array           $remoteContentAssetsManifestUrls = null
+        string               $agentImage = Project::DEFAULT_AGENT_IMAGE,
+        ?string              $agentBackgroundInstructions = null,
+        ?string              $agentStepInstructions = null,
+        ?string              $agentOutputInstructions = null,
+        ?array               $remoteContentAssetsManifestUrls = null
     ): void {
         $project->setName($name);
         $project->setGitUrl($gitUrl);

@@ -136,9 +136,9 @@ services:
         class: App\ChatBasedContentEditor\Infrastructure\ContentEditor\ContentEditorFacade
         arguments:
             - [
-                '@App\ChatBasedContentEditor\Infrastructure\ContentEditor\LlmContentEditorAdapter',
-                '@App\ChatBasedContentEditor\Infrastructure\ContentEditor\CursorAgentContentEditorAdapter'
-            ]
+                  '@App\ChatBasedContentEditor\Infrastructure\ContentEditor\LlmContentEditorAdapter',
+                  '@App\ChatBasedContentEditor\Infrastructure\ContentEditor\CursorAgentContentEditorAdapter',
+              ]
 
     # Domain service bindings
     App\WorkspaceMgmt\Domain\Service\WorkspaceStatusGuardInterface:

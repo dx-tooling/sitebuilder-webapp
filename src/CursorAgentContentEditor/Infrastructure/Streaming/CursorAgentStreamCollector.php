@@ -31,6 +31,7 @@ final class CursorAgentStreamCollector
     private ?string $lastSessionId = null;
 
     private string $assistantBuffer = '';
+    private bool $hasEmittedText    = false;
 
     public function __construct()
     {
@@ -57,18 +58,18 @@ final class CursorAgentStreamCollector
             }
 
             try {
-                /** @var mixed $decoded */
                 $decoded = json_decode($line, true, 512, JSON_THROW_ON_ERROR);
             } catch (JsonException) {
                 continue;
             }
 
-            if (!is_array($decoded)) {
+            $normalized = $this->normalizeEvent($decoded);
+            if ($normalized === null) {
                 continue;
             }
 
-            $this->captureSessionId($decoded);
-            $this->handleEvent($decoded);
+            $this->captureSessionId($normalized);
+            $this->handleEvent($normalized);
         }
     }
 
@@ -106,7 +107,7 @@ final class CursorAgentStreamCollector
      */
     private function handleEvent(array $event): void
     {
-        $type    = $event['type'] ?? null;
+        $type    = $event['type']    ?? null;
         $subtype = $event['subtype'] ?? null;
 
         if (!is_string($type)) {
@@ -149,7 +150,6 @@ final class CursorAgentStreamCollector
         if ($subtype === 'delta') {
             if (!$this->thinkingStarted) {
                 $this->thinkingStarted = true;
-                $this->enqueueEvent(new AgentEventDto('inference_start'));
             }
 
             return;
@@ -167,7 +167,6 @@ final class CursorAgentStreamCollector
         }
 
         $this->thinkingStarted = false;
-        $this->enqueueEvent(new AgentEventDto('inference_stop'));
     }
 
     /**
@@ -225,9 +224,14 @@ final class CursorAgentStreamCollector
             }
 
             if (($item['type'] ?? null) === 'text' && is_string($item['text'] ?? null)) {
-                $text                  = $item['text'];
-                $this->assistantBuffer .= $text;
-                $this->chunks->enqueue(new EditStreamChunkDto('text', $text));
+                $text  = $item['text'];
+                $delta = $this->resolveAssistantDelta($text);
+                if ($delta === '') {
+                    continue;
+                }
+
+                $this->hasEmittedText = true;
+                $this->chunks->enqueue(new EditStreamChunkDto('text', $delta));
             }
         }
     }
@@ -238,11 +242,11 @@ final class CursorAgentStreamCollector
     private function handleResult(array $event, ?string $subtype): void
     {
         if ($subtype === 'success') {
-            $this->resultSuccess = true;
+            $this->resultSuccess      = true;
             $this->resultErrorMessage = null;
 
             $result = $event['result'] ?? null;
-            if (is_string($result) && $result !== '' && $this->assistantBuffer === '') {
+            if (!$this->hasEmittedText && is_string($result) && $result !== '') {
                 $this->chunks->enqueue(new EditStreamChunkDto('text', $result));
             }
 
@@ -325,5 +329,44 @@ final class CursorAgentStreamCollector
         }
 
         return mb_substr($value, 0, $maxLength) . '...';
+    }
+
+    private function resolveAssistantDelta(string $incoming): string
+    {
+        if ($incoming === '') {
+            return '';
+        }
+
+        if ($this->assistantBuffer !== '' && str_starts_with($incoming, $this->assistantBuffer)) {
+            $delta                 = substr($incoming, strlen($this->assistantBuffer));
+            $this->assistantBuffer = $incoming;
+
+            return $delta;
+        }
+
+        $this->assistantBuffer .= $incoming;
+
+        return $incoming;
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private function normalizeEvent(mixed $decoded): ?array
+    {
+        if (!is_array($decoded)) {
+            return null;
+        }
+
+        $normalized = [];
+        foreach ($decoded as $key => $value) {
+            if (!is_string($key)) {
+                continue;
+            }
+
+            $normalized[$key] = $value;
+        }
+
+        return $normalized;
     }
 }

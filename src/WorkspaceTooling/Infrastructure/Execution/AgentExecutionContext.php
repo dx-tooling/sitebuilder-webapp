@@ -74,7 +74,7 @@ final class AgentExecutionContext implements AgentExecutionContextInterface
         $this->agentImage                      = null;
         $this->suggestedCommitMessage          = null;
         $this->remoteContentAssetsManifestUrls = null;
-        $this->outputCallback         = null;
+        $this->outputCallback                  = null;
     }
 
     /**

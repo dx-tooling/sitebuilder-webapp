@@ -26,19 +26,19 @@ class Conversation
      * @throws Exception
      */
     public function __construct(
-        string $workspaceId,
-        string $userId,
-        string $workspacePath,
+        string               $workspaceId,
+        string               $userId,
+        string               $workspacePath,
         ContentEditorBackend $contentEditorBackend = ContentEditorBackend::Llm
     ) {
-        $this->workspaceId   = $workspaceId;
-        $this->userId        = $userId;
-        $this->workspacePath = $workspacePath;
-        $this->status        = ConversationStatus::ONGOING;
+        $this->workspaceId          = $workspaceId;
+        $this->userId               = $userId;
+        $this->workspacePath        = $workspacePath;
+        $this->status               = ConversationStatus::ONGOING;
         $this->contentEditorBackend = $contentEditorBackend;
-        $this->createdAt     = DateAndTimeService::getDateTimeImmutable();
-        $this->editSessions  = new ArrayCollection();
-        $this->messages      = new ArrayCollection();
+        $this->createdAt            = DateAndTimeService::getDateTimeImmutable();
+        $this->editSessions         = new ArrayCollection();
+        $this->messages             = new ArrayCollection();
     }
 
     #[ORM\Id]
@@ -111,7 +111,8 @@ class Conversation
         type: Types::STRING,
         length: 32,
         nullable: false,
-        enumType: ContentEditorBackend::class
+        enumType: ContentEditorBackend::class,
+        options: ['default' => ContentEditorBackend::Llm->value]
     )]
     private ContentEditorBackend $contentEditorBackend = ContentEditorBackend::Llm;
 

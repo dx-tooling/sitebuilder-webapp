@@ -28,18 +28,18 @@ class Project
      * @param list<string>|null $remoteContentAssetsManifestUrls
      */
     public function __construct(
-        string           $name,
-        string           $gitUrl,
-        string           $githubToken,
-        LlmModelProvider $llmModelProvider,
-        string           $llmApiKey,
-        ProjectType      $projectType = ProjectType::DEFAULT,
+        string               $name,
+        string               $gitUrl,
+        string               $githubToken,
+        LlmModelProvider     $llmModelProvider,
+        string               $llmApiKey,
+        ProjectType          $projectType = ProjectType::DEFAULT,
         ContentEditorBackend $contentEditorBackend = ContentEditorBackend::Llm,
-        string           $agentImage = self::DEFAULT_AGENT_IMAGE,
-        ?string          $agentBackgroundInstructions = null,
-        ?string          $agentStepInstructions = null,
-        ?string          $agentOutputInstructions = null,
-        ?array           $remoteContentAssetsManifestUrls = null
+        string               $agentImage = self::DEFAULT_AGENT_IMAGE,
+        ?string              $agentBackgroundInstructions = null,
+        ?string              $agentStepInstructions = null,
+        ?string              $agentOutputInstructions = null,
+        ?array               $remoteContentAssetsManifestUrls = null
     ) {
         $this->name                            = $name;
         $this->gitUrl                          = $gitUrl;
@@ -47,7 +47,7 @@ class Project
         $this->llmModelProvider                = $llmModelProvider;
         $this->llmApiKey                       = $llmApiKey;
         $this->projectType                     = $projectType;
-        $this->contentEditorBackend = $contentEditorBackend;
+        $this->contentEditorBackend            = $contentEditorBackend;
         $this->agentImage                      = $agentImage;
         $this->createdAt                       = DateAndTimeService::getDateTimeImmutable();
         $this->remoteContentAssetsManifestUrls = $remoteContentAssetsManifestUrls !== null && $remoteContentAssetsManifestUrls !== [] ? $remoteContentAssetsManifestUrls : null;
@@ -146,7 +146,8 @@ class Project
         type: Types::STRING,
         length: 32,
         nullable: false,
-        enumType: ContentEditorBackend::class
+        enumType: ContentEditorBackend::class,
+        options: ['default' => ContentEditorBackend::Llm->value]
     )]
     private ContentEditorBackend $contentEditorBackend = ContentEditorBackend::Llm;
 

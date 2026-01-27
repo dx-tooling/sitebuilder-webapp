@@ -112,11 +112,11 @@ final class ProjectController extends AbstractController
         $defaultTemplate = $this->projectMgmtFacade->getAgentConfigTemplate(ProjectType::DEFAULT);
 
         return $this->render('@project_mgmt.presentation/project_form.twig', [
-            'project'             => null,
-            'llmProviders'        => LlmModelProvider::cases(),
+            'project'               => null,
+            'llmProviders'          => LlmModelProvider::cases(),
             'contentEditorBackends' => ContentEditorBackend::cases(),
-            'existingLlmKeys'     => $this->projectMgmtFacade->getExistingLlmApiKeys(),
-            'agentConfigTemplate' => $defaultTemplate,
+            'existingLlmKeys'       => $this->projectMgmtFacade->getExistingLlmApiKeys(),
+            'agentConfigTemplate'   => $defaultTemplate,
         ]);
     }
 
@@ -133,13 +133,13 @@ final class ProjectController extends AbstractController
             return $this->redirectToRoute('project_mgmt.presentation.new');
         }
 
-        $name             = $request->request->getString('name');
-        $gitUrl           = $request->request->getString('git_url');
-        $githubToken      = $request->request->getString('github_token');
-        $llmModelProvider = LlmModelProvider::tryFrom($request->request->getString('llm_model_provider'));
+        $name                 = $request->request->getString('name');
+        $gitUrl               = $request->request->getString('git_url');
+        $githubToken          = $request->request->getString('github_token');
+        $llmModelProvider     = LlmModelProvider::tryFrom($request->request->getString('llm_model_provider'));
         $contentEditorBackend = ContentEditorBackend::tryFrom($request->request->getString('content_editor_backend'));
-        $llmApiKey        = $request->request->getString('llm_api_key');
-        $agentImage       = $this->resolveAgentImage($request);
+        $llmApiKey            = $request->request->getString('llm_api_key');
+        $agentImage           = $this->resolveAgentImage($request);
 
         // Agent configuration (optional - uses template defaults if empty)
         $agentBackgroundInstructions     = $this->nullIfEmpty($request->request->getString('agent_background_instructions'));
@@ -215,11 +215,11 @@ final class ProjectController extends AbstractController
         $agentConfigTemplate = $this->projectMgmtFacade->getAgentConfigTemplate($project->getProjectType());
 
         return $this->render('@project_mgmt.presentation/project_form.twig', [
-            'project'             => $project,
-            'llmProviders'        => LlmModelProvider::cases(),
+            'project'               => $project,
+            'llmProviders'          => LlmModelProvider::cases(),
             'contentEditorBackends' => ContentEditorBackend::cases(),
-            'existingLlmKeys'     => $existingLlmKeys,
-            'agentConfigTemplate' => $agentConfigTemplate,
+            'existingLlmKeys'       => $existingLlmKeys,
+            'agentConfigTemplate'   => $agentConfigTemplate,
         ]);
     }
 
@@ -243,13 +243,13 @@ final class ProjectController extends AbstractController
             return $this->redirectToRoute('project_mgmt.presentation.edit', ['id' => $id]);
         }
 
-        $name             = $request->request->getString('name');
-        $gitUrl           = $request->request->getString('git_url');
-        $githubToken      = $request->request->getString('github_token');
-        $llmModelProvider = LlmModelProvider::tryFrom($request->request->getString('llm_model_provider'));
+        $name                 = $request->request->getString('name');
+        $gitUrl               = $request->request->getString('git_url');
+        $githubToken          = $request->request->getString('github_token');
+        $llmModelProvider     = LlmModelProvider::tryFrom($request->request->getString('llm_model_provider'));
         $contentEditorBackend = ContentEditorBackend::tryFrom($request->request->getString('content_editor_backend'));
-        $llmApiKey        = $request->request->getString('llm_api_key');
-        $agentImage       = $this->resolveAgentImage($request);
+        $llmApiKey            = $request->request->getString('llm_api_key');
+        $agentImage           = $this->resolveAgentImage($request);
 
         // Agent configuration (null means keep existing values)
         $agentBackgroundInstructions     = $this->nullIfEmpty($request->request->getString('agent_background_instructions'));

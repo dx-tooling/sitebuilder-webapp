@@ -51,7 +51,7 @@ final class ConversationService
             return $this->toDto($existingConversation);
         }
 
-        $projectInfo = $this->projectMgmtFacade->getProjectInfo($projectId);
+        $projectInfo          = $this->projectMgmtFacade->getProjectInfo($projectId);
         $contentEditorBackend = ContentEditorBackend::from($projectInfo->contentEditorBackend->value);
 
         // Transition workspace to IN_CONVERSATION
