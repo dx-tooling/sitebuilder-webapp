@@ -4,7 +4,7 @@
 set -e
 
 if [ ! -f .env.local ]; then
-    echo "HOST_PROJECT_PATH=$(pwd)" > .env.local
+    echo "HOST_PROJECT_PATH=\"$(pwd)\"" > .env.local
 fi
 
 HOST_PROJECT_PATH="${HOST_PROJECT_PATH:-$(pwd)}" /usr/bin/env docker compose up --build -d
