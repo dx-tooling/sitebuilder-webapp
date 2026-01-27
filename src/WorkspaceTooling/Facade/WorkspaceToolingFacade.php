@@ -6,7 +6,6 @@ namespace App\WorkspaceTooling\Facade;
 
 use App\RemoteContentAssets\Facade\RemoteContentAssetsFacadeInterface;
 use App\WorkspaceTooling\Infrastructure\Execution\AgentExecutionContext;
-use App\WorkspaceTooling\Infrastructure\RemoteManifestFetcher;
 use EtfsCodingAgent\Service\FileOperationsServiceInterface;
 use EtfsCodingAgent\Service\ShellOperationsServiceInterface;
 use EtfsCodingAgent\Service\TextOperationsService;
@@ -20,7 +19,6 @@ final class WorkspaceToolingFacade extends BaseWorkspaceToolingFacade implements
         TextOperationsService                               $textOperationsService,
         ShellOperationsServiceInterface                     $shellOperationsService,
         private readonly AgentExecutionContext              $executionContext,
-        private readonly RemoteManifestFetcher              $remoteManifestFetcher,
         private readonly RemoteContentAssetsFacadeInterface $remoteContentAssetsFacade
     ) {
         parent::__construct(
@@ -115,7 +113,7 @@ final class WorkspaceToolingFacade extends BaseWorkspaceToolingFacade implements
         }
 
         try {
-            $urls = $this->remoteManifestFetcher->fetchAndMergeAssetUrls($manifestUrls);
+            $urls = $this->remoteContentAssetsFacade->fetchAndMergeAssetUrls($manifestUrls);
 
             return json_encode($urls, JSON_THROW_ON_ERROR);
         } catch (Throwable) {

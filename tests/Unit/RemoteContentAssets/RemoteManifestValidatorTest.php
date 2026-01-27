@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Tests\Unit\ProjectMgmt;
+namespace App\Tests\Unit\RemoteContentAssets;
 
-use App\ProjectMgmt\Infrastructure\Service\RemoteManifestValidator;
+use App\RemoteContentAssets\Infrastructure\RemoteManifestValidator;
 use PHPUnit\Framework\TestCase;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;

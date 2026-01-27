@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\ProjectMgmt\Infrastructure\Service;
+namespace App\RemoteContentAssets\Infrastructure;
 
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Throwable;

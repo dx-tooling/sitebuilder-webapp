@@ -12,7 +12,7 @@ use App\ProjectMgmt\Domain\Service\ProjectService;
 use App\ProjectMgmt\Facade\Dto\ExistingLlmApiKeyDto;
 use App\ProjectMgmt\Facade\Enum\ProjectType;
 use App\ProjectMgmt\Facade\ProjectMgmtFacadeInterface;
-use App\ProjectMgmt\Infrastructure\Service\RemoteManifestValidatorInterface;
+use App\RemoteContentAssets\Facade\RemoteContentAssetsFacadeInterface;
 use App\WorkspaceMgmt\Facade\Enum\WorkspaceStatus;
 use App\WorkspaceMgmt\Facade\WorkspaceMgmtFacadeInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -38,7 +38,7 @@ final class ProjectController extends AbstractController
         private readonly ChatBasedContentEditorFacadeInterface $chatBasedContentEditorFacade,
         private readonly AccountFacadeInterface                $accountFacade,
         private readonly LlmContentEditorFacadeInterface       $llmContentEditorFacade,
-        private readonly RemoteManifestValidatorInterface      $remoteManifestValidator,
+        private readonly RemoteContentAssetsFacadeInterface    $remoteContentAssetsFacade,
         private readonly TranslatorInterface                   $translator,
     ) {
     }
@@ -469,7 +469,7 @@ final class ProjectController extends AbstractController
             return new JsonResponse(['valid' => false, 'error' => $this->translator->trans('api.error.url_required')], 400);
         }
 
-        $valid = $this->remoteManifestValidator->isValidManifestUrl($url);
+        $valid = $this->remoteContentAssetsFacade->isValidManifestUrl($url);
 
         return new JsonResponse(['valid' => $valid]);
     }

@@ -86,15 +86,24 @@ services:
         arguments:
             - "@EtfsCodingAgent\\Service\\FileOperationsServiceInterface"
 
-    # Remote content assets - fetcher implementation
+    # Remote content assets infrastructure bindings
     App\RemoteContentAssets\Infrastructure\RemoteImageInfoFetcherInterface:
         class: App\RemoteContentAssets\Infrastructure\RemoteImageInfoFetcher
 
-    # Remote content assets facade - metadata for remote images (dimensions, size, mime type)
+    App\RemoteContentAssets\Infrastructure\RemoteManifestValidatorInterface:
+        class: App\RemoteContentAssets\Infrastructure\RemoteManifestValidator
+
+    App\RemoteContentAssets\Infrastructure\RemoteManifestFetcherInterface:
+        class: App\RemoteContentAssets\Infrastructure\RemoteManifestFetcher
+
+    # Remote content assets facade - metadata for remote images (dimensions, size, mime type),
+    # manifest validation and fetching
     App\RemoteContentAssets\Facade\RemoteContentAssetsFacadeInterface:
         class: App\RemoteContentAssets\Facade\RemoteContentAssetsFacade
         arguments:
             - "@App\\RemoteContentAssets\\Infrastructure\\RemoteImageInfoFetcherInterface"
+            - "@App\\RemoteContentAssets\\Infrastructure\\RemoteManifestValidatorInterface"
+            - "@App\\RemoteContentAssets\\Infrastructure\\RemoteManifestFetcherInterface"
 
     # Sitebuilder-specific workspace tooling facade
     App\WorkspaceTooling\Facade\WorkspaceToolingFacadeInterface:
@@ -104,7 +113,6 @@ services:
             - "@EtfsCodingAgent\\Service\\TextOperationsService"
             - "@EtfsCodingAgent\\Service\\ShellOperationsServiceInterface"
             - "@App\\WorkspaceTooling\\Infrastructure\\Execution\\AgentExecutionContext"
-            - "@App\\WorkspaceTooling\\Infrastructure\\RemoteManifestFetcher"
             - "@App\\RemoteContentAssets\\Facade\\RemoteContentAssetsFacadeInterface"
 
     # Facade bindings

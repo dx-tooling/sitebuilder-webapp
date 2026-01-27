@@ -8,13 +8,10 @@ use App\RemoteContentAssets\Facade\Dto\RemoteContentAssetInfoDto;
 use App\RemoteContentAssets\Facade\RemoteContentAssetsFacadeInterface;
 use App\WorkspaceTooling\Facade\WorkspaceToolingFacade;
 use App\WorkspaceTooling\Infrastructure\Execution\AgentExecutionContext;
-use App\WorkspaceTooling\Infrastructure\RemoteManifestFetcher;
 use EtfsCodingAgent\Service\FileOperationsService;
 use EtfsCodingAgent\Service\ShellOperationsServiceInterface;
 use EtfsCodingAgent\Service\TextOperationsService;
 use PHPUnit\Framework\TestCase;
-use Psr\Log\LoggerInterface;
-use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 final class WorkspaceToolingFacadeTest extends TestCase
 {
@@ -240,16 +237,12 @@ final class WorkspaceToolingFacadeTest extends TestCase
 
     private function createFacade(): WorkspaceToolingFacade
     {
-        $fileOps  = new FileOperationsService();
-        $textOps  = new TextOperationsService($fileOps);
-        $shellOps = $this->createMock(ShellOperationsServiceInterface::class);
-        $fetcher  = new RemoteManifestFetcher(
-            $this->createMock(HttpClientInterface::class),
-            $this->createMock(LoggerInterface::class)
-        );
+        $fileOps                   = new FileOperationsService();
+        $textOps                   = new TextOperationsService($fileOps);
+        $shellOps                  = $this->createMock(ShellOperationsServiceInterface::class);
         $remoteContentAssetsFacade = $this->createMock(RemoteContentAssetsFacadeInterface::class);
 
-        return new WorkspaceToolingFacade($fileOps, $textOps, $shellOps, $this->executionContext, $fetcher, $remoteContentAssetsFacade);
+        return new WorkspaceToolingFacade($fileOps, $textOps, $shellOps, $this->executionContext, $remoteContentAssetsFacade);
     }
 
     public function testGetRemoteAssetInfoReturnsErrorJsonWhenFacadeReturnsNull(): void
@@ -293,12 +286,8 @@ final class WorkspaceToolingFacadeTest extends TestCase
         $fileOps  = new FileOperationsService();
         $textOps  = new TextOperationsService($fileOps);
         $shellOps = $this->createMock(ShellOperationsServiceInterface::class);
-        $fetcher  = new RemoteManifestFetcher(
-            $this->createMock(HttpClientInterface::class),
-            $this->createMock(LoggerInterface::class)
-        );
 
-        return new WorkspaceToolingFacade($fileOps, $textOps, $shellOps, $this->executionContext, $fetcher, $remoteContentAssetsFacade);
+        return new WorkspaceToolingFacade($fileOps, $textOps, $shellOps, $this->executionContext, $remoteContentAssetsFacade);
     }
 
     private function removeDirectory(string $dir): void

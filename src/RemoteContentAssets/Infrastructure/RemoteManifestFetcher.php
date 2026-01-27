@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\WorkspaceTooling\Infrastructure;
+namespace App\RemoteContentAssets\Infrastructure;
 
 use Psr\Log\LoggerInterface;
 use RuntimeException;
@@ -14,7 +14,7 @@ use Throwable;
  * Only includes entries that are fully qualified absolute URIs (http/https).
  * Logs and skips any manifest that fails to fetch or parse.
  */
-final class RemoteManifestFetcher
+final class RemoteManifestFetcher implements RemoteManifestFetcherInterface
 {
     private const int REQUEST_TIMEOUT = 10;
 
