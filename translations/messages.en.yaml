@@ -126,12 +126,12 @@ project:
         create_token_link: "Create a token at:"
         add_project_button: "Add project"
         update_project_button: "Update project"
-        content_assets_manifest_urls: "Content assets manifest URLs"
-        content_assets_manifest_urls_help: "Optional. One URL per line to manifest.json (or similar) files that list content asset URLs (images, etc.). The agent can use these to embed remote assets. Leave empty if not used."
-        content_assets_manifest_urls_placeholder: "https://example.com/.well-known/manifest.json"
-        content_assets_manifest_urls_syntax_error: "Enter one URL per line; each line must be a valid http or https URL."
-        content_assets_manifest_urls_warning: 'One or more URLs did not return a valid manifest (expected JSON with an "urls" list). You can still save.'
-        content_assets_manifest_urls_verified: "All manifest URLs returned a valid format."
+        remote_content_assets_manifest_urls: "Remote content assets manifest URLs"
+        remote_content_assets_manifest_urls_help: "Optional. One URL per line to manifest.json (or similar) files that list content asset URLs (images, etc.). The agent can use these to embed remote assets. Leave empty if not used."
+        remote_content_assets_manifest_urls_placeholder: "https://example.com/.well-known/manifest.json"
+        remote_content_assets_manifest_urls_syntax_error: "Enter one URL per line; each line must be a valid http or https URL."
+        remote_content_assets_manifest_urls_warning: 'One or more URLs did not return a valid manifest (expected JSON with an "urls" list). You can still save.'
+        remote_content_assets_manifest_urls_verified: "All manifest URLs returned a valid format."
 
 # Chat-Based Content Editor vertical
 editor:

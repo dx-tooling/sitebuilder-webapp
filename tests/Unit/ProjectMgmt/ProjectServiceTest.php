@@ -32,10 +32,10 @@ final class ProjectServiceTest extends TestCase
         self::assertSame('https://github.com/org/repo.git', $project->getGitUrl());
         self::assertSame('github-token-123', $project->getGithubToken());
         self::assertSame('sk-test-key-123', $project->getLlmApiKey());
-        self::assertSame([], $project->getContentAssetsManifestUrls());
+        self::assertSame([], $project->getRemoteContentAssetsManifestUrls());
     }
 
-    public function testCreateStoresContentAssetsManifestUrlsWhenProvided(): void
+    public function testCreateStoresRemoteContentAssetsManifestUrlsWhenProvided(): void
     {
         $entityManager = $this->createMock(EntityManagerInterface::class);
         $entityManager->expects($this->once())->method('persist');
@@ -57,7 +57,7 @@ final class ProjectServiceTest extends TestCase
             $manifestUrls
         );
 
-        self::assertSame($manifestUrls, $project->getContentAssetsManifestUrls());
+        self::assertSame($manifestUrls, $project->getRemoteContentAssetsManifestUrls());
     }
 
     public function testUpdateUpdatesAllProjectAttributes(): void

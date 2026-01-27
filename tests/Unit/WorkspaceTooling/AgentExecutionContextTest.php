@@ -57,29 +57,29 @@ final class AgentExecutionContextTest extends TestCase
         self::assertNull($context->getWorkspaceId());
     }
 
-    public function testGetContentAssetsManifestUrlsReturnsEmptyByDefault(): void
+    public function testGetRemoteContentAssetsManifestUrlsReturnsEmptyByDefault(): void
     {
         $context = new AgentExecutionContext();
 
-        self::assertSame([], $context->getContentAssetsManifestUrls());
+        self::assertSame([], $context->getRemoteContentAssetsManifestUrls());
     }
 
-    public function testSetContextStoresContentAssetsManifestUrls(): void
+    public function testSetContextStoresRemoteContentAssetsManifestUrls(): void
     {
         $context = new AgentExecutionContext();
         $urls    = ['https://cdn.example.com/manifest.json'];
 
         $context->setContext('ws-id', '/path', null, 'project', 'image', $urls);
 
-        self::assertSame($urls, $context->getContentAssetsManifestUrls());
+        self::assertSame($urls, $context->getRemoteContentAssetsManifestUrls());
     }
 
-    public function testClearContextResetsContentAssetsManifestUrls(): void
+    public function testClearContextResetsRemoteContentAssetsManifestUrls(): void
     {
         $context = new AgentExecutionContext();
         $context->setContext('ws-id', '/path', null, 'project', 'image', ['https://a.com/m.json']);
         $context->clearContext();
 
-        self::assertSame([], $context->getContentAssetsManifestUrls());
+        self::assertSame([], $context->getRemoteContentAssetsManifestUrls());
     }
 }

@@ -107,7 +107,7 @@ final class WorkspaceToolingFacade extends BaseWorkspaceToolingFacade implements
 
     public function listRemoteContentAssetUrls(): string
     {
-        $manifestUrls = $this->executionContext->getContentAssetsManifestUrls();
+        $manifestUrls = $this->executionContext->getRemoteContentAssetsManifestUrls();
         if ($manifestUrls === []) {
             return '[]';
         }

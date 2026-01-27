@@ -126,12 +126,12 @@ project:
         create_token_link: "Token erstellen unter:"
         add_project_button: "Projekt hinzufügen"
         update_project_button: "Projekt aktualisieren"
-        content_assets_manifest_urls: "Content-Asset-Manifest-URLs"
-        content_assets_manifest_urls_help: "Optional. Eine URL pro Zeile zu manifest.json (oder ähnlichen) Dateien, die Content-Asset-URLs (Bilder usw.) auflisten. Der Agent kann diese zur Einbettung nutzen. Leer lassen, wenn nicht verwendet."
-        content_assets_manifest_urls_placeholder: "https://example.com/.well-known/manifest.json"
-        content_assets_manifest_urls_syntax_error: "Eine URL pro Zeile; jede Zeile muss eine gültige http- oder https-URL sein."
-        content_assets_manifest_urls_warning: 'Eine oder mehrere URLs lieferten kein gültiges Manifest (erwartet: JSON mit "urls"-Liste). Sie können trotzdem speichern.'
-        content_assets_manifest_urls_verified: "Alle Manifest-URLs haben ein gültiges Format."
+        remote_content_assets_manifest_urls: "Remote-Content-Asset-Manifest-URLs"
+        remote_content_assets_manifest_urls_help: "Optional. Eine URL pro Zeile zu manifest.json (oder ähnlichen) Dateien, die Content-Asset-URLs (Bilder usw.) auflisten. Der Agent kann diese zur Einbettung nutzen. Leer lassen, wenn nicht verwendet."
+        remote_content_assets_manifest_urls_placeholder: "https://example.com/.well-known/manifest.json"
+        remote_content_assets_manifest_urls_syntax_error: "Eine URL pro Zeile; jede Zeile muss eine gültige http- oder https-URL sein."
+        remote_content_assets_manifest_urls_warning: 'Eine oder mehrere URLs lieferten kein gültiges Manifest (erwartet: JSON mit "urls"-Liste). Sie können trotzdem speichern.'
+        remote_content_assets_manifest_urls_verified: "Alle Manifest-URLs haben ein gültiges Format."
 
 # Chat-Based Content Editor vertical
 editor:

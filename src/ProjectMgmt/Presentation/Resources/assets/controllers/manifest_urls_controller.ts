@@ -1,7 +1,7 @@
 import { Controller } from "@hotwired/stimulus";
 
 /**
- * Stimulus controller for content assets manifest URLs field.
+ * Stimulus controller for remote content assets manifest URLs field.
  * Hard check: value must be empty or a list of valid http(s) URLs (one per line); blocks submit if invalid.
  * Soft check on blur: fetches each URL via backend and shows success/warning if manifest format is valid.
  */

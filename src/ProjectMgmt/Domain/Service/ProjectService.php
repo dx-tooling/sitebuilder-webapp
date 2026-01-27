@@ -21,7 +21,7 @@ final class ProjectService
     }
 
     /**
-     * @param list<string>|null $contentAssetsManifestUrls
+     * @param list<string>|null $remoteContentAssetsManifestUrls
      */
     public function create(
         string           $name,
@@ -34,7 +34,7 @@ final class ProjectService
         ?string          $agentBackgroundInstructions = null,
         ?string          $agentStepInstructions = null,
         ?string          $agentOutputInstructions = null,
-        ?array           $contentAssetsManifestUrls = null
+        ?array           $remoteContentAssetsManifestUrls = null
     ): Project {
         $project = new Project(
             $name,
@@ -47,7 +47,7 @@ final class ProjectService
             $agentBackgroundInstructions,
             $agentStepInstructions,
             $agentOutputInstructions,
-            $contentAssetsManifestUrls
+            $remoteContentAssetsManifestUrls
         );
         $this->entityManager->persist($project);
         $this->entityManager->flush();
@@ -56,7 +56,7 @@ final class ProjectService
     }
 
     /**
-     * @param list<string>|null $contentAssetsManifestUrls
+     * @param list<string>|null $remoteContentAssetsManifestUrls
      */
     public function update(
         Project          $project,
@@ -70,7 +70,7 @@ final class ProjectService
         ?string          $agentBackgroundInstructions = null,
         ?string          $agentStepInstructions = null,
         ?string          $agentOutputInstructions = null,
-        ?array           $contentAssetsManifestUrls = null
+        ?array           $remoteContentAssetsManifestUrls = null
     ): void {
         $project->setName($name);
         $project->setGitUrl($gitUrl);
@@ -89,8 +89,8 @@ final class ProjectService
         if ($agentOutputInstructions !== null) {
             $project->setAgentOutputInstructions($agentOutputInstructions);
         }
-        if ($contentAssetsManifestUrls !== null) {
-            $project->setContentAssetsManifestUrls($contentAssetsManifestUrls);
+        if ($remoteContentAssetsManifestUrls !== null) {
+            $project->setRemoteContentAssetsManifestUrls($remoteContentAssetsManifestUrls);
         }
 
         $this->entityManager->flush();

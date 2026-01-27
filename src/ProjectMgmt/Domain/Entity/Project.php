@@ -24,7 +24,7 @@ class Project
      * @throws Exception
      */
     /**
-     * @param list<string>|null $contentAssetsManifestUrls
+     * @param list<string>|null $remoteContentAssetsManifestUrls
      */
     public function __construct(
         string           $name,
@@ -37,17 +37,17 @@ class Project
         ?string          $agentBackgroundInstructions = null,
         ?string          $agentStepInstructions = null,
         ?string          $agentOutputInstructions = null,
-        ?array           $contentAssetsManifestUrls = null
+        ?array           $remoteContentAssetsManifestUrls = null
     ) {
-        $this->name                      = $name;
-        $this->gitUrl                    = $gitUrl;
-        $this->githubToken               = $githubToken;
-        $this->llmModelProvider          = $llmModelProvider;
-        $this->llmApiKey                 = $llmApiKey;
-        $this->projectType               = $projectType;
-        $this->agentImage                = $agentImage;
-        $this->createdAt                 = DateAndTimeService::getDateTimeImmutable();
-        $this->contentAssetsManifestUrls = $contentAssetsManifestUrls !== null && $contentAssetsManifestUrls !== [] ? $contentAssetsManifestUrls : null;
+        $this->name                            = $name;
+        $this->gitUrl                          = $gitUrl;
+        $this->githubToken                     = $githubToken;
+        $this->llmModelProvider                = $llmModelProvider;
+        $this->llmApiKey                       = $llmApiKey;
+        $this->projectType                     = $projectType;
+        $this->agentImage                      = $agentImage;
+        $this->createdAt                       = DateAndTimeService::getDateTimeImmutable();
+        $this->remoteContentAssetsManifestUrls = $remoteContentAssetsManifestUrls !== null && $remoteContentAssetsManifestUrls !== [] ? $remoteContentAssetsManifestUrls : null;
 
         // Initialize agent config from template if not provided
         $template                          = AgentConfigTemplate::forProjectType($projectType);
@@ -247,22 +247,22 @@ class Project
         type: Types::JSON,
         nullable: true
     )]
-    private ?array $contentAssetsManifestUrls = null;
+    private ?array $remoteContentAssetsManifestUrls = null;
 
     /**
      * @return list<string>
      */
-    public function getContentAssetsManifestUrls(): array
+    public function getRemoteContentAssetsManifestUrls(): array
     {
-        return $this->contentAssetsManifestUrls ?? [];
+        return $this->remoteContentAssetsManifestUrls ?? [];
     }
 
     /**
-     * @param list<string> $contentAssetsManifestUrls
+     * @param list<string> $remoteContentAssetsManifestUrls
      */
-    public function setContentAssetsManifestUrls(array $contentAssetsManifestUrls): void
+    public function setRemoteContentAssetsManifestUrls(array $remoteContentAssetsManifestUrls): void
     {
-        $this->contentAssetsManifestUrls = $contentAssetsManifestUrls === [] ? null : $contentAssetsManifestUrls;
+        $this->remoteContentAssetsManifestUrls = $remoteContentAssetsManifestUrls === [] ? null : $remoteContentAssetsManifestUrls;
     }
 
     #[ORM\Column(

@@ -21,7 +21,7 @@
               {{ stimulus_controller('manifest-urls', {
                   verifyUrl: path('project_mgmt.presentation.verify_manifest_url'),
                   csrfToken: csrf_token('verify_manifest_url'),
-                  syntaxErrorLabel: 'project.form.content_assets_manifest_urls_syntax_error'|trans
+                  syntaxErrorLabel: 'project.form.remote_content_assets_manifest_urls_syntax_error'|trans
               }) }}
               {{ stimulus_action('manifest-urls', 'validateSubmit', 'submit') }}>
             <input type="hidden" name="_csrf_token" value="{{ csrf_token(project ? 'project_update' : 'project_create') }}">
@@ -234,17 +234,17 @@
                 </div>
             </details>
 
-            {# Content assets manifest URLs (optional) #}
+            {# Remote content assets manifest URLs (optional) #}
             <div>
-                <label for="content_assets_manifest_urls" class="block text-sm font-medium text-dark-700 dark:text-dark-300 mb-1">{{ 'project.form.content_assets_manifest_urls'|trans }}</label>
-                <textarea name="content_assets_manifest_urls"
-                          id="content_assets_manifest_urls"
+                <label for="remote_content_assets_manifest_urls" class="block text-sm font-medium text-dark-700 dark:text-dark-300 mb-1">{{ 'project.form.remote_content_assets_manifest_urls'|trans }}</label>
+                <textarea name="remote_content_assets_manifest_urls"
+                          id="remote_content_assets_manifest_urls"
                           rows="3"
                           class="w-full px-3 py-2 border border-dark-300 dark:border-dark-600 rounded-md bg-white dark:bg-dark-800 text-dark-900 dark:text-dark-100 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 font-mono text-xs"
-                          placeholder="{{ 'project.form.content_assets_manifest_urls_placeholder'|trans }}"
+                          placeholder="{{ 'project.form.remote_content_assets_manifest_urls_placeholder'|trans }}"
                           data-manifest-urls-target="input"
-                          data-action="blur->manifest-urls#verify input->manifest-urls#checkSyntax">{{ project ? (project.getContentAssetsManifestUrls()|join("\n")) : '' }}</textarea>
-                <p class="mt-1 text-xs text-dark-500 dark:text-dark-400">{{ 'project.form.content_assets_manifest_urls_help'|trans }}</p>
+                          data-action="blur->manifest-urls#verify input->manifest-urls#checkSyntax">{{ project ? (project.getRemoteContentAssetsManifestUrls()|join("\n")) : '' }}</textarea>
+                <p class="mt-1 text-xs text-dark-500 dark:text-dark-400">{{ 'project.form.remote_content_assets_manifest_urls_help'|trans }}</p>
                 <div class="mt-2" data-manifest-urls-target="status">
                     <div class="hidden flex items-center gap-2" data-manifest-urls-target="syntaxError">
                         <span class="text-sm text-red-600 dark:text-red-400" data-manifest-urls-target="syntaxErrorText"></span>
@@ -260,13 +260,13 @@
                         <svg class="h-4 w-4 text-green-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
                             <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clip-rule="evenodd" />
                         </svg>
-                        <span class="text-sm text-green-600 dark:text-green-400">{{ 'project.form.content_assets_manifest_urls_verified'|trans }}</span>
+                        <span class="text-sm text-green-600 dark:text-green-400">{{ 'project.form.remote_content_assets_manifest_urls_verified'|trans }}</span>
                     </div>
                     <div class="hidden flex items-center gap-2" data-manifest-urls-target="warning">
                         <svg class="h-4 w-4 text-amber-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
                             <path fill-rule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" />
                         </svg>
-                        <span class="text-sm text-amber-600 dark:text-amber-400">{{ 'project.form.content_assets_manifest_urls_warning'|trans }}</span>
+                        <span class="text-sm text-amber-600 dark:text-amber-400">{{ 'project.form.remote_content_assets_manifest_urls_warning'|trans }}</span>
                     </div>
                 </div>
             </div>

@@ -50,7 +50,7 @@ final class RemoteManifestFetcher
                     }
                 }
             } catch (Throwable $e) {
-                $this->logger->warning('Failed to fetch content assets manifest', [
+                $this->logger->warning('Failed to fetch remote content assets manifest', [
                     'url'   => $manifestUrl,
                     'error' => $e->getMessage(),
                 ]);

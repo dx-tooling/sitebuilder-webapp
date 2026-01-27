@@ -139,10 +139,10 @@ final class ProjectController extends AbstractController
         $agentImage       = $this->resolveAgentImage($request);
 
         // Agent configuration (optional - uses template defaults if empty)
-        $agentBackgroundInstructions = $this->nullIfEmpty($request->request->getString('agent_background_instructions'));
-        $agentStepInstructions       = $this->nullIfEmpty($request->request->getString('agent_step_instructions'));
-        $agentOutputInstructions     = $this->nullIfEmpty($request->request->getString('agent_output_instructions'));
-        $contentAssetsManifestUrls   = $this->parseContentAssetsManifestUrls($request);
+        $agentBackgroundInstructions     = $this->nullIfEmpty($request->request->getString('agent_background_instructions'));
+        $agentStepInstructions           = $this->nullIfEmpty($request->request->getString('agent_step_instructions'));
+        $agentOutputInstructions         = $this->nullIfEmpty($request->request->getString('agent_output_instructions'));
+        $remoteContentAssetsManifestUrls = $this->parseRemoteContentAssetsManifestUrls($request);
 
         if ($name === '' || $gitUrl === '' || $githubToken === '' || $llmApiKey === '') {
             $this->addFlash('error', $this->translator->trans('flash.error.all_fields_required'));
@@ -173,7 +173,7 @@ final class ProjectController extends AbstractController
             $agentBackgroundInstructions,
             $agentStepInstructions,
             $agentOutputInstructions,
-            $contentAssetsManifestUrls
+            $remoteContentAssetsManifestUrls
         );
         $this->addFlash('success', $this->translator->trans('flash.success.project_created'));
 
@@ -240,10 +240,10 @@ final class ProjectController extends AbstractController
         $agentImage       = $this->resolveAgentImage($request);
 
         // Agent configuration (null means keep existing values)
-        $agentBackgroundInstructions = $this->nullIfEmpty($request->request->getString('agent_background_instructions'));
-        $agentStepInstructions       = $this->nullIfEmpty($request->request->getString('agent_step_instructions'));
-        $agentOutputInstructions     = $this->nullIfEmpty($request->request->getString('agent_output_instructions'));
-        $contentAssetsManifestUrls   = $this->parseContentAssetsManifestUrls($request);
+        $agentBackgroundInstructions     = $this->nullIfEmpty($request->request->getString('agent_background_instructions'));
+        $agentStepInstructions           = $this->nullIfEmpty($request->request->getString('agent_step_instructions'));
+        $agentOutputInstructions         = $this->nullIfEmpty($request->request->getString('agent_output_instructions'));
+        $remoteContentAssetsManifestUrls = $this->parseRemoteContentAssetsManifestUrls($request);
 
         if ($name === '' || $gitUrl === '' || $githubToken === '' || $llmApiKey === '') {
             $this->addFlash('error', $this->translator->trans('flash.error.all_fields_required'));
@@ -275,7 +275,7 @@ final class ProjectController extends AbstractController
             $agentBackgroundInstructions,
             $agentStepInstructions,
             $agentOutputInstructions,
-            $contentAssetsManifestUrls
+            $remoteContentAssetsManifestUrls
         );
         $this->addFlash('success', $this->translator->trans('flash.success.project_updated'));
 
@@ -534,14 +534,14 @@ final class ProjectController extends AbstractController
     }
 
     /**
-     * Parse content assets manifest URLs from request (textarea, one URL per line).
+     * Parse remote content assets manifest URLs from request (textarea, one URL per line).
      * Returns only valid http/https URLs; invalid lines are skipped.
      *
      * @return list<string>
      */
-    private function parseContentAssetsManifestUrls(Request $request): array
+    private function parseRemoteContentAssetsManifestUrls(Request $request): array
     {
-        $raw   = $request->request->getString('content_assets_manifest_urls');
+        $raw   = $request->request->getString('remote_content_assets_manifest_urls');
         $lines = preg_split('/\r\n|\r|\n/', $raw, -1, PREG_SPLIT_NO_EMPTY) ?: [];
         $urls  = [];
         foreach ($lines as $line) {

@@ -88,7 +88,7 @@ final readonly class RunEditSessionHandler
                 $conversation->getId(),
                 $workspace->projectName,
                 $project->agentImage,
-                $project->contentAssetsManifestUrls
+                $project->remoteContentAssetsManifestUrls
             );
 
             // Build agent configuration from project settings
