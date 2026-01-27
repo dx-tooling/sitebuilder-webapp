@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\RemoteContentAssets\Presentation\Controller;
 
-use App\ChatBasedContentEditor\Facade\ChatBasedContentEditorFacadeInterface;
 use App\ProjectMgmt\Facade\ProjectMgmtFacadeInterface;
 use App\RemoteContentAssets\Facade\RemoteContentAssetsFacadeInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -15,8 +14,6 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Throwable;
-
-use function sprintf;
 
 /**
  * Controller for remote content assets browsing.
@@ -45,9 +42,8 @@ final class RemoteAssetsController extends AbstractController
     ];
 
     public function __construct(
-        private readonly ProjectMgmtFacadeInterface            $projectMgmtFacade,
-        private readonly RemoteContentAssetsFacadeInterface    $remoteContentAssetsFacade,
-        private readonly ChatBasedContentEditorFacadeInterface $chatBasedContentEditorFacade,
+        private readonly ProjectMgmtFacadeInterface         $projectMgmtFacade,
+        private readonly RemoteContentAssetsFacadeInterface $remoteContentAssetsFacade,
     ) {
     }
 
@@ -155,16 +151,10 @@ final class RemoteAssetsController extends AbstractController
                 $mimeType
             );
 
-            // Add system notification to conversation
-            $this->chatBasedContentEditorFacade->addSystemNotification(
-                $workspaceId,
-                sprintf(
-                    '[System Notification] A new remote asset "%s" was uploaded to S3. ' .
-                    'Call list_remote_content_asset_urls to get the updated asset list ' .
-                    '(note: the asset will appear once the external manifest is refreshed).',
-                    $filename
-                )
-            );
+            // Note: We intentionally don't inject a system notification into the conversation
+            // because the UI shows EditSessions (not ConversationMessages), which would cause
+            // a mismatch where the agent sees an extra "user turn" that isn't visible in the UI.
+            // The user can tell the agent about the upload if needed.
 
             return $this->json([
                 'success' => true,

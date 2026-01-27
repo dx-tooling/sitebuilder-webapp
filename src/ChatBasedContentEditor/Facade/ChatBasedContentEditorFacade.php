@@ -5,16 +5,10 @@ declare(strict_types=1);
 namespace App\ChatBasedContentEditor\Facade;
 
 use App\ChatBasedContentEditor\Domain\Entity\Conversation;
-use App\ChatBasedContentEditor\Domain\Entity\ConversationMessage;
-use App\ChatBasedContentEditor\Domain\Enum\ConversationMessageRole;
 use App\ChatBasedContentEditor\Domain\Enum\ConversationStatus;
 use App\WorkspaceMgmt\Facade\WorkspaceMgmtFacadeInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use EnterpriseToolingForSymfony\SharedBundle\DateAndTime\Service\DateAndTimeService;
-
-use function json_encode;
-
-use const JSON_THROW_ON_ERROR;
 
 /**
  * Facade implementation for ChatBasedContentEditor operations.
@@ -124,39 +118,5 @@ final class ChatBasedContentEditorFacade implements ChatBasedContentEditorFacade
             ->getOneOrNullResult();
 
         return $conversation?->getId();
-    }
-
-    public function addSystemNotification(string $workspaceId, string $message): void
-    {
-        // Find ongoing conversation for this workspace
-        /** @var Conversation|null $conversation */
-        $conversation = $this->entityManager->createQueryBuilder()
-            ->select('c')
-            ->from(Conversation::class, 'c')
-            ->where('c.workspaceId = :workspaceId')
-            ->andWhere('c.status = :status')
-            ->setParameter('workspaceId', $workspaceId)
-            ->setParameter('status', ConversationStatus::ONGOING)
-            ->setMaxResults(1)
-            ->getQuery()
-            ->getOneOrNullResult();
-
-        if ($conversation === null) {
-            // No ongoing conversation, nothing to do
-            return;
-        }
-
-        // Create a user message with the system notification
-        // The agent will see this as a user message in the conversation history
-        $contentJson = json_encode(['text' => $message], JSON_THROW_ON_ERROR);
-
-        $conversationMessage = new ConversationMessage(
-            $conversation,
-            ConversationMessageRole::User,
-            $contentJson
-        );
-
-        $this->entityManager->persist($conversationMessage);
-        $this->entityManager->flush();
     }
 }

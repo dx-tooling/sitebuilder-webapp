@@ -40,14 +40,4 @@ interface ChatBasedContentEditorFacadeInterface
      * Returns the most recent conversation regardless of status.
      */
     public function getLatestConversationId(string $workspaceId): ?string;
-
-    /**
-     * Add a system notification message to the ongoing conversation of a workspace.
-     * This creates a user message with a system notification format that the agent will see.
-     * Does nothing if there's no ongoing conversation for the workspace.
-     *
-     * @param string $workspaceId The workspace ID
-     * @param string $message     The notification message content
-     */
-    public function addSystemNotification(string $workspaceId, string $message): void;
 }
