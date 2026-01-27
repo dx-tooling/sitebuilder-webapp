@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\WorkspaceTooling;
 
+use App\RemoteContentAssets\Facade\Dto\RemoteContentAssetInfoDto;
+use App\RemoteContentAssets\Facade\RemoteContentAssetsFacadeInterface;
 use App\WorkspaceTooling\Facade\WorkspaceToolingFacade;
 use App\WorkspaceTooling\Infrastructure\Execution\AgentExecutionContext;
 use App\WorkspaceTooling\Infrastructure\RemoteManifestFetcher;
@@ -245,8 +247,58 @@ final class WorkspaceToolingFacadeTest extends TestCase
             $this->createMock(HttpClientInterface::class),
             $this->createMock(LoggerInterface::class)
         );
+        $remoteContentAssetsFacade = $this->createMock(RemoteContentAssetsFacadeInterface::class);
 
-        return new WorkspaceToolingFacade($fileOps, $textOps, $shellOps, $this->executionContext, $fetcher);
+        return new WorkspaceToolingFacade($fileOps, $textOps, $shellOps, $this->executionContext, $fetcher, $remoteContentAssetsFacade);
+    }
+
+    public function testGetRemoteAssetInfoReturnsErrorJsonWhenFacadeReturnsNull(): void
+    {
+        $remoteContentAssets = $this->createMock(RemoteContentAssetsFacadeInterface::class);
+        $remoteContentAssets->method('getRemoteAssetInfo')->willReturn(null);
+        $facade = $this->createFacadeWithRemoteContentAssets($remoteContentAssets);
+
+        $result = $facade->getRemoteAssetInfo('https://example.com/image.png');
+
+        self::assertSame('{"error":"Could not retrieve asset info"}', $result);
+    }
+
+    public function testGetRemoteAssetInfoReturnsJsonWhenFacadeReturnsDto(): void
+    {
+        $dto = new RemoteContentAssetInfoDto(
+            'https://example.com/cat.jpg',
+            800,
+            600,
+            'image/jpeg',
+            45_000
+        );
+        $remoteContentAssets = $this->createMock(RemoteContentAssetsFacadeInterface::class);
+        $remoteContentAssets->method('getRemoteAssetInfo')->willReturn($dto);
+        $facade = $this->createFacadeWithRemoteContentAssets($remoteContentAssets);
+
+        $result = $facade->getRemoteAssetInfo('https://example.com/cat.jpg');
+
+        $decoded = json_decode($result, true, 512, JSON_THROW_ON_ERROR);
+        self::assertIsArray($decoded);
+        self::assertArrayHasKey('url', $decoded);
+        self::assertSame('https://example.com/cat.jpg', $decoded['url']);
+        self::assertSame(800, $decoded['width']);
+        self::assertSame(600, $decoded['height']);
+        self::assertSame('image/jpeg', $decoded['mimeType']);
+        self::assertSame(45_000, $decoded['sizeInBytes']);
+    }
+
+    private function createFacadeWithRemoteContentAssets(RemoteContentAssetsFacadeInterface $remoteContentAssetsFacade): WorkspaceToolingFacade
+    {
+        $fileOps  = new FileOperationsService();
+        $textOps  = new TextOperationsService($fileOps);
+        $shellOps = $this->createMock(ShellOperationsServiceInterface::class);
+        $fetcher  = new RemoteManifestFetcher(
+            $this->createMock(HttpClientInterface::class),
+            $this->createMock(LoggerInterface::class)
+        );
+
+        return new WorkspaceToolingFacade($fileOps, $textOps, $shellOps, $this->executionContext, $fetcher, $remoteContentAssetsFacade);
     }
 
     private function removeDirectory(string $dir): void

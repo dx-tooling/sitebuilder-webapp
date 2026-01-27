@@ -44,4 +44,11 @@ interface WorkspaceToolingServiceInterface extends BaseWorkspaceToolingFacadeInt
      * Returns JSON-encoded array of strings. Never throws; returns "[]" if no manifests or all fail.
      */
     public function listRemoteContentAssetUrls(): string;
+
+    /**
+     * Get information about a remote asset (e.g. image) by URL.
+     * Returns JSON with url, width, height, mimeType, sizeInBytes (null when unknown).
+     * On failure returns JSON object with an "error" key. Never throws.
+     */
+    public function getRemoteAssetInfo(string $url): string;
 }
