@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\WorkspaceTooling\Infrastructure\Execution;
 
 use App\WorkspaceTooling\Facade\AgentExecutionContextInterface;
+use Closure;
 
 /**
  * Holds context information for the current agent execution.
@@ -33,6 +34,7 @@ final class AgentExecutionContext implements AgentExecutionContextInterface
     private ?string $projectName            = null;
     private ?string $agentImage             = null;
     private ?string $suggestedCommitMessage = null;
+    private ?Closure $outputCallback        = null;
 
     /**
      * Set the execution context for the current agent run.
@@ -68,6 +70,23 @@ final class AgentExecutionContext implements AgentExecutionContextInterface
         $this->projectName            = null;
         $this->agentImage             = null;
         $this->suggestedCommitMessage = null;
+        $this->outputCallback         = null;
+    }
+
+    public function setOutputCallback(?callable $callback): void
+    {
+        if ($callback === null) {
+            $this->outputCallback = null;
+
+            return;
+        }
+
+        $this->outputCallback = Closure::fromCallable($callback);
+    }
+
+    public function getOutputCallback(): ?callable
+    {
+        return $this->outputCallback;
     }
 
     public function getWorkspaceId(): ?string

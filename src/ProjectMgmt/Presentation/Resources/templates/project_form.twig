@@ -73,6 +73,22 @@
                 </div>
             </fieldset>
 
+            {% set currentBackend = project ? project.contentEditorBackend.value : 'llm' %}
+            <div>
+                <label for="content_editor_backend" class="etfswui-form-label">{{ 'project.form.content_editor_backend'|trans }}</label>
+                <select name="content_editor_backend"
+                        id="content_editor_backend"
+                        required
+                        class="etfswui-form-input">
+                    {% for backend in contentEditorBackends %}
+                        <option value="{{ backend.value }}" {{ currentBackend == backend.value ? 'selected' : '' }}>
+                            {{ ('project.form.content_editor_backend_' ~ backend.value)|trans }}
+                        </option>
+                    {% endfor %}
+                </select>
+                <p class="mt-1 text-xs text-dark-500 dark:text-dark-400">{{ 'project.form.content_editor_backend_help'|trans }}</p>
+            </div>
+
             {# LLM API Key with verification #}
             <div {{ stimulus_controller('llm-key-verification', {
                 verifyUrl: path('project_mgmt.presentation.verify_llm_key'),

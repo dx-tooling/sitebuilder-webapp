@@ -35,6 +35,18 @@ interface AgentExecutionContextInterface
     public function clearContext(): void;
 
     /**
+     * Set a callback that receives streaming command output.
+     *
+     * The callback signature is: fn(string $buffer, bool $isError): void
+     */
+    public function setOutputCallback(?callable $callback): void;
+
+    /**
+     * Get the output callback for streaming command output.
+     */
+    public function getOutputCallback(): ?callable;
+
+    /**
      * Set a suggested commit message from the agent.
      *
      * The agent can call this to suggest an optimal commit message

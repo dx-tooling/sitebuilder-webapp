@@ -119,6 +119,7 @@ final class ProjectMgmtFacade implements ProjectMgmtFacadeInterface
             $project->getGitUrl(),
             $project->getGithubToken(),
             $project->getProjectType(),
+            $project->getContentEditorBackend(),
             $githubUrl,
             $project->getAgentImage(),
             $project->getLlmModelProvider(),

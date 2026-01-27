@@ -10,6 +10,7 @@ use App\LlmContentEditor\Facade\Enum\LlmModelProvider;
 use App\LlmContentEditor\Facade\LlmContentEditorFacadeInterface;
 use App\ProjectMgmt\Domain\Service\ProjectService;
 use App\ProjectMgmt\Facade\Dto\ExistingLlmApiKeyDto;
+use App\ProjectMgmt\Facade\Enum\ContentEditorBackend;
 use App\ProjectMgmt\Facade\Enum\ProjectType;
 use App\ProjectMgmt\Facade\ProjectMgmtFacadeInterface;
 use App\WorkspaceMgmt\Facade\Enum\WorkspaceStatus;
@@ -111,6 +112,7 @@ final class ProjectController extends AbstractController
         return $this->render('@project_mgmt.presentation/project_form.twig', [
             'project'             => null,
             'llmProviders'        => LlmModelProvider::cases(),
+            'contentEditorBackends' => ContentEditorBackend::cases(),
             'existingLlmKeys'     => $this->projectMgmtFacade->getExistingLlmApiKeys(),
             'agentConfigTemplate' => $defaultTemplate,
         ]);
@@ -133,6 +135,7 @@ final class ProjectController extends AbstractController
         $gitUrl           = $request->request->getString('git_url');
         $githubToken      = $request->request->getString('github_token');
         $llmModelProvider = LlmModelProvider::tryFrom($request->request->getString('llm_model_provider'));
+        $contentEditorBackend = ContentEditorBackend::tryFrom($request->request->getString('content_editor_backend'));
         $llmApiKey        = $request->request->getString('llm_api_key');
         $agentImage       = $this->resolveAgentImage($request);
 
@@ -153,6 +156,12 @@ final class ProjectController extends AbstractController
             return $this->redirectToRoute('project_mgmt.presentation.new');
         }
 
+        if ($contentEditorBackend === null) {
+            $this->addFlash('error', $this->translator->trans('flash.error.select_content_editor_backend'));
+
+            return $this->redirectToRoute('project_mgmt.presentation.new');
+        }
+
         if ($agentImage === '' || !$this->isValidDockerImageName($agentImage)) {
             $this->addFlash('error', $this->translator->trans('flash.error.invalid_docker_image'));
 
@@ -166,6 +175,7 @@ final class ProjectController extends AbstractController
             $llmModelProvider,
             $llmApiKey,
             ProjectType::DEFAULT,
+            $contentEditorBackend,
             $agentImage,
             $agentBackgroundInstructions,
             $agentStepInstructions,
@@ -203,6 +213,7 @@ final class ProjectController extends AbstractController
         return $this->render('@project_mgmt.presentation/project_form.twig', [
             'project'             => $project,
             'llmProviders'        => LlmModelProvider::cases(),
+            'contentEditorBackends' => ContentEditorBackend::cases(),
             'existingLlmKeys'     => $existingLlmKeys,
             'agentConfigTemplate' => $agentConfigTemplate,
         ]);
@@ -232,6 +243,7 @@ final class ProjectController extends AbstractController
         $gitUrl           = $request->request->getString('git_url');
         $githubToken      = $request->request->getString('github_token');
         $llmModelProvider = LlmModelProvider::tryFrom($request->request->getString('llm_model_provider'));
+        $contentEditorBackend = ContentEditorBackend::tryFrom($request->request->getString('content_editor_backend'));
         $llmApiKey        = $request->request->getString('llm_api_key');
         $agentImage       = $this->resolveAgentImage($request);
 
@@ -252,6 +264,12 @@ final class ProjectController extends AbstractController
             return $this->redirectToRoute('project_mgmt.presentation.edit', ['id' => $id]);
         }
 
+        if ($contentEditorBackend === null) {
+            $this->addFlash('error', $this->translator->trans('flash.error.select_content_editor_backend'));
+
+            return $this->redirectToRoute('project_mgmt.presentation.edit', ['id' => $id]);
+        }
+
         if ($agentImage === '' || !$this->isValidDockerImageName($agentImage)) {
             $this->addFlash('error', $this->translator->trans('flash.error.invalid_docker_image'));
 
@@ -266,6 +284,7 @@ final class ProjectController extends AbstractController
             $llmModelProvider,
             $llmApiKey,
             ProjectType::DEFAULT,
+            $contentEditorBackend,
             $agentImage,
             $agentBackgroundInstructions,
             $agentStepInstructions,

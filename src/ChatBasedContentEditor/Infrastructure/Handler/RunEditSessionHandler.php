@@ -9,15 +9,16 @@ use App\ChatBasedContentEditor\Domain\Entity\Conversation;
 use App\ChatBasedContentEditor\Domain\Entity\ConversationMessage;
 use App\ChatBasedContentEditor\Domain\Entity\EditSession;
 use App\ChatBasedContentEditor\Domain\Entity\EditSessionChunk;
+use App\ChatBasedContentEditor\Domain\Enum\ContentEditorBackend;
 use App\ChatBasedContentEditor\Domain\Enum\ConversationMessageRole;
 use App\ChatBasedContentEditor\Domain\Enum\EditSessionStatus;
+use App\ChatBasedContentEditor\Infrastructure\ContentEditor\ContentEditorFacadeInterface;
 use App\ChatBasedContentEditor\Infrastructure\Message\RunEditSessionMessage;
 use App\ChatBasedContentEditor\Infrastructure\Service\ConversationUrlServiceInterface;
 use App\LlmContentEditor\Facade\Dto\AgentConfigDto;
 use App\LlmContentEditor\Facade\Dto\AgentEventDto;
 use App\LlmContentEditor\Facade\Dto\ConversationMessageDto;
 use App\LlmContentEditor\Facade\Dto\ToolInputEntryDto;
-use App\LlmContentEditor\Facade\LlmContentEditorFacadeInterface;
 use App\ProjectMgmt\Facade\ProjectMgmtFacadeInterface;
 use App\WorkspaceMgmt\Facade\WorkspaceMgmtFacadeInterface;
 use App\WorkspaceTooling\Facade\AgentExecutionContextInterface;
@@ -36,7 +37,7 @@ final readonly class RunEditSessionHandler
 {
     public function __construct(
         private EntityManagerInterface          $entityManager,
-        private LlmContentEditorFacadeInterface $facade,
+        private ContentEditorFacadeInterface    $facade,
         private LoggerInterface                 $logger,
         private WorkspaceMgmtFacadeInterface    $workspaceMgmtFacade,
         private ProjectMgmtFacadeInterface      $projectMgmtFacade,
@@ -70,12 +71,12 @@ final readonly class RunEditSessionHandler
 
             // Ensure we have a valid LLM API key from the project
             if ($project === null || $project->llmApiKey === '') {
-                $this->logger->error('EditSession failed: no LLM API key configured for project', [
+                $this->logger->error('EditSession failed: no API key configured for project', [
                     'sessionId'   => $message->sessionId,
                     'workspaceId' => $conversation->getWorkspaceId(),
                 ]);
 
-                EditSessionChunk::createDoneChunk($session, false, 'No LLM API key configured for this project.');
+                EditSessionChunk::createDoneChunk($session, false, 'No API key configured for this project.');
                 $session->setStatus(EditSessionStatus::Failed);
                 $this->entityManager->flush();
 
@@ -98,11 +99,13 @@ final readonly class RunEditSessionHandler
             );
 
             $generator = $this->facade->streamEditWithHistory(
+                $conversation->getContentEditorBackend(),
                 $session->getWorkspacePath(),
                 $session->getInstruction(),
                 $previousMessages,
                 $project->llmApiKey,
-                $agentConfig
+                $agentConfig,
+                $conversation->getCursorAgentSessionId()
             );
 
             foreach ($generator as $chunk) {
@@ -127,6 +130,14 @@ final readonly class RunEditSessionHandler
 
             $session->setStatus(EditSessionStatus::Completed);
             $this->entityManager->flush();
+
+            if ($conversation->getContentEditorBackend() === ContentEditorBackend::CursorAgent) {
+                $sessionId = $this->facade->getLastCursorAgentSessionId();
+                if ($sessionId !== null && $sessionId !== $conversation->getCursorAgentSessionId()) {
+                    $conversation->setCursorAgentSessionId($sessionId);
+                    $this->entityManager->flush();
+                }
+            }
 
             // Commit and push changes after successful edit session
             $this->commitChangesAfterEdit($conversation, $session);

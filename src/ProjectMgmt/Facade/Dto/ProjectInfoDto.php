@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\ProjectMgmt\Facade\Dto;
 
 use App\LlmContentEditor\Facade\Enum\LlmModelProvider;
+use App\ProjectMgmt\Facade\Enum\ContentEditorBackend;
 use App\ProjectMgmt\Facade\Enum\ProjectType;
 
 final readonly class ProjectInfoDto
@@ -15,6 +16,7 @@ final readonly class ProjectInfoDto
         public string           $gitUrl,
         public string           $githubToken,
         public ProjectType      $projectType,
+        public ContentEditorBackend $contentEditorBackend,
         public string           $githubUrl,
         public string           $agentImage,
         public LlmModelProvider $llmModelProvider,

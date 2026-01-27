@@ -6,6 +6,7 @@ namespace App\ProjectMgmt\Domain\Entity;
 
 use App\LlmContentEditor\Facade\Enum\LlmModelProvider;
 use App\ProjectMgmt\Domain\ValueObject\AgentConfigTemplate;
+use App\ProjectMgmt\Facade\Enum\ContentEditorBackend;
 use App\ProjectMgmt\Facade\Enum\ProjectType;
 use DateTimeImmutable;
 use Doctrine\DBAL\Types\Types;
@@ -30,6 +31,7 @@ class Project
         LlmModelProvider $llmModelProvider,
         string           $llmApiKey,
         ProjectType      $projectType = ProjectType::DEFAULT,
+        ContentEditorBackend $contentEditorBackend = ContentEditorBackend::Llm,
         string           $agentImage = self::DEFAULT_AGENT_IMAGE,
         ?string          $agentBackgroundInstructions = null,
         ?string          $agentStepInstructions = null,
@@ -41,6 +43,7 @@ class Project
         $this->llmModelProvider = $llmModelProvider;
         $this->llmApiKey        = $llmApiKey;
         $this->projectType      = $projectType;
+        $this->contentEditorBackend = $contentEditorBackend;
         $this->agentImage       = $agentImage;
         $this->createdAt        = DateAndTimeService::getDateTimeImmutable();
 
@@ -132,6 +135,24 @@ class Project
     public function setProjectType(ProjectType $projectType): void
     {
         $this->projectType = $projectType;
+    }
+
+    #[ORM\Column(
+        type: Types::STRING,
+        length: 32,
+        nullable: false,
+        enumType: ContentEditorBackend::class
+    )]
+    private ContentEditorBackend $contentEditorBackend = ContentEditorBackend::Llm;
+
+    public function getContentEditorBackend(): ContentEditorBackend
+    {
+        return $this->contentEditorBackend;
+    }
+
+    public function setContentEditorBackend(ContentEditorBackend $contentEditorBackend): void
+    {
+        $this->contentEditorBackend = $contentEditorBackend;
     }
 
     #[ORM\Column(

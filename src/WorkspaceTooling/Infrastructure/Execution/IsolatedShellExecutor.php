@@ -66,6 +66,8 @@ final class IsolatedShellExecutor implements ShellOperationsServiceInterface
 
         // Execute command in isolated container
         // The actual workspace path is mounted to /workspace
+        $outputCallback = $this->executionContext->getOutputCallback();
+
         return $this->dockerExecutor->run(
             $agentImage,
             $command,
@@ -73,7 +75,8 @@ final class IsolatedShellExecutor implements ShellOperationsServiceInterface
             $workingDirectory,    // Working directory inside container
             300,
             true,
-            $containerName
+            $containerName,
+            $outputCallback
         );
     }
 }

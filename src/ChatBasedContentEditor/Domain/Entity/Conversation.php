@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\ChatBasedContentEditor\Domain\Entity;
 
+use App\ChatBasedContentEditor\Domain\Enum\ContentEditorBackend;
 use App\ChatBasedContentEditor\Domain\Enum\ConversationStatus;
 use DateTimeImmutable;
 use Doctrine\Common\Collections\ArrayCollection;
@@ -27,12 +28,14 @@ class Conversation
     public function __construct(
         string $workspaceId,
         string $userId,
-        string $workspacePath
+        string $workspacePath,
+        ContentEditorBackend $contentEditorBackend = ContentEditorBackend::Llm
     ) {
         $this->workspaceId   = $workspaceId;
         $this->userId        = $userId;
         $this->workspacePath = $workspacePath;
         $this->status        = ConversationStatus::ONGOING;
+        $this->contentEditorBackend = $contentEditorBackend;
         $this->createdAt     = DateAndTimeService::getDateTimeImmutable();
         $this->editSessions  = new ArrayCollection();
         $this->messages      = new ArrayCollection();
@@ -105,6 +108,24 @@ class Conversation
     }
 
     #[ORM\Column(
+        type: Types::STRING,
+        length: 32,
+        nullable: false,
+        enumType: ContentEditorBackend::class
+    )]
+    private ContentEditorBackend $contentEditorBackend = ContentEditorBackend::Llm;
+
+    public function getContentEditorBackend(): ContentEditorBackend
+    {
+        return $this->contentEditorBackend;
+    }
+
+    public function setContentEditorBackend(ContentEditorBackend $contentEditorBackend): void
+    {
+        $this->contentEditorBackend = $contentEditorBackend;
+    }
+
+    #[ORM\Column(
         type: Types::DATETIME_IMMUTABLE,
         nullable: false
     )]
@@ -134,6 +155,23 @@ class Conversation
     public function updateLastActivity(): void
     {
         $this->lastActivityAt = DateAndTimeService::getDateTimeImmutable();
+    }
+
+    #[ORM\Column(
+        type: Types::STRING,
+        length: 64,
+        nullable: true
+    )]
+    private ?string $cursorAgentSessionId = null;
+
+    public function getCursorAgentSessionId(): ?string
+    {
+        return $this->cursorAgentSessionId;
+    }
+
+    public function setCursorAgentSessionId(?string $cursorAgentSessionId): void
+    {
+        $this->cursorAgentSessionId = $cursorAgentSessionId;
     }
 
     /**

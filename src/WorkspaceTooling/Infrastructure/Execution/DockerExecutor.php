@@ -45,13 +45,14 @@ final class DockerExecutor
      * @throws DockerExecutionException if command execution fails
      */
     public function run(
-        string  $image,
-        string  $command,
-        string  $mountPath,
-        string  $workingDirectory = '/workspace',
-        int     $timeout = self::DEFAULT_TIMEOUT,
-        bool    $allowNetwork = true,
-        ?string $containerName = null
+        string    $image,
+        string    $command,
+        string    $mountPath,
+        string    $workingDirectory = '/workspace',
+        int       $timeout = self::DEFAULT_TIMEOUT,
+        bool      $allowNetwork = true,
+        ?string   $containerName = null,
+        ?callable $outputCallback = null
     ): string {
         $dockerCommand = $this->buildDockerCommand(
             $image,
@@ -66,7 +67,14 @@ final class DockerExecutor
         $process->setTimeout($timeout);
 
         try {
-            $process->run();
+            $output = '';
+            $process->run(function (string $type, string $buffer) use (&$output, $outputCallback): void {
+                $output .= $buffer;
+
+                if ($outputCallback !== null) {
+                    $outputCallback($buffer, $type === Process::ERR);
+                }
+            });
         } catch (ProcessTimedOutException $e) {
             throw new DockerExecutionException(
                 sprintf('Command timed out after %d seconds', $timeout),
@@ -74,8 +82,6 @@ final class DockerExecutor
                 $e
             );
         }
-
-        $output = $process->getOutput() . $process->getErrorOutput();
 
         if (!$process->isSuccessful()) {
             // Check for common Docker errors

@@ -7,8 +7,10 @@ namespace App\ChatBasedContentEditor\Domain\Service;
 use App\Account\Facade\AccountFacadeInterface;
 use App\ChatBasedContentEditor\Domain\Dto\ConversationInfoDto;
 use App\ChatBasedContentEditor\Domain\Entity\Conversation;
+use App\ChatBasedContentEditor\Domain\Enum\ContentEditorBackend;
 use App\ChatBasedContentEditor\Domain\Enum\ConversationStatus;
 use App\ChatBasedContentEditor\Infrastructure\Service\ConversationUrlServiceInterface;
+use App\ProjectMgmt\Facade\ProjectMgmtFacadeInterface;
 use App\WorkspaceMgmt\Facade\WorkspaceMgmtFacadeInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use RuntimeException;
@@ -24,6 +26,7 @@ final class ConversationService
         private readonly WorkspaceMgmtFacadeInterface    $workspaceMgmtFacade,
         private readonly AccountFacadeInterface          $accountFacade,
         private readonly ConversationUrlServiceInterface $conversationUrlService,
+        private readonly ProjectMgmtFacadeInterface      $projectMgmtFacade,
     ) {
     }
 
@@ -48,6 +51,9 @@ final class ConversationService
             return $this->toDto($existingConversation);
         }
 
+        $projectInfo = $this->projectMgmtFacade->getProjectInfo($projectId);
+        $contentEditorBackend = ContentEditorBackend::from($projectInfo->contentEditorBackend->value);
+
         // Transition workspace to IN_CONVERSATION
         $this->workspaceMgmtFacade->transitionToInConversation($workspaceInfo->id);
 
@@ -55,7 +61,8 @@ final class ConversationService
         $conversation = new Conversation(
             $workspaceInfo->id,
             $userId,
-            $workspaceInfo->workspacePath
+            $workspaceInfo->workspacePath,
+            $contentEditorBackend
         );
         $this->entityManager->persist($conversation);
         $this->entityManager->flush();
