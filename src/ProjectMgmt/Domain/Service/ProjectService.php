@@ -34,7 +34,13 @@ final class ProjectService
         ?string          $agentBackgroundInstructions = null,
         ?string          $agentStepInstructions = null,
         ?string          $agentOutputInstructions = null,
-        ?array           $remoteContentAssetsManifestUrls = null
+        ?array           $remoteContentAssetsManifestUrls = null,
+        ?string          $s3BucketName = null,
+        ?string          $s3Region = null,
+        ?string          $s3AccessKeyId = null,
+        ?string          $s3SecretAccessKey = null,
+        ?string          $s3IamRoleArn = null,
+        ?string          $s3KeyPrefix = null
     ): Project {
         $project = new Project(
             $name,
@@ -49,6 +55,15 @@ final class ProjectService
             $agentOutputInstructions,
             $remoteContentAssetsManifestUrls
         );
+
+        // Set S3 configuration if provided
+        $project->setS3BucketName($s3BucketName);
+        $project->setS3Region($s3Region);
+        $project->setS3AccessKeyId($s3AccessKeyId);
+        $project->setS3SecretAccessKey($s3SecretAccessKey);
+        $project->setS3IamRoleArn($s3IamRoleArn);
+        $project->setS3KeyPrefix($s3KeyPrefix);
+
         $this->entityManager->persist($project);
         $this->entityManager->flush();
 
@@ -70,7 +85,13 @@ final class ProjectService
         ?string          $agentBackgroundInstructions = null,
         ?string          $agentStepInstructions = null,
         ?string          $agentOutputInstructions = null,
-        ?array           $remoteContentAssetsManifestUrls = null
+        ?array           $remoteContentAssetsManifestUrls = null,
+        ?string          $s3BucketName = null,
+        ?string          $s3Region = null,
+        ?string          $s3AccessKeyId = null,
+        ?string          $s3SecretAccessKey = null,
+        ?string          $s3IamRoleArn = null,
+        ?string          $s3KeyPrefix = null
     ): void {
         $project->setName($name);
         $project->setGitUrl($gitUrl);
@@ -92,6 +113,14 @@ final class ProjectService
         if ($remoteContentAssetsManifestUrls !== null) {
             $project->setRemoteContentAssetsManifestUrls($remoteContentAssetsManifestUrls);
         }
+
+        // S3 fields are always updated (can be cleared by passing null)
+        $project->setS3BucketName($s3BucketName);
+        $project->setS3Region($s3Region);
+        $project->setS3AccessKeyId($s3AccessKeyId);
+        $project->setS3SecretAccessKey($s3SecretAccessKey);
+        $project->setS3IamRoleArn($s3IamRoleArn);
+        $project->setS3KeyPrefix($s3KeyPrefix);
 
         $this->entityManager->flush();
     }

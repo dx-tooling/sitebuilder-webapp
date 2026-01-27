@@ -9,6 +9,7 @@ use App\RemoteContentAssets\Facade\RemoteContentAssetsFacade;
 use App\RemoteContentAssets\Infrastructure\RemoteImageInfoFetcherInterface;
 use App\RemoteContentAssets\Infrastructure\RemoteManifestFetcherInterface;
 use App\RemoteContentAssets\Infrastructure\RemoteManifestValidatorInterface;
+use App\RemoteContentAssets\Infrastructure\S3AssetUploaderInterface;
 use PHPUnit\Framework\TestCase;
 
 final class RemoteContentAssetsFacadeTest extends TestCase
@@ -97,7 +98,8 @@ final class RemoteContentAssetsFacadeTest extends TestCase
         return new RemoteContentAssetsFacade(
             $imageInfoFetcher ?? $this->createMock(RemoteImageInfoFetcherInterface::class),
             $this->createMock(RemoteManifestValidatorInterface::class),
-            $this->createMock(RemoteManifestFetcherInterface::class)
+            $this->createMock(RemoteManifestFetcherInterface::class),
+            $this->createMock(S3AssetUploaderInterface::class)
         );
     }
 
@@ -106,7 +108,8 @@ final class RemoteContentAssetsFacadeTest extends TestCase
         return new RemoteContentAssetsFacade(
             $this->createMock(RemoteImageInfoFetcherInterface::class),
             $validator,
-            $this->createMock(RemoteManifestFetcherInterface::class)
+            $this->createMock(RemoteManifestFetcherInterface::class),
+            $this->createMock(S3AssetUploaderInterface::class)
         );
     }
 
@@ -115,7 +118,8 @@ final class RemoteContentAssetsFacadeTest extends TestCase
         return new RemoteContentAssetsFacade(
             $this->createMock(RemoteImageInfoFetcherInterface::class),
             $this->createMock(RemoteManifestValidatorInterface::class),
-            $fetcher
+            $fetcher,
+            $this->createMock(S3AssetUploaderInterface::class)
         );
     }
 }
