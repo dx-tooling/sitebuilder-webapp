@@ -62,4 +62,15 @@ interface WorkspaceToolingServiceInterface extends BaseWorkspaceToolingFacadeInt
      * On failure returns JSON object with an "error" key. Never throws.
      */
     public function getRemoteAssetInfo(string $url): string;
+
+    /**
+     * Get all workspace rules from .sitebuilder/rules/ folders.
+     *
+     * Scans the workspace for all .sitebuilder/rules/ directories (at any depth),
+     * reads all .md files within them, and returns a JSON object where keys are
+     * filenames without the .md extension and values are the file contents.
+     *
+     * @return string JSON object: {"rule-name": "content", ...}. Returns "{}" if no rules found.
+     */
+    public function getWorkspaceRules(): string;
 }

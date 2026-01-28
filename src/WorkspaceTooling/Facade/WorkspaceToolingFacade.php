@@ -10,6 +10,7 @@ use EtfsCodingAgent\Service\FileOperationsServiceInterface;
 use EtfsCodingAgent\Service\ShellOperationsServiceInterface;
 use EtfsCodingAgent\Service\TextOperationsService;
 use EtfsCodingAgent\Service\WorkspaceToolingService as BaseWorkspaceToolingFacade;
+use Symfony\Component\Finder\Finder;
 use Throwable;
 
 final class WorkspaceToolingFacade extends BaseWorkspaceToolingFacade implements WorkspaceToolingServiceInterface
@@ -188,5 +189,51 @@ final class WorkspaceToolingFacade extends BaseWorkspaceToolingFacade implements
         ];
 
         return json_encode($payload, JSON_THROW_ON_ERROR);
+    }
+
+    public function getWorkspaceRules(): string
+    {
+        $workspacePath = $this->executionContext->getWorkspacePath();
+        if ($workspacePath === null || !is_dir($workspacePath)) {
+            return '{}';
+        }
+
+        $rules = [];
+
+        try {
+            // Find all .sitebuilder/rules directories in the workspace
+            $dirFinder = new Finder();
+            $dirFinder->directories()
+                ->in($workspacePath)
+                ->path('/\.sitebuilder\/rules$/')
+                ->ignoreVCS(true)
+                ->ignoreDotFiles(false);
+
+            foreach ($dirFinder as $rulesDir) {
+                $rulesDirPath = $rulesDir->getRealPath();
+                if ($rulesDirPath === false) {
+                    continue;
+                }
+
+                // Find all .md files in this rules directory
+                $fileFinder = new Finder();
+                $fileFinder->files()
+                    ->in($rulesDirPath)
+                    ->name('*.md')
+                    ->depth(0);
+
+                foreach ($fileFinder as $file) {
+                    $ruleName = $file->getBasename('.md');
+                    // Use first found rule if duplicate names exist
+                    if (!array_key_exists($ruleName, $rules)) {
+                        $rules[$ruleName] = $file->getContents();
+                    }
+                }
+            }
+        } catch (Throwable) {
+            return '{}';
+        }
+
+        return json_encode($rules, JSON_THROW_ON_ERROR);
     }
 }

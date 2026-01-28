@@ -126,6 +126,13 @@ class ContentEditorAgent extends BaseCodingAgent
             '- Call list_remote_content_asset_urls to get a JSON array of all remote asset URLs configured for this project. Use these URLs directly (e.g. in img src). If the tool returns an empty array, no remote manifests are configured.',
             '- Call get_remote_asset_info with a URL to retrieve metadata (width, height, mimeType, sizeInBytes) for a remote image without downloading it. Use this when you need dimensions or format for embedding.',
             '',
+            'WORKSPACE RULES:',
+            '- Projects may define custom rules in .sitebuilder/rules/ folders (Markdown files)',
+            '- You MUST call get_workspace_rules ONCE at the very beginning of the session (on your first turn only, never again)',
+            '- If rules exist, they define project-specific conventions, constraints, and requirements you must follow',
+            '- If no rules exist (empty JSON object {}), this is normal - simply follow these default instructions',
+            '- When rules exist, apply them in addition to these default instructions throughout the entire session',
+            '',
             'WORK SCOPE:',
             '- Modify existing pages, remove existing pages, create new pages, as the user wishes',
             '- If specifically requested, modify the styleguide, too',
@@ -140,6 +147,7 @@ class ContentEditorAgent extends BaseCodingAgent
     private function getDefaultStepInstructions(): array
     {
         return [
+            '0. RULES (first turn only): Call get_workspace_rules once at the start of the session. If rules exist, remember and apply them throughout; if none exist, proceed with default instructions. Do NOT call this tool again on subsequent turns.',
             '1. EXPLORE: List the working folder (the path from the user\'s message) to understand its structure.',
             '2. UNDERSTAND: Read package.json and README.md to learn about the project.',
             '3. INVESTIGATE: Use get_file_info + search_in_file to efficiently explore files.',
@@ -259,6 +267,11 @@ class ContentEditorAgent extends BaseCodingAgent
                     true
                 )
             )->setCallable(fn (string $url): string => $this->sitebuilderFacade->getRemoteAssetInfo($url)),
+
+            Tool::make(
+                'get_workspace_rules',
+                'Get project-specific rules from .sitebuilder/rules/ folders. Returns a JSON object where keys are rule names (filename without .md extension) and values are the rule contents (Markdown text). IMPORTANT: You must call this tool at least once at the start of every session to understand project-specific conventions and requirements.'
+            )->setCallable(fn (): string => $this->sitebuilderFacade->getWorkspaceRules()),
         ]);
     }
 }
