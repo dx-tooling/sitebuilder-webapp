@@ -94,6 +94,11 @@
                                 {% if item.workspace and item.workspace.status.name == 'IN_REVIEW' and item.conversationId %}
                                     <a href="{{ path('chat_based_content_editor.presentation.show', { conversationId: item.conversationId }) }}"
                                        class="inline-flex items-center px-3 py-1.5 rounded-md bg-primary-600 text-white text-sm font-medium hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500">
+                                        {{ 'project.list.view_conversation_for_review'|trans }}
+                                    </a>
+                                {% elseif item.workspace and item.inConversationBy !== null and item.inConversationBy !== user.email and item.conversationId %}
+                                    <a href="{{ path('chat_based_content_editor.presentation.show', { conversationId: item.conversationId }) }}"
+                                       class="inline-flex items-center px-3 py-1.5 rounded-md bg-primary-600 text-white text-sm font-medium hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500">
                                         {{ 'project.list.view_conversation'|trans }}
                                     </a>
                                 {% else %}

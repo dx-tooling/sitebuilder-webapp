@@ -66,6 +66,7 @@ project:
         review: "Review"
         edit_content: "Edit content"
         view_conversation: "View conversation"
+        view_conversation_for_review: "Review conversation"
         edit_details: "Edit details"
         reset_work_area: "Reset work area"
         reset_confirm: "Reset this work area? This will end any active sessions and create a fresh work area next time."

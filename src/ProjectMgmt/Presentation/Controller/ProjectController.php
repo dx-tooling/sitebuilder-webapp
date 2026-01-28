@@ -50,6 +50,8 @@ final class ProjectController extends AbstractController
     )]
     public function list(): Response
     {
+        $user = $this->getUser();
+
         // Release any stale conversations (where users left without finishing)
         // This ensures workspaces become available again after 5 minutes of inactivity
         $this->chatBasedContentEditorFacade->releaseStaleConversations();
@@ -79,9 +81,14 @@ final class ProjectController extends AbstractController
 
             // If workspace is in review, get the conversation ID for read-only view
             $conversationId = null;
+            if ($workspace !== null) {
+                $conversationId = $this->chatBasedContentEditorFacade->getLatestConversationId($workspace->id);
+            }
+            /*
             if ($workspace !== null && $workspace->status === WorkspaceStatus::IN_REVIEW) {
                 $conversationId = $this->chatBasedContentEditorFacade->getLatestConversationId($workspace->id);
             }
+            */
 
             $projectsWithStatus[] = [
                 'project'          => $projectInfo,
@@ -95,6 +102,7 @@ final class ProjectController extends AbstractController
         $deletedProjects = $this->projectService->findAllDeleted();
 
         return $this->render('@project_mgmt.presentation/project_list.twig', [
+            'user'               => $user,
             'projectsWithStatus' => $projectsWithStatus,
             'deletedProjects'    => $deletedProjects,
         ]);
