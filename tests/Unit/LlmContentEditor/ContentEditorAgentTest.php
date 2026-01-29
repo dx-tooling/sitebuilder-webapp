@@ -36,7 +36,7 @@ final class ContentEditorAgentTest extends TestCase
         self::assertStringContainsString('Do not retry the same path', $text);
     }
 
-    public function testGetStepInstructionsRulesStepIsFirst(): void
+    public function testGetStepInstructionsExploreStepIsFirst(): void
     {
         $agent = new ContentEditorAgent(
             $this->createMockWorkspaceTooling(),
@@ -51,31 +51,10 @@ final class ContentEditorAgentTest extends TestCase
         $steps = $ref->invoke($agent);
 
         self::assertNotEmpty($steps);
-        $rulesStep = $steps[0];
-        self::assertStringContainsString('RULES', $rulesStep);
-        self::assertStringContainsString('get_workspace_rules', $rulesStep);
-    }
-
-    public function testGetStepInstructionsExploreStepRefersToWorkingFolderFromUserMessage(): void
-    {
-        $agent = new ContentEditorAgent(
-            $this->createMockWorkspaceTooling(),
-            LlmModelName::defaultForContentEditor(),
-            'sk-test-key',
-            $this->createDefaultAgentConfig()
-        );
-        $ref = new ReflectionMethod(ContentEditorAgent::class, 'getStepInstructions');
-        $ref->setAccessible(true);
-
-        /** @var list<string> $steps */
-        $steps = $ref->invoke($agent);
-
-        self::assertNotEmpty($steps);
-        // EXPLORE step is now at index 1 (after RULES step at index 0)
-        $exploreStep = $steps[1];
+        $exploreStep = $steps[0];
+        self::assertStringContainsString('EXPLORE', $exploreStep);
         self::assertStringContainsString('working folder', $exploreStep);
         self::assertStringContainsString("path from the user's message", $exploreStep);
-        self::assertStringNotContainsString('workspace root folder', $exploreStep);
     }
 
     public function testAgentUsesProvidedConfig(): void

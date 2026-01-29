@@ -85,7 +85,6 @@ WORK SCOPE:
 INSTRUCTIONS;
 
         $stepInstructions = <<<'INSTRUCTIONS'
-0. RULES (first turn only): Call get_workspace_rules once at the start of the session. If rules exist, remember and apply them throughout; if none exist, proceed with default instructions. Do NOT call this tool again on subsequent turns.
 1. EXPLORE: List the working folder (the path from the user's message) to understand its structure.
 2. UNDERSTAND: Read package.json and README.md to learn about the project.
 3. INVESTIGATE: Use get_file_info + search_in_file to efficiently explore files.

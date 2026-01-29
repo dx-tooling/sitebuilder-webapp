@@ -54,12 +54,11 @@ final class AgentConfigTemplateTest extends TestCase
         self::assertStringContainsString('.sitebuilder/rules/', $template->backgroundInstructions);
     }
 
-    public function testDefaultTemplateStepInstructionsStartsWithRulesStep(): void
+    public function testDefaultTemplateStepInstructionsStartsWithExploreStep(): void
     {
         $template = AgentConfigTemplate::forProjectType(ProjectType::DEFAULT);
 
-        self::assertStringStartsWith('0. RULES', $template->stepInstructions);
-        self::assertStringContainsString('get_workspace_rules', $template->stepInstructions);
+        self::assertStringStartsWith('1. EXPLORE', $template->stepInstructions);
     }
 
     public function testDefaultTemplateStepInstructionsContainsWorkflowSteps(): void
