@@ -88,18 +88,18 @@
 
 /* Prompt suggestion hover expansion */
 .prompt-suggestion {
-    @apply text-left overflow-hidden rounded-md;
+    @apply text-left overflow-hidden rounded-md bg-transparent;
     max-width: 200px;
     max-height: 1.75rem;
     white-space: nowrap;
     text-overflow: ellipsis;
-    transition: max-width 1s ease-out, max-height 1s ease-out, border-radius 1s ease-out, white-space 0s 0s;
+    transition: max-width 1s ease-out, max-height 1s ease-out, background-color 1s ease-out, white-space 0s 0s;
 }
 
 .prompt-suggestion.suggestion-expanded {
+    @apply bg-white dark:bg-dark-800;
     max-width: 600px;
     max-height: 200px;
     white-space: normal;
     text-overflow: clip;
-    border-radius: 0;
 }
