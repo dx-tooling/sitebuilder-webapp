@@ -229,6 +229,7 @@
                     {% if promptSuggestions is not empty %}
                         <div {{ stimulus_controller('prompt-suggestions', { maxVisible: 3 }) }}
                              class="mt-3">
+                            <h4 class="text-xs font-medium text-dark-500 dark:text-dark-400 mb-2">{{ 'editor.prompt_suggestions_headline'|trans }}</h4>
                             <div class="flex flex-wrap gap-2">
                                 {% for suggestion in promptSuggestions %}
                                     <button type="button"
