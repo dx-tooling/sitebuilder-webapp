@@ -93,7 +93,7 @@
     max-height: 1.75rem;
     white-space: nowrap;
     text-overflow: ellipsis;
-    transition: max-width 1s ease-out, max-height 1s ease-out, white-space 0s 0s;
+    transition: max-width 1s ease-out, max-height 1s ease-out, border-radius 1s ease-out, white-space 0s 0s;
 }
 
 .prompt-suggestion.suggestion-expanded {
@@ -101,4 +101,5 @@
     max-height: 200px;
     white-space: normal;
     text-overflow: clip;
+    border-radius: 0;
 }
