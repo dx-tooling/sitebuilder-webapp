@@ -88,13 +88,17 @@
 
 /* Prompt suggestion hover expansion */
 .prompt-suggestion {
-    @apply text-left overflow-hidden whitespace-nowrap;
+    @apply text-left overflow-hidden;
     max-width: 200px;
+    max-height: 1.75rem;
+    white-space: nowrap;
     text-overflow: ellipsis;
-    transition: max-width 1s ease-out;
+    transition: max-width 1s ease-out, max-height 1s ease-out, white-space 0s 0s;
 }
 
 .prompt-suggestion.suggestion-expanded {
-    max-width: 100%;
+    max-width: 600px;
+    max-height: 200px;
+    white-space: normal;
     text-overflow: clip;
 }

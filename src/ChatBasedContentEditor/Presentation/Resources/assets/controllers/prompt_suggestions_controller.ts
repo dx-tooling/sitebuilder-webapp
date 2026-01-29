@@ -8,7 +8,6 @@ export default class extends Controller {
     static targets = ["suggestion", "expandButton", "collapseButton"];
     static values = {
         maxVisible: { type: Number, default: 3 },
-        hoverDelay: { type: Number, default: 500 },
     };
 
     declare readonly suggestionTargets: HTMLButtonElement[];
@@ -17,9 +16,6 @@ export default class extends Controller {
     declare readonly hasCollapseButtonTarget: boolean;
     declare readonly collapseButtonTarget: HTMLButtonElement;
     declare readonly maxVisibleValue: number;
-    declare readonly hoverDelayValue: number;
-
-    private hoverTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
     /**
      * Handle click on a suggestion button.
@@ -38,42 +34,19 @@ export default class extends Controller {
     }
 
     /**
-     * Handle mouse enter on a suggestion - start hover delay timer.
+     * Handle mouse enter on a suggestion - expand immediately.
      */
     hoverStart(event: Event): void {
         const button = event.currentTarget as HTMLButtonElement;
-
-        // Clear any existing timeout
-        this.clearHoverTimeout();
-
-        // Start delay timer
-        this.hoverTimeoutId = setTimeout(() => {
-            button.classList.add("suggestion-expanded");
-        }, this.hoverDelayValue);
+        button.classList.add("suggestion-expanded");
     }
 
     /**
-     * Handle mouse leave on a suggestion - cancel timer and collapse immediately.
+     * Handle mouse leave on a suggestion - collapse immediately.
      */
     hoverEnd(event: Event): void {
         const button = event.currentTarget as HTMLButtonElement;
-
-        // Clear the delay timer
-        this.clearHoverTimeout();
-
-        // Collapse immediately
         button.classList.remove("suggestion-expanded");
-    }
-
-    private clearHoverTimeout(): void {
-        if (this.hoverTimeoutId !== null) {
-            clearTimeout(this.hoverTimeoutId);
-            this.hoverTimeoutId = null;
-        }
-    }
-
-    disconnect(): void {
-        this.clearHoverTimeout();
     }
 
     /**
