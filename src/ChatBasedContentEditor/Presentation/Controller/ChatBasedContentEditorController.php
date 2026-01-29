@@ -15,6 +15,7 @@ use App\ChatBasedContentEditor\Domain\Service\ConversationService;
 use App\ChatBasedContentEditor\Infrastructure\Adapter\DistFileScannerInterface;
 use App\ChatBasedContentEditor\Infrastructure\Message\RunEditSessionMessage;
 use App\ChatBasedContentEditor\Presentation\Service\ConversationContextUsageService;
+use App\ChatBasedContentEditor\Presentation\Service\PromptSuggestionsService;
 use App\ProjectMgmt\Facade\ProjectMgmtFacadeInterface;
 use App\RemoteContentAssets\Facade\RemoteContentAssetsFacadeInterface;
 use App\WorkspaceMgmt\Facade\Enum\WorkspaceStatus;
@@ -54,6 +55,7 @@ final class ChatBasedContentEditorController extends AbstractController
         private readonly DistFileScannerInterface        $distFileScanner,
         private readonly ConversationContextUsageService $contextUsageService,
         private readonly TranslatorInterface             $translator,
+        private readonly PromptSuggestionsService        $promptSuggestionsService,
     ) {
     }
 
@@ -310,6 +312,12 @@ final class ChatBasedContentEditorController extends AbstractController
 
         $contextUsage = $this->contextUsageService->getContextUsage($conversation);
 
+        // Load prompt suggestions only for editable sessions
+        $promptSuggestions = [];
+        if ($canEdit && $workspace !== null) {
+            $promptSuggestions = $this->promptSuggestionsService->getSuggestions($workspace->workspacePath);
+        }
+
         return $this->render('@chat_based_content_editor.presentation/chat_based_content_editor.twig', [
             'conversation'    => $conversation,
             'workspace'       => $workspace,
@@ -338,6 +346,7 @@ final class ChatBasedContentEditorController extends AbstractController
                 'lastChunkId' => count($activeSessionChunks) > 0 ? $activeSessionChunks[count($activeSessionChunks) - 1]['id'] : 0,
             ] : null,
             'remoteAssetBrowserWindowSize' => RemoteContentAssetsFacadeInterface::BROWSER_WINDOW_SIZE,
+            'promptSuggestions'            => $promptSuggestions,
         ]);
     }
 

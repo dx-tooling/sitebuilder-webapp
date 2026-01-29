@@ -1142,4 +1142,25 @@ export default class extends Controller {
             textarea.value = systemNote + currentValue;
         }
     }
+
+    /**
+     * Handle prompt suggestion insertion from prompt-suggestions controller.
+     * Inserts the suggestion text at the cursor position in the instruction textarea.
+     */
+    handleSuggestionInsert(event: CustomEvent<{ text: string }>): void {
+        const text = event.detail?.text;
+        if (!text || !this.hasInstructionTarget) {
+            return;
+        }
+
+        const textarea = this.instructionTarget;
+        const start = textarea.selectionStart;
+        const end = textarea.selectionEnd;
+
+        textarea.value = textarea.value.slice(0, start) + text + textarea.value.slice(end);
+
+        const newPos = start + text.length;
+        textarea.setSelectionRange(newPos, newPos);
+        textarea.focus();
+    }
 }
