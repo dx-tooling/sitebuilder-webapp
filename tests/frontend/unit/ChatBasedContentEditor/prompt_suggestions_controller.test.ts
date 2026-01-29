@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import PromptSuggestionsController from "../../../../src/ChatBasedContentEditor/Presentation/Resources/assets/controllers/prompt_suggestions_controller.ts";
 
 describe("PromptSuggestionsController", () => {
@@ -34,6 +34,8 @@ describe("PromptSuggestionsController", () => {
             hasCollapseButtonTarget: boolean;
             collapseButtonTarget: HTMLButtonElement;
             maxVisibleValue: number;
+            hoverDelayValue: number;
+            hoverTimeoutId: ReturnType<typeof setTimeout> | null;
             dispatch: (name: string, options: unknown) => void;
         };
 
@@ -43,6 +45,8 @@ describe("PromptSuggestionsController", () => {
         state.hasCollapseButtonTarget = true;
         state.collapseButtonTarget = collapseButton;
         state.maxVisibleValue = 3;
+        state.hoverDelayValue = 500;
+        state.hoverTimeoutId = null;
         state.dispatch = vi.fn();
 
         return { controller, suggestionButtons, expandButton, collapseButton };
@@ -157,6 +161,86 @@ describe("PromptSuggestionsController", () => {
 
             expect(expandButton.classList.contains("hidden")).toBe(false);
             expect(collapseButton.classList.contains("hidden")).toBe(true);
+        });
+    });
+
+    describe("hover functionality", () => {
+        beforeEach(() => {
+            vi.useFakeTimers();
+        });
+
+        afterEach(() => {
+            vi.useRealTimers();
+        });
+
+        it("adds suggestion-expanded class after hover delay", () => {
+            const { controller } = createController();
+            const button = document.createElement("button");
+            const event = { currentTarget: button } as unknown as Event;
+
+            controller.hoverStart(event);
+
+            // Class should not be added immediately
+            expect(button.classList.contains("suggestion-expanded")).toBe(false);
+
+            // Advance timer past the delay
+            vi.advanceTimersByTime(500);
+
+            // Now class should be added
+            expect(button.classList.contains("suggestion-expanded")).toBe(true);
+        });
+
+        it("does not add class before delay completes", () => {
+            const { controller } = createController();
+            const button = document.createElement("button");
+            const event = { currentTarget: button } as unknown as Event;
+
+            controller.hoverStart(event);
+
+            // Advance timer but not past the delay
+            vi.advanceTimersByTime(400);
+
+            expect(button.classList.contains("suggestion-expanded")).toBe(false);
+        });
+
+        it("removes class immediately on hover end", () => {
+            const { controller } = createController();
+            const button = document.createElement("button");
+            button.classList.add("suggestion-expanded");
+            const event = { currentTarget: button } as unknown as Event;
+
+            controller.hoverEnd(event);
+
+            expect(button.classList.contains("suggestion-expanded")).toBe(false);
+        });
+
+        it("cancels pending expansion on hover end", () => {
+            const { controller } = createController();
+            const button = document.createElement("button");
+            const event = { currentTarget: button } as unknown as Event;
+
+            controller.hoverStart(event);
+            vi.advanceTimersByTime(300); // Partial delay
+
+            controller.hoverEnd(event);
+            vi.advanceTimersByTime(300); // Past original delay
+
+            // Class should not be added because hover ended
+            expect(button.classList.contains("suggestion-expanded")).toBe(false);
+        });
+
+        it("clears timeout on disconnect", () => {
+            const { controller } = createController();
+            const button = document.createElement("button");
+            const event = { currentTarget: button } as unknown as Event;
+
+            controller.hoverStart(event);
+            controller.disconnect();
+
+            vi.advanceTimersByTime(600);
+
+            // Class should not be added because disconnect cleared the timeout
+            expect(button.classList.contains("suggestion-expanded")).toBe(false);
         });
     });
 });

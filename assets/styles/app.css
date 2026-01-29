@@ -85,3 +85,25 @@
 .activity-seconds-inactive {
     @apply bg-dark-200 text-dark-500 dark:bg-dark-700 dark:text-dark-400;
 }
+
+/* Prompt suggestion hover expansion */
+.prompt-suggestion {
+    @apply transition-all duration-300 ease-out;
+    max-width: fit-content;
+}
+
+.prompt-suggestion .suggestion-full {
+    display: none;
+}
+
+.prompt-suggestion .suggestion-truncated {
+    display: inline;
+}
+
+.prompt-suggestion.suggestion-expanded .suggestion-full {
+    display: inline;
+}
+
+.prompt-suggestion.suggestion-expanded .suggestion-truncated {
+    display: none;
+}
