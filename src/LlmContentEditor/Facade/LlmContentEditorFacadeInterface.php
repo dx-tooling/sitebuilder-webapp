@@ -29,16 +29,16 @@ interface LlmContentEditorFacadeInterface
      *
      * @param list<ConversationMessageDto> $previousMessages Messages from earlier turns in this conversation
      * @param string                       $llmApiKey        The API key for the LLM provider (BYOK)
-     * @param AgentConfigDto|null          $agentConfig      Custom agent configuration, or null for defaults
+     * @param AgentConfigDto               $agentConfig      Agent configuration from project settings
      *
      * @return Generator<EditStreamChunkDto>
      */
     public function streamEditWithHistory(
-        string          $workspacePath,
-        string          $instruction,
-        array           $previousMessages,
-        string          $llmApiKey,
-        ?AgentConfigDto $agentConfig = null
+        string         $workspacePath,
+        string         $instruction,
+        array          $previousMessages,
+        string         $llmApiKey,
+        AgentConfigDto $agentConfig
     ): Generator;
 
     /**

@@ -7,6 +7,8 @@ namespace App\Tests\Unit\LlmContentEditor;
 use App\LlmContentEditor\Domain\Agent\ContentEditorAgent;
 use App\LlmContentEditor\Domain\Enum\LlmModelName;
 use App\LlmContentEditor\Facade\Dto\AgentConfigDto;
+use App\ProjectMgmt\Domain\ValueObject\AgentConfigTemplate;
+use App\ProjectMgmt\Facade\Enum\ProjectType;
 use App\WorkspaceTooling\Facade\WorkspaceToolingServiceInterface;
 use PHPUnit\Framework\TestCase;
 use ReflectionMethod;
@@ -18,7 +20,8 @@ final class ContentEditorAgentTest extends TestCase
         $agent = new ContentEditorAgent(
             $this->createMockWorkspaceTooling(),
             LlmModelName::defaultForContentEditor(),
-            'sk-test-key'
+            'sk-test-key',
+            $this->createDefaultAgentConfig()
         );
         $ref = new ReflectionMethod(ContentEditorAgent::class, 'getBackgroundInstructions');
         $ref->setAccessible(true);
@@ -38,7 +41,8 @@ final class ContentEditorAgentTest extends TestCase
         $agent = new ContentEditorAgent(
             $this->createMockWorkspaceTooling(),
             LlmModelName::defaultForContentEditor(),
-            'sk-test-key'
+            'sk-test-key',
+            $this->createDefaultAgentConfig()
         );
         $ref = new ReflectionMethod(ContentEditorAgent::class, 'getStepInstructions');
         $ref->setAccessible(true);
@@ -57,7 +61,8 @@ final class ContentEditorAgentTest extends TestCase
         $agent = new ContentEditorAgent(
             $this->createMockWorkspaceTooling(),
             LlmModelName::defaultForContentEditor(),
-            'sk-test-key'
+            'sk-test-key',
+            $this->createDefaultAgentConfig()
         );
         $ref = new ReflectionMethod(ContentEditorAgent::class, 'getStepInstructions');
         $ref->setAccessible(true);
@@ -73,7 +78,7 @@ final class ContentEditorAgentTest extends TestCase
         self::assertStringNotContainsString('workspace root folder', $exploreStep);
     }
 
-    public function testAgentUsesCustomConfigWhenProvided(): void
+    public function testAgentUsesProvidedConfig(): void
     {
         $customConfig = new AgentConfigDto(
             "Custom background\nwith multiple lines",
@@ -110,31 +115,19 @@ final class ContentEditorAgentTest extends TestCase
         self::assertSame(['Custom output'], $outputInstructions);
     }
 
-    public function testAgentUsesDefaultConfigWhenNoCustomConfigProvided(): void
-    {
-        $agent = new ContentEditorAgent(
-            $this->createMockWorkspaceTooling(),
-            LlmModelName::defaultForContentEditor(),
-            'sk-test-key'
-            // No custom config
-        );
-
-        $ref = new ReflectionMethod(ContentEditorAgent::class, 'getBackgroundInstructions');
-        $ref->setAccessible(true);
-        /** @var list<string> $instructions */
-        $instructions = $ref->invoke($agent);
-
-        // Should contain default instructions
-        self::assertNotEmpty($instructions);
-        $text = implode("\n", $instructions);
-        self::assertStringContainsString('WORKSPACE CONVENTIONS', $text);
-        self::assertStringContainsString('REMOTE CONTENT ASSETS', $text);
-        self::assertStringContainsString('list_remote_content_asset_urls', $text);
-        self::assertStringContainsString('get_remote_asset_info', $text);
-    }
-
     private function createMockWorkspaceTooling(): WorkspaceToolingServiceInterface
     {
         return $this->createMock(WorkspaceToolingServiceInterface::class);
+    }
+
+    private function createDefaultAgentConfig(): AgentConfigDto
+    {
+        $template = AgentConfigTemplate::forProjectType(ProjectType::DEFAULT);
+
+        return new AgentConfigDto(
+            $template->backgroundInstructions,
+            $template->stepInstructions,
+            $template->outputInstructions
+        );
     }
 }

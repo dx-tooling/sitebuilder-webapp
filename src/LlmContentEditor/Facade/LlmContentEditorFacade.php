@@ -58,11 +58,11 @@ final class LlmContentEditorFacade implements LlmContentEditorFacadeInterface
      * @return Generator<EditStreamChunkDto>
      */
     public function streamEditWithHistory(
-        string          $workspacePath,
-        string          $instruction,
-        array           $previousMessages,
-        string          $llmApiKey,
-        ?AgentConfigDto $agentConfig = null
+        string         $workspacePath,
+        string         $instruction,
+        array          $previousMessages,
+        string         $llmApiKey,
+        AgentConfigDto $agentConfig
     ): Generator {
         // Convert previous message DTOs to NeuronAI messages
         $initialMessages = [];
