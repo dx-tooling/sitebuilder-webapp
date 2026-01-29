@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 #MISE description="Bootstrap local development environment"
+#MISE depends=["check-docker-performance"]
 
 set -e
 
