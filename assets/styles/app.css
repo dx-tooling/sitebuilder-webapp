@@ -88,22 +88,13 @@
 
 /* Prompt suggestion hover expansion */
 .prompt-suggestion {
-    @apply transition-all duration-300 ease-out;
-    max-width: fit-content;
+    @apply text-left overflow-hidden whitespace-nowrap;
+    max-width: 200px;
+    text-overflow: ellipsis;
+    transition: max-width 1s ease-out;
 }
 
-.prompt-suggestion .suggestion-full {
-    display: none;
-}
-
-.prompt-suggestion .suggestion-truncated {
-    display: inline;
-}
-
-.prompt-suggestion.suggestion-expanded .suggestion-full {
-    display: inline;
-}
-
-.prompt-suggestion.suggestion-expanded .suggestion-truncated {
-    display: none;
+.prompt-suggestion.suggestion-expanded {
+    max-width: 100%;
+    text-overflow: clip;
 }

@@ -236,8 +236,7 @@
                                             data-action="click->prompt-suggestions#insert mouseenter->prompt-suggestions#hoverStart mouseleave->prompt-suggestions#hoverEnd"
                                             data-text="{{ suggestion }}"
                                             class="prompt-suggestion px-3 py-1.5 text-xs rounded-full border border-dark-300 dark:border-dark-600 text-dark-600 dark:text-dark-400 hover:bg-dark-100 dark:hover:bg-dark-700 hover:text-dark-900 dark:hover:text-dark-100 cursor-pointer {{ loop.index > 3 ? 'hidden' : '' }}">
-                                        <span class="suggestion-truncated">{{ suggestion|length > 50 ? suggestion|slice(0, 50) ~ '...' : suggestion }}</span>
-                                        <span class="suggestion-full">{{ suggestion }}</span>
+                                        {{ suggestion }}
                                     </button>
                                 {% endfor %}
                             </div>
