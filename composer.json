@@ -59,6 +59,10 @@
         "twig/intl-extra": "^3.23.0",
         "twig/twig": "^2.12|^3.23.0"
     },
+    "require-dev": {
+        "pestphp/pest": "^4.3.2",
+        "phpunit/phpunit": "^12.5.8"
+    },
     "config": {
         "allow-plugins": {
             "pestphp/pest-plugin": true,
