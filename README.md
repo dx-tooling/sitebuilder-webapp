@@ -7,11 +7,13 @@ SiteBuilder is a Symfony web application for AI-assisted content editing. It giv
 The app lets users connect set up content management projects backed by Git repositories, work inside isolated workspaces, and use chat-based workflows to edit files with an AI agent. It manages workspace lifecycle and review steps so changes can be inspected before merging.
 
 <p align="center">
-  <a href="https://dx-tooling.org/sitebuilder-assets/sitebuilder-demo.mp4">
-    <img src="https://dx-tooling.org/sitebuilder-assets/sitebuilder-demo-still.png" alt="SiteBuilder Demo" width="320">
-  </a>
+  <img src="https://dx-tooling.org/sitebuilder-assets/webapp-screenshots/web-versions/SiteBuilder-content-editor-landing-page-preview-and-GitHub-PR-for-changes-1600x987.png" alt="SiteBuilder: content editor, landing page result, and GitHub PR for the changes." width="640">
   <br>
-  <em>Click to watch demo</em>
+  <em>Edit in chat → see the result → changes in a PR.</em>
+  <br>
+  <em>SiteBuilder is the content management tool that creators love to use and engineering loves to support.</em>
+  <br>
+  <a href="https://dx-tooling.org/sitebuilder-assets/sitebuilder-demo.mp4">Click to watch demo</a>
 </p>
 
 ## Latest updates
