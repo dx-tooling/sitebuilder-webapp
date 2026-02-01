@@ -116,14 +116,14 @@
 
         {# Members Card #}
         {% if members|length > 0 %}
-            <div class="etfswui-card mt-6">
+            <div class="etfswui-card mt-6 !overflow-visible">
                 <div class="etfswui-card-title">
                     <div class="etfswui-card-title-content">
                         <h2 class="etfswui-card-title-text">{{ 'dashboard.members.title'|trans({}, 'organization') }}</h2>
                         <p class="etfswui-card-subtitle">{{ 'dashboard.members.count'|trans({count: members|length}, 'organization') }}</p>
                     </div>
                 </div>
-                <div class="etfswui-card-content">
+                <div class="etfswui-card-content !overflow-visible">
                     <div class="divide-y divide-dark-200 dark:divide-dark-700">
                         {% for member in members %}
                             <div class="py-4 {% if loop.first %}pt-0{% endif %} {% if loop.last %}pb-0{% endif %}">
@@ -172,7 +172,7 @@
                                                 <summary class="cursor-pointer py-1 px-2 rounded text-xs text-dark-500 hover:text-dark-700 dark:text-dark-400 dark:hover:text-dark-200 hover:bg-dark-100 dark:hover:bg-dark-700 transition-colors list-none">
                                                     {{ 'dashboard.members.manage_groups'|trans({}, 'organization') }}
                                                 </summary>
-                                                <div class="absolute right-0 mt-1 w-56 bg-white dark:bg-dark-700 rounded-md shadow-lg ring-1 ring-dark-200 dark:ring-dark-600 z-10 py-2">
+                                                <div class="absolute right-0 mt-1 w-56 bg-white dark:bg-dark-700 rounded-md shadow-lg ring-1 ring-dark-200 dark:ring-dark-600 z-50 py-2">
                                                     <p class="px-3 py-1 text-xs font-medium text-dark-500 dark:text-dark-400 uppercase tracking-wide">{{ 'dashboard.members.groups_label'|trans({}, 'organization') }}</p>
                                                     {% for group in groups %}
                                                         {% set isInGroup = group.id in member.groupIds %}
