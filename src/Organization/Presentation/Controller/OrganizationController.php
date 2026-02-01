@@ -497,6 +497,11 @@ final class OrganizationController extends AbstractController
 
                 $this->addFlash('success', $this->translator->trans('flash.success.joined', ['name' => $organizationName], 'organization'));
 
+                // If user was auto-registered via invitation, redirect to set password
+                if ($this->accountFacade->mustSetPassword($invitation->getEmail())) {
+                    return $this->redirectToRoute('account.presentation.set_password');
+                }
+
                 return $this->redirectToRoute('account.presentation.dashboard');
             }
 

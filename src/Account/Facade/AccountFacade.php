@@ -5,14 +5,42 @@ declare(strict_types=1);
 namespace App\Account\Facade;
 
 use App\Account\Domain\Entity\AccountCore;
+use App\Account\Domain\Service\AccountDomainService;
 use App\Account\Facade\Dto\AccountInfoDto;
+use App\Account\Facade\Dto\ResultDto;
+use App\Account\Facade\Dto\UserRegistrationDto;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Security\Core\User\UserInterface;
+use Throwable;
 
 final readonly class AccountFacade implements AccountFacadeInterface
 {
-    public function __construct(private EntityManagerInterface $entityManager)
+    public function __construct(
+        private EntityManagerInterface $entityManager,
+        private AccountDomainService   $accountDomainService
+    ) {
+    }
+
+    public function register(UserRegistrationDto $dto): ResultDto
     {
+        try {
+            $accountCore = $this->accountDomainService->register(
+                $dto->email,
+                $dto->plainPassword,
+                $dto->mustSetPassword
+            );
+
+            return new ResultDto(true, null, $accountCore->getId());
+        } catch (Throwable $t) {
+            return new ResultDto(false, $t->getMessage());
+        }
+    }
+
+    public function mustSetPassword(string $email): bool
+    {
+        $account = $this->findAccountByEmail($email);
+
+        return $account?->getMustSetPassword() ?? false;
     }
 
     public function getAccountInfoById(string $id): ?AccountInfoDto

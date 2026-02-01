@@ -5,10 +5,22 @@ declare(strict_types=1);
 namespace App\Account\Facade;
 
 use App\Account\Facade\Dto\AccountInfoDto;
+use App\Account\Facade\Dto\ResultDto;
+use App\Account\Facade\Dto\UserRegistrationDto;
 use Symfony\Component\Security\Core\User\UserInterface;
 
 interface AccountFacadeInterface
 {
+    /**
+     * Register a new user account.
+     */
+    public function register(UserRegistrationDto $dto): ResultDto;
+
+    /**
+     * Check if user with given email must set their password.
+     */
+    public function mustSetPassword(string $email): bool;
+
     public function getAccountInfoById(string $id): ?AccountInfoDto;
 
     /**

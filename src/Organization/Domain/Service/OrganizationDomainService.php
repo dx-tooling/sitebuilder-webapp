@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Organization\Domain\Service;
 
 use App\Account\Facade\AccountFacadeInterface;
+use App\Account\Facade\Dto\UserRegistrationDto;
 use App\Organization\Domain\Entity\Group;
 use App\Organization\Domain\Entity\Invitation;
 use App\Organization\Domain\Entity\Organization;
@@ -184,11 +185,24 @@ readonly class OrganizationDomainService implements OrganizationDomainServiceInt
                 return $userId;
             }
         } else {
-            // New user - they need to be registered first
-            // In sitebuilder-webapp, we don't auto-create users
-            throw new Exception('User with email ' . $invitation->getEmail() . ' does not exist. They must register first.');
+            // New user - register them automatically (they'll get their own org via event)
+            // They must set a password since they're being created via invitation
+            $result = $this->accountFacade->register(
+                new UserRegistrationDto(
+                    $invitation->getEmail(),
+                    null,  // No password - will be set later
+                    true   // mustSetPassword = true
+                )
+            );
+
+            if (!$result->isSuccess || $result->userId === null) {
+                throw new Exception($result->errorMessage ?? 'Registration failed');
+            }
+
+            $userId = $result->userId;
         }
 
+        // At this point, $userId is guaranteed to be non-null
         // Add user to the inviting organization
         $this->organizationRepository->addUserToOrganization(
             $userId,

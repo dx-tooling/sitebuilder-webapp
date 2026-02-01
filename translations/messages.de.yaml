@@ -50,6 +50,14 @@ account:
         welcome_back: "Willkommen zurück, %email%!"
         member_since: "Mitglied seit"
         sign_out: "Abmelden"
+    set_password:
+        title: "Passwort festlegen"
+        subheading: "Bitte erstellen Sie ein Passwort, um Ihr Konto zu sichern."
+        password_label: "Neues Passwort"
+        password_placeholder: "Geben Sie Ihr neues Passwort ein"
+        confirm_password_label: "Passwort bestätigen"
+        confirm_password_placeholder: "Bestätigen Sie Ihr neues Passwort"
+        submit: "Passwort festlegen"
 
 # Project Management vertical
 project:
@@ -337,6 +345,8 @@ flash:
         finish_conversation_failed: "Unterhaltung konnte nicht beendet werden: %error%"
         send_to_review_failed: "Senden zum Review fehlgeschlagen: %error%"
         provide_email_password: "Bitte geben Sie E-Mail und Passwort an."
+        passwords_mismatch: "Passwörter stimmen nicht überein."
+        password_required: "Passwort ist erforderlich."
         registration_failed: "Registrierung fehlgeschlagen: %error%"
         workspace_in_review: "Dieser Arbeitsbereich wird gerade überprüft. Es können keine Unterhaltungen gestartet werden."
         workspace_busy: "%email% arbeitet gerade an diesem Arbeitsbereich."
@@ -355,6 +365,7 @@ flash:
         conversation_sent_to_review: "Unterhaltung zur Überprüfung gesendet. Pull Request: %url%"
         workspace_reset_conversation_ready: "Arbeitsbereich zurückgesetzt. Sie können jetzt eine neue Unterhaltung starten."
         registration_successful: "Registrierung erfolgreich. Bitte melden Sie sich an."
+        password_set: "Passwort erfolgreich festgelegt."
 
 # JSON API error responses
 api:

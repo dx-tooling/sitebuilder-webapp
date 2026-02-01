@@ -4,20 +4,23 @@ declare(strict_types=1);
 
 namespace App\Account\Presentation\Controller;
 
+use App\Account\Domain\Entity\AccountCore;
 use App\Account\Domain\Service\AccountDomainService;
-use Exception;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Authentication\AuthenticationUtils;
 use Symfony\Contracts\Translation\TranslatorInterface;
+use Throwable;
 
 final class AccountController extends AbstractController
 {
     public function __construct(
         private readonly AccountDomainService $accountService,
-        private readonly TranslatorInterface  $translator
+        private readonly TranslatorInterface  $translator,
+        private readonly Security             $security
     ) {
     }
 
@@ -52,27 +55,44 @@ final class AccountController extends AbstractController
             return $this->redirectToRoute('account.presentation.dashboard');
         }
 
+        $formData = [
+            'email'    => '',
+            'password' => '',
+        ];
+
         if ($request->isMethod(Request::METHOD_POST)) {
-            $email    = $request->request->get('email');
-            $password = $request->request->get('password');
+            $email           = $request->request->get('email');
+            $password        = $request->request->get('password');
+            $passwordConfirm = $request->request->get('password_confirm');
+
+            $formData['email']    = (string) $email;
+            $formData['password'] = (string) $password;
 
             if (!$email || !$password) {
                 $this->addFlash('error', $this->translator->trans('flash.error.provide_email_password'));
 
-                return $this->render('@account.presentation/sign_up.html.twig');
+                return $this->render('@account.presentation/sign_up.html.twig', $formData);
+            }
+
+            if ($password !== $passwordConfirm) {
+                $this->addFlash('error', $this->translator->trans('flash.error.passwords_mismatch'));
+
+                return $this->render('@account.presentation/sign_up.html.twig', $formData);
             }
 
             try {
-                $this->accountService->register((string) $email, (string) $password);
-                $this->addFlash('success', $this->translator->trans('flash.success.registration_successful'));
+                $accountCore = $this->accountService->register((string) $email, (string) $password);
+                $this->security->login($accountCore, 'form_login', 'main');
 
-                return $this->redirectToRoute('account.presentation.sign_in');
-            } catch (Exception $e) {
-                $this->addFlash('error', $this->translator->trans('flash.error.registration_failed', ['%error%' => $e->getMessage()]));
+                return $this->redirectToRoute('account.presentation.dashboard');
+            } catch (Throwable $e) {
+                $this->addFlash('error', $e->getMessage());
+
+                return $this->render('@account.presentation/sign_up.html.twig', $formData);
             }
         }
 
-        return $this->render('@account.presentation/sign_up.html.twig');
+        return $this->render('@account.presentation/sign_up.html.twig', $formData);
     }
 
     #[Route(
@@ -92,6 +112,60 @@ final class AccountController extends AbstractController
     )]
     public function dashboardAction(): Response
     {
+        /** @var AccountCore|null $accountCore */
+        $accountCore = $this->getUser();
+
+        if ($accountCore !== null && $accountCore->getMustSetPassword()) {
+            return $this->redirectToRoute('account.presentation.set_password');
+        }
+
         return $this->render('@account.presentation/account_dashboard.twig');
+    }
+
+    #[Route(
+        path: '/account/set-password',
+        name: 'account.presentation.set_password',
+        methods: [Request::METHOD_GET, Request::METHOD_POST]
+    )]
+    public function setPasswordAction(Request $request): Response
+    {
+        /** @var AccountCore|null $accountCore */
+        $accountCore = $this->getUser();
+
+        if ($accountCore === null) {
+            return $this->redirectToRoute('account.presentation.sign_in');
+        }
+
+        // If user doesn't need to set password, redirect to dashboard
+        if (!$accountCore->getMustSetPassword()) {
+            return $this->redirectToRoute('account.presentation.dashboard');
+        }
+
+        if ($request->isMethod(Request::METHOD_POST)) {
+            $password        = $request->request->get('password');
+            $passwordConfirm = $request->request->get('password_confirm');
+
+            if (!$password) {
+                $this->addFlash('error', $this->translator->trans('flash.error.password_required'));
+
+                return $this->render('@account.presentation/set_password.html.twig');
+            }
+
+            if ($password !== $passwordConfirm) {
+                $this->addFlash('error', $this->translator->trans('flash.error.passwords_mismatch'));
+
+                return $this->render('@account.presentation/set_password.html.twig');
+            }
+
+            // Important: Set the flag BEFORE calling updatePassword to ensure it persists
+            $accountCore->setMustSetPassword(false);
+            $this->accountService->updatePassword($accountCore, (string) $password);
+
+            $this->addFlash('success', $this->translator->trans('flash.success.password_set'));
+
+            return $this->redirectToRoute('account.presentation.dashboard');
+        }
+
+        return $this->render('@account.presentation/set_password.html.twig');
     }
 }
