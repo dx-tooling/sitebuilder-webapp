@@ -7,6 +7,7 @@ namespace App\Account\Facade;
 use App\Account\Domain\Entity\AccountCore;
 use App\Account\Facade\Dto\AccountInfoDto;
 use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Component\Security\Core\User\UserInterface;
 
 final readonly class AccountFacade implements AccountFacadeInterface
 {
@@ -32,6 +33,29 @@ final readonly class AccountFacade implements AccountFacadeInterface
         }
 
         return $this->toDto($account);
+    }
+
+    /**
+     * @param list<string> $ids
+     * @return list<AccountInfoDto>
+     */
+    public function getAccountInfoByIds(array $ids): array
+    {
+        if (count($ids) === 0) {
+            return [];
+        }
+
+        $repo     = $this->entityManager->getRepository(AccountCore::class);
+        $accounts = $repo->findBy(['id' => $ids]);
+
+        $result = [];
+        foreach ($accounts as $account) {
+            if ($account instanceof AccountCore) {
+                $result[] = $this->toDto($account);
+            }
+        }
+
+        return $result;
     }
 
     public function getAccountCoreIdByEmail(string $email): ?string
@@ -70,6 +94,18 @@ final readonly class AccountFacade implements AccountFacadeInterface
         $account->setCurrentlyActiveOrganizationId($organizationId);
         $this->entityManager->persist($account);
         $this->entityManager->flush();
+    }
+
+    public function getAccountForLogin(string $userId): ?UserInterface
+    {
+        return $this->findAccountById($userId);
+    }
+
+    public function getDisplayName(string $userId): string
+    {
+        $account = $this->findAccountById($userId);
+
+        return $account?->getEmail() ?? 'Unknown';
     }
 
     private function findAccountById(string $id): ?AccountCore

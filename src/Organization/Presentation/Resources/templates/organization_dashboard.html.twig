@@ -1,0 +1,313 @@
+{% extends '@common.presentation/base_appshell.html.twig' %}
+
+{% block title %}{{ 'dashboard.title'|trans({}, 'organization') }}{% endblock %}
+
+{% block body %}
+    <div class="max-w-4xl mx-auto py-8">
+        <h1 class="etfswui-pagetitle">
+            {{ 'dashboard.heading'|trans({}, 'organization') }}
+        </h1>
+
+        {# Flash Messages #}
+        {% for message in app.flashes('success') %}
+            <div class="etfswui-alert etfswui-alert-success mb-6">
+                <div class="etfswui-alert-body">
+                    <p class="etfswui-alert-success-text">{{ message }}</p>
+                </div>
+            </div>
+        {% endfor %}
+        {% for message in app.flashes('error') %}
+            <div class="etfswui-alert etfswui-alert-danger mb-6">
+                <div class="etfswui-alert-body">
+                    <p class="etfswui-alert-danger-text">{{ message }}</p>
+                </div>
+            </div>
+        {% endfor %}
+
+        {# Active Organization Card #}
+        <div class="etfswui-card">
+            <div class="etfswui-card-title">
+                <h2 class="etfswui-card-title-text">{{ 'dashboard.active.title'|trans({}, 'organization') }}</h2>
+            </div>
+            <div class="etfswui-card-content">
+
+                {% if organizationName %}
+                    <p class="text-dark-900 dark:text-white font-medium text-lg mb-2">{{ organizationName }}</p>
+
+                    {# Rename form for owner of current organization #}
+                    {% if canRenameCurrentOrganization %}
+                        <form action="{{ path('organization.presentation.rename') }}" method="post" class="mt-4">
+                            <input type="hidden" name="_csrf_token" value="{{ csrf_token('rename_organization') }}">
+                            <div class="flex gap-2">
+                                <input
+                                    type="text"
+                                    name="name"
+                                    placeholder="{{ 'dashboard.active.rename_placeholder'|trans({}, 'organization') }}"
+                                    value="{{ currentOrganizationRawName }}"
+                                    class="etfswui-form-input flex-1"
+                                >
+                                <button type="submit" class="etfswui-button-default">
+                                    {{ 'dashboard.active.rename_button'|trans({}, 'organization') }}
+                                </button>
+                            </div>
+                        </form>
+                    {% endif %}
+                {% else %}
+                    <p class="etfswui-text-small mb-4">
+                        {{ 'dashboard.active.no_organization'|trans({}, 'organization') }}
+                    </p>
+                {% endif %}
+            </div>
+        </div>
+
+        {# Invite Members Card (only for owners) #}
+        {% if canInviteToCurrentOrganization %}
+            <div class="etfswui-card mt-6">
+                <div class="etfswui-card-title">
+                    <div class="etfswui-card-title-content">
+                        <h2 class="etfswui-card-title-text">{{ 'dashboard.invite.title'|trans({}, 'organization') }}</h2>
+                        <p class="etfswui-card-subtitle">{{ 'dashboard.invite.description'|trans({}, 'organization') }}</p>
+                    </div>
+                </div>
+                <div class="etfswui-card-content">
+                    <form action="{{ path('organization.presentation.invite') }}" method="post">
+                        <input type="hidden" name="_csrf_token" value="{{ csrf_token('invite_member') }}">
+                        <div class="flex gap-2">
+                            <input
+                                type="email"
+                                name="email"
+                                placeholder="{{ 'dashboard.invite.email_placeholder'|trans({}, 'organization') }}"
+                                required
+                                class="etfswui-form-input flex-1"
+                            >
+                            <button type="submit" class="etfswui-button-default">
+                                {{ 'dashboard.invite.send_button'|trans({}, 'organization') }}
+                            </button>
+                        </div>
+                    </form>
+
+                    {# Pending Invitations #}
+                    {% if pendingInvitations|length > 0 %}
+                        <div class="mt-6 pt-4 border-t border-dark-200 dark:border-dark-700">
+                            <h3 class="etfswui-text-small font-medium mb-3">{{ 'dashboard.invite.pending_title'|trans({}, 'organization') }}</h3>
+                            <div class="space-y-2">
+                                {% for invitation in pendingInvitations %}
+                                    <div class="flex items-center justify-between py-2 px-3 bg-dark-50 dark:bg-dark-700/50 rounded-md">
+                                        <span class="etfswui-text-small">{{ invitation.email }}</span>
+                                        <div class="flex items-center gap-3">
+                                            <span class="text-xs text-dark-500 dark:text-dark-400">
+                                                {{ 'dashboard.invite.sent_date'|trans({date: invitation.createdAt|date('M j')}, 'organization') }}
+                                            </span>
+                                            <form action="{{ path('organization.presentation.resend_invitation', { invitationId: invitation.id }) }}" method="post" class="inline">
+                                                <input type="hidden" name="_csrf_token" value="{{ csrf_token('resend_invitation') }}">
+                                                <button type="submit" class="etfswui-button-as-link-default text-xs">
+                                                    {{ 'dashboard.invite.resend_button'|trans({}, 'organization') }}
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        {% endif %}
+
+        {# Members Card #}
+        {% if members|length > 0 %}
+            <div class="etfswui-card mt-6">
+                <div class="etfswui-card-title">
+                    <div class="etfswui-card-title-content">
+                        <h2 class="etfswui-card-title-text">{{ 'dashboard.members.title'|trans({}, 'organization') }}</h2>
+                        <p class="etfswui-card-subtitle">{{ 'dashboard.members.count'|trans({count: members|length}, 'organization') }}</p>
+                    </div>
+                </div>
+                <div class="etfswui-card-content">
+                    <div class="divide-y divide-dark-200 dark:divide-dark-700">
+                        {% for member in members %}
+                            <div class="py-4 {% if loop.first %}pt-0{% endif %} {% if loop.last %}pb-0{% endif %}">
+                                <div class="flex items-start justify-between gap-4">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-9 h-9 rounded-full bg-dark-100 dark:bg-dark-700 flex items-center justify-center flex-shrink-0">
+                                            <span class="text-sm font-medium text-dark-600 dark:text-dark-300">
+                                                {{ member.displayName|slice(0, 1)|upper }}
+                                            </span>
+                                        </div>
+                                        <div>
+                                            <p class="font-medium text-dark-900 dark:text-white flex items-center gap-2 flex-wrap">
+                                                {{ member.displayName }}
+                                                {% if member.isOwner %}
+                                                    <span class="etfswui-badge etfswui-badge-warning">
+                                                        {{ 'dashboard.members.owner_badge'|trans({}, 'organization') }}
+                                                    </span>
+                                                {% endif %}
+                                                {% if member.isCurrentUser %}
+                                                    <span class="etfswui-badge etfswui-badge-info">
+                                                        {{ 'dashboard.members.you_badge'|trans({}, 'organization') }}
+                                                    </span>
+                                                {% endif %}
+                                            </p>
+                                            <p class="text-xs text-dark-500 dark:text-dark-400">{{ member.email }}</p>
+
+                                            {# Show groups this member belongs to #}
+                                            {% if groups|length > 0 %}
+                                                <div class="mt-2 flex flex-wrap gap-1">
+                                                    {% for group in groups %}
+                                                        {% if group.id in member.groupIds %}
+                                                            <span class="etfswui-badge etfswui-badge-dark">
+                                                                {{ group.name }}
+                                                            </span>
+                                                        {% endif %}
+                                                    {% endfor %}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+
+                                    {# Group management controls for owner (not for themselves) #}
+                                    {% if isOrganizationOwner and not member.isOwner and groups|length > 0 %}
+                                        <div class="flex-shrink-0">
+                                            <details class="relative">
+                                                <summary class="cursor-pointer py-1 px-2 rounded text-xs text-dark-500 hover:text-dark-700 dark:text-dark-400 dark:hover:text-dark-200 hover:bg-dark-100 dark:hover:bg-dark-700 transition-colors list-none">
+                                                    {{ 'dashboard.members.manage_groups'|trans({}, 'organization') }}
+                                                </summary>
+                                                <div class="absolute right-0 mt-1 w-56 bg-white dark:bg-dark-700 rounded-md shadow-lg ring-1 ring-dark-200 dark:ring-dark-600 z-10 py-2">
+                                                    <p class="px-3 py-1 text-xs font-medium text-dark-500 dark:text-dark-400 uppercase tracking-wide">{{ 'dashboard.members.groups_label'|trans({}, 'organization') }}</p>
+                                                    {% for group in groups %}
+                                                        {% set isInGroup = group.id in member.groupIds %}
+                                                        <div class="px-3 py-1.5 flex items-center justify-between">
+                                                            <span class="etfswui-text-small">{{ group.name }}</span>
+                                                            {% if isInGroup %}
+                                                                <form action="{{ path('organization.presentation.remove_member_from_group', { groupId: group.id }) }}" method="post" class="inline">
+                                                                    <input type="hidden" name="_csrf_token" value="{{ csrf_token('manage_group') }}">
+                                                                    <input type="hidden" name="member_id" value="{{ member.id }}">
+                                                                    <button type="submit" class="etfswui-button-as-link-danger text-xs">
+                                                                        {{ 'dashboard.members.remove_button'|trans({}, 'organization') }}
+                                                                    </button>
+                                                                </form>
+                                                            {% else %}
+                                                                <form action="{{ path('organization.presentation.add_member_to_group', { groupId: group.id }) }}" method="post" class="inline">
+                                                                    <input type="hidden" name="_csrf_token" value="{{ csrf_token('manage_group') }}">
+                                                                    <input type="hidden" name="member_id" value="{{ member.id }}">
+                                                                    <button type="submit" class="etfswui-button-as-link-default text-xs">
+                                                                        {{ 'dashboard.members.add_button'|trans({}, 'organization') }}
+                                                                    </button>
+                                                                </form>
+                                                            {% endif %}
+                                                        </div>
+                                                    {% endfor %}
+                                                </div>
+                                            </details>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+
+        {# Groups Card #}
+        {% if groups|length > 0 %}
+            <div class="etfswui-card mt-6">
+                <div class="etfswui-card-title">
+                    <div class="etfswui-card-title-content">
+                        <h2 class="etfswui-card-title-text">{{ 'dashboard.groups.title'|trans({}, 'organization') }}</h2>
+                        <p class="etfswui-card-subtitle">{{ 'dashboard.groups.count'|trans({count: groups|length}, 'organization') }}</p>
+                    </div>
+                </div>
+                <div class="etfswui-card-content">
+                    <div class="divide-y divide-dark-200 dark:divide-dark-700">
+                        {% for group in groups %}
+                            {% set memberCount = 0 %}
+                            {% for member in members %}
+                                {% if group.id in member.groupIds %}
+                                    {% set memberCount = memberCount + 1 %}
+                                {% endif %}
+                            {% endfor %}
+                            <div class="py-3 flex items-center justify-between {% if loop.first %}pt-0{% endif %} {% if loop.last %}pb-0{% endif %}">
+                                <div>
+                                    <p class="font-medium text-dark-900 dark:text-white flex items-center gap-2">
+                                        {{ group.name }}
+                                        {% if group.isDefault %}
+                                            <span class="etfswui-badge etfswui-badge-success">
+                                                {{ 'dashboard.groups.default_badge'|trans({}, 'organization') }}
+                                            </span>
+                                        {% endif %}
+                                    </p>
+                                    <p class="text-xs text-dark-500 dark:text-dark-400">{{ 'dashboard.groups.member_count'|trans({count: memberCount}, 'organization') }}</p>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+
+        {# Create New Organization Card #}
+        <div class="etfswui-card mt-6">
+            <div class="etfswui-card-title">
+                <h2 class="etfswui-card-title-text">{{ 'dashboard.create.title'|trans({}, 'organization') }}</h2>
+            </div>
+            <div class="etfswui-card-content">
+                <form action="{{ path('organization.presentation.create') }}" method="post">
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token('create_organization') }}">
+                    <div class="flex gap-2">
+                        <input
+                            type="text"
+                            name="name"
+                            placeholder="{{ 'dashboard.create.name_placeholder'|trans({}, 'organization') }}"
+                            required
+                            minlength="1"
+                            class="etfswui-form-input flex-1"
+                        >
+                        <button type="submit" class="etfswui-button-default">
+                            {{ 'dashboard.create.create_button'|trans({}, 'organization') }}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        {# Organizations List (if user has multiple) #}
+        {% if organizations|length > 0 %}
+            <div class="etfswui-card mt-6">
+                <div class="etfswui-card-title">
+                    <h2 class="etfswui-card-title-text">{{ 'dashboard.list.title'|trans({}, 'organization') }}</h2>
+                </div>
+                <div class="etfswui-card-content">
+                    <div class="divide-y divide-dark-200 dark:divide-dark-700">
+                        {% for org in organizations %}
+                            <div class="py-3 flex items-center justify-between {% if loop.first %}pt-0{% endif %} {% if loop.last %}pb-0{% endif %}">
+                                <div>
+                                    <p class="font-medium text-dark-900 dark:text-white">
+                                        {{ org.name }}
+                                        {% if org.isActive %}
+                                            <span class="etfswui-badge etfswui-badge-success ml-2">
+                                                {{ 'dashboard.list.active_badge'|trans({}, 'organization') }}
+                                            </span>
+                                        {% endif %}
+                                    </p>
+                                    <p class="text-xs text-dark-500 dark:text-dark-400">
+                                        {% if org.isOwned %}{{ 'dashboard.list.owned_by_you'|trans({}, 'organization') }}{% else %}{{ 'dashboard.list.member_role'|trans({}, 'organization') }}{% endif %}
+                                    </p>
+                                </div>
+
+                                {% if not org.isActive %}
+                                    <form action="{{ path('organization.presentation.switch', { organizationId: org.id }) }}" method="post">
+                                        <input type="hidden" name="_csrf_token" value="{{ csrf_token('switch_organization') }}">
+                                        <button type="submit" class="etfswui-button-secondary">
+                                            {{ 'dashboard.list.switch_button'|trans({}, 'organization') }}
+                                        </button>
+                                    </form>
+                                {% endif %}
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+{% endblock body %}

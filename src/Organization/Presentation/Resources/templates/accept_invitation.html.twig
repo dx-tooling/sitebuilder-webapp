@@ -1,0 +1,54 @@
+{% extends '@common.presentation/base_appshell.html.twig' %}
+
+{% block title %}{{ 'invitation.accept.title'|trans({}, 'organization') }}{% endblock %}
+
+{% block body %}
+    <div class="min-h-[60vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+        <div class="w-full max-w-md space-y-8">
+            {# Header #}
+            <div class="text-center">
+                <h1 class="etfswui-h1">
+                    {{ 'invitation.accept.heading'|trans({}, 'organization') }}
+                </h1>
+                <p class="etfswui-text-small mt-2">
+                    {{ 'invitation.accept.subheading'|trans({}, 'organization') }}
+                </p>
+            </div>
+
+            {# Invitation Card #}
+            <div class="etfswui-card">
+                <div class="etfswui-card-content">
+                    <div class="text-center mb-6">
+                        <p class="etfswui-text mb-2">
+                            {{ 'invitation.accept.invited_by'|trans({name: ownerName}, 'organization') }}
+                        </p>
+                        {% if organizationName %}
+                            <p class="etfswui-text-small">
+                                {{ 'invitation.accept.organization_label'|trans({}, 'organization') }} <span class="font-medium text-dark-900 dark:text-white">{{ organizationName }}</span>
+                            </p>
+                        {% endif %}
+                    </div>
+
+                    <form action="{{ path('organization.presentation.accept_invitation', { invitationId: invitationId }) }}" method="post" class="space-y-4">
+                        <input type="hidden" name="_csrf_token" value="{{ csrf_token('accept_invitation') }}">
+
+                        <button type="submit" class="etfswui-button-default w-full justify-center">
+                            {{ 'invitation.accept.accept_button'|trans({}, 'organization') }}
+                        </button>
+                    </form>
+
+                    <p class="etfswui-text-small mt-4 text-center">
+                        {{ 'invitation.accept.note'|trans({}, 'organization') }}
+                    </p>
+                </div>
+            </div>
+
+            {# Back link #}
+            <p class="text-center etfswui-text-small">
+                <a href="{{ path('static_pages.presentation.homepage') }}" class="etfswui-link-default font-medium">
+                    {{ 'invitation.accept.homepage_link'|trans({}, 'organization') }}
+                </a>
+            </p>
+        </div>
+    </div>
+{% endblock body %}

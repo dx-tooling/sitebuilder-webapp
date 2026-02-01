@@ -105,6 +105,10 @@ readonly class MainNavigationPresentationService extends AbstractMainNavigationS
                 $this->translator->trans('navigation.your_account'),
                 'account.presentation.dashboard',
             );
+            $entries[] = $this->generateEntry(
+                $this->translator->trans('navigation.organization'),
+                'organization.presentation.dashboard',
+            );
         }
 
         return $entries;

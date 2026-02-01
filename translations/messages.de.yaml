@@ -14,6 +14,7 @@ navigation:
     projects: "Projekte"
     reviewer_dashboard: "Reviewer-Dashboard"
     your_account: "Ihr Konto"
+    organization: "Organisation"
     living_styleguide: "Living Styleguide"
     workflow_docs: "Workflow-Dokumentation"
 
