@@ -21,6 +21,7 @@ interface AccountFacadeInterface
      * Get account info for multiple users by their IDs.
      *
      * @param list<string> $ids
+     *
      * @return list<AccountInfoDto>
      */
     public function getAccountInfoByIds(array $ids): array;

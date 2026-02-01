@@ -37,6 +37,7 @@ final readonly class AccountFacade implements AccountFacadeInterface
 
     /**
      * @param list<string> $ids
+     *
      * @return list<AccountInfoDto>
      */
     public function getAccountInfoByIds(array $ids): array
