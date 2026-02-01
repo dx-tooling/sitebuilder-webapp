@@ -5,15 +5,18 @@ declare(strict_types=1);
 namespace App\Account\Domain\Service;
 
 use App\Account\Domain\Entity\AccountCore;
+use App\Account\Facade\SymfonyEvent\AccountCoreCreatedSymfonyEvent;
 use Doctrine\ORM\EntityManagerInterface;
 use LogicException;
+use Psr\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 final readonly class AccountDomainService
 {
     public function __construct(
         private EntityManagerInterface      $entityManager,
-        private UserPasswordHasherInterface $passwordHasher
+        private UserPasswordHasherInterface $passwordHasher,
+        private EventDispatcherInterface    $eventDispatcher
     ) {
     }
 
@@ -32,6 +35,12 @@ final readonly class AccountDomainService
 
         $this->entityManager->persist($account);
         $this->entityManager->flush();
+
+        // Dispatch event for other verticals (e.g., Organization creation)
+        $accountId = $account->getId();
+        if ($accountId !== null) {
+            $this->eventDispatcher->dispatch(new AccountCoreCreatedSymfonyEvent($accountId));
+        }
 
         return $account;
     }

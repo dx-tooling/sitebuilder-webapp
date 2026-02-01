@@ -16,9 +16,8 @@ final readonly class AccountFacade implements AccountFacadeInterface
 
     public function getAccountInfoById(string $id): ?AccountInfoDto
     {
-        $repo    = $this->entityManager->getRepository(AccountCore::class);
-        $account = $repo->find($id);
-        if (!$account instanceof AccountCore) {
+        $account = $this->findAccountById($id);
+        if ($account === null) {
             return null;
         }
 
@@ -27,13 +26,66 @@ final readonly class AccountFacade implements AccountFacadeInterface
 
     public function getAccountInfoByEmail(string $email): ?AccountInfoDto
     {
-        $repo    = $this->entityManager->getRepository(AccountCore::class);
-        $account = $repo->findOneBy(['email' => $email]);
-        if (!$account instanceof AccountCore) {
+        $account = $this->findAccountByEmail($email);
+        if ($account === null) {
             return null;
         }
 
         return $this->toDto($account);
+    }
+
+    public function getAccountCoreIdByEmail(string $email): ?string
+    {
+        $account = $this->findAccountByEmail($email);
+
+        return $account?->getId();
+    }
+
+    public function getAccountCoreEmailById(string $id): ?string
+    {
+        $account = $this->findAccountById($id);
+
+        return $account?->getEmail();
+    }
+
+    public function accountCoreWithIdExists(string $id): bool
+    {
+        return $this->findAccountById($id) !== null;
+    }
+
+    public function getCurrentlyActiveOrganizationIdForAccountCore(string $userId): ?string
+    {
+        $account = $this->findAccountById($userId);
+
+        return $account?->getCurrentlyActiveOrganizationId();
+    }
+
+    public function setCurrentlyActiveOrganizationId(string $userId, string $organizationId): void
+    {
+        $account = $this->findAccountById($userId);
+        if ($account === null) {
+            return;
+        }
+
+        $account->setCurrentlyActiveOrganizationId($organizationId);
+        $this->entityManager->persist($account);
+        $this->entityManager->flush();
+    }
+
+    private function findAccountById(string $id): ?AccountCore
+    {
+        $repo    = $this->entityManager->getRepository(AccountCore::class);
+        $account = $repo->find($id);
+
+        return $account instanceof AccountCore ? $account : null;
+    }
+
+    private function findAccountByEmail(string $email): ?AccountCore
+    {
+        $repo    = $this->entityManager->getRepository(AccountCore::class);
+        $account = $repo->findOneBy(['email' => $email]);
+
+        return $account instanceof AccountCore ? $account : null;
     }
 
     private function toDto(AccountCore $account): AccountInfoDto

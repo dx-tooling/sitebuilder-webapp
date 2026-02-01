@@ -297,6 +297,7 @@ final class ChatBasedContentEditorControllerTest extends WebTestCase
     private function createProject(string $name, string $gitUrl, string $githubToken): Project
     {
         $project = new Project(
+            'org-test-123',
             $name,
             $gitUrl,
             $githubToken,

@@ -104,6 +104,22 @@ class AccountCore implements UserInterface, PasswordAuthenticatedUserInterface
         $this->roles = $roles;
     }
 
+    #[ORM\Column(
+        type    : Types::GUID,
+        nullable: true
+    )]
+    private ?string $currentlyActiveOrganizationId = null;
+
+    public function getCurrentlyActiveOrganizationId(): ?string
+    {
+        return $this->currentlyActiveOrganizationId;
+    }
+
+    public function setCurrentlyActiveOrganizationId(?string $organizationId): void
+    {
+        $this->currentlyActiveOrganizationId = $organizationId;
+    }
+
     #[Deprecated]
     public function eraseCredentials(): void
     {

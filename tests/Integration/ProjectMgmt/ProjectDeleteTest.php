@@ -343,6 +343,7 @@ final class ProjectDeleteTest extends WebTestCase
     private function createProject(string $name): Project
     {
         $project = new Project(
+            'org-test-123',
             $name,
             'https://github.com/test/repo.git',
             'ghp_testtoken123',
