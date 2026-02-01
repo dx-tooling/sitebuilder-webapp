@@ -109,9 +109,12 @@ User Created
       → Added to default group
       → currentlyActiveOrganizationId updated
    b) If new user:
-      → Must register first
-      → Then added to inviting organization
+      → Auto-registered with mustSetPassword=true
+      → Personal organization created (via AccountCoreCreatedSymfonyEvent)
+      → Added to inviting organization
+      → Added to default group
       → currentlyActiveOrganizationId set to inviting org
+      → Redirected to set password page
 
 3. Invitation deleted after acceptance
 ```
@@ -189,8 +192,12 @@ src/Organization/
 ├── Facade/
 │   ├── OrganizationFacade[Interface]
 │   └── SymfonyEvent/     # Cross-vertical events
-└── Infrastructure/
-    └── Repository/       # OrganizationRepository
+├── Infrastructure/
+│   └── Repository/       # OrganizationRepository
+└── Presentation/
+    ├── Controller/       # OrganizationController
+    ├── Service/          # OrganizationPresentationService
+    └── Resources/        # Templates, translations
 ```
 
 Cross-vertical communication uses the Facade layer. The Account vertical listens for `CurrentlyActiveOrganizationChangedSymfonyEvent` to update the user's context.
@@ -205,4 +212,4 @@ When the organization system is introduced to an existing deployment:
 4. All existing projects are associated with this organization
 5. All users' `currentlyActiveOrganizationId` is set to this organization
 
-See `migrations/Version20260201160000.php` for implementation details.
+See `migrations/Version20260201154012.php` for implementation details.
