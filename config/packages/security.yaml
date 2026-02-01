@@ -38,7 +38,7 @@ security:
     access_control:
         - { path: ^/sign-in, roles: PUBLIC_ACCESS }
         - { path: ^/sign-up, roles: PUBLIC_ACCESS }
-        - { path: ^/organization/invitation/[^/]+$, roles: PUBLIC_ACCESS }
+        - { path: "^/organization/invitation/[^/]+$", roles: PUBLIC_ACCESS }
         - { path: ^/review, roles: ROLE_REVIEWER }
         - { path: ^/projects, roles: ROLE_USER }
         - { path: ^/conversation, roles: ROLE_USER }

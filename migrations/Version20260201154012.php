@@ -120,7 +120,8 @@ final class Version20260201154012 extends AbstractMigration
         $connection = $this->connection;
 
         // Check if there are any users
-        $userCount = (int) $connection->fetchOne('SELECT COUNT(*) FROM account_cores');
+        $countResult = $connection->fetchOne('SELECT COUNT(*) FROM account_cores');
+        $userCount   = is_numeric($countResult) ? (int) $countResult : 0;
         if ($userCount === 0) {
             // No users yet, make organization_id NOT NULL and return
             $connection->executeStatement('ALTER TABLE projects MODIFY organization_id CHAR(36) NOT NULL');
@@ -137,8 +138,12 @@ final class Version20260201154012 extends AbstractMigration
             return;
         }
 
-        $oldestUserId    = $oldestUser['id'];
-        $oldestUserEmail = $oldestUser['email'];
+        $oldestUserId    = is_string($oldestUser['id']) ? $oldestUser['id'] : '';
+        $oldestUserEmail = is_string($oldestUser['email']) ? $oldestUser['email'] : '';
+
+        if ($oldestUserId === '' || $oldestUserEmail === '') {
+            return;
+        }
 
         // Generate UUIDs for organization and groups
         $orgId        = $this->generateUuid();

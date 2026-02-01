@@ -51,9 +51,7 @@ final readonly class AccountFacade implements AccountFacadeInterface
 
         $result = [];
         foreach ($accounts as $account) {
-            if ($account instanceof AccountCore) {
-                $result[] = $this->toDto($account);
-            }
+            $result[] = $this->toDto($account);
         }
 
         return $result;
