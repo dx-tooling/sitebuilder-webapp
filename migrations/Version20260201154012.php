@@ -227,8 +227,8 @@ final class Version20260201154012 extends AbstractMigration
     {
         // Generate a UUID v4
         $data    = random_bytes(16);
-        $data[6] = chr(ord($data[6]) & 0x0f | 0x40); // Version 4
-        $data[8] = chr(ord($data[8]) & 0x3f | 0x80); // Variant RFC 4122
+        $data[6] = chr(ord($data[6]) & 0x0F | 0x40); // Version 4
+        $data[8] = chr(ord($data[8]) & 0x3F | 0x80); // Variant RFC 4122
 
         return vsprintf('%s%s-%s-%s-%s-%s%s%s', str_split(bin2hex($data), 4));
     }
