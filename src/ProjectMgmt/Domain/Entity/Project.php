@@ -27,6 +27,7 @@ class Project
      * @param list<string>|null $remoteContentAssetsManifestUrls
      */
     public function __construct(
+        string           $organizationId,
         string           $name,
         string           $gitUrl,
         string           $githubToken,
@@ -39,6 +40,7 @@ class Project
         ?string          $agentOutputInstructions = null,
         ?array           $remoteContentAssetsManifestUrls = null
     ) {
+        $this->organizationId                  = $organizationId;
         $this->name                            = $name;
         $this->gitUrl                          = $gitUrl;
         $this->githubToken                     = $githubToken;
@@ -68,6 +70,17 @@ class Project
     public function getId(): ?string
     {
         return $this->id;
+    }
+
+    #[ORM\Column(
+        type: Types::GUID,
+        nullable: false
+    )]
+    private readonly string $organizationId;
+
+    public function getOrganizationId(): string
+    {
+        return $this->organizationId;
     }
 
     #[ORM\Column(

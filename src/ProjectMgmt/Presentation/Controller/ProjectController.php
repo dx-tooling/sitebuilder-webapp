@@ -56,7 +56,15 @@ final class ProjectController extends AbstractController
         // This ensures workspaces become available again after 5 minutes of inactivity
         $this->chatBasedContentEditorFacade->releaseStaleConversations();
 
-        $projects = $this->projectService->findAll();
+        // Get the user's active organization
+        $organizationId = $this->getActiveOrganizationId();
+        if ($organizationId === null) {
+            $this->addFlash('error', $this->translator->trans('flash.error.no_organization'));
+
+            return $this->redirectToRoute('account.presentation.dashboard');
+        }
+
+        $projects = $this->projectService->findAllForOrganization($organizationId);
 
         $projectsWithStatus = [];
         foreach ($projects as $project) {
@@ -99,7 +107,7 @@ final class ProjectController extends AbstractController
         }
 
         // Get soft-deleted projects for the "Deleted projects" section
-        $deletedProjects = $this->projectService->findAllDeleted();
+        $deletedProjects = $this->projectService->findAllDeletedForOrganization($organizationId);
 
         return $this->render('@project_mgmt.presentation/project_list.twig', [
             'user'               => $user,
@@ -170,6 +178,14 @@ final class ProjectController extends AbstractController
             return $this->redirectToRoute('project_mgmt.presentation.new');
         }
 
+        // Get the user's active organization
+        $organizationId = $this->getActiveOrganizationId();
+        if ($organizationId === null) {
+            $this->addFlash('error', $this->translator->trans('flash.error.no_organization'));
+
+            return $this->redirectToRoute('account.presentation.dashboard');
+        }
+
         // S3 upload configuration (all optional)
         $s3BucketName      = $this->nullIfEmpty($request->request->getString('s3_bucket_name'));
         $s3Region          = $this->nullIfEmpty($request->request->getString('s3_region'));
@@ -179,6 +195,7 @@ final class ProjectController extends AbstractController
         $s3KeyPrefix       = $this->nullIfEmpty($request->request->getString('s3_key_prefix'));
 
         $this->projectService->create(
+            $organizationId,
             $name,
             $gitUrl,
             $githubToken,
@@ -636,5 +653,23 @@ final class ProjectController extends AbstractController
         }
 
         return $parsed['scheme'] === 'http' || $parsed['scheme'] === 'https';
+    }
+
+    /**
+     * Get the currently active organization ID for the logged-in user.
+     */
+    private function getActiveOrganizationId(): ?string
+    {
+        $user = $this->getUser();
+        if ($user === null) {
+            return null;
+        }
+
+        $accountInfo = $this->accountFacade->getAccountInfoByEmail($user->getUserIdentifier());
+        if ($accountInfo === null) {
+            return null;
+        }
+
+        return $this->accountFacade->getCurrentlyActiveOrganizationIdForAccountCore($accountInfo->id);
     }
 }

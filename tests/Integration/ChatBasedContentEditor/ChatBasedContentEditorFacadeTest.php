@@ -207,6 +207,7 @@ final class ChatBasedContentEditorFacadeTest extends KernelTestCase
     private function createProject(string $name): Project
     {
         $project = new Project(
+            'org-test-123',
             $name,
             'https://github.com/org/repo.git',
             'token123',

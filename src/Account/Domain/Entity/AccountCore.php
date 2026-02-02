@@ -73,11 +73,33 @@ class AccountCore implements UserInterface, PasswordAuthenticatedUserInterface
         type  : Types::STRING,
         length: 1024
     )]
-    private readonly string $passwordHash;
+    private string $passwordHash;
 
     public function getPasswordHash(): string
     {
         return $this->passwordHash;
+    }
+
+    public function setPasswordHash(string $passwordHash): void
+    {
+        $this->passwordHash = $passwordHash;
+    }
+
+    #[ORM\Column(
+        name   : 'must_set_password',
+        type   : Types::BOOLEAN,
+        options: ['default' => false]
+    )]
+    private bool $mustSetPassword = false;
+
+    public function getMustSetPassword(): bool
+    {
+        return $this->mustSetPassword;
+    }
+
+    public function setMustSetPassword(bool $mustSetPassword): void
+    {
+        $this->mustSetPassword = $mustSetPassword;
     }
 
     /**
@@ -102,6 +124,22 @@ class AccountCore implements UserInterface, PasswordAuthenticatedUserInterface
     public function setRoles(array $roles): void
     {
         $this->roles = $roles;
+    }
+
+    #[ORM\Column(
+        type    : Types::GUID,
+        nullable: true
+    )]
+    private ?string $currentlyActiveOrganizationId = null;
+
+    public function getCurrentlyActiveOrganizationId(): ?string
+    {
+        return $this->currentlyActiveOrganizationId;
+    }
+
+    public function setCurrentlyActiveOrganizationId(?string $organizationId): void
+    {
+        $this->currentlyActiveOrganizationId = $organizationId;
     }
 
     #[Deprecated]

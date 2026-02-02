@@ -14,9 +14,17 @@ $features = array_filter(
     ): bool => true
 );
 
+// Common is a shared vertical for cross-cutting concerns and can be used by other verticals
+$sharedVerticals = ['Common'];
+
 foreach ($features as $from) {
     foreach ($features as $to) {
         if ($from === $to) {
+            continue;
+        }
+
+        // Skip rules where the target is a shared vertical that can be used by others
+        if (in_array($to, $sharedVerticals, true)) {
             continue;
         }
 

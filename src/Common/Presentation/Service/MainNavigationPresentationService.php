@@ -72,7 +72,7 @@ readonly class MainNavigationPresentationService extends AbstractMainNavigationS
             );
         }
 
-        if ($this->security->isGranted('ROLE_REVIEWER')) {
+        if ($this->security->isGranted('CAN_REVIEW_WORKSPACES')) {
             $entries[] = $this->generateEntry(
                 $this->translator->trans('navigation.reviewer_dashboard'),
                 'workspace_mgmt.presentation.review_list',
@@ -104,6 +104,10 @@ readonly class MainNavigationPresentationService extends AbstractMainNavigationS
             $entries[] = $this->generateEntry(
                 $this->translator->trans('navigation.your_account'),
                 'account.presentation.dashboard',
+            );
+            $entries[] = $this->generateEntry(
+                $this->translator->trans('navigation.organization'),
+                'organization.presentation.dashboard',
             );
         }
 

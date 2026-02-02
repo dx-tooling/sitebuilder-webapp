@@ -19,7 +19,7 @@ use Symfony\Contracts\Translation\TranslatorInterface;
  * Controller for reviewer actions.
  * Uses internal WorkspaceService (same vertical).
  */
-#[IsGranted('ROLE_REVIEWER')]
+#[IsGranted('CAN_REVIEW_WORKSPACES')]
 final class ReviewerController extends AbstractController
 {
     public function __construct(

@@ -71,6 +71,65 @@ The architecture also follows the project rules in `.cursorrules`:
 - **Multibyte-safe strings**: Use `mb_*` functions where applicable.
 - **Date/time creation**: Use `DateAndTimeService` instead of `DateTimeImmutable`.
 
+## Security Architecture
+
+Symfony's security system is a cross-cutting concern that spans all verticals. To maintain clean architecture boundaries, the security layer uses a dedicated `SecurityUser` class rather than exposing domain entities.
+
+### The Problem
+
+Controllers access the authenticated user via `AbstractController::getUser()`. Without abstraction, this would return the `AccountCore` entity directly, creating a dependency from every vertical to `Account/Domain/Entity`.
+
+### The Solution
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│ Symfony Security System                                                 │
+│  ┌─────────────────────┐    ┌─────────────────────┐                    │
+│  │ SecurityUserProvider│───>│ Security Token      │                    │
+│  │ (Account vertical)  │    │ stores SecurityUser │                    │
+│  └─────────────────────┘    └─────────────────────┘                    │
+│           │                          │                                  │
+│           ▼                          ▼                                  │
+│  ┌─────────────────────┐    ┌─────────────────────┐                    │
+│  │ AccountCore Entity  │    │ Controllers call    │                    │
+│  │ (loaded from DB)    │    │ getUser()           │                    │
+│  └─────────────────────┘    └─────────────────────┘                    │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+Key components:
+
+- **`Common/Domain/Security/SecurityUser`** - Readonly class implementing `UserInterface`. This is what controllers receive from `getUser()`. Exposes only: `id`, `email`, `roles`, `mustSetPassword`, `createdAt`.
+
+- **`Account/Infrastructure/Security/SecurityUserProvider`** - Custom user provider that loads `AccountCore` from the database and converts it to `SecurityUser`. Configured in `security.yaml`.
+
+### Usage in Controllers
+
+Controllers receive `SecurityUser` objects, never `AccountCore` entities:
+
+```php
+/** @var SecurityUser|null $user */
+$user = $this->getUser();
+
+// Available methods:
+$user->getId();              // User's UUID
+$user->getEmail();           // Email address
+$user->getUserIdentifier();  // Same as email (Symfony interface)
+$user->getRoles();           // Role strings
+$user->getMustSetPassword(); // Whether password must be set
+$user->getCreatedAt();       // Account creation timestamp
+```
+
+For additional account data, use the `AccountFacade`:
+
+```php
+$accountInfo = $this->accountFacade->getAccountInfoByEmail($user->getEmail());
+```
+
+### Why Not Use AccountInfoDto Directly?
+
+The `SecurityUser` must implement `UserInterface` and `PasswordAuthenticatedUserInterface` for Symfony's authentication to work. These interfaces require the password hash for verification. A facade DTO should not expose security-sensitive data like password hashes, so `SecurityUser` is a separate security-specific class.
+
 ## Client-Side Organization
 
 Client-side Stimulus code is colocated with verticals under:

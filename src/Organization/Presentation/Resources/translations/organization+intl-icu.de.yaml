@@ -1,0 +1,119 @@
+# Organisations-Dashboard
+dashboard:
+    title: "Organisation"
+    heading: "Organisation"
+    active:
+        title: "Aktive Organisation"
+        rename_placeholder: "Neuen Namen eingeben"
+        rename_button: "Umbenennen"
+        no_organization: "Keine Organisation ausgewählt. Erstellen Sie unten eine oder nehmen Sie eine Einladung an."
+    invite:
+        title: "Mitglieder einladen"
+        description: "Laden Sie Teammitglieder per E-Mail zu Ihrer Organisation ein."
+        email_placeholder: "E-Mail-Adresse eingeben"
+        send_button: "Einladung senden"
+        pending_title: "Ausstehende Einladungen"
+        sent_date: "Gesendet am {date}"
+        resend_button: "Erneut senden"
+    members:
+        title: "Mitglieder"
+        count: "{count, plural, =1 {1 Mitglied} other {# Mitglieder}}"
+        owner_badge: "Eigentümer"
+        you_badge: "Sie"
+        manage_groups: "Gruppen verwalten"
+        groups_label: "Gruppen"
+        remove_button: "Entfernen"
+        add_button: "Hinzufügen"
+    groups:
+        title: "Gruppen"
+        count: "{count, plural, =1 {1 Gruppe in dieser Organisation} other {# Gruppen in dieser Organisation}}"
+        default_badge: "Standard"
+        member_count: "{count, plural, =1 {1 Mitglied} other {# Mitglieder}}"
+    create:
+        title: "Neue Organisation erstellen"
+        name_placeholder: "Organisationsname eingeben"
+        create_button: "Erstellen"
+    list:
+        title: "Ihre Organisationen"
+        active_badge: "Aktiv"
+        owned_by_you: "Von Ihnen verwaltet"
+        member_role: "Mitglied"
+        switch_button: "Wechseln"
+
+# Einladung annehmen und E-Mail
+invitation:
+    accept:
+        title: "Organisation beitreten"
+        heading: "Organisation beitreten"
+        subheading: "Sie wurden eingeladen, einer Organisation beizutreten"
+        invited_by: "{name} hat Sie eingeladen, ihrer Organisation beizutreten."
+        organization_label: "Organisation:"
+        accept_button: "Einladung annehmen"
+        note: "Durch das Annehmen treten Sie dieser Organisation bei und können mit ihren Mitgliedern zusammenarbeiten."
+        homepage_link: "Zur Startseite"
+    email:
+        title: "Sie wurden zu einer Organisation eingeladen"
+        heading: "Sie sind eingeladen!"
+        greeting: "Hallo,"
+        text1: "{owningUserName} hat Sie eingeladen, ihrer Organisation beizutreten."
+        text2: "Klicken Sie auf die Schaltfläche unten, um die Einladung anzunehmen und loszulegen."
+        cta: "Einladung annehmen"
+        fallback_text: "Falls die Schaltfläche nicht funktioniert, kopieren Sie diesen Link in Ihren Browser:"
+        footer: "Diese Einladung wurde Ihnen gesendet, weil jemand Sie zu seiner Organisation eingeladen hat."
+        subject: "{owningUserName} hat Sie eingeladen, ihrer Organisation beizutreten"
+
+# Flash-Nachrichten
+flash:
+    error:
+        missing_name: "Bitte geben Sie einen Namen für die Organisation an."
+        no_active_organization: "Keine aktive Organisation."
+        no_active_organization_rename: "Keine aktive Organisation zum Umbenennen."
+        no_active_organization_invite: "Keine aktive Organisation für Einladungen."
+        organization_not_found: "Organisation nicht gefunden."
+        owner_only_rename: "Nur der Organisationseigentümer kann sie umbenennen."
+        owner_only_invite: "Nur der Organisationseigentümer kann Mitglieder einladen."
+        owner_only_resend: "Nur der Organisationseigentümer kann Einladungen erneut senden."
+        owner_only_groups: "Nur der Organisationseigentümer kann die Gruppenmitgliedschaft verwalten."
+        invalid_email: "Bitte geben Sie eine gültige E-Mail-Adresse an."
+        email_already_member: "Diese E-Mail-Adresse ist bereits Mitglied dieser Organisation oder ist der Eigentümer."
+        invitation_failed: "Einladung konnte nicht gesendet werden."
+        invitation_not_found: "Einladung nicht gefunden."
+        invitation_not_found_or_used: "Einladung nicht gefunden oder bereits verwendet."
+        accept_failed: "Einladung konnte nicht angenommen werden."
+        group_not_found: "Gruppe nicht gefunden."
+        invalid_member_id: "Ungültige Mitglieds-ID."
+        create_failed: "Organisation konnte nicht erstellt werden: {message}"
+        rename_failed: "Organisation konnte nicht umbenannt werden: {message}"
+        switch_failed: "Organisationswechsel fehlgeschlagen: {message}"
+        invite_failed: "Einladung konnte nicht gesendet werden: {message}"
+        resend_failed: "Einladung konnte nicht erneut gesendet werden: {message}"
+        accept_invitation_failed: "Einladung konnte nicht angenommen werden: {message}"
+        add_member_failed: "Mitglied konnte nicht zur Gruppe hinzugefügt werden: {message}"
+        remove_member_failed: "Mitglied konnte nicht aus der Gruppe entfernt werden: {message}"
+    success:
+        created: 'Organisation "{name}" erfolgreich erstellt.'
+        renamed: 'Organisation umbenannt zu "{name}".'
+        switched: 'Gewechselt zu "{name}".'
+        invitation_sent: "Einladung an {email} gesendet."
+        invitation_resent: "Einladung erneut an {email} gesendet."
+        joined: 'Sie sind "{name}" erfolgreich beigetreten.'
+        member_added: "Mitglied zu {group} hinzugefügt."
+        member_removed: "Mitglied aus {group} entfernt."
+
+# Domain - Standard-Gruppennamen (gespeicherte Werte)
+groups:
+    administrators: "Administratoren"
+    team_members: "Teammitglieder"
+
+# Gruppennamen-Übersetzungen (für getGroupName-Methode)
+group:
+    name:
+        Administrators: "Administratoren"
+        Team Members: "Teammitglieder"
+
+# Standard-Organisationsname
+default_organization_name: "Meine Organisation"
+
+# Fallback-Name
+fallback:
+    someone: "Jemand"
