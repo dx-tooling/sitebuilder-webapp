@@ -53,6 +53,19 @@ final class OrganizationDomainServiceTest extends KernelTestCase
         self::fail('Admin group not found');
     }
 
+    /**
+     * @param list<Group> $groups
+     */
+    private function findReviewersGroup(array $groups): Group
+    {
+        foreach ($groups as $group) {
+            if ($group->isReviewersGroup()) {
+                return $group;
+            }
+        }
+        self::fail('Reviewers group not found');
+    }
+
     public function testCreateOrganizationCreatesWithOwningUser(): void
     {
         $userId = $this->createTestUser();
@@ -72,11 +85,12 @@ final class OrganizationDomainServiceTest extends KernelTestCase
 
         $groups = $this->service->getGroups($organizations[0]);
 
-        $this->assertCount(2, $groups);
+        $this->assertCount(3, $groups);
 
         $groupNames = array_map(fn (Group $g): string => $g->getName(), $groups);
         $this->assertContains('Administrators', $groupNames);
         $this->assertContains('Team Members', $groupNames);
+        $this->assertContains('Reviewers', $groupNames);
     }
 
     public function testCreateOrganizationAdministratorsGroupHasFullAccess(): void
@@ -203,5 +217,28 @@ final class OrganizationDomainServiceTest extends KernelTestCase
         $userIds = $this->service->getAllUserIdsForOrganization($organization);
 
         $this->assertContains($userId, $userIds);
+    }
+
+    public function testCreateOrganizationReviewersGroupHasReviewWorkspacesAccess(): void
+    {
+        $userId = $this->createTestUser();
+
+        $organizations = $this->service->getAllOrganizationsForUser($userId);
+        $this->assertNotEmpty($organizations);
+
+        $groups         = $this->service->getGroups($organizations[0]);
+        $reviewersGroup = $this->findReviewersGroup($groups);
+
+        $this->assertContains(AccessRight::REVIEW_WORKSPACES, $reviewersGroup->getAccessRights());
+    }
+
+    public function testUserHasAccessRightReviewWorkspacesReturnsTrueForOwner(): void
+    {
+        $userId = $this->createTestUser();
+
+        // Owner has all access rights including review workspaces
+        $hasRight = $this->service->userHasAccessRight($userId, AccessRight::REVIEW_WORKSPACES);
+
+        $this->assertTrue($hasRight);
     }
 }

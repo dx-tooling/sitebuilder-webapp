@@ -25,7 +25,11 @@ describe('AccessRight enum', function (): void {
         expect(AccessRight::MOVE_ORGANIZATION_MEMBERS_INTO_GROUPS->value)->toBe('move_organization_members_into_groups');
     });
 
-    it('has exactly five access rights', function (): void {
-        expect(AccessRight::cases())->toHaveCount(5);
+    it('has REVIEW_WORKSPACES right', function (): void {
+        expect(AccessRight::REVIEW_WORKSPACES->value)->toBe('review_workspaces');
+    });
+
+    it('has exactly six access rights', function (): void {
+        expect(AccessRight::cases())->toHaveCount(6);
     });
 });

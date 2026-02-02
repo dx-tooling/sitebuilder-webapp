@@ -31,6 +31,18 @@ describe('Group', function (): void {
             $group = new Group($org, 'Administrators', [AccessRight::FULL_ACCESS], false);
             expect($group->isTeamMembersGroup())->toBeFalse();
         });
+
+        it('isReviewersGroup returns true for Reviewers group', function (): void {
+            $org   = new Organization('user-id-123');
+            $group = new Group($org, 'Reviewers', [AccessRight::REVIEW_WORKSPACES], false);
+            expect($group->isReviewersGroup())->toBeTrue();
+        });
+
+        it('isReviewersGroup returns false for other groups', function (): void {
+            $org   = new Organization('user-id-123');
+            $group = new Group($org, 'Team Members', [AccessRight::SEE_ORGANIZATION_GROUPS_AND_MEMBERS], true);
+            expect($group->isReviewersGroup())->toBeFalse();
+        });
     });
 
     describe('access rights', function (): void {

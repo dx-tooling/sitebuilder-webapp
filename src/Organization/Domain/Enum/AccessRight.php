@@ -11,4 +11,5 @@ enum AccessRight: string
     case INVITE_ORGANIZATION_MEMBERS           = 'invite_organization_members';
     case SEE_ORGANIZATION_GROUPS_AND_MEMBERS   = 'see_organization_groups_and_members';
     case MOVE_ORGANIZATION_MEMBERS_INTO_GROUPS = 'move_organization_members_into_groups';
+    case REVIEW_WORKSPACES                     = 'review_workspaces';
 }

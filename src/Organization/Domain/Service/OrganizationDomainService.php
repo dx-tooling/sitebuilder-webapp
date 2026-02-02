@@ -91,6 +91,15 @@ readonly class OrganizationDomainService implements OrganizationDomainServiceInt
 
         $this->entityManager->persist($teamMemberGroup);
 
+        $reviewersGroup = new Group(
+            $organization,
+            'Reviewers',
+            [AccessRight::REVIEW_WORKSPACES],
+            false
+        );
+
+        $this->entityManager->persist($reviewersGroup);
+
         $this->entityManager->persist($organization);
         $this->entityManager->flush();
 

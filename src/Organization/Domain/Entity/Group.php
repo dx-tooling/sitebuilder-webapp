@@ -134,4 +134,9 @@ class Group implements OrganizationOwnedEntityInterface
     {
         return $this->getName() === 'Team Members';
     }
+
+    public function isReviewersGroup(): bool
+    {
+        return $this->getName() === 'Reviewers';
+    }
 }

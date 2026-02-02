@@ -30,8 +30,7 @@ security:
 
     # Role hierarchy
     role_hierarchy:
-        ROLE_REVIEWER: ROLE_USER
-        ROLE_ADMIN: [ROLE_USER, ROLE_REVIEWER]
+        ROLE_ADMIN: ROLE_USER
 
     # Easy way to control access for large sections of your site
     # Note: Only the *first* access control that matches will be used
@@ -39,7 +38,7 @@ security:
         - { path: ^/sign-in, roles: PUBLIC_ACCESS }
         - { path: ^/sign-up, roles: PUBLIC_ACCESS }
         - { path: "^/organization/invitation/[^/]+$", roles: PUBLIC_ACCESS }
-        - { path: ^/review, roles: ROLE_REVIEWER }
+        - { path: ^/review, roles: ROLE_USER }
         - { path: ^/projects, roles: ROLE_USER }
         - { path: ^/conversation, roles: ROLE_USER }
         - { path: ^/workspace, roles: ROLE_USER }

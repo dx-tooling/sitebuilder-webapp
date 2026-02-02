@@ -7,4 +7,6 @@ namespace App\Organization\Facade;
 interface OrganizationFacadeInterface
 {
     public function getOrganizationNameById(string $organizationId): ?string;
+
+    public function userCanReviewWorkspaces(string $userId): bool;
 }
