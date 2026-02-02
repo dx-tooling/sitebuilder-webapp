@@ -2,10 +2,6 @@ server {
     listen 80;
     server_name localhost;
 
-    # Basic auth for entire site
-    auth_basic "Preprod Environment";
-    auth_basic_user_file /etc/nginx/.htpasswd;
-
     root /var/www/public;
     index index.php index.html;
 
