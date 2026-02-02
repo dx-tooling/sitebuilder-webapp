@@ -9,6 +9,7 @@ use App\Account\Domain\Service\AccountDomainService;
 use App\Account\Facade\AccountFacadeInterface;
 use App\LlmContentEditor\Facade\Enum\LlmModelProvider;
 use App\ProjectMgmt\Domain\Entity\Project;
+use App\Tests\Support\SecurityUserLoginTrait;
 use App\WorkspaceMgmt\Domain\Entity\Workspace;
 use App\WorkspaceMgmt\Facade\Enum\WorkspaceStatus;
 use Doctrine\ORM\EntityManagerInterface;
@@ -20,6 +21,8 @@ use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
  */
 final class ProjectDeleteTest extends WebTestCase
 {
+    use SecurityUserLoginTrait;
+
     private KernelBrowser $client;
     private EntityManagerInterface $entityManager;
     private AccountDomainService $accountDomainService;
@@ -54,7 +57,7 @@ final class ProjectDeleteTest extends WebTestCase
         self::assertNotNull($projectId);
 
         // Act: Log in and visit the projects page to get CSRF token, then soft delete
-        $this->client->loginUser($user);
+        $this->loginAsUser($this->client, $user);
         $crawler = $this->client->request('GET', '/en/projects');
 
         // Find and submit the delete form
@@ -87,7 +90,7 @@ final class ProjectDeleteTest extends WebTestCase
         $this->entityManager->flush();
 
         // Act: Visit project list
-        $this->client->loginUser($user);
+        $this->loginAsUser($this->client, $user);
         $crawler = $this->client->request('GET', '/en/projects');
 
         // Assert
@@ -106,7 +109,7 @@ final class ProjectDeleteTest extends WebTestCase
         $this->entityManager->flush();
 
         // Act: Visit project list
-        $this->client->loginUser($user);
+        $this->loginAsUser($this->client, $user);
         $crawler = $this->client->request('GET', '/en/projects');
 
         // Assert: Deleted projects section exists and contains the project
@@ -129,7 +132,7 @@ final class ProjectDeleteTest extends WebTestCase
         $this->entityManager->flush();
 
         // Act: Visit projects page and find permanent delete form in deleted section
-        $this->client->loginUser($user);
+        $this->loginAsUser($this->client, $user);
         $crawler = $this->client->request('GET', '/en/projects');
 
         // Find and submit the permanent delete form
@@ -156,7 +159,7 @@ final class ProjectDeleteTest extends WebTestCase
 
         // Act: Log in and try to permanently delete without soft delete first
         // Note: Controller checks project state before CSRF validation, so we use a dummy token
-        $this->client->loginUser($user);
+        $this->loginAsUser($this->client, $user);
         $this->client->request('POST', '/en/projects/' . $projectId . '/permanently-delete', [
             '_csrf_token' => 'dummy-token',
         ]);
@@ -183,7 +186,7 @@ final class ProjectDeleteTest extends WebTestCase
         $this->entityManager->flush();
 
         // Act: Visit projects page and find permanent delete form
-        $this->client->loginUser($user);
+        $this->loginAsUser($this->client, $user);
         $crawler = $this->client->request('GET', '/en/projects');
 
         // Find and submit the permanent delete form
@@ -211,7 +214,7 @@ final class ProjectDeleteTest extends WebTestCase
         $this->entityManager->flush();
 
         // Act: Try to access edit page
-        $this->client->loginUser($user);
+        $this->loginAsUser($this->client, $user);
         $this->client->request('GET', '/en/projects/' . $projectId . '/edit');
 
         // Assert: Returns 404
@@ -232,7 +235,7 @@ final class ProjectDeleteTest extends WebTestCase
 
         // Act: Log in and try to soft delete again
         // Note: Controller checks project state before CSRF validation, so we use a dummy token
-        $this->client->loginUser($user);
+        $this->loginAsUser($this->client, $user);
         $this->client->request('POST', '/en/projects/' . $projectId . '/delete', [
             '_csrf_token' => 'dummy-token',
         ]);
@@ -255,7 +258,7 @@ final class ProjectDeleteTest extends WebTestCase
         $this->entityManager->flush();
 
         // Act: Visit projects page and find restore form in deleted section
-        $this->client->loginUser($user);
+        $this->loginAsUser($this->client, $user);
         $crawler = $this->client->request('GET', '/en/projects');
 
         // Find and submit the restore form
@@ -284,7 +287,7 @@ final class ProjectDeleteTest extends WebTestCase
 
         // Act: Try to restore an active project
         // Note: Controller checks project state before CSRF validation, so we use a dummy token
-        $this->client->loginUser($user);
+        $this->loginAsUser($this->client, $user);
         $this->client->request('POST', '/en/projects/' . $projectId . '/restore', [
             '_csrf_token' => 'dummy-token',
         ]);
@@ -306,7 +309,7 @@ final class ProjectDeleteTest extends WebTestCase
         $project->markAsDeleted();
         $this->entityManager->flush();
 
-        $this->client->loginUser($user);
+        $this->loginAsUser($this->client, $user);
         $crawler = $this->client->request('GET', '/en/projects');
 
         $restoreForm = $crawler->filter('form[action="/en/projects/' . $projectId . '/restore"]')->form();

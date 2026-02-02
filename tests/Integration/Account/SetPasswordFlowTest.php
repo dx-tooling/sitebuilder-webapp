@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Integration\Account;
 
 use App\Account\Domain\Service\AccountDomainService;
+use App\Tests\Support\SecurityUserLoginTrait;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
@@ -14,6 +15,8 @@ use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
  */
 final class SetPasswordFlowTest extends WebTestCase
 {
+    use SecurityUserLoginTrait;
+
     private AccountDomainService $accountService;
     private EntityManagerInterface $entityManager;
     private KernelBrowser $client;
@@ -45,7 +48,7 @@ final class SetPasswordFlowTest extends WebTestCase
         $this->assertTrue($account->getMustSetPassword(), 'Account should have mustSetPassword=true after invitation registration');
 
         // Step 2: Log in as the user and call the set-password endpoint
-        $this->client->loginUser($account);
+        $this->loginAsUser($this->client, $account);
 
         $this->client->request('POST', '/en/account/set-password', [
             'password'         => 'newSecurePassword123',
@@ -79,7 +82,7 @@ final class SetPasswordFlowTest extends WebTestCase
 
         $this->assertFalse($account->getMustSetPassword());
 
-        $this->client->loginUser($account);
+        $this->loginAsUser($this->client, $account);
         $this->client->request('GET', '/en/account/set-password');
 
         $this->assertResponseRedirects('/en/account/dashboard');
@@ -93,7 +96,7 @@ final class SetPasswordFlowTest extends WebTestCase
         $email   = 'mismatch-test-' . uniqid() . '@example.com';
         $account = $this->accountService->register($email, null, true);
 
-        $this->client->loginUser($account);
+        $this->loginAsUser($this->client, $account);
 
         $this->client->request('POST', '/en/account/set-password', [
             'password'         => 'newSecurePassword123',

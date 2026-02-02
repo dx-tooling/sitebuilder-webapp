@@ -4,8 +4,9 @@ declare(strict_types=1);
 
 namespace App\Account\Presentation\Controller;
 
-use App\Account\Domain\Entity\AccountCore;
 use App\Account\Domain\Service\AccountDomainService;
+use App\Account\Infrastructure\Security\SecurityUserProvider;
+use App\Common\Domain\Security\SecurityUser;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\HttpFoundation\Request;
@@ -20,7 +21,8 @@ final class AccountController extends AbstractController
     public function __construct(
         private readonly AccountDomainService $accountService,
         private readonly TranslatorInterface  $translator,
-        private readonly Security             $security
+        private readonly Security             $security,
+        private readonly SecurityUserProvider $securityUserProvider
     ) {
     }
 
@@ -81,8 +83,10 @@ final class AccountController extends AbstractController
             }
 
             try {
-                $accountCore = $this->accountService->register((string) $email, (string) $password);
-                $this->security->login($accountCore, 'form_login', 'main');
+                $this->accountService->register((string) $email, (string) $password);
+                // Load user as SecurityUser via provider to store correct class in session
+                $securityUser = $this->securityUserProvider->loadUserByIdentifier((string) $email);
+                $this->security->login($securityUser, 'form_login', 'main');
 
                 return $this->redirectToRoute('account.presentation.dashboard');
             } catch (Throwable $e) {
@@ -112,10 +116,10 @@ final class AccountController extends AbstractController
     )]
     public function dashboardAction(): Response
     {
-        /** @var AccountCore|null $accountCore */
-        $accountCore = $this->getUser();
+        /** @var SecurityUser|null $securityUser */
+        $securityUser = $this->getUser();
 
-        if ($accountCore !== null && $accountCore->getMustSetPassword()) {
+        if ($securityUser !== null && $securityUser->getMustSetPassword()) {
             return $this->redirectToRoute('account.presentation.set_password');
         }
 
@@ -129,15 +133,15 @@ final class AccountController extends AbstractController
     )]
     public function setPasswordAction(Request $request): Response
     {
-        /** @var AccountCore|null $accountCore */
-        $accountCore = $this->getUser();
+        /** @var SecurityUser|null $securityUser */
+        $securityUser = $this->getUser();
 
-        if ($accountCore === null) {
+        if ($securityUser === null) {
             return $this->redirectToRoute('account.presentation.sign_in');
         }
 
         // If user doesn't need to set password, redirect to dashboard
-        if (!$accountCore->getMustSetPassword()) {
+        if (!$securityUser->getMustSetPassword()) {
             return $this->redirectToRoute('account.presentation.dashboard');
         }
 
@@ -157,9 +161,10 @@ final class AccountController extends AbstractController
                 return $this->render('@account.presentation/set_password.html.twig');
             }
 
-            // Important: Set the flag BEFORE calling updatePassword to ensure it persists
-            $accountCore->setMustSetPassword(false);
-            $this->accountService->updatePassword($accountCore, (string) $password);
+            // Update password and clear the must-set-password flag via domain service
+            $userId = $securityUser->getId();
+            $this->accountService->setMustSetPasswordById($userId, false);
+            $this->accountService->updatePasswordById($userId, (string) $password);
 
             $this->addFlash('success', $this->translator->trans('flash.success.password_set'));
 

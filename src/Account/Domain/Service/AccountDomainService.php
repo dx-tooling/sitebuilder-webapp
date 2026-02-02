@@ -64,6 +64,45 @@ final readonly class AccountDomainService
         $this->entityManager->flush();
     }
 
+    /**
+     * Update password for user by ID.
+     *
+     * @throws LogicException if account not found
+     */
+    public function updatePasswordById(string $userId, string $plainPassword): void
+    {
+        $account = $this->findById($userId);
+
+        if ($account === null) {
+            throw new LogicException('Account not found.');
+        }
+
+        $this->updatePassword($account, $plainPassword);
+    }
+
+    /**
+     * Set the must-set-password flag for user by ID.
+     *
+     * @throws LogicException if account not found
+     */
+    public function setMustSetPasswordById(string $userId, bool $mustSetPassword): void
+    {
+        $account = $this->findById($userId);
+
+        if ($account === null) {
+            throw new LogicException('Account not found.');
+        }
+
+        $account->setMustSetPassword($mustSetPassword);
+        $this->entityManager->persist($account);
+        $this->entityManager->flush();
+    }
+
+    public function findById(string $id): ?AccountCore
+    {
+        return $this->entityManager->getRepository(AccountCore::class)->find($id);
+    }
+
     public function findByEmail(string $email): ?AccountCore
     {
         return $this->entityManager->getRepository(AccountCore::class)->findOneBy(['email' => $email]);

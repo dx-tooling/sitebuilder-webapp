@@ -5,9 +5,7 @@ security:
     # https://symfony.com/doc/current/security.html#loading-the-user-the-user-provider
     providers:
         app_user_provider:
-            entity:
-                class: App\Account\Domain\Entity\AccountCore
-                property: email
+            id: App\Account\Infrastructure\Security\SecurityUserProvider
     firewalls:
         dev:
             pattern: ^/(_(profiler|wdt)|css|images|js)/
