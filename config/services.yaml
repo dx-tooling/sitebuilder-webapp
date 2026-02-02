@@ -4,6 +4,9 @@
 # Put parameters here that don't need to change on each machine where the app is deployed
 # https://symfony.com/doc/current/best_practices.html#use-parameters-for-application-configuration
 parameters:
+    # Mail configuration
+    app.mail.default_sender_address: "%env(MAIL_DEFAULT_SENDER_ADDRESS)%"
+
     # Workspace root directory for all workspace operations
     workspace_mgmt.workspace_root_default: "/var/www/public/workspaces"
     workspace_mgmt.workspace_root: "%env(default:workspace_mgmt.workspace_root_default:WORKSPACE_ROOT)%"

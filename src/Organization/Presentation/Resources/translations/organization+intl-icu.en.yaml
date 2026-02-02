@@ -1,0 +1,119 @@
+# Organization Dashboard
+dashboard:
+    title: "Organization"
+    heading: "Organization"
+    active:
+        title: "Active Organization"
+        rename_placeholder: "Enter new name"
+        rename_button: "Rename"
+        no_organization: "No organization selected. Create one below or accept an invitation."
+    invite:
+        title: "Invite Members"
+        description: "Invite team members to join your organization by email."
+        email_placeholder: "Enter email address"
+        send_button: "Send Invite"
+        pending_title: "Pending Invitations"
+        sent_date: "Sent {date}"
+        resend_button: "Resend"
+    members:
+        title: "Members"
+        count: "{count, plural, =1 {1 member} other {# members}}"
+        owner_badge: "Owner"
+        you_badge: "You"
+        manage_groups: "Manage groups"
+        groups_label: "Groups"
+        remove_button: "Remove"
+        add_button: "Add"
+    groups:
+        title: "Groups"
+        count: "{count, plural, =1 {1 group in this organization} other {# groups in this organization}}"
+        default_badge: "Default"
+        member_count: "{count, plural, =1 {1 member} other {# members}}"
+    create:
+        title: "Create New Organization"
+        name_placeholder: "Enter organization name"
+        create_button: "Create"
+    list:
+        title: "Your Organizations"
+        active_badge: "Active"
+        owned_by_you: "Owned by you"
+        member_role: "Member"
+        switch_button: "Switch"
+
+# Accept Invitation Page and Email
+invitation:
+    accept:
+        title: "Join Organization"
+        heading: "Join Organization"
+        subheading: "You've been invited to join an organization"
+        invited_by: "{name} has invited you to join their organization."
+        organization_label: "Organization:"
+        accept_button: "Accept Invitation"
+        note: "By accepting, you'll join this organization and can collaborate with its members."
+        homepage_link: "Go to homepage"
+    email:
+        title: "You're invited to join an organization"
+        heading: "You're Invited!"
+        greeting: "Hello,"
+        text1: "{owningUserName} has invited you to join their organization."
+        text2: "Click the button below to accept the invitation and get started."
+        cta: "Accept Invitation"
+        fallback_text: "If the button doesn't work, copy and paste this link into your browser:"
+        footer: "This invitation was sent to you because someone invited you to their organization."
+        subject: "{owningUserName} has invited you to join their organization"
+
+# Flash Messages
+flash:
+    error:
+        missing_name: "Please provide a name for the organization."
+        no_active_organization: "No active organization."
+        no_active_organization_rename: "No active organization to rename."
+        no_active_organization_invite: "No active organization to invite to."
+        organization_not_found: "Organization not found."
+        owner_only_rename: "Only the organization owner can rename it."
+        owner_only_invite: "Only the organization owner can invite members."
+        owner_only_resend: "Only the organization owner can resend invitations."
+        owner_only_groups: "Only the organization owner can manage group membership."
+        invalid_email: "Please provide a valid email address."
+        email_already_member: "This email is already a member of this organization or is the owner."
+        invitation_failed: "Could not send invitation."
+        invitation_not_found: "Invitation not found."
+        invitation_not_found_or_used: "Invitation not found or has already been used."
+        accept_failed: "Failed to accept invitation."
+        group_not_found: "Group not found."
+        invalid_member_id: "Invalid member ID."
+        create_failed: "Failed to create organization: {message}"
+        rename_failed: "Failed to rename organization: {message}"
+        switch_failed: "Failed to switch organization: {message}"
+        invite_failed: "Failed to send invitation: {message}"
+        resend_failed: "Failed to resend invitation: {message}"
+        accept_invitation_failed: "Failed to accept invitation: {message}"
+        add_member_failed: "Failed to add member to group: {message}"
+        remove_member_failed: "Failed to remove member from group: {message}"
+    success:
+        created: 'Organization "{name}" created successfully.'
+        renamed: 'Organization renamed to "{name}".'
+        switched: 'Switched to "{name}".'
+        invitation_sent: "Invitation sent to {email}."
+        invitation_resent: "Invitation resent to {email}."
+        joined: 'You''ve successfully joined "{name}".'
+        member_added: "Member added to {group}."
+        member_removed: "Member removed from {group}."
+
+# Domain - Default Group Names (stored values)
+groups:
+    administrators: "Administrators"
+    team_members: "Team Members"
+
+# Group Name Translations (for getGroupName method)
+group:
+    name:
+        Administrators: "Administrators"
+        Team Members: "Team Members"
+
+# Default Organization Name
+default_organization_name: "My Organization"
+
+# Fallback Name
+fallback:
+    someone: "Someone"

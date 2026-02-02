@@ -4,11 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests\Application\Account;
 
-use App\Account\Domain\Entity\AccountCore;
-use Doctrine\ORM\EntityManagerInterface;
+use App\Account\Domain\Service\AccountDomainService;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
-use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 /**
  * Tests the sign-in flow to prevent regressions in form field configuration.
@@ -19,22 +17,22 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 final class SignInTest extends WebTestCase
 {
     private KernelBrowser $client;
-    private EntityManagerInterface $entityManager;
+    private AccountDomainService $accountDomainService;
 
     protected function setUp(): void
     {
         $this->client = static::createClient();
         $container    = static::getContainer();
 
-        /** @var EntityManagerInterface $entityManager */
-        $entityManager       = $container->get(EntityManagerInterface::class);
-        $this->entityManager = $entityManager;
+        /** @var AccountDomainService $accountDomainService */
+        $accountDomainService       = $container->get(AccountDomainService::class);
+        $this->accountDomainService = $accountDomainService;
     }
 
     public function testSignInWithValidCredentialsRedirectsToProjects(): void
     {
         // Arrange: Create a test user
-        $email         = 'test-signin@example.com';
+        $email         = 'test-signin-' . uniqid() . '@example.com';
         $plainPassword = 'test-password-123';
 
         $this->createTestUser($email, $plainPassword);
@@ -61,7 +59,7 @@ final class SignInTest extends WebTestCase
     public function testSignInWithInvalidCredentialsShowsError(): void
     {
         // Arrange: Create a test user
-        $email         = 'test-invalid@example.com';
+        $email         = 'test-invalid-' . uniqid() . '@example.com';
         $plainPassword = 'correct-password';
 
         $this->createTestUser($email, $plainPassword);
@@ -99,21 +97,7 @@ final class SignInTest extends WebTestCase
 
     private function createTestUser(string $email, string $plainPassword): void
     {
-        $container = static::getContainer();
-
-        /** @var UserPasswordHasherInterface $passwordHasher */
-        $passwordHasher = $container->get(UserPasswordHasherInterface::class);
-
-        // Create user with hashed password
-        $user = new AccountCore($email, ''); // Temporary empty hash
-
-        // Hash the password using the hasher
-        $hashedPassword = $passwordHasher->hashPassword($user, $plainPassword);
-
-        // Create user with correct hash using reflection (passwordHash is readonly)
-        $user = new AccountCore($email, $hashedPassword);
-
-        $this->entityManager->persist($user);
-        $this->entityManager->flush();
+        // Use proper registration to trigger organization creation via event
+        $this->accountDomainService->register($email, $plainPassword);
     }
 }

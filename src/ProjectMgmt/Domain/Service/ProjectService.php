@@ -24,6 +24,7 @@ final class ProjectService
      * @param list<string>|null $remoteContentAssetsManifestUrls
      */
     public function create(
+        string           $organizationId,
         string           $name,
         string           $gitUrl,
         string           $githubToken,
@@ -43,6 +44,7 @@ final class ProjectService
         ?string          $s3KeyPrefix = null
     ): Project {
         $project = new Project(
+            $organizationId,
             $name,
             $gitUrl,
             $githubToken,
@@ -158,17 +160,19 @@ final class ProjectService
     }
 
     /**
-     * Find all non-deleted projects.
+     * Find all non-deleted projects for an organization.
      *
      * @return list<Project>
      */
-    public function findAll(): array
+    public function findAllForOrganization(string $organizationId): array
     {
         /** @var list<Project> $projects */
         $projects = $this->entityManager->createQueryBuilder()
             ->select('p')
             ->from(Project::class, 'p')
             ->where('p.deletedAt IS NULL')
+            ->andWhere('p.organizationId = :organizationId')
+            ->setParameter('organizationId', $organizationId)
             ->orderBy('p.name', 'ASC')
             ->getQuery()
             ->getResult();
@@ -177,17 +181,19 @@ final class ProjectService
     }
 
     /**
-     * Find all soft-deleted projects.
+     * Find all soft-deleted projects for an organization.
      *
      * @return list<Project>
      */
-    public function findAllDeleted(): array
+    public function findAllDeletedForOrganization(string $organizationId): array
     {
         /** @var list<Project> $projects */
         $projects = $this->entityManager->createQueryBuilder()
             ->select('p')
             ->from(Project::class, 'p')
             ->where('p.deletedAt IS NOT NULL')
+            ->andWhere('p.organizationId = :organizationId')
+            ->setParameter('organizationId', $organizationId)
             ->orderBy('p.deletedAt', 'DESC')
             ->getQuery()
             ->getResult();
