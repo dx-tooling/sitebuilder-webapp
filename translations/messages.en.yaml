@@ -96,7 +96,7 @@ project:
         project_link: "Project link"
         placeholder_project_link: "https://github.com/org/repo.git"
         project_link_help: "Paste the GitHub repository URL for this project."
-        project_link_note: '<strong>Important:</strong> For now, only repositories based on the "landingpages-ai-template" project can be used in SiteBuilder! See <a href="https://github.com/dx-tooling/landingpages-ai-template" target="_blank" rel="noopener noreferrer" class="text-primary-600 dark:text-primary-400 hover:underline">github.com/dx-tooling/landingpages-ai-template</a> for more info.'
+        project_link_note: '<strong>Important:</strong> For now, only repositories based on the "landingpages-ai-template" project can be used in SiteBuilder! See <a href="https://github.com/dx-tooling/landingpages-ai-template" target="_blank" rel="noopener noreferrer" class="underline">github.com/dx-tooling/landingpages-ai-template</a> for more info.'
         github_access_key: "GitHub access key"
         placeholder_github_token: "ghp_xxxxxxxxxxxx"
         github_access_key_help: "A personal access token so we can open the project and save changes."
