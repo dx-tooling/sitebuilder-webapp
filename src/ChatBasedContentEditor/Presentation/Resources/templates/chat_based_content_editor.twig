@@ -154,11 +154,13 @@
                     <input type="hidden" name="_html_editor_csrf_token" value="{{ csrf_token('html_editor_save') }}">
                 {% endif %}
 
-                {# Chat area - hidden when HTML editor is open #}
-                <div {{ stimulus_target('html-editor', 'chatArea') }} class="space-y-6 transition-all duration-300 ease-in-out">
-                    {# Header with project context (title only, buttons moved above) #}
-                    <div>
-                        <h1 class="text-2xl font-semibold text-dark-900 dark:text-dark-100">{{ 'editor.title'|trans }}</h1>
+                {# Chat area - slides up when HTML editor is open #}
+                <div {{ stimulus_target('html-editor', 'chatArea') }} class="grid grid-rows-[1fr] transition-[grid-template-rows] duration-300 ease-in-out">
+                    <div class="overflow-hidden">
+                        <div class="space-y-6">
+                            {# Header with project context (title only, buttons moved above) #}
+                            <div>
+                                <h1 class="text-2xl font-semibold text-dark-900 dark:text-dark-100">{{ 'editor.title'|trans }}</h1>
                         {% if project %}
                             <p class="text-dark-600 dark:text-dark-400 mt-1">
                                 {{ 'editor.working_on'|trans({'%project%': project.name})|raw }}
@@ -281,65 +283,71 @@
                             </div>
                         {% endif %}
                     {% else %}
-                        <div class="rounded-md bg-dark-100 dark:bg-dark-700/50 p-4">
-                            <p class="text-sm text-dark-600 dark:text-dark-400">
-                                {% if conversation.status.value == 'finished' %}
-                                    {{ 'editor.session_finished'|trans }}
-                                {% else %}
-                                    {{ 'editor.cannot_edit'|trans }}
-                                {% endif %}
-                            </p>
-                        </div>
-                    {% endif %}
-                </div>
+                            <div class="rounded-md bg-dark-100 dark:bg-dark-700/50 p-4">
+                                <p class="text-sm text-dark-600 dark:text-dark-400">
+                                    {% if conversation.status.value == 'finished' %}
+                                        {{ 'editor.session_finished'|trans }}
+                                    {% else %}
+                                        {{ 'editor.cannot_edit'|trans }}
+                                    {% endif %}
+                                </p>
+                            </div>
+                        {% endif %}
+                        </div>{# end space-y-6 #}
+                    </div>{# end overflow-hidden #}
+                </div>{# end chatArea grid #}
 
-                {# HTML Editor section #}
+                {# HTML Editor section - slides down when opened #}
                 {% if workspace and not readOnly %}
-                    {# HTML Editor Container - hidden by default, includes title #}
-                    <div {{ stimulus_target('html-editor', 'container') }} class="hidden space-y-4 border-t border-dark-200 dark:border-dark-700 pt-6 transition-all duration-300 ease-in-out">
-                        <h2 class="text-lg font-medium text-dark-900 dark:text-dark-100 mb-3">{{ 'editor.html_editor_title'|trans }}</h2>
+                    {# HTML Editor Container - collapsed by default, includes title #}
+                    <div {{ stimulus_target('html-editor', 'container') }} class="grid grid-rows-[0fr] transition-[grid-template-rows] duration-300 ease-in-out">
+                        <div class="overflow-hidden">
+                            <div class="space-y-4 border-t border-dark-200 dark:border-dark-700 pt-6">
+                                <h2 class="text-lg font-medium text-dark-900 dark:text-dark-100 mb-3">{{ 'editor.html_editor_title'|trans }}</h2>
 
-                        {# Page name display #}
-                        <div class="flex items-center gap-2 text-sm">
-                            <span class="text-dark-500 dark:text-dark-400">{{ 'editor.html_editor_editing'|trans }}</span>
-                            <span {{ stimulus_target('html-editor', 'pageNameDisplay') }} class="font-medium text-dark-900 dark:text-dark-100"></span>
-                        </div>
+                                {# Page name display #}
+                                <div class="flex items-center gap-2 text-sm">
+                                    <span class="text-dark-500 dark:text-dark-400">{{ 'editor.html_editor_editing'|trans }}</span>
+                                    <span {{ stimulus_target('html-editor', 'pageNameDisplay') }} class="font-medium text-dark-900 dark:text-dark-100"></span>
+                                </div>
 
-                        {# Loading indicator #}
-                        <div {{ stimulus_target('html-editor', 'loading') }} class="hidden py-8 text-center text-dark-500 dark:text-dark-400">
-                            <svg class="animate-spin h-6 w-6 mx-auto mb-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                            </svg>
-                            {{ 'common.loading'|trans }}
-                        </div>
+                                {# Loading indicator #}
+                                <div {{ stimulus_target('html-editor', 'loading') }} class="hidden py-8 text-center text-dark-500 dark:text-dark-400">
+                                    <svg class="animate-spin h-6 w-6 mx-auto mb-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                    {{ 'common.loading'|trans }}
+                                </div>
 
-                        {# Error message #}
-                        <div {{ stimulus_target('html-editor', 'error') }} class="hidden rounded-md bg-red-50 dark:bg-red-900/20 p-3 text-sm text-red-700 dark:text-red-400"></div>
+                                {# Error message #}
+                                <div {{ stimulus_target('html-editor', 'error') }} class="hidden rounded-md bg-red-50 dark:bg-red-900/20 p-3 text-sm text-red-700 dark:text-red-400"></div>
 
-                        {# Success message #}
-                        <div {{ stimulus_target('html-editor', 'success') }} class="hidden rounded-md bg-green-50 dark:bg-green-900/20 p-3 text-sm text-green-700 dark:text-green-400"></div>
+                                {# Success message #}
+                                <div {{ stimulus_target('html-editor', 'success') }} class="hidden rounded-md bg-green-50 dark:bg-green-900/20 p-3 text-sm text-green-700 dark:text-green-400"></div>
 
-                        {# Textarea for HTML editing #}
-                        <textarea {{ stimulus_target('html-editor', 'textarea') }}
-                                  class="w-full h-96 font-mono text-sm border border-dark-300 dark:border-dark-600 rounded-md p-3 bg-white dark:bg-dark-800 text-dark-900 dark:text-dark-100 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"></textarea>
+                                {# Textarea for HTML editing #}
+                                <textarea {{ stimulus_target('html-editor', 'textarea') }}
+                                          class="w-full h-96 font-mono text-sm border border-dark-300 dark:border-dark-600 rounded-md p-3 bg-white dark:bg-dark-800 text-dark-900 dark:text-dark-100 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"></textarea>
 
-                        {# Action buttons #}
-                        <div class="flex gap-3">
-                            <button type="button"
-                                    {{ stimulus_target('html-editor', 'saveButton') }}
-                                    {{ stimulus_action('html-editor', 'saveChanges', 'click') }}
-                                    class="px-4 py-2 rounded-md bg-primary-600 text-white text-sm font-medium hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:focus:ring-offset-dark-900 disabled:opacity-50 disabled:cursor-not-allowed">
-                                {{ 'editor.html_editor_save_changes'|trans }}
-                            </button>
-                            <button type="button"
-                                    {{ stimulus_target('html-editor', 'closeButton') }}
-                                    {{ stimulus_action('html-editor', 'closeEditor', 'click') }}
-                                    class="px-4 py-2 rounded-md border border-dark-300 dark:border-dark-600 text-dark-700 dark:text-dark-300 text-sm font-medium hover:bg-dark-100 dark:hover:bg-dark-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:focus:ring-offset-dark-900 disabled:opacity-50 disabled:cursor-not-allowed">
-                                {{ 'editor.html_editor_close'|trans }}
-                            </button>
-                        </div>
-                    </div>
+                                {# Action buttons #}
+                                <div class="flex gap-3">
+                                    <button type="button"
+                                            {{ stimulus_target('html-editor', 'saveButton') }}
+                                            {{ stimulus_action('html-editor', 'saveChanges', 'click') }}
+                                            class="px-4 py-2 rounded-md bg-primary-600 text-white text-sm font-medium hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:focus:ring-offset-dark-900 disabled:opacity-50 disabled:cursor-not-allowed">
+                                        {{ 'editor.html_editor_save_changes'|trans }}
+                                    </button>
+                                    <button type="button"
+                                            {{ stimulus_target('html-editor', 'closeButton') }}
+                                            {{ stimulus_action('html-editor', 'closeEditor', 'click') }}
+                                            class="px-4 py-2 rounded-md border border-dark-300 dark:border-dark-600 text-dark-700 dark:text-dark-300 text-sm font-medium hover:bg-dark-100 dark:hover:bg-dark-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:focus:ring-offset-dark-900 disabled:opacity-50 disabled:cursor-not-allowed">
+                                        {{ 'editor.html_editor_close'|trans }}
+                                    </button>
+                                </div>
+                            </div>{# end space-y-4 #}
+                        </div>{# end overflow-hidden #}
+                    </div>{# end container grid #}
 
                     {# Preview pages section - always visible #}
                     <div {{ stimulus_controller('dist-files', {

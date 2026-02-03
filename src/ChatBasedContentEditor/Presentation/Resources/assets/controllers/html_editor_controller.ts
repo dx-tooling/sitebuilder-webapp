@@ -84,12 +84,14 @@ export default class extends Controller {
         this.hideError();
         this.hideSuccess();
 
-        // Hide chat area and show editor container
+        // Slide up chat area and slide down editor container
         if (this.hasChatAreaTarget) {
-            this.chatAreaTarget.classList.add("hidden");
+            this.chatAreaTarget.classList.remove("grid-rows-[1fr]");
+            this.chatAreaTarget.classList.add("grid-rows-[0fr]");
         }
         if (this.hasContainerTarget) {
-            this.containerTarget.classList.remove("hidden");
+            this.containerTarget.classList.remove("grid-rows-[0fr]");
+            this.containerTarget.classList.add("grid-rows-[1fr]");
         }
 
         // Update page name display
@@ -177,12 +179,14 @@ export default class extends Controller {
             this.textareaTarget.value = "";
         }
 
-        // Hide editor container and show chat area
+        // Slide up editor container and slide down chat area
         if (this.hasContainerTarget) {
-            this.containerTarget.classList.add("hidden");
+            this.containerTarget.classList.remove("grid-rows-[1fr]");
+            this.containerTarget.classList.add("grid-rows-[0fr]");
         }
         if (this.hasChatAreaTarget) {
-            this.chatAreaTarget.classList.remove("hidden");
+            this.chatAreaTarget.classList.remove("grid-rows-[0fr]");
+            this.chatAreaTarget.classList.add("grid-rows-[1fr]");
         }
     }
 
