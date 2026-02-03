@@ -96,6 +96,7 @@ project:
         project_link: "Projektlink"
         placeholder_project_link: "https://github.com/org/repo.git"
         project_link_help: "Fügen Sie die GitHub-Repository-URL für dieses Projekt ein."
+        project_link_note: '<strong>Wichtig:</strong> Derzeit können nur Repositories verwendet werden, die auf dem "landingpages-ai-template"-Projekt basieren! Siehe <a href="https://github.com/dx-tooling/landingpages-ai-template" target="_blank" rel="noopener noreferrer" class="text-primary-600 dark:text-primary-400 hover:underline">github.com/dx-tooling/landingpages-ai-template</a> für weitere Informationen.'
         github_access_key: "GitHub-Zugriffsschlüssel"
         placeholder_github_token: "ghp_xxxxxxxxxxxx"
         github_access_key_help: "Ein persönlicher Zugriffstoken, damit wir das Projekt öffnen und Änderungen speichern können."
