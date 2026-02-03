@@ -31,7 +31,7 @@ export default class extends Controller {
         "loading",
         "error",
         "success",
-        "contentEditorArea",
+        "chatArea",
     ];
 
     declare readonly loadUrlValue: string;
@@ -55,8 +55,8 @@ export default class extends Controller {
     declare readonly errorTarget: HTMLElement;
     declare readonly hasSuccessTarget: boolean;
     declare readonly successTarget: HTMLElement;
-    declare readonly hasContentEditorAreaTarget: boolean;
-    declare readonly contentEditorAreaTarget: HTMLElement;
+    declare readonly hasChatAreaTarget: boolean;
+    declare readonly chatAreaTarget: HTMLElement;
 
     private currentPath: string = "";
     private csrfToken: string = "";
@@ -84,12 +84,12 @@ export default class extends Controller {
         this.hideError();
         this.hideSuccess();
 
-        // Show editor container and hide content editor area
+        // Hide chat area and show editor container
+        if (this.hasChatAreaTarget) {
+            this.chatAreaTarget.classList.add("hidden");
+        }
         if (this.hasContainerTarget) {
             this.containerTarget.classList.remove("hidden");
-        }
-        if (this.hasContentEditorAreaTarget) {
-            this.contentEditorAreaTarget.classList.add("hidden");
         }
 
         // Update page name display
@@ -177,12 +177,12 @@ export default class extends Controller {
             this.textareaTarget.value = "";
         }
 
-        // Hide editor container and show content editor area
+        // Hide editor container and show chat area
         if (this.hasContainerTarget) {
             this.containerTarget.classList.add("hidden");
         }
-        if (this.hasContentEditorAreaTarget) {
-            this.contentEditorAreaTarget.classList.remove("hidden");
+        if (this.hasChatAreaTarget) {
+            this.chatAreaTarget.classList.remove("hidden");
         }
     }
 
