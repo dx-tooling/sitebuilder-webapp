@@ -142,6 +142,39 @@
                 {% endif %}
             </div>
 
+            {# GitHub Access Key Helper - shown after base required fields #}
+            <div class="rounded-lg border border-dark-200 dark:border-dark-700 bg-dark-50 dark:bg-dark-800 p-4 text-sm text-dark-600 dark:text-dark-400 space-y-3">
+                <p>
+                    {{ 'project.form.github_token_info'|trans|raw }}
+                </p>
+                <div class="bg-white dark:bg-dark-900 rounded-md p-3 border border-dark-200 dark:border-dark-600">
+                    <p class="font-medium text-dark-800 dark:text-dark-200 mb-2">{{ 'project.form.required_permissions'|trans }}</p>
+                    <ul class="list-disc list-inside space-y-1 text-dark-600 dark:text-dark-400">
+                        <li>{{ 'project.form.contents_permission'|trans|raw }}</li>
+                        <li>{{ 'project.form.pull_requests_permission'|trans|raw }}</li>
+                    </ul>
+                </div>
+                <div class="bg-white dark:bg-dark-900 rounded-md p-3 border border-dark-200 dark:border-dark-600">
+                    <p class="font-medium text-dark-800 dark:text-dark-200 mb-2">{{ 'project.form.classic_token_alternative'|trans }}</p>
+                    <ul class="list-disc list-inside space-y-1 text-dark-600 dark:text-dark-400">
+                        <li>{{ 'project.form.repo_scope'|trans|raw }}</li>
+                    </ul>
+                </div>
+                <p class="text-xs text-dark-500 dark:text-dark-500">
+                    {{ 'project.form.create_token_link'|trans }} <a href="https://github.com/settings/personal-access-tokens" target="_blank" rel="noopener noreferrer" class="text-primary-600 dark:text-primary-400 hover:underline">github.com/settings/personal-access-tokens</a>
+                </p>
+            </div>
+
+            {# Pro Settings - collapsible section for advanced/optional fields #}
+            <details class="mt-8 border border-dark-200 dark:border-dark-700 rounded-lg">
+                <summary class="px-4 py-3 cursor-pointer select-none text-sm font-medium text-dark-700 dark:text-dark-300 hover:bg-dark-50 dark:hover:bg-dark-900/50 rounded-lg">
+                    {{ 'project.form.pro_settings'|trans }}
+                </summary>
+                <div class="px-4 pb-4 pt-2 space-y-6 border-t border-dark-200 dark:border-dark-700">
+                    <p class="text-xs text-dark-500 dark:text-dark-400">
+                        {{ 'project.form.pro_settings_description'|trans }}
+                    </p>
+
             {% set currentImage = project ? project.agentImage : 'node:22-slim' %}
             {% set standardImages = ['node:22-slim', 'node:20-slim', 'node:18-slim', 'python:3.12-slim', 'php:8.4-cli'] %}
             {% set isCustomImage = currentImage not in standardImages %}
@@ -395,27 +428,8 @@
                 </div>
             </details>
 
-            <div class="rounded-lg border border-dark-200 dark:border-dark-700 bg-dark-50 dark:bg-dark-800 p-4 text-sm text-dark-600 dark:text-dark-400 space-y-3">
-                <p>
-                    {{ 'project.form.github_token_info'|trans|raw }}
-                </p>
-                <div class="bg-white dark:bg-dark-900 rounded-md p-3 border border-dark-200 dark:border-dark-600">
-                    <p class="font-medium text-dark-800 dark:text-dark-200 mb-2">{{ 'project.form.required_permissions'|trans }}</p>
-                    <ul class="list-disc list-inside space-y-1 text-dark-600 dark:text-dark-400">
-                        <li>{{ 'project.form.contents_permission'|trans|raw }}</li>
-                        <li>{{ 'project.form.pull_requests_permission'|trans|raw }}</li>
-                    </ul>
                 </div>
-                <div class="bg-white dark:bg-dark-900 rounded-md p-3 border border-dark-200 dark:border-dark-600">
-                    <p class="font-medium text-dark-800 dark:text-dark-200 mb-2">{{ 'project.form.classic_token_alternative'|trans }}</p>
-                    <ul class="list-disc list-inside space-y-1 text-dark-600 dark:text-dark-400">
-                        <li>{{ 'project.form.repo_scope'|trans|raw }}</li>
-                    </ul>
-                </div>
-                <p class="text-xs text-dark-500 dark:text-dark-500">
-                    {{ 'project.form.create_token_link'|trans }} <a href="https://github.com/settings/tokens" target="_blank" rel="noopener noreferrer" class="text-primary-600 dark:text-primary-400 hover:underline">github.com/settings/tokens</a>
-                </p>
-            </div>
+            </details>
 
             <div class="flex items-center justify-end gap-3 pt-4 border-t border-dark-200 dark:border-dark-700">
                 <a href="{{ path('project_mgmt.presentation.list') }}"

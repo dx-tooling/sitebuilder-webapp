@@ -129,6 +129,8 @@ project:
         output_instructions: "Output Instructions"
         output_instructions_placeholder: "Output format instructions..."
         output_instructions_help: "Instructions for how the agent should format its output and summaries."
+        pro_settings: "Pro Settings"
+        pro_settings_description: "Advanced configuration options for power users."
         github_token_info: "Need a GitHub access key? Create a <strong>Personal Access Token</strong> so the app can read and update your project."
         required_permissions: "Required permissions (fine-grained token):"
         contents_permission: "<strong>Contents</strong>: Read and write"
