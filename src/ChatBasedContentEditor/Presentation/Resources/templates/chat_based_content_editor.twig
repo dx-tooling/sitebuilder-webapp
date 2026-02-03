@@ -273,6 +273,11 @@
 
                 {# Preview pages section - hide for read-only #}
                 {% if workspace and not readOnly %}
+                    <div id="html_editor" class="border-t border-dark-200 dark:border-dark-700 pt-6">
+                        <h1 class="text-2xl font-semibold text-dark-900 dark:text-dark-100">{{ 'editor.html_editor_title'|trans }}</h1>
+                        <!-- Place HTML editor here! -->
+                    </div>
+
                     <div {{ stimulus_controller('dist-files', {
                              pollUrl: path('chat_based_content_editor.presentation.dist_files', { workspaceId: workspace.id }),
                              pollInterval: 3000

@@ -171,6 +171,7 @@ project:
 # Chat-Based Content Editor vertical
 editor:
     title: "Inhaltseditor"
+    html_editor_title: "HTML-Editor"
     working_on: "Arbeitet an <strong>%project%</strong>"
     description: "Beschreiben Sie, was Sie ändern möchten, in einfacher Sprache. Der Assistent kümmert sich um die Änderungen und zeigt den Fortschritt an."
     end_session: "Sitzung beenden"
