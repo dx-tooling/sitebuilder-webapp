@@ -21,7 +21,8 @@ final readonly class GitHubUrlService implements GitHubUrlServiceInterface
     public function getRepositoryUrl(string $gitUrl): string
     {
         // Handle: https://github.com/owner/repo.git or https://github.com/owner/repo
-        if (preg_match('#github\.com[/:]([^/]+)/([^/.]+)(?:\.git)?$#', $gitUrl, $matches)) {
+        // Note: repo name can contain dots (e.g., dx-tooling.org)
+        if (preg_match('#github\.com[/:]([^/]+)/(.+?)(?:\.git)?$#', $gitUrl, $matches)) {
             return 'https://github.com/' . $matches[1] . '/' . $matches[2];
         }
 
@@ -55,7 +56,8 @@ final readonly class GitHubUrlService implements GitHubUrlServiceInterface
     public function parseGitUrl(string $gitUrl): GitHubRepositoryInfoDto
     {
         // Handle: https://github.com/owner/repo.git
-        if (preg_match('#github\.com[/:]([^/]+)/([^/.]+)(?:\.git)?$#', $gitUrl, $matches)) {
+        // Note: repo name can contain dots (e.g., dx-tooling.org)
+        if (preg_match('#github\.com[/:]([^/]+)/(.+?)(?:\.git)?$#', $gitUrl, $matches)) {
             return new GitHubRepositoryInfoDto($matches[1], $matches[2]);
         }
 
