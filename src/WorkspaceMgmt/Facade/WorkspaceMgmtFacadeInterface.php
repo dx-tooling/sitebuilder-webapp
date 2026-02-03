@@ -100,4 +100,23 @@ interface WorkspaceMgmtFacadeInterface
         ?string $conversationUrl = null,
         ?string $userEmail = null
     ): string;
+
+    /**
+     * Read a file from the workspace.
+     *
+     * @param string $workspaceId  the workspace ID
+     * @param string $relativePath the relative path within the workspace
+     *
+     * @return string the file contents
+     */
+    public function readWorkspaceFile(string $workspaceId, string $relativePath): string;
+
+    /**
+     * Write a file to the workspace.
+     *
+     * @param string $workspaceId  the workspace ID
+     * @param string $relativePath the relative path within the workspace
+     * @param string $content      the content to write
+     */
+    public function writeWorkspaceFile(string $workspaceId, string $relativePath, string $content): void;
 }

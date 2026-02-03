@@ -273,19 +273,82 @@
 
                 {# Preview pages section - hide for read-only #}
                 {% if workspace and not readOnly %}
-                    <div id="html_editor" class="border-t border-dark-200 dark:border-dark-700 pt-6">
-                        <h1 class="text-2xl font-semibold text-dark-900 dark:text-dark-100">{{ 'editor.html_editor_title'|trans }}</h1>
-                        <!-- Place HTML editor here! -->
-                    </div>
-
-                    <div {{ stimulus_controller('dist-files', {
-                             pollUrl: path('chat_based_content_editor.presentation.dist_files', { workspaceId: workspace.id }),
-                             pollInterval: 3000
+                    <div {{ stimulus_controller('html-editor', {
+                             loadUrl: path('chat_based_content_editor.presentation.page_content', { workspaceId: workspace.id }),
+                             saveUrl: path('chat_based_content_editor.presentation.save_page', { workspaceId: workspace.id }),
+                             workspaceId: workspace.id,
+                             translations: {
+                                 editing: 'editor.html_editor_editing'|trans,
+                                 saveChanges: 'editor.html_editor_save_changes'|trans,
+                                 close: 'editor.html_editor_close'|trans,
+                                 saving: 'editor.html_editor_saving'|trans,
+                                 saveSuccess: 'editor.html_editor_save_success'|trans,
+                                 saveError: 'editor.html_editor_save_error'|trans,
+                                 loadError: 'editor.html_editor_load_error'|trans
+                             }
                          }) }}
-                         {{ stimulus_target('dist-files', 'container') }}
-                         class="border-t border-dark-200 dark:border-dark-700 pt-6 hidden">
-                        <h2 class="text-lg font-medium text-dark-900 dark:text-dark-100 mb-3">{{ 'editor.preview_pages'|trans }}</h2>
-                        <ul {{ stimulus_target('dist-files', 'list') }} class="space-y-1"></ul>
+                         data-action="html-editor:open->html-editor#openEditor">
+                        <input type="hidden" name="_html_editor_csrf_token" value="{{ csrf_token('html_editor_save') }}">
+
+                        <div id="html_editor" class="border-t border-dark-200 dark:border-dark-700 pt-6">
+                            <h2 class="text-lg font-medium text-dark-900 dark:text-dark-100 mb-3">{{ 'editor.html_editor_title'|trans }}</h2>
+
+                            {# HTML Editor Container - hidden by default #}
+                            <div {{ stimulus_target('html-editor', 'container') }} class="hidden space-y-4">
+                                {# Page name display #}
+                                <div class="flex items-center gap-2 text-sm">
+                                    <span class="text-dark-500 dark:text-dark-400">{{ 'editor.html_editor_editing'|trans }}</span>
+                                    <span {{ stimulus_target('html-editor', 'pageNameDisplay') }} class="font-medium text-dark-900 dark:text-dark-100"></span>
+                                </div>
+
+                                {# Loading indicator #}
+                                <div {{ stimulus_target('html-editor', 'loading') }} class="hidden py-8 text-center text-dark-500 dark:text-dark-400">
+                                    <svg class="animate-spin h-6 w-6 mx-auto mb-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                    {{ 'common.loading'|trans }}
+                                </div>
+
+                                {# Error message #}
+                                <div {{ stimulus_target('html-editor', 'error') }} class="hidden rounded-md bg-red-50 dark:bg-red-900/20 p-3 text-sm text-red-700 dark:text-red-400"></div>
+
+                                {# Success message #}
+                                <div {{ stimulus_target('html-editor', 'success') }} class="hidden rounded-md bg-green-50 dark:bg-green-900/20 p-3 text-sm text-green-700 dark:text-green-400"></div>
+
+                                {# Textarea for HTML editing #}
+                                <textarea {{ stimulus_target('html-editor', 'textarea') }}
+                                          class="w-full h-96 font-mono text-sm border border-dark-300 dark:border-dark-600 rounded-md p-3 bg-white dark:bg-dark-800 text-dark-900 dark:text-dark-100 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"></textarea>
+
+                                {# Action buttons #}
+                                <div class="flex gap-3">
+                                    <button type="button"
+                                            {{ stimulus_target('html-editor', 'saveButton') }}
+                                            {{ stimulus_action('html-editor', 'saveChanges', 'click') }}
+                                            class="px-4 py-2 rounded-md bg-primary-600 text-white text-sm font-medium hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:focus:ring-offset-dark-900 disabled:opacity-50 disabled:cursor-not-allowed">
+                                        {{ 'editor.html_editor_save_changes'|trans }}
+                                    </button>
+                                    <button type="button"
+                                            {{ stimulus_target('html-editor', 'closeButton') }}
+                                            {{ stimulus_action('html-editor', 'closeEditor', 'click') }}
+                                            class="px-4 py-2 rounded-md border border-dark-300 dark:border-dark-600 text-dark-700 dark:text-dark-300 text-sm font-medium hover:bg-dark-100 dark:hover:bg-dark-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:focus:ring-offset-dark-900 disabled:opacity-50 disabled:cursor-not-allowed">
+                                        {{ 'editor.html_editor_close'|trans }}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        {# Content editor area (dist files list) - visible by default #}
+                        <div {{ stimulus_target('html-editor', 'contentEditorArea') }}
+                             {{ stimulus_controller('dist-files', {
+                                 pollUrl: path('chat_based_content_editor.presentation.dist_files', { workspaceId: workspace.id }),
+                                 pollInterval: 3000
+                             }) }}
+                             {{ stimulus_target('dist-files', 'container') }}
+                             class="border-t border-dark-200 dark:border-dark-700 pt-6 hidden">
+                            <h2 class="text-lg font-medium text-dark-900 dark:text-dark-100 mb-3">{{ 'editor.preview_pages'|trans }}</h2>
+                            <ul {{ stimulus_target('dist-files', 'list') }} class="space-y-1"></ul>
+                        </div>
                     </div>
                 {% endif %}
             </div>

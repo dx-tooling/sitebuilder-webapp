@@ -610,4 +610,81 @@ final class ChatBasedContentEditorController extends AbstractController
 
         return $this->json(['files' => $files]);
     }
+
+    #[Route(
+        path: '/workspace/{workspaceId}/page-content',
+        name: 'chat_based_content_editor.presentation.page_content',
+        methods: [Request::METHOD_GET],
+        requirements: ['workspaceId' => '[a-f0-9-]{36}']
+    )]
+    public function getPageContent(string $workspaceId, Request $request): Response
+    {
+        $workspace = $this->workspaceMgmtFacade->getWorkspaceById($workspaceId);
+
+        if ($workspace === null) {
+            return $this->json(['error' => 'Workspace not found.'], Response::HTTP_NOT_FOUND);
+        }
+
+        $path = $request->query->getString('path');
+
+        if ($path === '') {
+            return $this->json(['error' => 'Path parameter is required.'], Response::HTTP_BAD_REQUEST);
+        }
+
+        try {
+            $content = $this->workspaceMgmtFacade->readWorkspaceFile($workspaceId, 'dist/' . $path);
+
+            return $this->json(['content' => $content]);
+        } catch (Throwable $e) {
+            return $this->json(['error' => 'Failed to read file: ' . $e->getMessage()], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    #[Route(
+        path: '/workspace/{workspaceId}/save-page',
+        name: 'chat_based_content_editor.presentation.save_page',
+        methods: [Request::METHOD_POST],
+        requirements: ['workspaceId' => '[a-f0-9-]{36}']
+    )]
+    public function savePage(
+        string        $workspaceId,
+        Request       $request,
+        #[CurrentUser] UserInterface $user
+    ): Response {
+        if (!$this->isCsrfTokenValid('html_editor_save', $request->request->getString('_csrf_token'))) {
+            return $this->json(['error' => 'Invalid CSRF token.'], Response::HTTP_FORBIDDEN);
+        }
+
+        $workspace = $this->workspaceMgmtFacade->getWorkspaceById($workspaceId);
+
+        if ($workspace === null) {
+            return $this->json(['error' => 'Workspace not found.'], Response::HTTP_NOT_FOUND);
+        }
+
+        $path    = $request->request->getString('path');
+        $content = $request->request->getString('content');
+
+        if ($path === '') {
+            return $this->json(['error' => 'Path parameter is required.'], Response::HTTP_BAD_REQUEST);
+        }
+
+        try {
+            // Write the file
+            $this->workspaceMgmtFacade->writeWorkspaceFile($workspaceId, 'dist/' . $path, $content);
+
+            // Get user email for commit author
+            $accountInfo = $this->getAccountInfo($user);
+
+            // Commit and push the changes
+            $this->workspaceMgmtFacade->commitAndPush(
+                $workspaceId,
+                'Manual HTML edit: ' . $path,
+                $accountInfo->email
+            );
+
+            return $this->json(['success' => true]);
+        } catch (Throwable $e) {
+            return $this->json(['error' => 'Failed to save file: ' . $e->getMessage()], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
 }
