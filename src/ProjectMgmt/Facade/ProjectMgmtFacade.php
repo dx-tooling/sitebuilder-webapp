@@ -65,17 +65,21 @@ final class ProjectMgmtFacade implements ProjectMgmtFacadeInterface
     /**
      * Returns unique LLM API keys with their abbreviated form and associated project names.
      * Used for the "reuse existing key" feature in the project form.
-     * Only includes keys from non-deleted projects.
+     * Only includes keys from non-deleted projects belonging to the specified organization.
+     *
+     * SECURITY: This method filters by organizationId to prevent cross-organization key leakage.
      *
      * @return list<ExistingLlmApiKeyDto>
      */
-    public function getExistingLlmApiKeys(): array
+    public function getExistingLlmApiKeys(string $organizationId): array
     {
         /** @var list<Project> $projects */
         $projects = $this->entityManager->createQueryBuilder()
             ->select('p')
             ->from(Project::class, 'p')
             ->where('p.deletedAt IS NULL')
+            ->andWhere('p.organizationId = :organizationId')
+            ->setParameter('organizationId', $organizationId)
             ->orderBy('p.name', 'ASC')
             ->getQuery()
             ->getResult();

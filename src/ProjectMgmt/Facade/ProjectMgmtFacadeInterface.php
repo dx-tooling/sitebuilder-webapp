@@ -32,9 +32,12 @@ interface ProjectMgmtFacadeInterface
      * Get unique LLM API keys with their abbreviated form and associated project names.
      * Used for the "reuse existing key" feature.
      *
+     * Only returns keys from projects belonging to the specified organization.
+     * This is a security boundary - keys must never leak across organizations.
+     *
      * @return list<ExistingLlmApiKeyDto>
      */
-    public function getExistingLlmApiKeys(): array;
+    public function getExistingLlmApiKeys(string $organizationId): array;
 
     /**
      * Get the default agent configuration template for a given project type.

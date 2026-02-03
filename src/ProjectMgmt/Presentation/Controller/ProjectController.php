@@ -123,13 +123,21 @@ final class ProjectController extends AbstractController
     )]
     public function new(): Response
     {
+        // Get the user's active organization
+        $organizationId = $this->getActiveOrganizationId();
+        if ($organizationId === null) {
+            $this->addFlash('error', $this->translator->trans('flash.error.no_organization'));
+
+            return $this->redirectToRoute('account.presentation.dashboard');
+        }
+
         // Get default agent config template for new projects
         $defaultTemplate = $this->projectMgmtFacade->getAgentConfigTemplate(ProjectType::DEFAULT);
 
         return $this->render('@project_mgmt.presentation/project_form.twig', [
             'project'             => null,
             'llmProviders'        => LlmModelProvider::cases(),
-            'existingLlmKeys'     => $this->projectMgmtFacade->getExistingLlmApiKeys(),
+            'existingLlmKeys'     => $this->projectMgmtFacade->getExistingLlmApiKeys($organizationId),
             'agentConfigTemplate' => $defaultTemplate,
         ]);
     }
@@ -233,10 +241,19 @@ final class ProjectController extends AbstractController
             throw $this->createNotFoundException('Project not found.');
         }
 
+        // Get the user's active organization (for filtering existing LLM keys)
+        $organizationId = $this->getActiveOrganizationId();
+        if ($organizationId === null) {
+            $this->addFlash('error', $this->translator->trans('flash.error.no_organization'));
+
+            return $this->redirectToRoute('account.presentation.dashboard');
+        }
+
         // Filter out the current project's key from the reuse list
+        // Only show keys from the user's organization (security boundary)
         $currentKey      = $project->getLlmApiKey();
         $existingLlmKeys = array_values(array_filter(
-            $this->projectMgmtFacade->getExistingLlmApiKeys(),
+            $this->projectMgmtFacade->getExistingLlmApiKeys($organizationId),
             static fn (ExistingLlmApiKeyDto $key) => $key->apiKey !== $currentKey
         ));
 
