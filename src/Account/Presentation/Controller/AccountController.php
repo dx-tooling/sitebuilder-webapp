@@ -119,7 +119,11 @@ final class AccountController extends AbstractController
         /** @var SecurityUser|null $securityUser */
         $securityUser = $this->getUser();
 
-        if ($securityUser !== null && $securityUser->getMustSetPassword()) {
+        if ($securityUser === null) {
+            return $this->redirectToRoute('account.presentation.sign_in');
+        }
+
+        if ($securityUser->getMustSetPassword()) {
             return $this->redirectToRoute('account.presentation.set_password');
         }
 
@@ -146,6 +150,12 @@ final class AccountController extends AbstractController
         }
 
         if ($request->isMethod(Request::METHOD_POST)) {
+            if (!$this->isCsrfTokenValid('set_password', $request->request->getString('_csrf_token'))) {
+                $this->addFlash('error', $this->translator->trans('flash.error.invalid_csrf'));
+
+                return $this->render('@account.presentation/set_password.html.twig');
+            }
+
             $password        = $request->request->get('password');
             $passwordConfirm = $request->request->get('password_confirm');
 
@@ -165,6 +175,9 @@ final class AccountController extends AbstractController
             $userId = $securityUser->getId();
             $this->accountService->setMustSetPasswordById($userId, false);
             $this->accountService->updatePasswordById($userId, (string) $password);
+
+            $refreshedUser = $this->securityUserProvider->loadUserByIdentifier($securityUser->getUserIdentifier());
+            $this->security->login($refreshedUser, 'form_login', 'main');
 
             $this->addFlash('success', $this->translator->trans('flash.success.password_set'));
 

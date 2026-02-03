@@ -473,6 +473,12 @@ final class OrganizationController extends AbstractController
             ]);
         }
 
+        if (!$this->isCsrfTokenValid('accept_invitation', $request->request->getString('_csrf_token'))) {
+            $this->addFlash('error', $this->translator->trans('flash.error.invalid_csrf', [], 'organization'));
+
+            return $this->redirectToRoute('static_pages.presentation.homepage');
+        }
+
         // POST request - accept the invitation
         try {
             $currentUser = $this->getUser();
