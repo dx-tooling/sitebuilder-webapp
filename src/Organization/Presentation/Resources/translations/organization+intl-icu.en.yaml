@@ -69,6 +69,7 @@ flash:
         no_active_organization: "No active organization."
         no_active_organization_rename: "No active organization to rename."
         no_active_organization_invite: "No active organization to invite to."
+        invalid_csrf: "Invalid CSRF token."
         organization_not_found: "Organization not found."
         owner_only_rename: "Only the organization owner can rename it."
         owner_only_invite: "Only the organization owner can invite members."

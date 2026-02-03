@@ -35,6 +35,15 @@ final class SetPasswordFlowTest extends WebTestCase
         $this->entityManager = $em;
     }
 
+    private function getSetPasswordCsrfToken(): string
+    {
+        $crawler = $this->client->request('GET', '/en/account/set-password');
+
+        $token = $crawler->filter('input[name="_csrf_token"]')->attr('value');
+
+        return is_string($token) ? $token : '';
+    }
+
     /**
      * Functional test: Calls the actual controller endpoint to verify that
      * the mustSetPassword flag is correctly persisted after setting a password.
@@ -50,7 +59,9 @@ final class SetPasswordFlowTest extends WebTestCase
         // Step 2: Log in as the user and call the set-password endpoint
         $this->loginAsUser($this->client, $account);
 
+        $csrfToken = $this->getSetPasswordCsrfToken();
         $this->client->request('POST', '/en/account/set-password', [
+            '_csrf_token'      => $csrfToken,
             'password'         => 'newSecurePassword123',
             'password_confirm' => 'newSecurePassword123',
         ]);
@@ -98,12 +109,36 @@ final class SetPasswordFlowTest extends WebTestCase
 
         $this->loginAsUser($this->client, $account);
 
+        $csrfToken = $this->getSetPasswordCsrfToken();
         $this->client->request('POST', '/en/account/set-password', [
+            '_csrf_token'      => $csrfToken,
             'password'         => 'newSecurePassword123',
             'password_confirm' => 'differentPassword456',
         ]);
 
         // Should stay on the same page (re-render)
         $this->assertResponseIsSuccessful();
+    }
+
+    public function testSetPasswordRejectsInvalidCsrf(): void
+    {
+        $email   = 'csrf-test-' . uniqid() . '@example.com';
+        $account = $this->accountService->register($email, null, true);
+
+        $this->loginAsUser($this->client, $account);
+
+        $this->client->request('POST', '/en/account/set-password', [
+            '_csrf_token'      => 'invalid-token',
+            'password'         => 'newSecurePassword123',
+            'password_confirm' => 'newSecurePassword123',
+        ]);
+
+        $this->assertResponseIsSuccessful();
+
+        $this->entityManager->clear();
+        $reloadedAccount = $this->accountService->findByEmail($email);
+
+        $this->assertNotNull($reloadedAccount);
+        $this->assertTrue($reloadedAccount->getMustSetPassword());
     }
 }
