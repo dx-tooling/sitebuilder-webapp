@@ -41,7 +41,8 @@ final class ProjectService
         ?string          $s3AccessKeyId = null,
         ?string          $s3SecretAccessKey = null,
         ?string          $s3IamRoleArn = null,
-        ?string          $s3KeyPrefix = null
+        ?string          $s3KeyPrefix = null,
+        bool             $keysVisible = true
     ): Project {
         $project = new Project(
             $organizationId,
@@ -57,6 +58,8 @@ final class ProjectService
             $agentOutputInstructions,
             $remoteContentAssetsManifestUrls
         );
+
+        $project->setKeysVisible($keysVisible);
 
         // Set S3 configuration if provided
         $project->setS3BucketName($s3BucketName);

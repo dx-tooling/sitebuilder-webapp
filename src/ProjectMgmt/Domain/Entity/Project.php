@@ -405,6 +405,22 @@ class Project
     }
 
     #[ORM\Column(
+        type: Types::BOOLEAN,
+        nullable: true
+    )]
+    private ?bool $keysVisible = null;
+
+    public function isKeysVisible(): bool
+    {
+        return $this->keysVisible ?? true;
+    }
+
+    public function setKeysVisible(bool $keysVisible): void
+    {
+        $this->keysVisible = $keysVisible;
+    }
+
+    #[ORM\Column(
         type: Types::DATETIME_IMMUTABLE,
         nullable: true
     )]

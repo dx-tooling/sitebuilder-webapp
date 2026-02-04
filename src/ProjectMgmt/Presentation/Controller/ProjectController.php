@@ -257,6 +257,11 @@ final class ProjectController extends AbstractController
             static fn (ExistingLlmApiKeyDto $key) => $key->apiKey !== $currentKey
         ));
 
+        // When keys are not visible (e.g. prefab project), do not send real keys to the template
+        $keysVisible        = $project->isKeysVisible();
+        $displayGithubToken = $keysVisible ? $project->getGithubToken() : '';
+        $displayLlmApiKey   = $keysVisible ? $project->getLlmApiKey() : '';
+
         // Get agent config template (used as fallback in template, but project values take precedence)
         $agentConfigTemplate = $this->projectMgmtFacade->getAgentConfigTemplate($project->getProjectType());
 
@@ -265,6 +270,9 @@ final class ProjectController extends AbstractController
             'llmProviders'        => LlmModelProvider::cases(),
             'existingLlmKeys'     => $existingLlmKeys,
             'agentConfigTemplate' => $agentConfigTemplate,
+            'keysVisible'         => $keysVisible,
+            'displayGithubToken'  => $displayGithubToken,
+            'displayLlmApiKey'    => $displayLlmApiKey,
         ]);
     }
 
@@ -290,9 +298,10 @@ final class ProjectController extends AbstractController
 
         $name             = $request->request->getString('name');
         $gitUrl           = $request->request->getString('git_url');
-        $githubToken      = $request->request->getString('github_token');
+        $keysVisible      = $project->isKeysVisible();
+        $githubToken      = $keysVisible ? $request->request->getString('github_token') : $project->getGithubToken();
         $llmModelProvider = LlmModelProvider::tryFrom($request->request->getString('llm_model_provider'));
-        $llmApiKey        = $request->request->getString('llm_api_key');
+        $llmApiKey        = $keysVisible ? $request->request->getString('llm_api_key') : $project->getLlmApiKey();
         $agentImage       = $this->resolveAgentImage($request);
 
         // Agent configuration (null means keep existing values)
@@ -301,7 +310,8 @@ final class ProjectController extends AbstractController
         $agentOutputInstructions         = $this->nullIfEmpty($request->request->getString('agent_output_instructions'));
         $remoteContentAssetsManifestUrls = $this->parseRemoteContentAssetsManifestUrls($request);
 
-        if ($name === '' || $gitUrl === '' || $githubToken === '' || $llmApiKey === '') {
+        $requireKeys = $keysVisible;
+        if ($name === '' || $gitUrl === '' || ($requireKeys && ($githubToken === '' || $llmApiKey === ''))) {
             $this->addFlash('error', $this->translator->trans('flash.error.all_fields_required'));
 
             return $this->redirectToRoute('project_mgmt.presentation.edit', ['id' => $id]);

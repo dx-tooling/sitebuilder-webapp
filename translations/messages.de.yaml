@@ -108,6 +108,7 @@ project:
         key_verified: "Schlüssel erfolgreich überprüft"
         key_verification_failed: "Schlüsselüberprüfung fehlgeschlagen"
         reuse_existing_key: "Oder vorhandenen Schlüssel verwenden:"
+        keys_managed_by_deployment: "Von Bereitstellung verwaltet"
         runtime_environment: "Laufzeitumgebung"
         runtime_help: "Wählen Sie die Laufzeitumgebung zum Erstellen und Ausführen Ihres Projekts."
         node_22_recommended: "Node.js 22 (empfohlen)"

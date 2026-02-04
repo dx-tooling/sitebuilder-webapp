@@ -108,6 +108,7 @@ project:
         key_verified: "Key successfully verified"
         key_verification_failed: "Key verification failed"
         reuse_existing_key: "Or reuse an existing key:"
+        keys_managed_by_deployment: "Managed by deployment"
         runtime_environment: "Runtime environment"
         runtime_help: "Select the runtime environment for building and running your project."
         node_22_recommended: "Node.js 22 (recommended)"

@@ -121,6 +121,9 @@ services:
             - "@App\\RemoteContentAssets\\Facade\\RemoteContentAssetsFacadeInterface"
 
     # Facade bindings
+    App\Prefab\Facade\PrefabFacadeInterface:
+        class: App\Prefab\Facade\PrefabFacade
+
     App\ProjectMgmt\Facade\ProjectMgmtFacadeInterface:
         class: App\ProjectMgmt\Facade\ProjectMgmtFacade
 

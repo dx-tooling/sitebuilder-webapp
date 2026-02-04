@@ -94,7 +94,12 @@ User Created
     → createOrganization(userId)
     → dispatch CurrentlyActiveOrganizationChangedSymfonyEvent
       → set user's currentlyActiveOrganizationId
+    → if prefabs.yaml present: create prefabricated projects for the new org
 ```
+
+### Prefabricated projects (prefabs)
+
+In deployments that provide a root-folder file **`prefabs.yaml`**, when a user signs up and their organization is created, that organization automatically receives one or more **prefabricated** projects. The app reads `prefabs.yaml` from the project root (e.g. `%kernel.project_dir%/prefabs.yaml`). The open-source repo ships only a sample file (`prefabs.yaml.example`); actual prefabs are provided by private hosting (e.g. via the deploy work dir overlay). Each prefab supplies project name, project link, GitHub access key, LLM provider, LLM API key, and a **keys are visible** flag. When **keys are visible** is false, those keys are set and used by the app but never shown to org users (edit form, reuse-existing-key UI). See [prefabs.yaml.example](../prefabs.yaml.example) for the schema.
 
 ### Invitation Flow
 

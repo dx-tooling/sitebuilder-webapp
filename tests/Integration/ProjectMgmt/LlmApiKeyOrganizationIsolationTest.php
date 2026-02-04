@@ -103,6 +103,24 @@ final class LlmApiKeyOrganizationIsolationTest extends WebTestCase
     }
 
     /**
+     * Projects with keys_visible=false (e.g. from prefab) must not appear in getExistingLlmApiKeys.
+     */
+    public function testGetExistingLlmApiKeysExcludesProjectsWithKeysNotVisible(): void
+    {
+        $user           = $this->createTestUser('user-keys-hidden-' . uniqid() . '@example.com', 'password123');
+        $organizationId = $this->getOrganizationIdForUser($user);
+
+        $this->createProjectWithApiKey($organizationId, 'Visible Project', 'sk-visible-key');
+        $this->createProjectWithApiKeyAndKeysVisible($organizationId, 'Hidden Keys Project', 'sk-hidden-key', false);
+
+        $keys = $this->projectMgmtFacade->getExistingLlmApiKeys($organizationId);
+
+        $apiKeys = array_map(fn (ExistingLlmApiKeyDto $dto) => $dto->apiKey, $keys);
+        self::assertContains('sk-visible-key', $apiKeys);
+        self::assertNotContains('sk-hidden-key', $apiKeys, 'Keys from projects with keys_visible=false must not appear');
+    }
+
+    /**
      * Test that the new project form only shows API keys from the user's organization.
      *
      * This is an end-to-end test that verifies the controller correctly filters keys.
@@ -189,6 +207,15 @@ final class LlmApiKeyOrganizationIsolationTest extends WebTestCase
 
     private function createProjectWithApiKey(string $organizationId, string $name, string $apiKey): Project
     {
+        return $this->createProjectWithApiKeyAndKeysVisible($organizationId, $name, $apiKey, true);
+    }
+
+    private function createProjectWithApiKeyAndKeysVisible(
+        string $organizationId,
+        string $name,
+        string $apiKey,
+        bool $keysVisible
+    ): Project {
         $project = new Project(
             $organizationId,
             $name,
@@ -197,6 +224,7 @@ final class LlmApiKeyOrganizationIsolationTest extends WebTestCase
             LlmModelProvider::OpenAI,
             $apiKey
         );
+        $project->setKeysVisible($keysVisible);
         $this->entityManager->persist($project);
         $this->entityManager->flush();
 
