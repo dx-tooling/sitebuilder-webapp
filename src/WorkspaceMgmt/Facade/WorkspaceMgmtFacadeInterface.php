@@ -119,4 +119,16 @@ interface WorkspaceMgmtFacadeInterface
      * @param string $content      the content to write
      */
     public function writeWorkspaceFile(string $workspaceId, string $relativePath, string $content): void;
+
+    /**
+     * Run the build process (npm run build) in the workspace.
+     *
+     * This compiles source files (from /src) to distribution files (to /dist).
+     * Used after manual HTML edits to update the dist folder.
+     *
+     * @param string $workspaceId the workspace ID
+     *
+     * @return string the build output
+     */
+    public function runBuild(string $workspaceId): string;
 }

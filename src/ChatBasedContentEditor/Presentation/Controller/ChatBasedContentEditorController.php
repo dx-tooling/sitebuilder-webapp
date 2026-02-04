@@ -631,8 +631,11 @@ final class ChatBasedContentEditorController extends AbstractController
             return $this->json(['error' => 'Path parameter is required.'], Response::HTTP_BAD_REQUEST);
         }
 
+        // Map dist/ path to src/ for reading source files
+        $sourcePath = $this->mapDistPathToSrc($path);
+
         try {
-            $content = $this->workspaceMgmtFacade->readWorkspaceFile($workspaceId, $path);
+            $content = $this->workspaceMgmtFacade->readWorkspaceFile($workspaceId, $sourcePath);
 
             return $this->json(['content' => $content]);
         } catch (Throwable $e) {
@@ -668,17 +671,23 @@ final class ChatBasedContentEditorController extends AbstractController
             return $this->json(['error' => 'Path parameter is required.'], Response::HTTP_BAD_REQUEST);
         }
 
+        // Map dist/ path to src/ for writing source files
+        $sourcePath = $this->mapDistPathToSrc($path);
+
         try {
-            // Write the file
-            $this->workspaceMgmtFacade->writeWorkspaceFile($workspaceId, $path, $content);
+            // Write the file to src/
+            $this->workspaceMgmtFacade->writeWorkspaceFile($workspaceId, $sourcePath, $content);
+
+            // Run build to update dist/ from src/
+            $this->workspaceMgmtFacade->runBuild($workspaceId);
 
             // Get user email for commit author
             $accountInfo = $this->getAccountInfo($user);
 
-            // Commit and push the changes
+            // Commit and push the changes (now includes both src/ and rebuilt dist/)
             $this->workspaceMgmtFacade->commitAndPush(
                 $workspaceId,
-                'Manual HTML edit: ' . $path,
+                'Manual HTML edit: ' . $sourcePath,
                 $accountInfo->email
             );
 
@@ -686,5 +695,22 @@ final class ChatBasedContentEditorController extends AbstractController
         } catch (Throwable $e) {
             return $this->json(['error' => 'Failed to save file: ' . $e->getMessage()], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
+    }
+
+    /**
+     * Map a dist/ path to the corresponding src/ path.
+     *
+     * The HTML editor displays files from /dist but edits should be made to /src.
+     * After saving to /src, a build is run to update /dist.
+     *
+     * Example: dist/index.html -> src/index.html
+     */
+    private function mapDistPathToSrc(string $path): string
+    {
+        if (str_starts_with($path, 'dist/')) {
+            return 'src/' . substr($path, 5); // 'dist/' = 5 characters
+        }
+
+        return $path;
     }
 }

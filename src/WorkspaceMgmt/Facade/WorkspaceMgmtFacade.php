@@ -14,6 +14,7 @@ use App\WorkspaceMgmt\Facade\Enum\WorkspaceStatus;
 use App\WorkspaceMgmt\Infrastructure\Adapter\FilesystemAdapterInterface;
 use App\WorkspaceMgmt\Infrastructure\Message\SetupWorkspaceMessage;
 use App\WorkspaceMgmt\Infrastructure\Service\GitHubUrlServiceInterface;
+use App\WorkspaceTooling\Facade\WorkspaceToolingServiceInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use RuntimeException;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
@@ -30,15 +31,16 @@ final class WorkspaceMgmtFacade implements WorkspaceMgmtFacadeInterface
 {
     public function __construct(
         #[Autowire(param: 'workspace_mgmt.workspace_root')]
-        private readonly string                     $workspaceRoot,
-        private readonly WorkspaceService           $workspaceService,
-        private readonly WorkspaceGitService        $gitService,
-        private readonly WorkspaceStatusGuard       $statusGuard,
-        private readonly ProjectMgmtFacadeInterface $projectMgmtFacade,
-        private readonly EntityManagerInterface     $entityManager,
-        private readonly MessageBusInterface        $messageBus,
-        private readonly GitHubUrlServiceInterface  $gitHubUrlService,
-        private readonly FilesystemAdapterInterface $filesystemAdapter,
+        private readonly string                           $workspaceRoot,
+        private readonly WorkspaceService                 $workspaceService,
+        private readonly WorkspaceGitService              $gitService,
+        private readonly WorkspaceStatusGuard             $statusGuard,
+        private readonly ProjectMgmtFacadeInterface       $projectMgmtFacade,
+        private readonly EntityManagerInterface           $entityManager,
+        private readonly MessageBusInterface              $messageBus,
+        private readonly GitHubUrlServiceInterface        $gitHubUrlService,
+        private readonly FilesystemAdapterInterface       $filesystemAdapter,
+        private readonly WorkspaceToolingServiceInterface $workspaceToolingService,
     ) {
     }
 
@@ -236,6 +238,18 @@ final class WorkspaceMgmtFacade implements WorkspaceMgmtFacadeInterface
     {
         $absolutePath = $this->resolveAndValidatePath($workspaceId, $relativePath);
         $this->filesystemAdapter->writeFile($absolutePath, $content);
+    }
+
+    public function runBuild(string $workspaceId): string
+    {
+        $workspace = $this->getWorkspaceOrFail($workspaceId);
+
+        // Get project info to determine the agent image
+        $projectInfo = $this->projectMgmtFacade->getProjectInfo($workspace->getProjectId());
+
+        $workspacePath = $this->workspaceRoot . '/' . $workspaceId;
+
+        return $this->workspaceToolingService->runBuildInWorkspace($workspacePath, $projectInfo->agentImage);
     }
 
     /**

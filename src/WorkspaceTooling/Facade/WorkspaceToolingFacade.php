@@ -6,6 +6,7 @@ namespace App\WorkspaceTooling\Facade;
 
 use App\RemoteContentAssets\Facade\RemoteContentAssetsFacadeInterface;
 use App\WorkspaceTooling\Infrastructure\Execution\AgentExecutionContext;
+use App\WorkspaceTooling\Infrastructure\Execution\DockerExecutor;
 use EtfsCodingAgent\Service\FileOperationsServiceInterface;
 use EtfsCodingAgent\Service\ShellOperationsServiceInterface;
 use EtfsCodingAgent\Service\TextOperationsService;
@@ -20,7 +21,8 @@ final class WorkspaceToolingFacade extends BaseWorkspaceToolingFacade implements
         TextOperationsService                               $textOperationsService,
         ShellOperationsServiceInterface                     $shellOperationsService,
         private readonly AgentExecutionContext              $executionContext,
-        private readonly RemoteContentAssetsFacadeInterface $remoteContentAssetsFacade
+        private readonly RemoteContentAssetsFacadeInterface $remoteContentAssetsFacade,
+        private readonly DockerExecutor                     $dockerExecutor
     ) {
         parent::__construct(
             $fileOperationsService,
@@ -235,5 +237,18 @@ final class WorkspaceToolingFacade extends BaseWorkspaceToolingFacade implements
         }
 
         return json_encode($rules, JSON_THROW_ON_ERROR);
+    }
+
+    public function runBuildInWorkspace(string $workspacePath, string $agentImage): string
+    {
+        return $this->dockerExecutor->run(
+            $agentImage,
+            'npm run build',
+            $workspacePath,
+            '/workspace',
+            300,
+            true,
+            'html-editor-build'
+        );
     }
 }

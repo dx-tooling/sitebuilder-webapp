@@ -237,17 +237,18 @@ final class HtmlEditorControllerTest extends WebTestCase
         $workspaceId = $workspace->getId();
         self::assertNotNull($workspaceId);
 
-        // Create workspace with file
+        // Create workspace with file in src/ (the controller maps dist/ paths to src/)
         $workspacePath = $this->workspaceRoot . '/' . $workspaceId;
-        $distPath      = $workspacePath . '/dist';
-        $this->filesystem->mkdir($distPath);
+        $srcPath       = $workspacePath . '/src';
+        $this->filesystem->mkdir($srcPath);
 
         $htmlContent = '<html><head><title>Test</title></head><body>Hello World</body></html>';
-        $this->filesystem->dumpFile($distPath . '/index.html', $htmlContent);
+        $this->filesystem->dumpFile($srcPath . '/index.html', $htmlContent);
 
         $this->loginAsUser($this->client, $user);
 
         try {
+            // Request with dist/ path - controller maps to src/
             $this->client->request('GET', '/en/workspace/' . $workspaceId . '/page-content', [
                 'path' => 'dist/index.html',
             ]);
@@ -276,9 +277,11 @@ final class HtmlEditorControllerTest extends WebTestCase
         $workspaceId = $workspace->getId();
         self::assertNotNull($workspaceId);
 
-        // Create empty workspace directory
+        // Create workspace directory with src/ folder but no files
+        // (controller maps dist/ to src/, so src/nonexistent.html won't be found)
         $workspacePath = $this->workspaceRoot . '/' . $workspaceId;
-        $this->filesystem->mkdir($workspacePath);
+        $srcPath       = $workspacePath . '/src';
+        $this->filesystem->mkdir($srcPath);
 
         $this->loginAsUser($this->client, $user);
 

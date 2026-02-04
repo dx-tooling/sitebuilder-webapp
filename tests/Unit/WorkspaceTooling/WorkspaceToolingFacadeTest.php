@@ -8,6 +8,7 @@ use App\RemoteContentAssets\Facade\Dto\RemoteContentAssetInfoDto;
 use App\RemoteContentAssets\Facade\RemoteContentAssetsFacadeInterface;
 use App\WorkspaceTooling\Facade\WorkspaceToolingFacade;
 use App\WorkspaceTooling\Infrastructure\Execution\AgentExecutionContext;
+use App\WorkspaceTooling\Infrastructure\Execution\DockerExecutor;
 use EtfsCodingAgent\Service\FileOperationsService;
 use EtfsCodingAgent\Service\ShellOperationsServiceInterface;
 use EtfsCodingAgent\Service\TextOperationsService;
@@ -381,8 +382,11 @@ final class WorkspaceToolingFacadeTest extends TestCase
         $textOps                   = new TextOperationsService($fileOps);
         $shellOps                  = $this->createMock(ShellOperationsServiceInterface::class);
         $remoteContentAssetsFacade = $this->createMock(RemoteContentAssetsFacadeInterface::class);
+        // DockerExecutor is final, so we create a real instance with dummy paths
+        // The tests don't call runBuildInWorkspace, so this is safe
+        $dockerExecutor = new DockerExecutor('/tmp', '/tmp');
 
-        return new WorkspaceToolingFacade($fileOps, $textOps, $shellOps, $this->executionContext, $remoteContentAssetsFacade);
+        return new WorkspaceToolingFacade($fileOps, $textOps, $shellOps, $this->executionContext, $remoteContentAssetsFacade, $dockerExecutor);
     }
 
     public function testGetRemoteAssetInfoReturnsErrorJsonWhenFacadeReturnsNull(): void
@@ -426,8 +430,11 @@ final class WorkspaceToolingFacadeTest extends TestCase
         $fileOps  = new FileOperationsService();
         $textOps  = new TextOperationsService($fileOps);
         $shellOps = $this->createMock(ShellOperationsServiceInterface::class);
+        // DockerExecutor is final, so we create a real instance with dummy paths
+        // The tests don't call runBuildInWorkspace, so this is safe
+        $dockerExecutor = new DockerExecutor('/tmp', '/tmp');
 
-        return new WorkspaceToolingFacade($fileOps, $textOps, $shellOps, $this->executionContext, $remoteContentAssetsFacade);
+        return new WorkspaceToolingFacade($fileOps, $textOps, $shellOps, $this->executionContext, $remoteContentAssetsFacade, $dockerExecutor);
     }
 
     private function removeDirectory(string $dir): void
