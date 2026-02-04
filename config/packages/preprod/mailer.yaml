@@ -2,4 +2,4 @@
 # Password is URL-encoded so special characters don't break the DSN.
 framework:
     mailer:
-        dsn: 'smtp://%env(MAILER_USER)%:%env(urlencode:MAILER_PASSWORD)%@%env(MAILER_HOST)%:%env(MAILER_PORT)%'
+        dsn: "smtp://%env(MAILER_USER)%:%env(urlencode:MAILER_PASSWORD)%@%env(MAILER_HOST)%:%env(MAILER_PORT)%"

@@ -15,9 +15,9 @@ readonly class MailService implements MailServiceInterface
     public function __construct(
         private MailerInterface $mailer,
         #[Autowire(param: 'app.mail.default_sender_address')]
-        private string $defaultSenderAddress,
+        private string          $defaultSenderAddress,
         #[Autowire(param: 'app.mail.default_sender_name')]
-        private string $defaultSenderName
+        private string          $defaultSenderName
     ) {
     }
 
