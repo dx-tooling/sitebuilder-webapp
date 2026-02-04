@@ -51,3 +51,7 @@ public/workspaces/*
 /.npm/
 
 .playwright-mcp/
+
+# Company-specific preprod (symlinked from hosting repo when used)
+/.mise/tasks/deploy/preprod.sh
+/docker-compose.preprod.yml

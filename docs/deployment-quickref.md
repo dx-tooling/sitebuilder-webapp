@@ -1,23 +1,26 @@
 # Quick Reference: Preprod Deployment
 
+Use this as a generic reference. Replace placeholders with your server and host. If your org uses a hosting repo (e.g. `sitebuilder-webapp-hosting-joboo`), run its integrate script first; then the deploy task and full guide will be available.
+
 ## TL;DR
 
 ```bash
-# From your local machine
+# From your local machine (after integrating hosting repo if applicable)
 cd sitebuilder-webapp
-./bin/deploy-preprod.sh
+mise run deploy:preprod
+# Or: ./.mise/tasks/deploy/preprod.sh
 ```
 
-## Manual Deployment
+## Manual Deployment (placeholders)
 
 ```bash
 # 1. SSH to server
-ssh root@152.53.168.103
+ssh root@<PREPROD_SERVER>
 
 # 2. Navigate to app directory
-cd /opt/sitebuilder-preprod
+cd <PREPROD_REMOTE_DIR>
 
-# 3. Set environment variable
+# 3. Set environment variable (example name)
 export ETFS_PROJECT_NAME=sitebuilder_preprod
 
 # 4. Build and start (messenger scaled to 3 instances)
@@ -34,33 +37,10 @@ docker compose -f docker-compose.preprod.yml exec app php bin/console cache:clea
 
 ## Key Files
 
-- **Preprod compose**: `docker compose.preprod.yml`
-- **Preprod nginx config**: `docker/nginx/default.conf.preprod`
-- **Deployment script**: `bin/deploy-preprod.sh`
-- **Full guide**: `docs/deployment-preprod.md`
-
-## Container Names
-
-- `sitebuilder_preprod_app` - PHP-FPM application
-- `sitebuilder_preprod_nginx` - Nginx web server (exposed to Traefik)
-- `sitebuilder_preprod_messenger_1`, `sitebuilder_preprod_messenger_2`, `sitebuilder_preprod_messenger_3` - Symfony messenger workers (3 instances)
-- `sitebuilder_preprod_mariadb` - MariaDB database
-
-## Network Configuration
-
-- **Internal network**: `sitebuilder_preprod_default` (app, messenger, mariadb)
-- **External network**: `outermost_router` (nginx only, for Traefik routing)
-
-## Traefik Labels
-
-The nginx container has these labels for Traefik routing:
-- `traefik.enable=true`
-- `outermost_router.enable=true`
-- `traefik.docker.network=outermost_router`
-- `traefik.http.routers.sitebuilder-preprod.rule=Host(\`sitebuilder-preprod.dx-tooling.org\`)`
-- `traefik.http.routers.sitebuilder-preprod.entrypoints=websecure`
-- `traefik.http.routers.sitebuilder-preprod.tls=true`
-- `traefik.http.services.sitebuilder-preprod.loadbalancer.server.port=80`
+- **Preprod compose**: `docker-compose.preprod.yml` (from hosting repo when integrated)
+- **Preprod nginx config**: `docker/nginx/default.conf.preprod` (generic, in this repo)
+- **Deployment script**: `.mise/tasks/deploy/preprod.sh` (from hosting repo when integrated)
+- **Full guide**: `docs/deployment-preprod.md` (stub); company-specific full guide from hosting repo (e.g. `docs/deployment-preprod-joboo.md`)
 
 ## Environment Variables
 
@@ -79,10 +59,8 @@ docker compose -f docker-compose.preprod.yml logs -f
 # Restart services
 docker compose -f docker-compose.preprod.yml restart
 
-# Stop services
+# Stop / start services
 docker compose -f docker-compose.preprod.yml stop
-
-# Start services
 docker compose -f docker-compose.preprod.yml start
 
 # Rebuild after code changes
