@@ -118,7 +118,9 @@ export default class extends Controller {
             `;
             editLink.addEventListener("click", (e) => {
                 e.preventDefault();
-                this.openHtmlEditor(file.path);
+                // Extract full path from URL: /workspaces/{workspaceId}/{fullPath} -> {fullPath}
+                const fullPath = file.url.split("/").slice(3).join("/");
+                this.openHtmlEditor(fullPath);
             });
 
             // Create preview link

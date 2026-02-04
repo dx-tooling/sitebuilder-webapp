@@ -632,7 +632,7 @@ final class ChatBasedContentEditorController extends AbstractController
         }
 
         try {
-            $content = $this->workspaceMgmtFacade->readWorkspaceFile($workspaceId, 'dist/' . $path);
+            $content = $this->workspaceMgmtFacade->readWorkspaceFile($workspaceId, $path);
 
             return $this->json(['content' => $content]);
         } catch (Throwable $e) {
@@ -670,7 +670,7 @@ final class ChatBasedContentEditorController extends AbstractController
 
         try {
             // Write the file
-            $this->workspaceMgmtFacade->writeWorkspaceFile($workspaceId, 'dist/' . $path, $content);
+            $this->workspaceMgmtFacade->writeWorkspaceFile($workspaceId, $path, $content);
 
             // Get user email for commit author
             $accountInfo = $this->getAccountInfo($user);
