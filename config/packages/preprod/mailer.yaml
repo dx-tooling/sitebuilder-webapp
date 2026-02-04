@@ -1,5 +1,0 @@
-# Preprod: build DSN from MAILER_HOST, MAILER_PORT, MAILER_USER, MAILER_PASSWORD (set in .env.preprod.local or env).
-# Password is URL-encoded so special characters don't break the DSN.
-framework:
-    mailer:
-        dsn: "smtp://%env(MAILER_USER)%:%env(urlencode:MAILER_PASSWORD)%@%env(MAILER_HOST)%:%env(MAILER_PORT)%"

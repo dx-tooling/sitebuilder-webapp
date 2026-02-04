@@ -107,4 +107,3 @@ More tasks are documented in:
 - `docs/devbook.md` — recurring dev tasks
 - `docs/setupbook.md` — full setup guide
 - `docs/frontendbook.md` — frontend conventions
-- `docs/deployment-quickref.md` — deployment notes
