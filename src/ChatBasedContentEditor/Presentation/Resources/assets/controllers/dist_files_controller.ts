@@ -108,8 +108,7 @@ export default class extends Controller {
             // Create edit link
             const editLink = document.createElement("a");
             editLink.href = "#";
-            editLink.className =
-                "text-dark-500 hover:text-primary-600 dark:text-dark-400 dark:hover:text-primary-400 transition-colors";
+            editLink.className = "etfswui-link-icon";
             editLink.title = "Edit HTML";
             editLink.innerHTML = `
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 flex-shrink-0">
@@ -127,8 +126,7 @@ export default class extends Controller {
             const previewLink = document.createElement("a");
             previewLink.href = file.url;
             previewLink.target = "_blank";
-            previewLink.className =
-                "text-dark-500 hover:text-primary-600 dark:text-dark-400 dark:hover:text-primary-400 transition-colors";
+            previewLink.className = "etfswui-link-icon";
             previewLink.title = "Open preview";
             previewLink.innerHTML = `
                 <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
