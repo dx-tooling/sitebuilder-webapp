@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\ProjectMgmt\Facade;
 
+use App\Prefab\Facade\Dto\PrefabDto;
 use App\ProjectMgmt\Facade\Dto\AgentConfigTemplateDto;
 use App\ProjectMgmt\Facade\Dto\ExistingLlmApiKeyDto;
 use App\ProjectMgmt\Facade\Dto\ProjectInfoDto;
@@ -16,6 +17,11 @@ use App\ProjectMgmt\Facade\Enum\ProjectType;
  */
 interface ProjectMgmtFacadeInterface
 {
+    /**
+     * Create a project from a prefab definition (used when a new organization is created).
+     */
+    public function createProjectFromPrefab(string $organizationId, PrefabDto $prefab): string;
+
     /**
      * Get project information by ID.
      */

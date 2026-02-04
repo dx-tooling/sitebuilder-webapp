@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 namespace App\ProjectMgmt\Facade;
 
+use App\LlmContentEditor\Facade\Enum\LlmModelProvider;
+use App\Prefab\Facade\Dto\PrefabDto;
 use App\ProjectMgmt\Domain\Entity\Project;
+use App\ProjectMgmt\Domain\Service\ProjectService;
 use App\ProjectMgmt\Domain\ValueObject\AgentConfigTemplate;
 use App\ProjectMgmt\Facade\Dto\AgentConfigTemplateDto;
 use App\ProjectMgmt\Facade\Dto\ExistingLlmApiKeyDto;
@@ -26,7 +29,45 @@ final class ProjectMgmtFacade implements ProjectMgmtFacadeInterface
     public function __construct(
         private readonly EntityManagerInterface    $entityManager,
         private readonly GitHubUrlServiceInterface $gitHubUrlService,
+        private readonly ProjectService            $projectService,
     ) {
+    }
+
+    public function createProjectFromPrefab(string $organizationId, PrefabDto $prefab): string
+    {
+        $llmModelProvider = LlmModelProvider::tryFrom($prefab->llmModelProvider);
+        if ($llmModelProvider === null) {
+            throw new RuntimeException('Invalid prefab llm_model_provider: ' . $prefab->llmModelProvider);
+        }
+
+        $project = $this->projectService->create(
+            $organizationId,
+            $prefab->name,
+            $prefab->projectLink,
+            $prefab->githubAccessKey,
+            $llmModelProvider,
+            $prefab->llmApiKey,
+            ProjectType::DEFAULT,
+            Project::DEFAULT_AGENT_IMAGE,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            $prefab->keysVisible
+        );
+
+        $projectId = $project->getId();
+        if ($projectId === null) {
+            throw new RuntimeException('Prefab project creation failed: missing project ID.');
+        }
+
+        return $projectId;
     }
 
     public function getProjectInfo(string $id): ProjectInfoDto
@@ -84,10 +125,13 @@ final class ProjectMgmtFacade implements ProjectMgmtFacadeInterface
             ->getQuery()
             ->getResult();
 
-        // Group projects by API key
+        // Group projects by API key (exclude projects where keys are not visible to users)
         /** @var array<string, list<string>> $keyToProjects */
         $keyToProjects = [];
         foreach ($projects as $project) {
+            if (!$project->isKeysVisible()) {
+                continue;
+            }
             $apiKey = $project->getLlmApiKey();
             if ($apiKey === '') {
                 continue;

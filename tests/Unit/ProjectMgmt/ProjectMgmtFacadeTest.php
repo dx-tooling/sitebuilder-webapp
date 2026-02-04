@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\ProjectMgmt;
 
+use App\ProjectMgmt\Domain\Service\ProjectService;
 use App\ProjectMgmt\Facade\ProjectMgmtFacade;
 use App\WorkspaceMgmt\Infrastructure\Service\GitHubUrlServiceInterface;
 use Doctrine\ORM\EntityManagerInterface;
@@ -64,7 +65,8 @@ final class ProjectMgmtFacadeTest extends TestCase
     {
         $entityManager    = $this->createMock(EntityManagerInterface::class);
         $gitHubUrlService = $this->createMock(GitHubUrlServiceInterface::class);
+        $projectService   = new ProjectService($entityManager);
 
-        return new ProjectMgmtFacade($entityManager, $gitHubUrlService);
+        return new ProjectMgmtFacade($entityManager, $gitHubUrlService, $projectService);
     }
 }

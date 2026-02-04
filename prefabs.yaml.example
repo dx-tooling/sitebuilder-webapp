@@ -1,0 +1,22 @@
+# Prefabricated projects for new organizations (sample only).
+# Copy to prefabs.yaml in deployments that provide it (e.g. hosting overlay).
+# When a user signs up and their organization is created, one project per entry
+# is created for that organization. Do not commit prefabs.yaml with real secrets.
+#
+# Required keys per entry:
+#   name:             Project display name
+#   project_link:     Git repository URL (e.g. https://github.com/org/repo.git)
+#   github_access_key: GitHub personal access token
+#   llm_model_provider: One of: openai (see LlmModelProvider enum)
+#   llm_api_key:      API key for the LLM provider
+#   keys_visible:     (optional, default true) If false, GitHub and LLM keys are
+#                     set and used by the app but never shown to org users
+#                     (edit form, reuse-existing-key UI).
+#
+# prefabs:
+#   - name: "My Prefab Project"
+#     project_link: "https://github.com/example/repo.git"
+#     github_access_key: "ghp_xxxxxxxxxxxx"
+#     llm_model_provider: "openai"
+#     llm_api_key: "sk-..."
+#     keys_visible: false
