@@ -254,7 +254,7 @@ describe("HtmlEditorController", () => {
             });
             await controller.openEditor(event);
 
-            expect(elements.pageNameDisplay.textContent).toBe("dist/about.html");
+            expect(elements.pageNameDisplay.textContent).toBe("src/about.html");
         });
 
         it("should slide up chat area and slide down container", async () => {

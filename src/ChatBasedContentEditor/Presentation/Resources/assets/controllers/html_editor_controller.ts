@@ -94,9 +94,11 @@ export default class extends Controller {
             this.containerTarget.classList.add("grid-rows-[1fr]");
         }
 
-        // Update page name display
+        // Update page name display - show source path with mapping info
         if (this.hasPageNameDisplayTarget) {
-            this.pageNameDisplayTarget.textContent = path;
+            // Map dist/ path to src/ path for display
+            const sourcePath = path.startsWith("dist/") ? "src/" + path.substring(5) : path;
+            this.pageNameDisplayTarget.textContent = `${sourcePath}`;
         }
 
         try {

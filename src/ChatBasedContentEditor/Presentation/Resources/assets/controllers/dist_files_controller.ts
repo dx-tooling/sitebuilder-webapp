@@ -105,7 +105,7 @@ export default class extends Controller {
             const span = document.createElement("span");
             span.className = "flex items-center space-x-2 whitespace-nowrap";
 
-            // Create edit link
+            // Create edit link (icon only)
             const editLink = document.createElement("a");
             editLink.href = "#";
             editLink.className = "etfswui-link-icon";
@@ -122,26 +122,16 @@ export default class extends Controller {
                 this.openHtmlEditor(fullPath);
             });
 
-            // Create preview link
+            // Create preview link (icon + filename, inline to prevent line break)
             const previewLink = document.createElement("a");
             previewLink.href = file.url;
             previewLink.target = "_blank";
-            previewLink.className = "etfswui-link-icon";
+            previewLink.className = "inline-flex items-center gap-1 text-primary-600 hover:text-primary-800 dark:text-primary-400 dark:hover:text-primary-300";
             previewLink.title = "Open preview";
-            previewLink.innerHTML = `
-                <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                </svg>
-            `;
-
-            // Create file path text
-            const pathText = document.createElement("span");
-            pathText.className = "text-dark-700 dark:text-dark-300";
-            pathText.textContent = file.path;
+            previewLink.innerHTML = `<svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg><span>${file.path}</span>`;
 
             span.appendChild(editLink);
             span.appendChild(previewLink);
-            span.appendChild(pathText);
             li.appendChild(span);
             this.listTarget.appendChild(li);
         }
