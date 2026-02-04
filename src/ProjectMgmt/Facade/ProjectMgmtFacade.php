@@ -33,14 +33,14 @@ final class ProjectMgmtFacade implements ProjectMgmtFacadeInterface
     ) {
     }
 
-    public function createProjectFromPrefab(string $organizationId, PrefabDto $prefab): void
+    public function createProjectFromPrefab(string $organizationId, PrefabDto $prefab): string
     {
         $llmModelProvider = LlmModelProvider::tryFrom($prefab->llmModelProvider);
         if ($llmModelProvider === null) {
             throw new RuntimeException('Invalid prefab llm_model_provider: ' . $prefab->llmModelProvider);
         }
 
-        $this->projectService->create(
+        $project = $this->projectService->create(
             $organizationId,
             $prefab->name,
             $prefab->projectLink,
@@ -61,6 +61,13 @@ final class ProjectMgmtFacade implements ProjectMgmtFacadeInterface
             null,
             $prefab->keysVisible
         );
+
+        $projectId = $project->getId();
+        if ($projectId === null) {
+            throw new RuntimeException('Prefab project creation failed: missing project ID.');
+        }
+
+        return $projectId;
     }
 
     public function getProjectInfo(string $id): ProjectInfoDto

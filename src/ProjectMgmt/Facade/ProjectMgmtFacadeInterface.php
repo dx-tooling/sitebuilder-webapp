@@ -20,7 +20,7 @@ interface ProjectMgmtFacadeInterface
     /**
      * Create a project from a prefab definition (used when a new organization is created).
      */
-    public function createProjectFromPrefab(string $organizationId, PrefabDto $prefab): void;
+    public function createProjectFromPrefab(string $organizationId, PrefabDto $prefab): string;
 
     /**
      * Get project information by ID.

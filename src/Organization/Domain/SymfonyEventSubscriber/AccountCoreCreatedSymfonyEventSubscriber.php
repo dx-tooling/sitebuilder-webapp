@@ -9,6 +9,7 @@ use App\Organization\Domain\Service\OrganizationDomainServiceInterface;
 use App\Organization\Facade\SymfonyEvent\CurrentlyActiveOrganizationChangedSymfonyEvent;
 use App\Prefab\Facade\PrefabFacadeInterface;
 use App\ProjectMgmt\Facade\ProjectMgmtFacadeInterface;
+use App\WorkspaceMgmt\Facade\WorkspaceMgmtFacadeInterface;
 use Exception;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
@@ -23,6 +24,7 @@ readonly class AccountCoreCreatedSymfonyEventSubscriber
         private EventDispatcherInterface           $eventDispatcher,
         private PrefabFacadeInterface              $prefabFacade,
         private ProjectMgmtFacadeInterface         $projectMgmtFacade,
+        private WorkspaceMgmtFacadeInterface       $workspaceMgmtFacade,
         private LoggerInterface                    $logger
     ) {
     }
@@ -47,7 +49,8 @@ readonly class AccountCoreCreatedSymfonyEventSubscriber
         $prefabs = $this->prefabFacade->loadPrefabs();
         foreach ($prefabs as $prefab) {
             try {
-                $this->projectMgmtFacade->createProjectFromPrefab($organization->getId(), $prefab);
+                $projectId = $this->projectMgmtFacade->createProjectFromPrefab($organization->getId(), $prefab);
+                $this->workspaceMgmtFacade->dispatchSetupIfNeeded($projectId);
             } catch (Throwable $e) {
                 $this->logger->warning('Prefab project creation failed', [
                     'organization_id' => $organization->getId(),

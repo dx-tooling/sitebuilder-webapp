@@ -214,7 +214,7 @@ final class LlmApiKeyOrganizationIsolationTest extends WebTestCase
         string $organizationId,
         string $name,
         string $apiKey,
-        bool $keysVisible
+        bool   $keysVisible
     ): Project {
         $project = new Project(
             $organizationId,
