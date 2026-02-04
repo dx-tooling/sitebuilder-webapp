@@ -256,7 +256,7 @@ RUN install -m 0755 -d /etc/apt/keyrings && \
 
 ### Permissions
 
-**On Linux (production/preprod):**
+**On Linux (production):**
 
 The user running PHP-FPM (typically `www-data`) needs permission to access the Docker socket. Options:
 

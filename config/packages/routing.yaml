@@ -4,11 +4,6 @@ framework:
         # See https://symfony.com/doc/current/routing.html#generating-urls-in-commands
         #default_uri: http://localhost
 
-when@preprod:
-    framework:
-        router:
-            default_uri: "https://sitebuilder-preprod.dx-tooling.org"
-
 when@prod:
     framework:
         router:
