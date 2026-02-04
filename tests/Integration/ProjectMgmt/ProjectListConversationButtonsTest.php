@@ -5,17 +5,24 @@ declare(strict_types=1);
 namespace App\Tests\Integration\ProjectMgmt;
 
 use App\Account\Domain\Entity\AccountCore;
+use App\Account\Domain\Service\AccountDomainService;
+use App\Account\Facade\AccountFacadeInterface;
 use App\ChatBasedContentEditor\Domain\Entity\Conversation;
 use App\ChatBasedContentEditor\Domain\Enum\ConversationStatus;
+use App\LlmContentEditor\Facade\Enum\LlmModelProvider;
+use App\Organization\Domain\Service\OrganizationDomainServiceInterface;
+use App\Organization\Facade\SymfonyEvent\CurrentlyActiveOrganizationChangedSymfonyEvent;
+use App\Organization\Infrastructure\Repository\OrganizationRepositoryInterface;
 use App\ProjectMgmt\Domain\Entity\Project;
+use App\Tests\Support\SecurityUserLoginTrait;
 use App\WorkspaceMgmt\Domain\Entity\Workspace;
 use App\WorkspaceMgmt\Facade\Enum\WorkspaceStatus;
 use Doctrine\ORM\EntityManagerInterface;
+use Psr\EventDispatcher\EventDispatcherInterface;
 use RuntimeException;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
-use Throwable;
 
 /**
  * Integration tests for project list conversation buttons.
@@ -27,9 +34,17 @@ use Throwable;
  */
 final class ProjectListConversationButtonsTest extends WebTestCase
 {
+    use SecurityUserLoginTrait;
+
     private KernelBrowser $client;
     private EntityManagerInterface $entityManager;
     private UserPasswordHasherInterface $passwordHasher;
+    private AccountDomainService $accountDomainService;
+    private AccountFacadeInterface $accountFacade;
+    private OrganizationDomainServiceInterface $organizationDomainService;
+    private OrganizationRepositoryInterface $organizationRepository;
+    private EventDispatcherInterface $eventDispatcher;
+    private ?string $testOrganizationId = null;
 
     protected function setUp(): void
     {
@@ -44,27 +59,31 @@ final class ProjectListConversationButtonsTest extends WebTestCase
         $passwordHasher       = $container->get(UserPasswordHasherInterface::class);
         $this->passwordHasher = $passwordHasher;
 
-        $this->cleanupTestData();
-    }
+        /** @var AccountDomainService $accountDomainService */
+        $accountDomainService       = $container->get(AccountDomainService::class);
+        $this->accountDomainService = $accountDomainService;
 
-    private function cleanupTestData(): void
-    {
-        $connection = $this->entityManager->getConnection();
+        /** @var AccountFacadeInterface $accountFacade */
+        $accountFacade       = $container->get(AccountFacadeInterface::class);
+        $this->accountFacade = $accountFacade;
 
-        try {
-            $connection->executeStatement('DELETE FROM conversations');
-            $connection->executeStatement('DELETE FROM workspaces');
-            $connection->executeStatement('DELETE FROM projects');
-            $connection->executeStatement('DELETE FROM account_cores');
-        } catch (Throwable) {
-            // Tables may not exist yet on first run
-        }
+        /** @var OrganizationDomainServiceInterface $organizationDomainService */
+        $organizationDomainService       = $container->get(OrganizationDomainServiceInterface::class);
+        $this->organizationDomainService = $organizationDomainService;
+
+        /** @var OrganizationRepositoryInterface $organizationRepository */
+        $organizationRepository       = $container->get(OrganizationRepositoryInterface::class);
+        $this->organizationRepository = $organizationRepository;
+
+        /** @var EventDispatcherInterface $eventDispatcher */
+        $eventDispatcher       = $container->get(EventDispatcherInterface::class);
+        $this->eventDispatcher = $eventDispatcher;
     }
 
     public function testOwnerSeesEditContentButtonWhenTheyHaveActiveConversation(): void
     {
         // Arrange: User A starts a conversation
-        $userA = $this->createTestUser('userA@example.com', 'password123');
+        $userA = $this->createTestUser('usera-' . uniqid() . '@example.com', 'password123');
 
         $project   = $this->createProject('Test Project', 'https://github.com/org/repo.git', 'token123');
         $projectId = $project->getId();
@@ -79,7 +98,7 @@ final class ProjectListConversationButtonsTest extends WebTestCase
         $this->createConversation($workspaceId, $userAId, ConversationStatus::ONGOING);
 
         // Act: User A views project list
-        $this->client->loginUser($userA);
+        $this->loginAsUser($this->client, $userA);
         $crawler = $this->client->request('GET', '/en/projects');
 
         // Assert: User A sees "Edit content" button (not "View conversation")
@@ -93,8 +112,11 @@ final class ProjectListConversationButtonsTest extends WebTestCase
     public function testOtherUserSeesViewConversationButtonWhenSomeoneElseHasActiveConversation(): void
     {
         // Arrange: User A starts a conversation
-        $userA = $this->createTestUser('userA@example.com', 'password123');
-        $userB = $this->createTestUser('userB@example.com', 'password123');
+        // Note: Email addresses are stored/displayed in lowercase
+        $userAEmail = 'usera-' . uniqid() . '@example.com';
+        $userA      = $this->createTestUser($userAEmail, 'password123');
+        // User B must be in the same organization to see the same projects
+        $userB = $this->createAdditionalUserInSameOrganization('userb-' . uniqid() . '@example.com', 'password123');
 
         $project   = $this->createProject('Test Project', 'https://github.com/org/repo.git', 'token123');
         $projectId = $project->getId();
@@ -109,7 +131,7 @@ final class ProjectListConversationButtonsTest extends WebTestCase
         $this->createConversation($workspaceId, $userAId, ConversationStatus::ONGOING);
 
         // Act: User B views project list
-        $this->client->loginUser($userB);
+        $this->loginAsUser($this->client, $userB);
         $crawler = $this->client->request('GET', '/en/projects');
 
         // Assert: User B sees "View conversation" button (not "Edit content")
@@ -119,14 +141,14 @@ final class ProjectListConversationButtonsTest extends WebTestCase
         self::assertStringContainsString('View conversation', $pageText);
         self::assertStringNotContainsString('Edit content', $pageText);
 
-        // Assert: Shows who is in conversation
-        self::assertStringContainsString('with userA@example.com', $pageText);
+        // Assert: Shows who is in conversation (using the actual email)
+        self::assertStringContainsString('with ' . $userAEmail, $pageText);
     }
 
     public function testUserSeesViewConversationForReviewButtonWhenWorkspaceIsInReview(): void
     {
         // Arrange: Workspace is in review
-        $user = $this->createTestUser('user@example.com', 'password123');
+        $user = $this->createTestUser('user-' . uniqid() . '@example.com', 'password123');
 
         $project   = $this->createProject('Test Project', 'https://github.com/org/repo.git', 'token123');
         $projectId = $project->getId();
@@ -142,7 +164,7 @@ final class ProjectListConversationButtonsTest extends WebTestCase
         $this->createConversation($workspaceId, $userId, ConversationStatus::FINISHED);
 
         // Act: User views project list
-        $this->client->loginUser($user);
+        $this->loginAsUser($this->client, $user);
         $crawler = $this->client->request('GET', '/en/projects');
 
         // Assert: User sees "Review conversation" button
@@ -155,7 +177,7 @@ final class ProjectListConversationButtonsTest extends WebTestCase
     public function testUserSeesEditContentButtonWhenNoActiveConversation(): void
     {
         // Arrange: Workspace is available for conversation
-        $user = $this->createTestUser('user@example.com', 'password123');
+        $user = $this->createTestUser('user-' . uniqid() . '@example.com', 'password123');
 
         $project   = $this->createProject('Test Project', 'https://github.com/org/repo.git', 'token123');
         $projectId = $project->getId();
@@ -164,7 +186,7 @@ final class ProjectListConversationButtonsTest extends WebTestCase
         $this->createWorkspace($projectId, WorkspaceStatus::AVAILABLE_FOR_CONVERSATION);
 
         // Act: User views project list
-        $this->client->loginUser($user);
+        $this->loginAsUser($this->client, $user);
         $crawler = $this->client->request('GET', '/en/projects');
 
         // Assert: User sees "Edit content" button
@@ -177,8 +199,11 @@ final class ProjectListConversationButtonsTest extends WebTestCase
     public function testMultipleProjectsShowCorrectButtonsBasedOnConversationOwnership(): void
     {
         // Arrange: 3 projects with different scenarios
-        $userA = $this->createTestUser('userA@example.com', 'password123');
-        $userB = $this->createTestUser('userB@example.com', 'password123');
+        // Note: Email addresses are stored/displayed in lowercase
+        $userA      = $this->createTestUser('usera-' . uniqid() . '@example.com', 'password123');
+        $userBEmail = 'userb-' . uniqid() . '@example.com';
+        // User B must be in the same organization to see the same projects
+        $userB = $this->createAdditionalUserInSameOrganization($userBEmail, 'password123');
 
         // Project 1: User A has active conversation
         $project1   = $this->createProject('Project 1', 'https://github.com/org/repo1.git', 'token1');
@@ -209,7 +234,7 @@ final class ProjectListConversationButtonsTest extends WebTestCase
         $this->createWorkspace($project3Id, WorkspaceStatus::AVAILABLE_FOR_CONVERSATION);
 
         // Act: User A views project list
-        $this->client->loginUser($userA);
+        $this->loginAsUser($this->client, $userA);
         $crawler = $this->client->request('GET', '/en/projects');
 
         // Assert: Correct buttons are shown
@@ -222,7 +247,7 @@ final class ProjectListConversationButtonsTest extends WebTestCase
 
         // Project 2: User A sees "View conversation" (User B's conversation)
         self::assertStringContainsString('Project 2', $pageText);
-        self::assertStringContainsString('with userB@example.com', $pageText);
+        self::assertStringContainsString('with ' . $userBEmail, $pageText);
 
         // Project 3: User A sees "Edit content" (no active conversation)
         self::assertStringContainsString('Project 3', $pageText);
@@ -233,31 +258,81 @@ final class ProjectListConversationButtonsTest extends WebTestCase
         // Verify the expected buttons appear in the text
         self::assertStringContainsString('Edit content', $pageText);
         self::assertStringContainsString('View conversation', $pageText);
-        self::assertStringContainsString('with userB@example.com', $pageText);
+        self::assertStringContainsString('with ' . $userBEmail, $pageText);
     }
 
+    /**
+     * Creates a test user using proper registration to trigger organization creation.
+     * The first user created will have their organization stored as $testOrganizationId.
+     */
     private function createTestUser(string $email, string $plainPassword): AccountCore
     {
-        $user = new AccountCore($email, '');
+        $user = $this->accountDomainService->register($email, $plainPassword);
 
-        $hashedPassword = $this->passwordHasher->hashPassword($user, $plainPassword);
+        $userId = $user->getId();
+        self::assertNotNull($userId);
 
-        $user = new AccountCore($email, $hashedPassword);
+        $organizationId = $this->accountFacade->getCurrentlyActiveOrganizationIdForAccountCore($userId);
+        self::assertNotNull($organizationId, 'User should have an organization after registration');
+
+        // Store the first organization as the test organization
+        if ($this->testOrganizationId === null) {
+            $this->testOrganizationId = $organizationId;
+        }
+
+        return $user;
+    }
+
+    /**
+     * Creates an additional user and adds them to the existing test organization.
+     * Must be called after createTestUser() has been called at least once.
+     */
+    private function createAdditionalUserInSameOrganization(string $email, string $plainPassword): AccountCore
+    {
+        $organizationId = $this->testOrganizationId;
+        self::assertNotNull($organizationId, 'Must create first user before creating additional users');
+
+        // Create user with hashed password
+        $tempUser       = new AccountCore($email, '');
+        $hashedPassword = $this->passwordHasher->hashPassword($tempUser, $plainPassword);
+        $user           = new AccountCore($email, $hashedPassword);
 
         $this->entityManager->persist($user);
         $this->entityManager->flush();
+
+        $userId = $user->getId();
+        self::assertNotNull($userId);
+
+        // Add user to the test organization
+        $this->organizationRepository->addUserToOrganization($userId, $organizationId);
+
+        // Set the test organization as currently active for this user
+        $this->eventDispatcher->dispatch(
+            new CurrentlyActiveOrganizationChangedSymfonyEvent(
+                $organizationId,
+                $userId
+            )
+        );
+
+        // Add user to the default group
+        $organization = $this->organizationDomainService->getOrganizationById($organizationId);
+        self::assertNotNull($organization);
+        $defaultGroup = $this->organizationDomainService->getDefaultGroupForNewMembers($organization);
+        $this->organizationDomainService->addUserToGroup($userId, $defaultGroup);
 
         return $user;
     }
 
     private function createProject(string $name, string $gitUrl, string $githubToken): Project
     {
+        self::assertNotNull($this->testOrganizationId, 'Must create user before creating project');
+
         $project = new Project(
-            'org-test-123',
+            $this->testOrganizationId,
             $name,
             $gitUrl,
             $githubToken,
-            \App\LlmContentEditor\Facade\Enum\LlmModelProvider::OpenAI,
+            LlmModelProvider::OpenAI,
             'sk-test-key'
         );
         $this->entityManager->persist($project);
