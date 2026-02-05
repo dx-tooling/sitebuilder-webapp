@@ -8,6 +8,7 @@ use App\RemoteContentAssets\Facade\Dto\RemoteContentAssetInfoDto;
 use App\RemoteContentAssets\Facade\RemoteContentAssetsFacadeInterface;
 use App\WorkspaceTooling\Facade\WorkspaceToolingFacade;
 use App\WorkspaceTooling\Infrastructure\Execution\AgentExecutionContext;
+use App\WorkspaceTooling\Infrastructure\Execution\DockerExecutor;
 use EtfsCodingAgent\Service\FileOperationsService;
 use EtfsCodingAgent\Service\ShellOperationsServiceInterface;
 use EtfsCodingAgent\Service\TextOperationsService;
@@ -235,14 +236,157 @@ final class WorkspaceToolingFacadeTest extends TestCase
         self::assertSame('[]', $result);
     }
 
+    public function testSearchRemoteContentAssetUrlsReturnsEmptyArrayWhenNoManifestsConfigured(): void
+    {
+        $this->executionContext->setContext(
+            'workspace-id',
+            '/path',
+            null,
+            'project',
+            'image'
+        );
+        $facade = $this->createFacade();
+
+        $result = $facade->searchRemoteContentAssetUrls('hero');
+
+        self::assertSame('[]', $result);
+    }
+
+    public function testSearchRemoteContentAssetUrlsFiltersUrlsByRegexPattern(): void
+    {
+        $this->executionContext->setContext(
+            'workspace-id',
+            '/path',
+            null,
+            'project',
+            'image',
+            ['https://example.com/manifest.json']
+        );
+        $remoteContentAssets = $this->createMock(RemoteContentAssetsFacadeInterface::class);
+        $remoteContentAssets->method('fetchAndMergeAssetUrls')->willReturn([
+            'https://cdn.example.com/images/hero.jpg',
+            'https://cdn.example.com/images/banner.png',
+            'https://cdn.example.com/images/hero-mobile.jpg',
+        ]);
+        $facade = $this->createFacadeWithRemoteContentAssets($remoteContentAssets);
+
+        $result = $facade->searchRemoteContentAssetUrls('hero');
+
+        $decoded = json_decode($result, true, 512, JSON_THROW_ON_ERROR);
+        self::assertIsArray($decoded);
+        self::assertCount(2, $decoded);
+        self::assertContains('https://cdn.example.com/images/hero.jpg', $decoded);
+        self::assertContains('https://cdn.example.com/images/hero-mobile.jpg', $decoded);
+    }
+
+    public function testSearchRemoteContentAssetUrlsMatchesMultipleUrls(): void
+    {
+        $this->executionContext->setContext(
+            'workspace-id',
+            '/path',
+            null,
+            'project',
+            'image',
+            ['https://example.com/manifest.json']
+        );
+        $remoteContentAssets = $this->createMock(RemoteContentAssetsFacadeInterface::class);
+        $remoteContentAssets->method('fetchAndMergeAssetUrls')->willReturn([
+            'https://cdn.example.com/images/photo1.png',
+            'https://cdn.example.com/images/photo2.png',
+            'https://cdn.example.com/images/photo3.jpg',
+        ]);
+        $facade = $this->createFacadeWithRemoteContentAssets($remoteContentAssets);
+
+        $result = $facade->searchRemoteContentAssetUrls('\\.png$');
+
+        $decoded = json_decode($result, true, 512, JSON_THROW_ON_ERROR);
+        self::assertIsArray($decoded);
+        self::assertCount(2, $decoded);
+        self::assertContains('https://cdn.example.com/images/photo1.png', $decoded);
+        self::assertContains('https://cdn.example.com/images/photo2.png', $decoded);
+    }
+
+    public function testSearchRemoteContentAssetUrlsReturnsEmptyArrayWhenNoMatches(): void
+    {
+        $this->executionContext->setContext(
+            'workspace-id',
+            '/path',
+            null,
+            'project',
+            'image',
+            ['https://example.com/manifest.json']
+        );
+        $remoteContentAssets = $this->createMock(RemoteContentAssetsFacadeInterface::class);
+        $remoteContentAssets->method('fetchAndMergeAssetUrls')->willReturn([
+            'https://cdn.example.com/images/hero.jpg',
+            'https://cdn.example.com/images/banner.png',
+        ]);
+        $facade = $this->createFacadeWithRemoteContentAssets($remoteContentAssets);
+
+        $result = $facade->searchRemoteContentAssetUrls('nonexistent');
+
+        self::assertSame('[]', $result);
+    }
+
+    public function testSearchRemoteContentAssetUrlsReturnsErrorForInvalidRegex(): void
+    {
+        $this->executionContext->setContext(
+            'workspace-id',
+            '/path',
+            null,
+            'project',
+            'image',
+            ['https://example.com/manifest.json']
+        );
+        $facade = $this->createFacade();
+
+        $result = $facade->searchRemoteContentAssetUrls('[invalid');
+
+        $decoded = json_decode($result, true, 512, JSON_THROW_ON_ERROR);
+        self::assertIsArray($decoded);
+        self::assertArrayHasKey('error', $decoded);
+        self::assertIsString($decoded['error']);
+        self::assertStringContainsString('Invalid regex pattern', $decoded['error']);
+    }
+
+    public function testSearchRemoteContentAssetUrlsIsCaseInsensitive(): void
+    {
+        $this->executionContext->setContext(
+            'workspace-id',
+            '/path',
+            null,
+            'project',
+            'image',
+            ['https://example.com/manifest.json']
+        );
+        $remoteContentAssets = $this->createMock(RemoteContentAssetsFacadeInterface::class);
+        $remoteContentAssets->method('fetchAndMergeAssetUrls')->willReturn([
+            'https://cdn.example.com/images/HERO.jpg',
+            'https://cdn.example.com/images/Hero-Mobile.JPG',
+            'https://cdn.example.com/images/banner.png',
+        ]);
+        $facade = $this->createFacadeWithRemoteContentAssets($remoteContentAssets);
+
+        $result = $facade->searchRemoteContentAssetUrls('hero');
+
+        $decoded = json_decode($result, true, 512, JSON_THROW_ON_ERROR);
+        self::assertIsArray($decoded);
+        self::assertCount(2, $decoded);
+        self::assertContains('https://cdn.example.com/images/HERO.jpg', $decoded);
+        self::assertContains('https://cdn.example.com/images/Hero-Mobile.JPG', $decoded);
+    }
+
     private function createFacade(): WorkspaceToolingFacade
     {
         $fileOps                   = new FileOperationsService();
         $textOps                   = new TextOperationsService($fileOps);
         $shellOps                  = $this->createMock(ShellOperationsServiceInterface::class);
         $remoteContentAssetsFacade = $this->createMock(RemoteContentAssetsFacadeInterface::class);
+        // DockerExecutor is final, so we create a real instance with dummy paths
+        // The tests don't call runBuildInWorkspace, so this is safe
+        $dockerExecutor = new DockerExecutor('/tmp', '/tmp');
 
-        return new WorkspaceToolingFacade($fileOps, $textOps, $shellOps, $this->executionContext, $remoteContentAssetsFacade);
+        return new WorkspaceToolingFacade($fileOps, $textOps, $shellOps, $this->executionContext, $remoteContentAssetsFacade, $dockerExecutor);
     }
 
     public function testGetRemoteAssetInfoReturnsErrorJsonWhenFacadeReturnsNull(): void
@@ -286,8 +430,11 @@ final class WorkspaceToolingFacadeTest extends TestCase
         $fileOps  = new FileOperationsService();
         $textOps  = new TextOperationsService($fileOps);
         $shellOps = $this->createMock(ShellOperationsServiceInterface::class);
+        // DockerExecutor is final, so we create a real instance with dummy paths
+        // The tests don't call runBuildInWorkspace, so this is safe
+        $dockerExecutor = new DockerExecutor('/tmp', '/tmp');
 
-        return new WorkspaceToolingFacade($fileOps, $textOps, $shellOps, $this->executionContext, $remoteContentAssetsFacade);
+        return new WorkspaceToolingFacade($fileOps, $textOps, $shellOps, $this->executionContext, $remoteContentAssetsFacade, $dockerExecutor);
     }
 
     private function removeDirectory(string $dir): void

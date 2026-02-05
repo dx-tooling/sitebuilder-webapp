@@ -6,10 +6,12 @@ namespace App\WorkspaceTooling\Facade;
 
 use App\RemoteContentAssets\Facade\RemoteContentAssetsFacadeInterface;
 use App\WorkspaceTooling\Infrastructure\Execution\AgentExecutionContext;
+use App\WorkspaceTooling\Infrastructure\Execution\DockerExecutor;
 use EtfsCodingAgent\Service\FileOperationsServiceInterface;
 use EtfsCodingAgent\Service\ShellOperationsServiceInterface;
 use EtfsCodingAgent\Service\TextOperationsService;
 use EtfsCodingAgent\Service\WorkspaceToolingService as BaseWorkspaceToolingFacade;
+use Symfony\Component\Finder\Finder;
 use Throwable;
 
 final class WorkspaceToolingFacade extends BaseWorkspaceToolingFacade implements WorkspaceToolingServiceInterface
@@ -19,7 +21,8 @@ final class WorkspaceToolingFacade extends BaseWorkspaceToolingFacade implements
         TextOperationsService                               $textOperationsService,
         ShellOperationsServiceInterface                     $shellOperationsService,
         private readonly AgentExecutionContext              $executionContext,
-        private readonly RemoteContentAssetsFacadeInterface $remoteContentAssetsFacade
+        private readonly RemoteContentAssetsFacadeInterface $remoteContentAssetsFacade,
+        private readonly DockerExecutor                     $dockerExecutor
     ) {
         parent::__construct(
             $fileOperationsService,
@@ -121,6 +124,58 @@ final class WorkspaceToolingFacade extends BaseWorkspaceToolingFacade implements
         }
     }
 
+    public function searchRemoteContentAssetUrls(string $regexPattern): string
+    {
+        $manifestUrls = $this->executionContext->getRemoteContentAssetsManifestUrls();
+        if ($manifestUrls === []) {
+            return '[]';
+        }
+
+        // Validate regex pattern by attempting a test match
+        $fullPattern = '#' . $regexPattern . '#i';
+        if (!$this->isValidRegexPattern($fullPattern)) {
+            return json_encode(['error' => 'Invalid regex pattern: ' . $regexPattern], JSON_THROW_ON_ERROR);
+        }
+
+        try {
+            $urls = $this->remoteContentAssetsFacade->fetchAndMergeAssetUrls($manifestUrls);
+        } catch (Throwable) {
+            return '[]';
+        }
+
+        $matchingUrls = [];
+        foreach ($urls as $url) {
+            $filename = $this->extractFilenameFromUrl($url);
+            if (preg_match($fullPattern, $filename) === 1) {
+                $matchingUrls[] = $url;
+            }
+        }
+
+        return json_encode($matchingUrls, JSON_THROW_ON_ERROR);
+    }
+
+    private function extractFilenameFromUrl(string $url): string
+    {
+        $path = parse_url($url, PHP_URL_PATH);
+        if ($path === null || $path === false) {
+            return '';
+        }
+
+        return basename($path);
+    }
+
+    private function isValidRegexPattern(string $pattern): bool
+    {
+        set_error_handler(static fn () => true);
+        try {
+            $result = preg_match($pattern, '');
+
+            return $result !== false;
+        } finally {
+            restore_error_handler();
+        }
+    }
+
     public function getRemoteAssetInfo(string $url): string
     {
         $info = $this->remoteContentAssetsFacade->getRemoteAssetInfo($url);
@@ -136,5 +191,64 @@ final class WorkspaceToolingFacade extends BaseWorkspaceToolingFacade implements
         ];
 
         return json_encode($payload, JSON_THROW_ON_ERROR);
+    }
+
+    public function getWorkspaceRules(): string
+    {
+        $workspacePath = $this->executionContext->getWorkspacePath();
+        if ($workspacePath === null || !is_dir($workspacePath)) {
+            return '{}';
+        }
+
+        $rules = [];
+
+        try {
+            // Find all .sitebuilder/rules directories in the workspace
+            $dirFinder = new Finder();
+            $dirFinder->directories()
+                ->in($workspacePath)
+                ->path('/\.sitebuilder\/rules$/')
+                ->ignoreVCS(true)
+                ->ignoreDotFiles(false);
+
+            foreach ($dirFinder as $rulesDir) {
+                $rulesDirPath = $rulesDir->getRealPath();
+                if ($rulesDirPath === false) {
+                    continue;
+                }
+
+                // Find all .md files in this rules directory
+                $fileFinder = new Finder();
+                $fileFinder->files()
+                    ->in($rulesDirPath)
+                    ->name('*.md')
+                    ->depth(0);
+
+                foreach ($fileFinder as $file) {
+                    $ruleName = $file->getBasename('.md');
+                    // Use first found rule if duplicate names exist
+                    if (!array_key_exists($ruleName, $rules)) {
+                        $rules[$ruleName] = $file->getContents();
+                    }
+                }
+            }
+        } catch (Throwable) {
+            return '{}';
+        }
+
+        return json_encode($rules, JSON_THROW_ON_ERROR);
+    }
+
+    public function runBuildInWorkspace(string $workspacePath, string $agentImage): string
+    {
+        return $this->dockerExecutor->run(
+            $agentImage,
+            'npm run build',
+            $workspacePath,
+            '/workspace',
+            300,
+            true,
+            'html-editor-build'
+        );
     }
 }

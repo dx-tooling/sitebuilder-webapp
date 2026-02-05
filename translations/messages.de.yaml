@@ -14,6 +14,7 @@ navigation:
     projects: "Projekte"
     reviewer_dashboard: "Reviewer-Dashboard"
     your_account: "Ihr Konto"
+    organization: "Organisation"
     living_styleguide: "Living Styleguide"
     workflow_docs: "Workflow-Dokumentation"
 
@@ -27,6 +28,7 @@ common:
     password: "Passwort"
     continue: "Weiter"
     loading: "Wird geladen..."
+    optional: "optional"
 
 # Account vertical
 account:
@@ -48,6 +50,14 @@ account:
         welcome_back: "Willkommen zurück, %email%!"
         member_since: "Mitglied seit"
         sign_out: "Abmelden"
+    set_password:
+        title: "Passwort festlegen"
+        subheading: "Bitte erstellen Sie ein Passwort, um Ihr Konto zu sichern."
+        password_label: "Neues Passwort"
+        password_placeholder: "Geben Sie Ihr neues Passwort ein"
+        confirm_password_label: "Passwort bestätigen"
+        confirm_password_placeholder: "Bestätigen Sie Ihr neues Passwort"
+        submit: "Passwort festlegen"
 
 # Project Management vertical
 project:
@@ -65,6 +75,7 @@ project:
         review: "Review"
         edit_content: "Inhalt bearbeiten"
         view_conversation: "Konversation ansehen"
+        view_conversation_for_review: "Konversation wg. Review ansehen"
         edit_details: "Details bearbeiten"
         reset_work_area: "Arbeitsbereich zurücksetzen"
         reset_confirm: "Arbeitsbereich zurücksetzen? Dies beendet alle aktiven Sitzungen und erstellt beim nächsten Mal einen neuen Arbeitsbereich."
@@ -85,6 +96,7 @@ project:
         project_link: "Projektlink"
         placeholder_project_link: "https://github.com/org/repo.git"
         project_link_help: "Fügen Sie die GitHub-Repository-URL für dieses Projekt ein."
+        project_link_note: '<strong>Wichtig:</strong> Derzeit können nur Repositories verwendet werden, die auf dem "landingpages-ai-template"-Projekt basieren! Siehe <a href="https://github.com/dx-tooling/landingpages-ai-template" target="_blank" rel="noopener noreferrer" class="underline">github.com/dx-tooling/landingpages-ai-template</a> für weitere Informationen.'
         github_access_key: "GitHub-Zugriffsschlüssel"
         placeholder_github_token: "ghp_xxxxxxxxxxxx"
         github_access_key_help: "Ein persönlicher Zugriffstoken, damit wir das Projekt öffnen und Änderungen speichern können."
@@ -100,6 +112,7 @@ project:
         key_verified: "Schlüssel erfolgreich überprüft"
         key_verification_failed: "Schlüsselüberprüfung fehlgeschlagen"
         reuse_existing_key: "Oder vorhandenen Schlüssel verwenden:"
+        keys_managed_by_deployment: "Von Bereitstellung verwaltet"
         runtime_environment: "Laufzeitumgebung"
         runtime_help: "Wählen Sie die Laufzeitumgebung zum Erstellen und Ausführen Ihres Projekts."
         node_22_recommended: "Node.js 22 (empfohlen)"
@@ -122,6 +135,8 @@ project:
         output_instructions: "Ausgabeanweisungen"
         output_instructions_placeholder: "Anweisungen zum Ausgabeformat..."
         output_instructions_help: "Anweisungen, wie der Agent seine Ausgabe und Zusammenfassungen formatieren sollte."
+        pro_settings: "Pro-Einstellungen"
+        pro_settings_description: "Erweiterte Konfigurationsoptionen für erfahrene Benutzer."
         github_token_info: "Benötigen Sie einen GitHub-Zugriffsschlüssel? Erstellen Sie einen <strong>Personal Access Token</strong>, damit die App Ihr Projekt lesen und aktualisieren kann."
         required_permissions: "Erforderliche Berechtigungen (feingranularer Token):"
         contents_permission: "<strong>Contents</strong>: Lesen und Schreiben"
@@ -137,10 +152,38 @@ project:
         remote_content_assets_manifest_urls_syntax_error: "Eine URL pro Zeile; jede Zeile muss eine gültige http- oder https-URL sein."
         remote_content_assets_manifest_urls_warning: 'Eine oder mehrere URLs lieferten kein gültiges Manifest (erwartet: JSON mit "urls"-Liste). Sie können trotzdem speichern.'
         remote_content_assets_manifest_urls_verified: "Alle Manifest-URLs haben ein gültiges Format."
+        # S3 Upload Configuration
+        s3_upload_config: "S3-Upload-Konfiguration"
+        s3_upload_description: "Konfigurieren Sie AWS S3-Anmeldedaten, um das Hochladen neuer Assets direkt aus dem Chat-Editor zu ermöglichen. Dies ist optional - Sie können weiterhin Manifest-URLs ohne S3-Upload verwenden."
+        s3_bucket_name: "Bucket-Name"
+        s3_bucket_name_placeholder: "mein-assets-bucket"
+        s3_region: "AWS-Region"
+        s3_region_placeholder: "Region auswählen..."
+        s3_access_key_id: "Zugriffsschlüssel-ID"
+        s3_access_key_id_placeholder: "AKIAIOSFODNN7EXAMPLE"
+        s3_secret_access_key: "Geheimer Zugriffsschlüssel"
+        s3_secret_access_key_placeholder: "AWS-Geheimschlüssel eingeben"
+        s3_iam_role_arn: "IAM-Rollen-ARN"
+        s3_iam_role_arn_placeholder: "arn:aws:iam::123456789012:role/MeineRolle"
+        s3_iam_role_arn_help: "Wenn Ihre Anmeldedaten eine andere Rolle annehmen müssen, um auf den Bucket zuzugreifen, geben Sie hier den Rollen-ARN ein."
+        s3_key_prefix: "Schlüsselpräfix (Ordner)"
+        s3_key_prefix_placeholder: "uploads/assets"
+        s3_key_prefix_help: "Optionaler Pfadpräfix für hochgeladene Dateien. Dateien werden in diesem 'Ordner' innerhalb des Buckets gespeichert."
+        verifying_s3_credentials: "S3-Anmeldedaten werden überprüft..."
+        s3_credentials_verified: "S3-Anmeldedaten erfolgreich verifiziert"
+        s3_credentials_failed: "S3-Anmeldedaten konnten nicht verifiziert werden. Überprüfen Sie Bucket-Name, Region und Berechtigungen."
 
 # Chat-Based Content Editor vertical
 editor:
     title: "Inhaltseditor"
+    html_editor_title: "HTML-Editor"
+    html_editor_editing: "Bearbeiten:"
+    html_editor_save_changes: "Änderungen speichern"
+    html_editor_close: "Editor schließen"
+    html_editor_saving: "Speichern..."
+    html_editor_save_success: "Änderungen erfolgreich gespeichert"
+    html_editor_save_error: "Fehler beim Speichern der Änderungen"
+    html_editor_load_error: "Fehler beim Laden des Seiteninhalts"
     working_on: "Arbeitet an <strong>%project%</strong>"
     description: "Beschreiben Sie, was Sie ändern möchten, in einfacher Sprache. Der Assistent kümmert sich um die Änderungen und zeigt den Fortschritt an."
     end_session: "Sitzung beenden"
@@ -156,6 +199,9 @@ editor:
     session_finished: "Diese Sitzung ist beendet. Sie können den Verlauf oben einsehen."
     cannot_edit: "Sie können diese Sitzung nicht bearbeiten."
     preview_pages: "Vorschauseiten"
+    prompt_suggestions_headline: "Prompt-Vorschläge"
+    show_more_suggestions: "+%count% weitere"
+    hide_suggestions: "Weniger anzeigen"
     details_troubleshooting: "Details (zur Fehlerbehebung)"
     session_label: "Sitzung:"
     work_area_label: "Arbeitsbereich:"
@@ -316,6 +362,8 @@ flash:
         finish_conversation_failed: "Unterhaltung konnte nicht beendet werden: %error%"
         send_to_review_failed: "Senden zum Review fehlgeschlagen: %error%"
         provide_email_password: "Bitte geben Sie E-Mail und Passwort an."
+        passwords_mismatch: "Passwörter stimmen nicht überein."
+        password_required: "Passwort ist erforderlich."
         registration_failed: "Registrierung fehlgeschlagen: %error%"
         workspace_in_review: "Dieser Arbeitsbereich wird gerade überprüft. Es können keine Unterhaltungen gestartet werden."
         workspace_busy: "%email% arbeitet gerade an diesem Arbeitsbereich."
@@ -334,6 +382,7 @@ flash:
         conversation_sent_to_review: "Unterhaltung zur Überprüfung gesendet. Pull Request: %url%"
         workspace_reset_conversation_ready: "Arbeitsbereich zurückgesetzt. Sie können jetzt eine neue Unterhaltung starten."
         registration_successful: "Registrierung erfolgreich. Bitte melden Sie sich an."
+        password_set: "Passwort erfolgreich festgelegt."
 
 # JSON API error responses
 api:
@@ -352,6 +401,7 @@ api:
         failed_to_create_session: "Sitzung konnte nicht erstellt werden."
         not_authorized_to_run: "Nicht berechtigt, Änderungen in dieser Unterhaltung auszuführen."
         conversation_not_active: "Die Unterhaltung ist nicht mehr aktiv."
+        s3_required_fields: "Bucket-Name, Region, Zugriffsschlüssel-ID und geheimer Zugriffsschlüssel sind erforderlich."
 
 # Frontend JavaScript translations (passed via data attributes)
 js:
@@ -384,6 +434,11 @@ remote_content_assets:
     browser_search_placeholder: "Assets suchen..."
     browser_add_to_chat: "Zum Chat hinzufügen"
     browser_open_in_new_tab: "In neuem Tab öffnen"
+    browser_upload_dropzone: "Bild hier ablegen zum Hochladen"
+    browser_upload_hint: "JPEG, PNG, GIF, WebP, SVG, AVIF (max. 10MB)"
+    browser_uploading: "Wird hochgeladen..."
+    browser_upload_success: "Upload abgeschlossen. Asset-Liste wird aktualisiert..."
+    browser_upload_error: "Upload fehlgeschlagen. Bitte erneut versuchen."
 
 # Language switcher
 language:

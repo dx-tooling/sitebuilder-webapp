@@ -65,6 +65,18 @@ DISCOVERY IS KEY:
 - Look for styleguides, examples, or documentation in the workspace
 - Examine existing files to understand patterns before creating new ones
 
+REMOTE CONTENT ASSETS:
+- In addition to files in the workspace, the project may have "remote" content assets (images, etc.) that can be embedded as-is.
+- Call list_remote_content_asset_urls to get a JSON array of all remote asset URLs configured for this project. Use these URLs directly (e.g. in img src). If the tool returns an empty array, no remote manifests are configured.
+- Call get_remote_asset_info with a URL to retrieve metadata (width, height, mimeType, sizeInBytes) for a remote image without downloading it. Use this when you need dimensions or format for embedding.
+
+WORKSPACE RULES:
+- Projects may define custom rules in .sitebuilder/rules/ folders (Markdown files)
+- You MUST call get_workspace_rules ONCE at the very beginning of the session (on your first turn only, never again)
+- If rules exist, they define project-specific conventions, constraints, and requirements you must follow
+- If no rules exist (empty JSON object {}), this is normal - simply follow these default instructions
+- When rules exist, apply them in addition to these default instructions throughout the entire session
+
 WORK SCOPE:
 - Modify existing pages, remove existing pages, create new pages, as the user wishes
 - If specifically requested, modify the styleguide, too
@@ -87,6 +99,8 @@ INSTRUCTIONS;
 Summarize what changes were made and why.
 If quality checks, tests, or build fail, analyze the errors and fix them.
 Always verify your changes with quality checks, tests, and build before finishing.
+After a successful build, use get_preview_url to get browser links for the pages you modified or created, and share these links with the user so they can preview their changes. You will receive this as a relative URI, e.g. `/workspaces/019bf523-245b-7982-9a07-e6f69e3a0099/dist/aerzte.html`; render this as a relative Markdown link, like so: `[Ärzte-Seite](/workspaces/019bf523-245b-7982-9a07-e6f69e3a0099/dist/aerzte.html)`.
+After making file changes, call suggest_commit_message with a concise commit message (50-72 chars, imperative mood) in the same language the user is speaking. Examples: "Add hero section to homepage", "Füge Hero-Bereich zur Startseite hinzu", "Ajouter une section héros à la page d'accueil". You must not tell the user about your commit message suggestions.
 INSTRUCTIONS;
 
         return new self($backgroundInstructions, $stepInstructions, $outputInstructions);

@@ -6,7 +6,10 @@ namespace App\LlmContentEditor\Domain\Command;
 
 use App\LlmContentEditor\Domain\Agent\ContentEditorAgent;
 use App\LlmContentEditor\Domain\Enum\LlmModelName;
+use App\LlmContentEditor\Facade\Dto\AgentConfigDto;
 use App\LlmContentEditor\Infrastructure\Observer\ConsoleObserver;
+use App\ProjectMgmt\Facade\Enum\ProjectType;
+use App\ProjectMgmt\Facade\ProjectMgmtFacadeInterface;
 use App\WorkspaceTooling\Facade\WorkspaceToolingServiceInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use EnterpriseToolingForSymfony\SharedBundle\Commandline\Command\EnhancedCommand;
@@ -35,7 +38,8 @@ final class EditContentCommand extends EnhancedCommand
         LoggerInterface                          $logger,
         LockService                              $lockService,
         ParameterBagInterface                    $parameterBag,
-        private WorkspaceToolingServiceInterface $fileEditingFacade
+        private WorkspaceToolingServiceInterface $fileEditingFacade,
+        private ProjectMgmtFacadeInterface       $projectMgmtFacade,
     ) {
         parent::__construct(
             $rolloutService,
@@ -101,7 +105,15 @@ final class EditContentCommand extends EnhancedCommand
         $output->writeln("<info>Instruction:</info> {$instruction}");
         $output->writeln('');
 
-        $agent    = new ContentEditorAgent($this->fileEditingFacade, LlmModelName::defaultForContentEditor(), $apiKey);
+        // Create agent config from default template
+        $template    = $this->projectMgmtFacade->getAgentConfigTemplate(ProjectType::DEFAULT);
+        $agentConfig = new AgentConfigDto(
+            $template->backgroundInstructions,
+            $template->stepInstructions,
+            $template->outputInstructions
+        );
+
+        $agent    = new ContentEditorAgent($this->fileEditingFacade, LlmModelName::defaultForContentEditor(), $apiKey, $agentConfig);
         $observer = new ConsoleObserver($output);
         $agent->attach($observer);
 

@@ -9,6 +9,7 @@ use App\RemoteContentAssets\Facade\RemoteContentAssetsFacade;
 use App\RemoteContentAssets\Infrastructure\RemoteImageInfoFetcherInterface;
 use App\RemoteContentAssets\Infrastructure\RemoteManifestFetcherInterface;
 use App\RemoteContentAssets\Infrastructure\RemoteManifestValidatorInterface;
+use App\RemoteContentAssets\Infrastructure\S3AssetUploaderInterface;
 use PHPUnit\Framework\TestCase;
 
 final class RemoteContentAssetsFacadeTest extends TestCase
@@ -92,12 +93,87 @@ final class RemoteContentAssetsFacadeTest extends TestCase
         self::assertSame([], $facade->fetchAndMergeAssetUrls([]));
     }
 
+    public function testUploadAssetDelegatesToS3Uploader(): void
+    {
+        $expectedUrl = 'https://bucket.s3.eu-central-1.amazonaws.com/prefix/20260127/abc123_image.jpg';
+
+        $uploader = $this->createMock(S3AssetUploaderInterface::class);
+        $uploader->expects($this->once())
+            ->method('upload')
+            ->with(
+                'my-bucket',
+                'eu-central-1',
+                'AKIAIOSFODNN7EXAMPLE',
+                'wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY',
+                'arn:aws:iam::123456789012:role/S3UploadRole',
+                'prefix',
+                'image.jpg',
+                'file-contents',
+                'image/jpeg'
+            )
+            ->willReturn($expectedUrl);
+
+        $facade = $this->createFacadeWithS3Uploader($uploader);
+
+        $result = $facade->uploadAsset(
+            'my-bucket',
+            'eu-central-1',
+            'AKIAIOSFODNN7EXAMPLE',
+            'wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY',
+            'arn:aws:iam::123456789012:role/S3UploadRole',
+            'prefix',
+            'image.jpg',
+            'file-contents',
+            'image/jpeg'
+        );
+
+        self::assertSame($expectedUrl, $result);
+    }
+
+    public function testUploadAssetPassesNullValuesCorrectly(): void
+    {
+        $expectedUrl = 'https://bucket.s3.eu-central-1.amazonaws.com/image.jpg';
+
+        $uploader = $this->createMock(S3AssetUploaderInterface::class);
+        $uploader->expects($this->once())
+            ->method('upload')
+            ->with(
+                'my-bucket',
+                'eu-central-1',
+                'AKIAIOSFODNN7EXAMPLE',
+                'wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY',
+                null, // no IAM role
+                null, // no key prefix
+                'image.jpg',
+                'file-contents',
+                'image/jpeg'
+            )
+            ->willReturn($expectedUrl);
+
+        $facade = $this->createFacadeWithS3Uploader($uploader);
+
+        $result = $facade->uploadAsset(
+            'my-bucket',
+            'eu-central-1',
+            'AKIAIOSFODNN7EXAMPLE',
+            'wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY',
+            null,
+            null,
+            'image.jpg',
+            'file-contents',
+            'image/jpeg'
+        );
+
+        self::assertSame($expectedUrl, $result);
+    }
+
     private function createFacade(?RemoteImageInfoFetcherInterface $imageInfoFetcher = null): RemoteContentAssetsFacade
     {
         return new RemoteContentAssetsFacade(
             $imageInfoFetcher ?? $this->createMock(RemoteImageInfoFetcherInterface::class),
             $this->createMock(RemoteManifestValidatorInterface::class),
-            $this->createMock(RemoteManifestFetcherInterface::class)
+            $this->createMock(RemoteManifestFetcherInterface::class),
+            $this->createMock(S3AssetUploaderInterface::class)
         );
     }
 
@@ -106,7 +182,8 @@ final class RemoteContentAssetsFacadeTest extends TestCase
         return new RemoteContentAssetsFacade(
             $this->createMock(RemoteImageInfoFetcherInterface::class),
             $validator,
-            $this->createMock(RemoteManifestFetcherInterface::class)
+            $this->createMock(RemoteManifestFetcherInterface::class),
+            $this->createMock(S3AssetUploaderInterface::class)
         );
     }
 
@@ -115,7 +192,18 @@ final class RemoteContentAssetsFacadeTest extends TestCase
         return new RemoteContentAssetsFacade(
             $this->createMock(RemoteImageInfoFetcherInterface::class),
             $this->createMock(RemoteManifestValidatorInterface::class),
-            $fetcher
+            $fetcher,
+            $this->createMock(S3AssetUploaderInterface::class)
+        );
+    }
+
+    private function createFacadeWithS3Uploader(S3AssetUploaderInterface $uploader): RemoteContentAssetsFacade
+    {
+        return new RemoteContentAssetsFacade(
+            $this->createMock(RemoteImageInfoFetcherInterface::class),
+            $this->createMock(RemoteManifestValidatorInterface::class),
+            $this->createMock(RemoteManifestFetcherInterface::class),
+            $uploader
         );
     }
 }

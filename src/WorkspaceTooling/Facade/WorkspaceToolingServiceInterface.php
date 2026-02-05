@@ -46,9 +46,45 @@ interface WorkspaceToolingServiceInterface extends BaseWorkspaceToolingFacadeInt
     public function listRemoteContentAssetUrls(): string;
 
     /**
+     * Search remote content asset URLs using a regex pattern on filenames.
+     * Fetches all URLs from configured manifests, then filters by pattern.
+     * Returns JSON-encoded array of matching URLs. Never throws.
+     *
+     * @param string $regexPattern PCRE regex pattern (without delimiters) to match filenames
+     *
+     * @return string JSON array of matching URLs, or error JSON for invalid regex
+     */
+    public function searchRemoteContentAssetUrls(string $regexPattern): string;
+
+    /**
      * Get information about a remote asset (e.g. image) by URL.
      * Returns JSON with url, width, height, mimeType, sizeInBytes (null when unknown).
      * On failure returns JSON object with an "error" key. Never throws.
      */
     public function getRemoteAssetInfo(string $url): string;
+
+    /**
+     * Get all workspace rules from .sitebuilder/rules/ folders.
+     *
+     * Scans the workspace for all .sitebuilder/rules/ directories (at any depth),
+     * reads all .md files within them, and returns a JSON object where keys are
+     * filenames without the .md extension and values are the file contents.
+     *
+     * @return string JSON object: {"rule-name": "content", ...}. Returns "{}" if no rules found.
+     */
+    public function getWorkspaceRules(): string;
+
+    /**
+     * Run build (npm run build) in the specified workspace.
+     *
+     * This method runs the build process in an isolated Docker container.
+     * Unlike the agent's runBuild() method, this does not require an AgentExecutionContext
+     * and takes explicit parameters.
+     *
+     * @param string $workspacePath absolute path to the workspace directory
+     * @param string $agentImage    Docker image to use for the build
+     *
+     * @return string the build output
+     */
+    public function runBuildInWorkspace(string $workspacePath, string $agentImage): string;
 }

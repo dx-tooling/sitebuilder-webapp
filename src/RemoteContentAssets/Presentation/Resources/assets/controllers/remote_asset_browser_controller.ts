@@ -9,6 +9,7 @@ import { Controller } from "@hotwired/stimulus";
  * - Image preview for image URLs
  * - Click to open asset in new tab
  * - Add to chat button dispatches custom event for insertion
+ * - Drag-and-drop upload to S3 (when configured)
  */
 export default class extends Controller {
     static values = {
@@ -16,14 +17,31 @@ export default class extends Controller {
         windowSize: { type: Number, default: 20 },
         addToChatLabel: { type: String, default: "Add to chat" },
         openInNewTabLabel: { type: String, default: "Open in new tab" },
+        // Upload configuration (optional - if not set, upload is disabled)
+        uploadUrl: { type: String, default: "" },
+        uploadCsrfToken: { type: String, default: "" },
+        workspaceId: { type: String, default: "" },
     };
 
-    static targets = ["list", "count", "loading", "empty", "search"];
+    static targets = [
+        "list",
+        "count",
+        "loading",
+        "empty",
+        "search",
+        "dropzone",
+        "uploadProgress",
+        "uploadError",
+        "uploadSuccess",
+    ];
 
     declare readonly fetchUrlValue: string;
     declare readonly windowSizeValue: number;
     declare readonly addToChatLabelValue: string;
     declare readonly openInNewTabLabelValue: string;
+    declare readonly uploadUrlValue: string;
+    declare readonly uploadCsrfTokenValue: string;
+    declare readonly workspaceIdValue: string;
 
     declare readonly hasListTarget: boolean;
     declare readonly listTarget: HTMLElement;
@@ -35,14 +53,166 @@ export default class extends Controller {
     declare readonly emptyTarget: HTMLElement;
     declare readonly hasSearchTarget: boolean;
     declare readonly searchTarget: HTMLInputElement;
+    declare readonly hasDropzoneTarget: boolean;
+    declare readonly dropzoneTarget: HTMLElement;
+    declare readonly hasUploadProgressTarget: boolean;
+    declare readonly uploadProgressTarget: HTMLElement;
+    declare readonly hasUploadErrorTarget: boolean;
+    declare readonly uploadErrorTarget: HTMLElement;
+    declare readonly hasUploadSuccessTarget: boolean;
+    declare readonly uploadSuccessTarget: HTMLElement;
 
     private urls: string[] = [];
     private filteredUrls: string[] = [];
     private itemHeight: number = 64;
     private isLoading: boolean = false;
+    private isUploading: boolean = false;
 
     connect(): void {
         this.fetchAssets();
+        this.setupDropzone();
+    }
+
+    /**
+     * Set up drag-and-drop event handlers if upload is configured.
+     */
+    private setupDropzone(): void {
+        if (!this.isUploadEnabled() || !this.hasDropzoneTarget) {
+            return;
+        }
+
+        const dropzone = this.dropzoneTarget;
+
+        dropzone.addEventListener("dragover", (e) => this.handleDragOver(e));
+        dropzone.addEventListener("dragleave", (e) => this.handleDragLeave(e));
+        dropzone.addEventListener("drop", (e) => this.handleDrop(e));
+    }
+
+    /**
+     * Check if upload functionality is enabled.
+     */
+    private isUploadEnabled(): boolean {
+        return this.uploadUrlValue !== "" && this.uploadCsrfTokenValue !== "" && this.workspaceIdValue !== "";
+    }
+
+    /**
+     * Handle dragover event - show visual feedback.
+     */
+    private handleDragOver(e: DragEvent): void {
+        e.preventDefault();
+        e.stopPropagation();
+
+        if (this.hasDropzoneTarget) {
+            this.dropzoneTarget.classList.add("border-primary-500", "bg-primary-50", "dark:bg-primary-900/20");
+        }
+    }
+
+    /**
+     * Handle dragleave event - remove visual feedback.
+     */
+    private handleDragLeave(e: DragEvent): void {
+        e.preventDefault();
+        e.stopPropagation();
+
+        if (this.hasDropzoneTarget) {
+            this.dropzoneTarget.classList.remove("border-primary-500", "bg-primary-50", "dark:bg-primary-900/20");
+        }
+    }
+
+    /**
+     * Handle drop event - upload the file.
+     */
+    private async handleDrop(e: DragEvent): Promise<void> {
+        e.preventDefault();
+        e.stopPropagation();
+
+        // Remove visual feedback
+        if (this.hasDropzoneTarget) {
+            this.dropzoneTarget.classList.remove("border-primary-500", "bg-primary-50", "dark:bg-primary-900/20");
+        }
+
+        const files = e.dataTransfer?.files;
+        if (!files || files.length === 0) {
+            return;
+        }
+
+        // Only upload the first file
+        await this.uploadFile(files[0]);
+    }
+
+    /**
+     * Upload a file to S3.
+     */
+    private async uploadFile(file: File): Promise<void> {
+        if (!this.isUploadEnabled() || this.isUploading) {
+            return;
+        }
+
+        this.isUploading = true;
+        this.showUploadStatus("progress");
+
+        try {
+            const formData = new FormData();
+            formData.append("file", file);
+            formData.append("workspace_id", this.workspaceIdValue);
+            formData.append("_csrf_token", this.uploadCsrfTokenValue);
+
+            const response = await fetch(this.uploadUrlValue, {
+                method: "POST",
+                headers: {
+                    "X-Requested-With": "XMLHttpRequest",
+                },
+                body: formData,
+            });
+
+            const data = (await response.json()) as { success?: boolean; url?: string; error?: string };
+
+            if (data.success && data.url) {
+                this.showUploadStatus("success");
+                // Notify chat controller about the upload
+                this.dispatch("uploadComplete", { detail: { url: data.url } });
+                // Re-fetch the asset list to show updated manifests
+                await this.fetchAssets();
+                // Auto-hide success message after 3 seconds
+                setTimeout(() => this.showUploadStatus("none"), 3000);
+            } else {
+                this.showUploadError(data.error || "Upload failed");
+            }
+        } catch {
+            this.showUploadError("Upload failed. Please try again.");
+        } finally {
+            this.isUploading = false;
+        }
+    }
+
+    /**
+     * Show upload status indicator.
+     */
+    private showUploadStatus(which: "progress" | "success" | "error" | "none"): void {
+        if (this.hasUploadProgressTarget) {
+            this.uploadProgressTarget.classList.toggle("hidden", which !== "progress");
+        }
+        if (this.hasUploadSuccessTarget) {
+            this.uploadSuccessTarget.classList.toggle("hidden", which !== "success");
+        }
+        if (this.hasUploadErrorTarget) {
+            this.uploadErrorTarget.classList.toggle("hidden", which !== "error");
+        }
+    }
+
+    /**
+     * Show upload error with message.
+     */
+    private showUploadError(message: string): void {
+        if (this.hasUploadErrorTarget) {
+            const textEl = this.uploadErrorTarget.querySelector("[data-error-text]");
+            if (textEl) {
+                textEl.textContent = message;
+            }
+        }
+        this.showUploadStatus("error");
+        // Auto-hide error message after 5 seconds
+        setTimeout(() => this.showUploadStatus("none"), 5000);
     }
 
     private async fetchAssets(): Promise<void> {
@@ -64,16 +234,17 @@ export default class extends Controller {
 
             const data = (await response.json()) as { urls?: string[] };
             this.urls = data.urls ?? [];
-            this.filteredUrls = this.urls;
 
-            this.updateCount();
             this.showLoading(false);
 
             if (this.urls.length === 0) {
+                this.filteredUrls = [];
+                this.updateCount();
                 this.showEmpty(true);
             } else {
-                this.showEmpty(false);
-                this.renderItems();
+                // Re-apply current search filter (if any) to the new URL list
+                this.filter();
+                this.showEmpty(this.filteredUrls.length === 0);
             }
         } catch {
             this.showLoading(false);

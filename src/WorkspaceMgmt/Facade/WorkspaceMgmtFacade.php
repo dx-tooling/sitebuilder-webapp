@@ -11,13 +11,17 @@ use App\WorkspaceMgmt\Domain\Service\WorkspaceService;
 use App\WorkspaceMgmt\Domain\Service\WorkspaceStatusGuard;
 use App\WorkspaceMgmt\Facade\Dto\WorkspaceInfoDto;
 use App\WorkspaceMgmt\Facade\Enum\WorkspaceStatus;
+use App\WorkspaceMgmt\Infrastructure\Adapter\FilesystemAdapterInterface;
 use App\WorkspaceMgmt\Infrastructure\Message\SetupWorkspaceMessage;
 use App\WorkspaceMgmt\Infrastructure\Service\GitHubUrlServiceInterface;
+use App\WorkspaceTooling\Facade\WorkspaceToolingServiceInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use RuntimeException;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\Messenger\MessageBusInterface;
 use Throwable;
+
+use function str_starts_with;
 
 /**
  * Facade implementation for workspace management.
@@ -27,14 +31,16 @@ final class WorkspaceMgmtFacade implements WorkspaceMgmtFacadeInterface
 {
     public function __construct(
         #[Autowire(param: 'workspace_mgmt.workspace_root')]
-        private readonly string                     $workspaceRoot,
-        private readonly WorkspaceService           $workspaceService,
-        private readonly WorkspaceGitService        $gitService,
-        private readonly WorkspaceStatusGuard       $statusGuard,
-        private readonly ProjectMgmtFacadeInterface $projectMgmtFacade,
-        private readonly EntityManagerInterface     $entityManager,
-        private readonly MessageBusInterface        $messageBus,
-        private readonly GitHubUrlServiceInterface  $gitHubUrlService,
+        private readonly string                           $workspaceRoot,
+        private readonly WorkspaceService                 $workspaceService,
+        private readonly WorkspaceGitService              $gitService,
+        private readonly WorkspaceStatusGuard             $statusGuard,
+        private readonly ProjectMgmtFacadeInterface       $projectMgmtFacade,
+        private readonly EntityManagerInterface           $entityManager,
+        private readonly MessageBusInterface              $messageBus,
+        private readonly GitHubUrlServiceInterface        $gitHubUrlService,
+        private readonly FilesystemAdapterInterface       $filesystemAdapter,
+        private readonly WorkspaceToolingServiceInterface $workspaceToolingService,
     ) {
     }
 
@@ -219,5 +225,66 @@ final class WorkspaceMgmtFacade implements WorkspaceMgmtFacadeInterface
             $githubBranchUrl,
             $githubPrUrl,
         );
+    }
+
+    public function readWorkspaceFile(string $workspaceId, string $relativePath): string
+    {
+        $absolutePath = $this->resolveAndValidatePath($workspaceId, $relativePath);
+
+        return $this->filesystemAdapter->readFile($absolutePath);
+    }
+
+    public function writeWorkspaceFile(string $workspaceId, string $relativePath, string $content): void
+    {
+        $absolutePath = $this->resolveAndValidatePath($workspaceId, $relativePath);
+        $this->filesystemAdapter->writeFile($absolutePath, $content);
+    }
+
+    public function runBuild(string $workspaceId): string
+    {
+        $workspace = $this->getWorkspaceOrFail($workspaceId);
+
+        // Get project info to determine the agent image
+        $projectInfo = $this->projectMgmtFacade->getProjectInfo($workspace->getProjectId());
+
+        $workspacePath = $this->workspaceRoot . '/' . $workspaceId;
+
+        return $this->workspaceToolingService->runBuildInWorkspace($workspacePath, $projectInfo->agentImage);
+    }
+
+    /**
+     * Resolve a relative path to an absolute path and validate it's within the workspace.
+     */
+    private function resolveAndValidatePath(string $workspaceId, string $relativePath): string
+    {
+        // Ensure workspace exists
+        $this->getWorkspaceOrFail($workspaceId);
+
+        $workspacePath = $this->workspaceRoot . '/' . $workspaceId;
+        $absolutePath  = $workspacePath . '/' . $relativePath;
+
+        // Resolve to real path to prevent path traversal
+        $realWorkspacePath = realpath($workspacePath);
+        $realDirPath       = realpath(dirname($absolutePath));
+
+        if ($realWorkspacePath === false || $realDirPath === false) {
+            throw new RuntimeException('Invalid path: workspace or directory does not exist');
+        }
+
+        $realAbsolutePath = $realDirPath . '/' . basename($absolutePath);
+
+        // For existing files, use full realpath validation
+        if ($this->filesystemAdapter->exists($absolutePath)) {
+            $resolvedPath = realpath($absolutePath);
+            if ($resolvedPath !== false) {
+                $realAbsolutePath = $resolvedPath;
+            }
+        }
+
+        if (!str_starts_with($realAbsolutePath, $realWorkspacePath)) {
+            throw new RuntimeException('Invalid path: path traversal detected');
+        }
+
+        return $absolutePath;
     }
 }

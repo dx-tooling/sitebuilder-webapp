@@ -47,6 +47,9 @@
                        placeholder="{{ 'project.form.placeholder_project_link'|trans }}"
                        class="w-full px-3 py-2 border border-dark-300 dark:border-dark-600 rounded-md bg-white dark:bg-dark-800 text-dark-900 dark:text-dark-100 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
                 <p class="mt-1 text-xs text-dark-500 dark:text-dark-400">{{ 'project.form.project_link_help'|trans }}</p>
+                <div class="mt-2 p-3 rounded-md bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
+                    <p class="text-xs text-amber-800 dark:text-amber-200">{{ 'project.form.project_link_note'|trans|raw }}</p>
+                </div>
             </div>
 
             <div>
@@ -54,9 +57,9 @@
                 <input type="password"
                        name="github_token"
                        id="github_token"
-                       value="{{ project ? project.githubToken : '' }}"
-                       required
-                       placeholder="{{ 'project.form.placeholder_github_token'|trans }}"
+                       value="{{ project ? (displayGithubToken is defined ? displayGithubToken : project.githubToken) : '' }}"
+                       {{ (keysVisible is not defined or keysVisible) ? 'required' : 'disabled' }}
+                       placeholder="{{ (keysVisible is defined and not keysVisible) ? 'project.form.keys_managed_by_deployment'|trans : 'project.form.placeholder_github_token'|trans }}"
                        class="w-full px-3 py-2 border border-dark-300 dark:border-dark-600 rounded-md bg-white dark:bg-dark-800 text-dark-900 dark:text-dark-100 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
                 <p class="mt-1 text-xs text-dark-500 dark:text-dark-400">{{ 'project.form.github_access_key_help'|trans }}</p>
             </div>
@@ -104,9 +107,9 @@
                 <input type="password"
                        name="llm_api_key"
                        id="llm_api_key"
-                       value="{{ project ? project.llmApiKey : '' }}"
-                       required
-                       placeholder="{{ 'project.form.placeholder_llm_api_key'|trans }}"
+                       value="{{ project ? (displayLlmApiKey is defined ? displayLlmApiKey : project.llmApiKey) : '' }}"
+                       {{ (keysVisible is not defined or keysVisible) ? 'required' : 'disabled' }}
+                       placeholder="{{ (keysVisible is defined and not keysVisible) ? 'project.form.keys_managed_by_deployment'|trans : 'project.form.placeholder_llm_api_key'|trans }}"
                        class="etfswui-form-input"
                        {{ stimulus_target('llm-key-verification', 'input') }}
                        {{ stimulus_action('llm-key-verification', 'verify', 'blur') }}>
@@ -157,6 +160,39 @@
                     </div>
                 {% endif %}
             </div>
+
+            {# GitHub Access Key Helper - shown after base required fields #}
+            <div class="rounded-lg border border-dark-200 dark:border-dark-700 bg-dark-50 dark:bg-dark-800 p-4 text-sm text-dark-600 dark:text-dark-400 space-y-3">
+                <p>
+                    {{ 'project.form.github_token_info'|trans|raw }}
+                </p>
+                <div class="bg-white dark:bg-dark-900 rounded-md p-3 border border-dark-200 dark:border-dark-600">
+                    <p class="font-medium text-dark-800 dark:text-dark-200 mb-2">{{ 'project.form.required_permissions'|trans }}</p>
+                    <ul class="list-disc list-inside space-y-1 text-dark-600 dark:text-dark-400">
+                        <li>{{ 'project.form.contents_permission'|trans|raw }}</li>
+                        <li>{{ 'project.form.pull_requests_permission'|trans|raw }}</li>
+                    </ul>
+                </div>
+                <div class="bg-white dark:bg-dark-900 rounded-md p-3 border border-dark-200 dark:border-dark-600">
+                    <p class="font-medium text-dark-800 dark:text-dark-200 mb-2">{{ 'project.form.classic_token_alternative'|trans }}</p>
+                    <ul class="list-disc list-inside space-y-1 text-dark-600 dark:text-dark-400">
+                        <li>{{ 'project.form.repo_scope'|trans|raw }}</li>
+                    </ul>
+                </div>
+                <p class="text-xs text-dark-500 dark:text-dark-500">
+                    {{ 'project.form.create_token_link'|trans }} <a href="https://github.com/settings/personal-access-tokens" target="_blank" rel="noopener noreferrer" class="text-primary-600 dark:text-primary-400 hover:underline">github.com/settings/personal-access-tokens</a>
+                </p>
+            </div>
+
+            {# Pro Settings - collapsible section for advanced/optional fields #}
+            <details class="mt-8 border border-dark-200 dark:border-dark-700 rounded-lg">
+                <summary class="px-4 py-3 cursor-pointer select-none text-sm font-medium text-dark-700 dark:text-dark-300 hover:bg-dark-50 dark:hover:bg-dark-900/50 rounded-lg">
+                    {{ 'project.form.pro_settings'|trans }}
+                </summary>
+                <div class="px-4 pb-4 pt-2 space-y-6 border-t border-dark-200 dark:border-dark-700">
+                    <p class="text-xs text-dark-500 dark:text-dark-400">
+                        {{ 'project.form.pro_settings_description'|trans }}
+                    </p>
 
             {% set currentImage = project ? project.agentImage : 'node:22-slim' %}
             {% set standardImages = ['node:22-slim', 'node:20-slim', 'node:18-slim', 'python:3.12-slim', 'php:8.4-cli'] %}
@@ -287,27 +323,132 @@
                 </div>
             </div>
 
-            <div class="rounded-lg border border-dark-200 dark:border-dark-700 bg-dark-50 dark:bg-dark-800 p-4 text-sm text-dark-600 dark:text-dark-400 space-y-3">
-                <p>
-                    {{ 'project.form.github_token_info'|trans|raw }}
-                </p>
-                <div class="bg-white dark:bg-dark-900 rounded-md p-3 border border-dark-200 dark:border-dark-600">
-                    <p class="font-medium text-dark-800 dark:text-dark-200 mb-2">{{ 'project.form.required_permissions'|trans }}</p>
-                    <ul class="list-disc list-inside space-y-1 text-dark-600 dark:text-dark-400">
-                        <li>{{ 'project.form.contents_permission'|trans|raw }}</li>
-                        <li>{{ 'project.form.pull_requests_permission'|trans|raw }}</li>
-                    </ul>
+            {# S3 Upload Configuration (Optional) - collapsible section #}
+            <details class="border border-dark-200 dark:border-dark-700 rounded-lg"
+                     {{ stimulus_controller('s3-credentials', {
+                         verifyUrl: path('project_mgmt.presentation.verify_s3_credentials'),
+                         csrfToken: csrf_token('verify_s3_credentials')
+                     }) }}>
+                <summary class="px-4 py-3 cursor-pointer select-none text-sm font-medium text-dark-700 dark:text-dark-300 hover:bg-dark-50 dark:hover:bg-dark-900/50 rounded-lg">
+                    {{ 'project.form.s3_upload_config'|trans }}
+                    <span class="text-dark-500 dark:text-dark-400 font-normal">({{ 'common.optional'|trans }})</span>
+                </summary>
+                <div class="px-4 pb-4 pt-2 space-y-4 border-t border-dark-200 dark:border-dark-700">
+                    <p class="text-xs text-dark-500 dark:text-dark-400">
+                        {{ 'project.form.s3_upload_description'|trans }}
+                    </p>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label for="s3_bucket_name" class="etfswui-form-label">{{ 'project.form.s3_bucket_name'|trans }}</label>
+                            <input type="text"
+                                   name="s3_bucket_name"
+                                   id="s3_bucket_name"
+                                   value="{{ project ? project.getS3BucketName() : '' }}"
+                                   placeholder="{{ 'project.form.s3_bucket_name_placeholder'|trans }}"
+                                   class="etfswui-form-input"
+                                   {{ stimulus_target('s3-credentials', 'bucketName') }}>
+                        </div>
+
+                        <div>
+                            <label for="s3_region" class="etfswui-form-label">{{ 'project.form.s3_region'|trans }}</label>
+                            <select name="s3_region"
+                                    id="s3_region"
+                                    class="etfswui-form-input"
+                                    {{ stimulus_target('s3-credentials', 'region') }}>
+                                <option value="">{{ 'project.form.s3_region_placeholder'|trans }}</option>
+                                {% set currentRegion = project ? project.getS3Region() : '' %}
+                                {% for region in ['us-east-1', 'us-east-2', 'us-west-1', 'us-west-2', 'eu-central-1', 'eu-west-1', 'eu-west-2', 'eu-west-3', 'eu-north-1', 'ap-northeast-1', 'ap-northeast-2', 'ap-southeast-1', 'ap-southeast-2', 'ap-south-1', 'sa-east-1'] %}
+                                    <option value="{{ region }}" {{ currentRegion == region ? 'selected' : '' }}>{{ region }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="s3_access_key_id" class="etfswui-form-label">{{ 'project.form.s3_access_key_id'|trans }}</label>
+                        <input type="text"
+                               name="s3_access_key_id"
+                               id="s3_access_key_id"
+                               value="{{ project ? project.getS3AccessKeyId() : '' }}"
+                               placeholder="{{ 'project.form.s3_access_key_id_placeholder'|trans }}"
+                               class="etfswui-form-input font-mono"
+                               {{ stimulus_target('s3-credentials', 'accessKeyId') }}>
+                    </div>
+
+                    <div>
+                        <label for="s3_secret_access_key" class="etfswui-form-label">{{ 'project.form.s3_secret_access_key'|trans }}</label>
+                        <input type="password"
+                               name="s3_secret_access_key"
+                               id="s3_secret_access_key"
+                               value="{{ project ? project.getS3SecretAccessKey() : '' }}"
+                               placeholder="{{ 'project.form.s3_secret_access_key_placeholder'|trans }}"
+                               class="etfswui-form-input"
+                               {{ stimulus_target('s3-credentials', 'secretAccessKey') }}
+                               {{ stimulus_action('s3-credentials', 'verify', 'blur') }}>
+                    </div>
+
+                    <div>
+                        <label for="s3_iam_role_arn" class="etfswui-form-label">
+                            {{ 'project.form.s3_iam_role_arn'|trans }}
+                            <span class="text-dark-500 dark:text-dark-400 font-normal">({{ 'common.optional'|trans }})</span>
+                        </label>
+                        <input type="text"
+                               name="s3_iam_role_arn"
+                               id="s3_iam_role_arn"
+                               value="{{ project ? project.getS3IamRoleArn() : '' }}"
+                               placeholder="{{ 'project.form.s3_iam_role_arn_placeholder'|trans }}"
+                               class="etfswui-form-input font-mono text-xs"
+                               {{ stimulus_target('s3-credentials', 'iamRoleArn') }}
+                               {{ stimulus_action('s3-credentials', 'verify', 'blur') }}>
+                        <p class="mt-1 text-xs text-dark-500 dark:text-dark-400">{{ 'project.form.s3_iam_role_arn_help'|trans }}</p>
+                    </div>
+
+                    <div>
+                        <label for="s3_key_prefix" class="etfswui-form-label">
+                            {{ 'project.form.s3_key_prefix'|trans }}
+                            <span class="text-dark-500 dark:text-dark-400 font-normal">({{ 'common.optional'|trans }})</span>
+                        </label>
+                        <input type="text"
+                               name="s3_key_prefix"
+                               id="s3_key_prefix"
+                               value="{{ project ? project.getS3KeyPrefix() : '' }}"
+                               placeholder="{{ 'project.form.s3_key_prefix_placeholder'|trans }}"
+                               class="etfswui-form-input"
+                               {{ stimulus_target('s3-credentials', 'keyPrefix') }}>
+                        <p class="mt-1 text-xs text-dark-500 dark:text-dark-400">{{ 'project.form.s3_key_prefix_help'|trans }}</p>
+                    </div>
+
+                    {# Verification status area #}
+                    <div class="mt-2" {{ stimulus_target('s3-credentials', 'status') }}>
+                        {# Spinner (hidden by default) #}
+                        <div class="hidden flex items-center gap-2" {{ stimulus_target('s3-credentials', 'spinner') }}>
+                            <svg class="animate-spin h-4 w-4 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            <span class="text-sm text-blue-600 dark:text-blue-400">{{ 'project.form.verifying_s3_credentials'|trans }}</span>
+                        </div>
+                        {# Success (hidden by default) #}
+                        <div class="hidden flex items-center gap-2" {{ stimulus_target('s3-credentials', 'success') }}>
+                            <svg class="h-4 w-4 text-green-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clip-rule="evenodd" />
+                            </svg>
+                            <span class="text-sm text-green-600 dark:text-green-400">{{ 'project.form.s3_credentials_verified'|trans }}</span>
+                        </div>
+                        {# Error (hidden by default) #}
+                        <div class="hidden flex items-center gap-2" {{ stimulus_target('s3-credentials', 'error') }}>
+                            <svg class="h-4 w-4 text-red-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clip-rule="evenodd" />
+                            </svg>
+                            <span class="text-sm text-red-600 dark:text-red-400">{{ 'project.form.s3_credentials_failed'|trans }}</span>
+                        </div>
+                    </div>
                 </div>
-                <div class="bg-white dark:bg-dark-900 rounded-md p-3 border border-dark-200 dark:border-dark-600">
-                    <p class="font-medium text-dark-800 dark:text-dark-200 mb-2">{{ 'project.form.classic_token_alternative'|trans }}</p>
-                    <ul class="list-disc list-inside space-y-1 text-dark-600 dark:text-dark-400">
-                        <li>{{ 'project.form.repo_scope'|trans|raw }}</li>
-                    </ul>
+            </details>
+
                 </div>
-                <p class="text-xs text-dark-500 dark:text-dark-500">
-                    {{ 'project.form.create_token_link'|trans }} <a href="https://github.com/settings/tokens" target="_blank" rel="noopener noreferrer" class="text-primary-600 dark:text-primary-400 hover:underline">github.com/settings/tokens</a>
-                </p>
-            </div>
+            </details>
 
             <div class="flex items-center justify-end gap-3 pt-4 border-t border-dark-200 dark:border-dark-700">
                 <a href="{{ path('project_mgmt.presentation.list') }}"

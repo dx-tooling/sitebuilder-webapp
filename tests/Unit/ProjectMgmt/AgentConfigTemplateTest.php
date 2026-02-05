@@ -36,6 +36,31 @@ final class AgentConfigTemplateTest extends TestCase
         self::assertStringContainsString('working folder', $template->backgroundInstructions);
     }
 
+    public function testDefaultTemplateContainsRemoteContentAssetsSection(): void
+    {
+        $template = AgentConfigTemplate::forProjectType(ProjectType::DEFAULT);
+
+        self::assertStringContainsString('REMOTE CONTENT ASSETS', $template->backgroundInstructions);
+        self::assertStringContainsString('list_remote_content_asset_urls', $template->backgroundInstructions);
+        self::assertStringContainsString('get_remote_asset_info', $template->backgroundInstructions);
+    }
+
+    public function testDefaultTemplateContainsWorkspaceRulesSection(): void
+    {
+        $template = AgentConfigTemplate::forProjectType(ProjectType::DEFAULT);
+
+        self::assertStringContainsString('WORKSPACE RULES', $template->backgroundInstructions);
+        self::assertStringContainsString('get_workspace_rules', $template->backgroundInstructions);
+        self::assertStringContainsString('.sitebuilder/rules/', $template->backgroundInstructions);
+    }
+
+    public function testDefaultTemplateStepInstructionsStartsWithExploreStep(): void
+    {
+        $template = AgentConfigTemplate::forProjectType(ProjectType::DEFAULT);
+
+        self::assertStringStartsWith('1. EXPLORE', $template->stepInstructions);
+    }
+
     public function testDefaultTemplateStepInstructionsContainsWorkflowSteps(): void
     {
         $template = AgentConfigTemplate::forProjectType(ProjectType::DEFAULT);
@@ -51,5 +76,21 @@ final class AgentConfigTemplateTest extends TestCase
         $template = AgentConfigTemplate::forProjectType(ProjectType::DEFAULT);
 
         self::assertStringContainsString('Summarize', $template->outputInstructions);
+    }
+
+    public function testDefaultTemplateOutputInstructionsContainsPreviewUrlGuidance(): void
+    {
+        $template = AgentConfigTemplate::forProjectType(ProjectType::DEFAULT);
+
+        self::assertStringContainsString('get_preview_url', $template->outputInstructions);
+        self::assertStringContainsString('Markdown link', $template->outputInstructions);
+    }
+
+    public function testDefaultTemplateOutputInstructionsContainsCommitMessageGuidance(): void
+    {
+        $template = AgentConfigTemplate::forProjectType(ProjectType::DEFAULT);
+
+        self::assertStringContainsString('suggest_commit_message', $template->outputInstructions);
+        self::assertStringContainsString('imperative mood', $template->outputInstructions);
     }
 }

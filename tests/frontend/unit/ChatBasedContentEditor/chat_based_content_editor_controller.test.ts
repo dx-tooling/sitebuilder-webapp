@@ -1,6 +1,188 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import ChatBasedContentEditorController from "../../../../src/ChatBasedContentEditor/Presentation/Resources/assets/controllers/chat_based_content_editor_controller.ts";
 
+describe("ChatBasedContentEditorController handleSuggestionInsert", () => {
+    const createControllerWithInstructionTarget = (): {
+        controller: ChatBasedContentEditorController;
+        textarea: HTMLTextAreaElement;
+    } => {
+        const textarea = document.createElement("textarea");
+        textarea.id = "instruction";
+        document.body.appendChild(textarea);
+
+        const controller = Object.create(
+            ChatBasedContentEditorController.prototype,
+        ) as ChatBasedContentEditorController;
+        const state = controller as unknown as {
+            hasInstructionTarget: boolean;
+            instructionTarget: HTMLTextAreaElement;
+        };
+        state.hasInstructionTarget = true;
+        state.instructionTarget = textarea;
+
+        return { controller, textarea };
+    };
+
+    it("inserts suggestion text at cursor position in empty textarea", () => {
+        const { controller, textarea } = createControllerWithInstructionTarget();
+        textarea.value = "";
+        textarea.selectionStart = 0;
+        textarea.selectionEnd = 0;
+
+        const event = new CustomEvent("prompt-suggestions:insert", {
+            detail: { text: "Create a landing page" },
+        });
+        controller.handleSuggestionInsert(event);
+
+        expect(textarea.value).toBe("Create a landing page");
+        expect(textarea.selectionStart).toBe(21);
+        expect(textarea.selectionEnd).toBe(21);
+    });
+
+    it("inserts suggestion text at cursor position in middle of existing text", () => {
+        const { controller, textarea } = createControllerWithInstructionTarget();
+        textarea.value = "Please  for the homepage";
+        textarea.selectionStart = 7;
+        textarea.selectionEnd = 7;
+
+        const event = new CustomEvent("prompt-suggestions:insert", {
+            detail: { text: "add a hero section" },
+        });
+        controller.handleSuggestionInsert(event);
+
+        expect(textarea.value).toBe("Please add a hero section for the homepage");
+        expect(textarea.selectionStart).toBe(25);
+        expect(textarea.selectionEnd).toBe(25);
+    });
+
+    it("replaces selected text with suggestion", () => {
+        const { controller, textarea } = createControllerWithInstructionTarget();
+        textarea.value = "Please REPLACE_THIS for the homepage";
+        textarea.selectionStart = 7;
+        textarea.selectionEnd = 19;
+
+        const event = new CustomEvent("prompt-suggestions:insert", {
+            detail: { text: "add images" },
+        });
+        controller.handleSuggestionInsert(event);
+
+        expect(textarea.value).toBe("Please add images for the homepage");
+    });
+
+    it("appends suggestion at end when cursor is at end", () => {
+        const { controller, textarea } = createControllerWithInstructionTarget();
+        textarea.value = "Add a section about ";
+        textarea.selectionStart = 20;
+        textarea.selectionEnd = 20;
+
+        const event = new CustomEvent("prompt-suggestions:insert", {
+            detail: { text: "our team" },
+        });
+        controller.handleSuggestionInsert(event);
+
+        expect(textarea.value).toBe("Add a section about our team");
+    });
+
+    it("does nothing when text is empty", () => {
+        const { controller, textarea } = createControllerWithInstructionTarget();
+        textarea.value = "Original text";
+
+        const event = new CustomEvent("prompt-suggestions:insert", {
+            detail: { text: "" },
+        });
+        controller.handleSuggestionInsert(event);
+
+        expect(textarea.value).toBe("Original text");
+    });
+
+    it("does nothing when detail is missing", () => {
+        const { controller, textarea } = createControllerWithInstructionTarget();
+        textarea.value = "Original text";
+
+        const event = new CustomEvent("prompt-suggestions:insert", {
+            detail: null,
+        });
+        controller.handleSuggestionInsert(event as CustomEvent<{ text: string }>);
+
+        expect(textarea.value).toBe("Original text");
+    });
+
+    it("does nothing without instruction target", () => {
+        const controller = Object.create(
+            ChatBasedContentEditorController.prototype,
+        ) as ChatBasedContentEditorController;
+        const state = controller as unknown as { hasInstructionTarget: boolean };
+        state.hasInstructionTarget = false;
+
+        const event = new CustomEvent("prompt-suggestions:insert", {
+            detail: { text: "Some suggestion" },
+        });
+
+        // Should not throw
+        expect(() => controller.handleSuggestionInsert(event)).not.toThrow();
+    });
+});
+
+describe("ChatBasedContentEditorController handleUploadComplete", () => {
+    const createControllerWithInstructionTarget = (): {
+        controller: ChatBasedContentEditorController;
+        textarea: HTMLTextAreaElement;
+    } => {
+        const textarea = document.createElement("textarea");
+        textarea.id = "instruction";
+
+        const controller = Object.create(
+            ChatBasedContentEditorController.prototype,
+        ) as ChatBasedContentEditorController;
+        const state = controller as unknown as {
+            hasInstructionTarget: boolean;
+            instructionTarget: HTMLTextAreaElement;
+        };
+        state.hasInstructionTarget = true;
+        state.instructionTarget = textarea;
+
+        return { controller, textarea };
+    };
+
+    it("prepends system note to empty textarea", () => {
+        const { controller, textarea } = createControllerWithInstructionTarget();
+        textarea.value = "";
+
+        controller.handleUploadComplete();
+
+        expect(textarea.value).toBe("[System Note: a new remote asset has been uploaded]\n\n");
+    });
+
+    it("prepends system note to existing text", () => {
+        const { controller, textarea } = createControllerWithInstructionTarget();
+        textarea.value = "Please add an image here";
+
+        controller.handleUploadComplete();
+
+        expect(textarea.value).toBe("[System Note: a new remote asset has been uploaded]\n\nPlease add an image here");
+    });
+
+    it("does not duplicate system note if already present", () => {
+        const { controller, textarea } = createControllerWithInstructionTarget();
+        textarea.value = "[System Note: a new remote asset has been uploaded]\n\nSome text";
+
+        controller.handleUploadComplete();
+
+        expect(textarea.value).toBe("[System Note: a new remote asset has been uploaded]\n\nSome text");
+    });
+
+    it("does nothing without instruction target", () => {
+        const controller = Object.create(
+            ChatBasedContentEditorController.prototype,
+        ) as ChatBasedContentEditorController;
+        const state = controller as unknown as { hasInstructionTarget: boolean };
+        state.hasInstructionTarget = false;
+
+        // Should not throw
+        expect(() => controller.handleUploadComplete()).not.toThrow();
+    });
+});
+
 describe("ChatBasedContentEditorController activity indicators", () => {
     let controller: ChatBasedContentEditorController | null = null;
 

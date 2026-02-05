@@ -9,6 +9,7 @@
         "ext-ctype": "*",
         "ext-iconv": "*",
         "ext-mbstring": "*",
+        "aws/aws-sdk-php": "^3.369",
         "doctrine/dbal": "^4.4.1",
         "doctrine/doctrine-bundle": "^3.2.2",
         "doctrine/doctrine-migrations-bundle": "^3.7.0",
@@ -57,6 +58,10 @@
         "twig/extra-bundle": "^2.12|^3.23.0",
         "twig/intl-extra": "^3.23.0",
         "twig/twig": "^2.12|^3.23.0"
+    },
+    "require-dev": {
+        "pestphp/pest": "^4.3.2",
+        "phpunit/phpunit": "^12.5.8"
     },
     "config": {
         "allow-plugins": {

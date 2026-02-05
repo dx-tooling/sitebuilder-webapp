@@ -27,5 +27,8 @@
         "prettier": "^3.4.2",
         "tailwindcss": "^4.1.4",
         "vitest": "^2.1.0"
+    },
+    "overrides": {
+        "esbuild": ">=0.25.0"
     }
 }

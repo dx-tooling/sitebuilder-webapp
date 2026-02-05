@@ -1123,4 +1123,44 @@ export default class extends Controller {
         textarea.setSelectionRange(newPos, newPos);
         textarea.focus();
     }
+
+    /**
+     * Handle upload complete event from remote-asset-browser controller.
+     * Prepends a system note to the instruction textarea to inform the agent.
+     */
+    handleUploadComplete(): void {
+        if (!this.hasInstructionTarget) {
+            return;
+        }
+
+        const systemNote = "[System Note: a new remote asset has been uploaded]\n\n";
+        const textarea = this.instructionTarget;
+        const currentValue = textarea.value;
+
+        // Only prepend if not already present
+        if (!currentValue.startsWith(systemNote)) {
+            textarea.value = systemNote + currentValue;
+        }
+    }
+
+    /**
+     * Handle prompt suggestion insertion from prompt-suggestions controller.
+     * Inserts the suggestion text at the cursor position in the instruction textarea.
+     */
+    handleSuggestionInsert(event: CustomEvent<{ text: string }>): void {
+        const text = event.detail?.text;
+        if (!text || !this.hasInstructionTarget) {
+            return;
+        }
+
+        const textarea = this.instructionTarget;
+        const start = textarea.selectionStart;
+        const end = textarea.selectionEnd;
+
+        textarea.value = textarea.value.slice(0, start) + text + textarea.value.slice(end);
+
+        const newPos = start + text.length;
+        textarea.setSelectionRange(newPos, newPos);
+        textarea.focus();
+    }
 }

@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 namespace App\ProjectMgmt\Facade;
 
+use App\LlmContentEditor\Facade\Enum\LlmModelProvider;
+use App\Prefab\Facade\Dto\PrefabDto;
 use App\ProjectMgmt\Domain\Entity\Project;
+use App\ProjectMgmt\Domain\Service\ProjectService;
 use App\ProjectMgmt\Domain\ValueObject\AgentConfigTemplate;
 use App\ProjectMgmt\Facade\Dto\AgentConfigTemplateDto;
 use App\ProjectMgmt\Facade\Dto\ExistingLlmApiKeyDto;
@@ -26,7 +29,45 @@ final class ProjectMgmtFacade implements ProjectMgmtFacadeInterface
     public function __construct(
         private readonly EntityManagerInterface    $entityManager,
         private readonly GitHubUrlServiceInterface $gitHubUrlService,
+        private readonly ProjectService            $projectService,
     ) {
+    }
+
+    public function createProjectFromPrefab(string $organizationId, PrefabDto $prefab): string
+    {
+        $llmModelProvider = LlmModelProvider::tryFrom($prefab->llmModelProvider);
+        if ($llmModelProvider === null) {
+            throw new RuntimeException('Invalid prefab llm_model_provider: ' . $prefab->llmModelProvider);
+        }
+
+        $project = $this->projectService->create(
+            $organizationId,
+            $prefab->name,
+            $prefab->projectLink,
+            $prefab->githubAccessKey,
+            $llmModelProvider,
+            $prefab->llmApiKey,
+            ProjectType::DEFAULT,
+            Project::DEFAULT_AGENT_IMAGE,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            $prefab->keysVisible
+        );
+
+        $projectId = $project->getId();
+        if ($projectId === null) {
+            throw new RuntimeException('Prefab project creation failed: missing project ID.');
+        }
+
+        return $projectId;
     }
 
     public function getProjectInfo(string $id): ProjectInfoDto
@@ -65,25 +106,32 @@ final class ProjectMgmtFacade implements ProjectMgmtFacadeInterface
     /**
      * Returns unique LLM API keys with their abbreviated form and associated project names.
      * Used for the "reuse existing key" feature in the project form.
-     * Only includes keys from non-deleted projects.
+     * Only includes keys from non-deleted projects belonging to the specified organization.
+     *
+     * SECURITY: This method filters by organizationId to prevent cross-organization key leakage.
      *
      * @return list<ExistingLlmApiKeyDto>
      */
-    public function getExistingLlmApiKeys(): array
+    public function getExistingLlmApiKeys(string $organizationId): array
     {
         /** @var list<Project> $projects */
         $projects = $this->entityManager->createQueryBuilder()
             ->select('p')
             ->from(Project::class, 'p')
             ->where('p.deletedAt IS NULL')
+            ->andWhere('p.organizationId = :organizationId')
+            ->setParameter('organizationId', $organizationId)
             ->orderBy('p.name', 'ASC')
             ->getQuery()
             ->getResult();
 
-        // Group projects by API key
+        // Group projects by API key (exclude projects where keys are not visible to users)
         /** @var array<string, list<string>> $keyToProjects */
         $keyToProjects = [];
         foreach ($projects as $project) {
+            if (!$project->isKeysVisible()) {
+                continue;
+            }
             $apiKey = $project->getLlmApiKey();
             if ($apiKey === '') {
                 continue;
@@ -128,6 +176,12 @@ final class ProjectMgmtFacade implements ProjectMgmtFacadeInterface
             $project->getAgentStepInstructions(),
             $project->getAgentOutputInstructions(),
             $project->getRemoteContentAssetsManifestUrls(),
+            $project->getS3BucketName(),
+            $project->getS3Region(),
+            $project->getS3AccessKeyId(),
+            $project->getS3SecretAccessKey(),
+            $project->getS3IamRoleArn(),
+            $project->getS3KeyPrefix(),
         );
     }
 

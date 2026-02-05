@@ -8,6 +8,7 @@ use App\Account\Domain\Entity\AccountCore;
 use App\ChatBasedContentEditor\Domain\Entity\Conversation;
 use App\ChatBasedContentEditor\Domain\Enum\ConversationStatus;
 use App\ProjectMgmt\Domain\Entity\Project;
+use App\Tests\Support\SecurityUserLoginTrait;
 use App\WorkspaceMgmt\Domain\Entity\Workspace;
 use App\WorkspaceMgmt\Facade\Enum\WorkspaceStatus;
 use Doctrine\ORM\EntityManagerInterface;
@@ -22,13 +23,16 @@ use Throwable;
  * conversation access restrictions per workflow requirements.
  *
  * These tests ensure:
- * - Users cannot jump between conversations for a given workflow
- * - Only the conversation owner can view their conversation
- * - ONGOING conversations are fully interactive
- * - Finished conversations are displayed in read-only mode
+ * - Users can view conversations in read-only mode (including ongoing conversations)
+ * - Only the conversation owner can edit their conversation
+ * - ONGOING conversations are fully interactive for owners
+ * - ONGOING conversations are read-only for non-owners
+ * - Finished conversations are displayed in read-only mode for everyone
  */
 final class ChatBasedContentEditorControllerTest extends WebTestCase
 {
+    use SecurityUserLoginTrait;
+
     private KernelBrowser $client;
     private EntityManagerInterface $entityManager;
     private UserPasswordHasherInterface $passwordHasher;
@@ -64,7 +68,11 @@ final class ChatBasedContentEditorControllerTest extends WebTestCase
         }
     }
 
-    public function testShowConversationDeniesAccessWhenUserIsNotOwner(): void
+    /**
+     * Test that non-owners can view ongoing conversations in read-only mode.
+     * This allows other users to see the conversation (e.g., for review purposes).
+     */
+    public function testShowConversationAllowsReadOnlyAccessWhenUserIsNotOwner(): void
     {
         // Arrange: Create two users
         $ownerUser = $this->createTestUser('owner@example.com', 'password123');
@@ -87,14 +95,22 @@ final class ChatBasedContentEditorControllerTest extends WebTestCase
             ConversationStatus::ONGOING
         );
 
-        // Act: Try to access the conversation as otherUser
-        $this->client->loginUser($otherUser);
+        // Act: Access the conversation as otherUser (should be read-only)
+        $this->loginAsUser($this->client, $otherUser);
         $conversationId = $conversation->getId();
         self::assertNotNull($conversationId);
-        $this->client->request('GET', '/en/conversation/' . $conversationId);
+        $crawler = $this->client->request('GET', '/en/conversation/' . $conversationId);
 
-        // Assert: Access denied
-        self::assertResponseStatusCodeSame(403);
+        // Assert: Page renders successfully in read-only mode
+        self::assertResponseIsSuccessful();
+        self::assertSelectorTextContains('h1', 'Content editor');
+
+        // Assert: User cannot edit (no "Make changes" button)
+        $pageText = $crawler->text();
+        self::assertStringNotContainsString('Make changes', $pageText);
+
+        // Assert: Read-only message is shown
+        self::assertStringContainsString('cannot edit', $pageText);
     }
 
     public function testShowConversationDisplaysFinishedConversationInReadOnlyMode(): void
@@ -118,7 +134,7 @@ final class ChatBasedContentEditorControllerTest extends WebTestCase
         );
 
         // Act: Access the finished conversation
-        $this->client->loginUser($user);
+        $this->loginAsUser($this->client, $user);
         $conversationId = $conversation->getId();
         self::assertNotNull($conversationId);
         $crawler = $this->client->request('GET', '/en/conversation/' . $conversationId);
@@ -161,7 +177,7 @@ final class ChatBasedContentEditorControllerTest extends WebTestCase
         );
 
         // Act: Access the finished conversation as otherUser (not the owner)
-        $this->client->loginUser($otherUser);
+        $this->loginAsUser($this->client, $otherUser);
         $conversationId = $conversation->getId();
         self::assertNotNull($conversationId);
         $crawler = $this->client->request('GET', '/en/conversation/' . $conversationId);
@@ -196,7 +212,7 @@ final class ChatBasedContentEditorControllerTest extends WebTestCase
         );
 
         // Act: Access the conversation as the owner
-        $this->client->loginUser($user);
+        $this->loginAsUser($this->client, $user);
         $conversationId = $conversation->getId();
         self::assertNotNull($conversationId);
         $this->client->request('GET', '/en/conversation/' . $conversationId);
@@ -212,7 +228,7 @@ final class ChatBasedContentEditorControllerTest extends WebTestCase
         $user = $this->createTestUser('user@example.com', 'password123');
 
         // Act: Try to access a non-existent conversation
-        $this->client->loginUser($user);
+        $this->loginAsUser($this->client, $user);
         $this->client->request('GET', '/en/conversation/00000000-0000-0000-0000-000000000000');
 
         // Assert: 404 Not Found
@@ -253,7 +269,7 @@ final class ChatBasedContentEditorControllerTest extends WebTestCase
         );
 
         // Act: Access the ongoing conversation
-        $this->client->loginUser($user);
+        $this->loginAsUser($this->client, $user);
         $conversationId = $ongoingConversation->getId();
         self::assertNotNull($conversationId);
         $crawler = $this->client->request('GET', '/en/conversation/' . $conversationId);
@@ -284,6 +300,7 @@ final class ChatBasedContentEditorControllerTest extends WebTestCase
     private function createProject(string $name, string $gitUrl, string $githubToken): Project
     {
         $project = new Project(
+            'org-test-123',
             $name,
             $gitUrl,
             $githubToken,
@@ -349,7 +366,7 @@ final class ChatBasedContentEditorControllerTest extends WebTestCase
         self::assertNull($conversation->getLastActivityAt());
 
         // Act: Send heartbeat
-        $this->client->loginUser($user);
+        $this->loginAsUser($this->client, $user);
         $conversationId = $conversation->getId();
         self::assertNotNull($conversationId);
         $this->client->request('POST', '/en/conversation/' . $conversationId . '/heartbeat');
@@ -389,7 +406,7 @@ final class ChatBasedContentEditorControllerTest extends WebTestCase
         );
 
         // Act: Try to send heartbeat as other user
-        $this->client->loginUser($otherUser);
+        $this->loginAsUser($this->client, $otherUser);
         $conversationId = $conversation->getId();
         self::assertNotNull($conversationId);
         $this->client->request('POST', '/en/conversation/' . $conversationId . '/heartbeat');
@@ -419,7 +436,7 @@ final class ChatBasedContentEditorControllerTest extends WebTestCase
         );
 
         // Act: Try to send heartbeat on finished conversation
-        $this->client->loginUser($user);
+        $this->loginAsUser($this->client, $user);
         $conversationId = $conversation->getId();
         self::assertNotNull($conversationId);
         $this->client->request('POST', '/en/conversation/' . $conversationId . '/heartbeat');
@@ -434,7 +451,7 @@ final class ChatBasedContentEditorControllerTest extends WebTestCase
         $user = $this->createTestUser('user@example.com', 'password123');
 
         // Act: Try to send heartbeat to non-existent conversation
-        $this->client->loginUser($user);
+        $this->loginAsUser($this->client, $user);
         $this->client->request('POST', '/en/conversation/00000000-0000-0000-0000-000000000000/heartbeat');
 
         // Assert: 404 Not Found

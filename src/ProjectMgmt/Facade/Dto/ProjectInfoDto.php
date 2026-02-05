@@ -28,6 +28,24 @@ final readonly class ProjectInfoDto
         public string               $agentStepInstructions,
         public string               $agentOutputInstructions,
         public array                $remoteContentAssetsManifestUrls = [],
+        // S3 Upload Configuration (all optional)
+        public ?string              $s3BucketName = null,
+        public ?string              $s3Region = null,
+        public ?string              $s3AccessKeyId = null,
+        public ?string              $s3SecretAccessKey = null,
+        public ?string              $s3IamRoleArn = null,
+        public ?string              $s3KeyPrefix = null,
     ) {
+    }
+
+    /**
+     * Check if S3 upload is configured (all required fields present).
+     */
+    public function hasS3UploadConfigured(): bool
+    {
+        return $this->s3BucketName      !== null
+            && $this->s3Region          !== null
+            && $this->s3AccessKeyId     !== null
+            && $this->s3SecretAccessKey !== null;
     }
 }

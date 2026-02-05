@@ -12,7 +12,7 @@ namespace App\WorkspaceTooling\Infrastructure\Security;
  * - Validating that resolved paths are under the workspace root
  * - Detecting symlink escape attempts
  */
-final readonly class SecurePathResolver
+final readonly class SecurePathResolver implements SecurePathResolverInterface
 {
     public function __construct(
         private string $workspaceRoot

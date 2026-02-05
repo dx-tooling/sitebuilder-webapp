@@ -51,11 +51,21 @@ final class ProjectController extends AbstractController
     )]
     public function list(): Response
     {
+        $user = $this->getUser();
+
         // Release any stale conversations (where users left without finishing)
         // This ensures workspaces become available again after 5 minutes of inactivity
         $this->chatBasedContentEditorFacade->releaseStaleConversations();
 
-        $projects = $this->projectService->findAll();
+        // Get the user's active organization
+        $organizationId = $this->getActiveOrganizationId();
+        if ($organizationId === null) {
+            $this->addFlash('error', $this->translator->trans('flash.error.no_organization'));
+
+            return $this->redirectToRoute('account.presentation.dashboard');
+        }
+
+        $projects = $this->projectService->findAllForOrganization($organizationId);
 
         $projectsWithStatus = [];
         foreach ($projects as $project) {
@@ -80,9 +90,14 @@ final class ProjectController extends AbstractController
 
             // If workspace is in review, get the conversation ID for read-only view
             $conversationId = null;
+            if ($workspace !== null) {
+                $conversationId = $this->chatBasedContentEditorFacade->getLatestConversationId($workspace->id);
+            }
+            /*
             if ($workspace !== null && $workspace->status === WorkspaceStatus::IN_REVIEW) {
                 $conversationId = $this->chatBasedContentEditorFacade->getLatestConversationId($workspace->id);
             }
+            */
 
             $projectsWithStatus[] = [
                 'project'          => $projectInfo,
@@ -93,9 +108,10 @@ final class ProjectController extends AbstractController
         }
 
         // Get soft-deleted projects for the "Deleted projects" section
-        $deletedProjects = $this->projectService->findAllDeleted();
+        $deletedProjects = $this->projectService->findAllDeletedForOrganization($organizationId);
 
         return $this->render('@project_mgmt.presentation/project_list.twig', [
+            'user'               => $user,
             'projectsWithStatus' => $projectsWithStatus,
             'deletedProjects'    => $deletedProjects,
         ]);
@@ -108,6 +124,14 @@ final class ProjectController extends AbstractController
     )]
     public function new(): Response
     {
+        // Get the user's active organization
+        $organizationId = $this->getActiveOrganizationId();
+        if ($organizationId === null) {
+            $this->addFlash('error', $this->translator->trans('flash.error.no_organization'));
+
+            return $this->redirectToRoute('account.presentation.dashboard');
+        }
+
         // Get default agent config template for new projects
         $defaultTemplate = $this->projectMgmtFacade->getAgentConfigTemplate(ProjectType::DEFAULT);
 
@@ -115,7 +139,7 @@ final class ProjectController extends AbstractController
             'project'               => null,
             'llmProviders'          => LlmModelProvider::cases(),
             'contentEditorBackends' => ContentEditorBackend::cases(),
-            'existingLlmKeys'       => $this->projectMgmtFacade->getExistingLlmApiKeys(),
+            'existingLlmKeys'       => $this->projectMgmtFacade->getExistingLlmApiKeys($organizationId),
             'agentConfigTemplate'   => $defaultTemplate,
         ]);
     }
@@ -171,7 +195,24 @@ final class ProjectController extends AbstractController
             return $this->redirectToRoute('project_mgmt.presentation.new');
         }
 
+        // Get the user's active organization
+        $organizationId = $this->getActiveOrganizationId();
+        if ($organizationId === null) {
+            $this->addFlash('error', $this->translator->trans('flash.error.no_organization'));
+
+            return $this->redirectToRoute('account.presentation.dashboard');
+        }
+
+        // S3 upload configuration (all optional)
+        $s3BucketName      = $this->nullIfEmpty($request->request->getString('s3_bucket_name'));
+        $s3Region          = $this->nullIfEmpty($request->request->getString('s3_region'));
+        $s3AccessKeyId     = $this->nullIfEmpty($request->request->getString('s3_access_key_id'));
+        $s3SecretAccessKey = $this->nullIfEmpty($request->request->getString('s3_secret_access_key'));
+        $s3IamRoleArn      = $this->nullIfEmpty($request->request->getString('s3_iam_role_arn'));
+        $s3KeyPrefix       = $this->nullIfEmpty($request->request->getString('s3_key_prefix'));
+
         $this->projectService->create(
+            $organizationId,
             $name,
             $gitUrl,
             $githubToken,
@@ -183,7 +224,13 @@ final class ProjectController extends AbstractController
             $agentBackgroundInstructions,
             $agentStepInstructions,
             $agentOutputInstructions,
-            $remoteContentAssetsManifestUrls
+            $remoteContentAssetsManifestUrls,
+            $s3BucketName,
+            $s3Region,
+            $s3AccessKeyId,
+            $s3SecretAccessKey,
+            $s3IamRoleArn,
+            $s3KeyPrefix
         );
         $this->addFlash('success', $this->translator->trans('flash.success.project_created'));
 
@@ -204,12 +251,26 @@ final class ProjectController extends AbstractController
             throw $this->createNotFoundException('Project not found.');
         }
 
+        // Get the user's active organization (for filtering existing LLM keys)
+        $organizationId = $this->getActiveOrganizationId();
+        if ($organizationId === null) {
+            $this->addFlash('error', $this->translator->trans('flash.error.no_organization'));
+
+            return $this->redirectToRoute('account.presentation.dashboard');
+        }
+
         // Filter out the current project's key from the reuse list
+        // Only show keys from the user's organization (security boundary)
         $currentKey      = $project->getLlmApiKey();
         $existingLlmKeys = array_values(array_filter(
-            $this->projectMgmtFacade->getExistingLlmApiKeys(),
+            $this->projectMgmtFacade->getExistingLlmApiKeys($organizationId),
             static fn (ExistingLlmApiKeyDto $key) => $key->apiKey !== $currentKey
         ));
+
+        // When keys are not visible (e.g. prefab project), do not send real keys to the template
+        $keysVisible        = $project->isKeysVisible();
+        $displayGithubToken = $keysVisible ? $project->getGithubToken() : '';
+        $displayLlmApiKey   = $keysVisible ? $project->getLlmApiKey() : '';
 
         // Get agent config template (used as fallback in template, but project values take precedence)
         $agentConfigTemplate = $this->projectMgmtFacade->getAgentConfigTemplate($project->getProjectType());
@@ -220,6 +281,9 @@ final class ProjectController extends AbstractController
             'contentEditorBackends' => ContentEditorBackend::cases(),
             'existingLlmKeys'       => $existingLlmKeys,
             'agentConfigTemplate'   => $agentConfigTemplate,
+            'keysVisible'           => $keysVisible,
+            'displayGithubToken'    => $displayGithubToken,
+            'displayLlmApiKey'      => $displayLlmApiKey,
         ]);
     }
 
@@ -245,10 +309,11 @@ final class ProjectController extends AbstractController
 
         $name                 = $request->request->getString('name');
         $gitUrl               = $request->request->getString('git_url');
-        $githubToken          = $request->request->getString('github_token');
+        $keysVisible          = $project->isKeysVisible();
+        $githubToken          = $keysVisible ? $request->request->getString('github_token') : $project->getGithubToken();
         $llmModelProvider     = LlmModelProvider::tryFrom($request->request->getString('llm_model_provider'));
         $contentEditorBackend = ContentEditorBackend::tryFrom($request->request->getString('content_editor_backend'));
-        $llmApiKey            = $request->request->getString('llm_api_key');
+        $llmApiKey            = $keysVisible ? $request->request->getString('llm_api_key') : $project->getLlmApiKey();
         $agentImage           = $this->resolveAgentImage($request);
 
         // Agent configuration (null means keep existing values)
@@ -257,7 +322,8 @@ final class ProjectController extends AbstractController
         $agentOutputInstructions         = $this->nullIfEmpty($request->request->getString('agent_output_instructions'));
         $remoteContentAssetsManifestUrls = $this->parseRemoteContentAssetsManifestUrls($request);
 
-        if ($name === '' || $gitUrl === '' || $githubToken === '' || $llmApiKey === '') {
+        $requireKeys = $keysVisible;
+        if ($name === '' || $gitUrl === '' || ($requireKeys && ($githubToken === '' || $llmApiKey === ''))) {
             $this->addFlash('error', $this->translator->trans('flash.error.all_fields_required'));
 
             return $this->redirectToRoute('project_mgmt.presentation.edit', ['id' => $id]);
@@ -281,6 +347,14 @@ final class ProjectController extends AbstractController
             return $this->redirectToRoute('project_mgmt.presentation.edit', ['id' => $id]);
         }
 
+        // S3 upload configuration (all optional)
+        $s3BucketName      = $this->nullIfEmpty($request->request->getString('s3_bucket_name'));
+        $s3Region          = $this->nullIfEmpty($request->request->getString('s3_region'));
+        $s3AccessKeyId     = $this->nullIfEmpty($request->request->getString('s3_access_key_id'));
+        $s3SecretAccessKey = $this->nullIfEmpty($request->request->getString('s3_secret_access_key'));
+        $s3IamRoleArn      = $this->nullIfEmpty($request->request->getString('s3_iam_role_arn'));
+        $s3KeyPrefix       = $this->nullIfEmpty($request->request->getString('s3_key_prefix'));
+
         $this->projectService->update(
             $project,
             $name,
@@ -294,7 +368,13 @@ final class ProjectController extends AbstractController
             $agentBackgroundInstructions,
             $agentStepInstructions,
             $agentOutputInstructions,
-            $remoteContentAssetsManifestUrls
+            $remoteContentAssetsManifestUrls,
+            $s3BucketName,
+            $s3Region,
+            $s3AccessKeyId,
+            $s3SecretAccessKey,
+            $s3IamRoleArn,
+            $s3KeyPrefix
         );
         $this->addFlash('success', $this->translator->trans('flash.success.project_updated'));
 
@@ -493,6 +573,38 @@ final class ProjectController extends AbstractController
         return new JsonResponse(['valid' => $valid]);
     }
 
+    #[Route(
+        path: '/projects/verify-s3-credentials',
+        name: 'project_mgmt.presentation.verify_s3_credentials',
+        methods: [Request::METHOD_POST]
+    )]
+    public function verifyS3Credentials(Request $request): JsonResponse
+    {
+        if (!$this->isCsrfTokenValid('verify_s3_credentials', $request->request->getString('_csrf_token'))) {
+            return new JsonResponse(['valid' => false, 'error' => $this->translator->trans('api.error.invalid_csrf')], 403);
+        }
+
+        $bucketName      = trim($request->request->getString('bucket_name'));
+        $region          = trim($request->request->getString('region'));
+        $accessKeyId     = trim($request->request->getString('access_key_id'));
+        $secretAccessKey = trim($request->request->getString('secret_access_key'));
+        $iamRoleArn      = trim($request->request->getString('iam_role_arn'));
+
+        if ($bucketName === '' || $region === '' || $accessKeyId === '' || $secretAccessKey === '') {
+            return new JsonResponse(['valid' => false, 'error' => $this->translator->trans('api.error.s3_required_fields')], 400);
+        }
+
+        $valid = $this->remoteContentAssetsFacade->verifyS3Credentials(
+            $bucketName,
+            $region,
+            $accessKeyId,
+            $secretAccessKey,
+            $iamRoleArn === '' ? null : $iamRoleArn
+        );
+
+        return new JsonResponse(['valid' => $valid]);
+    }
+
     /**
      * Resolve the agent image from the request.
      * If "custom" is selected, use the custom_agent_image field.
@@ -587,5 +699,23 @@ final class ProjectController extends AbstractController
         }
 
         return $parsed['scheme'] === 'http' || $parsed['scheme'] === 'https';
+    }
+
+    /**
+     * Get the currently active organization ID for the logged-in user.
+     */
+    private function getActiveOrganizationId(): ?string
+    {
+        $user = $this->getUser();
+        if ($user === null) {
+            return null;
+        }
+
+        $accountInfo = $this->accountFacade->getAccountInfoByEmail($user->getUserIdentifier());
+        if ($accountInfo === null) {
+            return null;
+        }
+
+        return $this->accountFacade->getCurrentlyActiveOrganizationIdForAccountCore($accountInfo->id);
     }
 }

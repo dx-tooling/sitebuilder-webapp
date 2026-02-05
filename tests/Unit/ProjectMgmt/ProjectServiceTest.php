@@ -23,6 +23,7 @@ final class ProjectServiceTest extends TestCase
 
         $service = new ProjectService($entityManager);
         $project = $service->create(
+            'org-123',
             'My Project',
             'https://github.com/org/repo.git',
             'github-token-123',
@@ -30,6 +31,7 @@ final class ProjectServiceTest extends TestCase
             'sk-test-key-123'
         );
 
+        self::assertSame('org-123', $project->getOrganizationId());
         self::assertSame('My Project', $project->getName());
         self::assertSame('https://github.com/org/repo.git', $project->getGitUrl());
         self::assertSame('github-token-123', $project->getGithubToken());
@@ -46,6 +48,7 @@ final class ProjectServiceTest extends TestCase
         $service      = new ProjectService($entityManager);
         $manifestUrls = ['https://cdn.example.com/manifest.json'];
         $project      = $service->create(
+            'org-123',
             'My Project',
             'https://github.com/org/repo.git',
             'token',
@@ -134,7 +137,7 @@ final class ProjectServiceTest extends TestCase
      */
     private function createProject(string $id, string $name, string $gitUrl, string $githubToken): Project
     {
-        $project = new Project($name, $gitUrl, $githubToken, LlmModelProvider::OpenAI, 'sk-test-key');
+        $project = new Project('org-123', $name, $gitUrl, $githubToken, LlmModelProvider::OpenAI, 'sk-test-key');
 
         // Use reflection to set the ID since it's normally set by Doctrine
         $reflection = new ReflectionClass($project);

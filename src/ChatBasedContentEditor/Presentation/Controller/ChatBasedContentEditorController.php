@@ -15,6 +15,7 @@ use App\ChatBasedContentEditor\Domain\Service\ConversationService;
 use App\ChatBasedContentEditor\Infrastructure\Adapter\DistFileScannerInterface;
 use App\ChatBasedContentEditor\Infrastructure\Message\RunEditSessionMessage;
 use App\ChatBasedContentEditor\Presentation\Service\ConversationContextUsageService;
+use App\ChatBasedContentEditor\Presentation\Service\PromptSuggestionsService;
 use App\ProjectMgmt\Facade\ProjectMgmtFacadeInterface;
 use App\RemoteContentAssets\Facade\RemoteContentAssetsFacadeInterface;
 use App\WorkspaceMgmt\Facade\Enum\WorkspaceStatus;
@@ -54,6 +55,7 @@ final class ChatBasedContentEditorController extends AbstractController
         private readonly DistFileScannerInterface        $distFileScanner,
         private readonly ConversationContextUsageService $contextUsageService,
         private readonly TranslatorInterface             $translator,
+        private readonly PromptSuggestionsService        $promptSuggestionsService,
     ) {
     }
 
@@ -245,13 +247,13 @@ final class ChatBasedContentEditorController extends AbstractController
         $isOwner    = $conversation->getUserId() === $accountInfo->id;
         $isFinished = $conversation->getStatus() !== ConversationStatus::ONGOING;
 
-        if (!$isOwner && !$isFinished) {
-            throw $this->createAccessDeniedException('You do not have access to this conversation.');
-        }
-
         // Determine if this is a read-only view (finished conversation)
         $readOnly = $conversation->getStatus() !== ConversationStatus::ONGOING;
         $canEdit  = !$readOnly;
+        if (!$isOwner && !$isFinished) {
+            $readOnly = true;
+            $canEdit  = false;
+        }
 
         // Get workspace info for status display
         $workspace   = $this->workspaceMgmtFacade->getWorkspaceById($conversation->getWorkspaceId());
@@ -310,6 +312,12 @@ final class ChatBasedContentEditorController extends AbstractController
 
         $contextUsage = $this->contextUsageService->getContextUsage($conversation);
 
+        // Load prompt suggestions only for editable sessions
+        $promptSuggestions = [];
+        if ($canEdit && $workspace !== null) {
+            $promptSuggestions = $this->promptSuggestionsService->getSuggestions($workspace->workspacePath);
+        }
+
         return $this->render('@chat_based_content_editor.presentation/chat_based_content_editor.twig', [
             'conversation'    => $conversation,
             'workspace'       => $workspace,
@@ -338,6 +346,7 @@ final class ChatBasedContentEditorController extends AbstractController
                 'lastChunkId' => count($activeSessionChunks) > 0 ? $activeSessionChunks[count($activeSessionChunks) - 1]['id'] : 0,
             ] : null,
             'remoteAssetBrowserWindowSize' => RemoteContentAssetsFacadeInterface::BROWSER_WINDOW_SIZE,
+            'promptSuggestions'            => $promptSuggestions,
         ]);
     }
 
@@ -600,5 +609,108 @@ final class ChatBasedContentEditorController extends AbstractController
         }
 
         return $this->json(['files' => $files]);
+    }
+
+    #[Route(
+        path: '/workspace/{workspaceId}/page-content',
+        name: 'chat_based_content_editor.presentation.page_content',
+        methods: [Request::METHOD_GET],
+        requirements: ['workspaceId' => '[a-f0-9-]{36}']
+    )]
+    public function getPageContent(string $workspaceId, Request $request): Response
+    {
+        $workspace = $this->workspaceMgmtFacade->getWorkspaceById($workspaceId);
+
+        if ($workspace === null) {
+            return $this->json(['error' => 'Workspace not found.'], Response::HTTP_NOT_FOUND);
+        }
+
+        $path = $request->query->getString('path');
+
+        if ($path === '') {
+            return $this->json(['error' => 'Path parameter is required.'], Response::HTTP_BAD_REQUEST);
+        }
+
+        // Map dist/ path to src/ for reading source files
+        $sourcePath = $this->mapDistPathToSrc($path);
+
+        try {
+            $content = $this->workspaceMgmtFacade->readWorkspaceFile($workspaceId, $sourcePath);
+
+            return $this->json(['content' => $content]);
+        } catch (Throwable $e) {
+            return $this->json(['error' => 'Failed to read file: ' . $e->getMessage()], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    #[Route(
+        path: '/workspace/{workspaceId}/save-page',
+        name: 'chat_based_content_editor.presentation.save_page',
+        methods: [Request::METHOD_POST],
+        requirements: ['workspaceId' => '[a-f0-9-]{36}']
+    )]
+    public function savePage(
+        string        $workspaceId,
+        Request       $request,
+        #[CurrentUser] UserInterface $user
+    ): Response {
+        if (!$this->isCsrfTokenValid('html_editor_save', $request->request->getString('_csrf_token'))) {
+            return $this->json(['error' => 'Invalid CSRF token.'], Response::HTTP_FORBIDDEN);
+        }
+
+        $workspace = $this->workspaceMgmtFacade->getWorkspaceById($workspaceId);
+
+        if ($workspace === null) {
+            return $this->json(['error' => 'Workspace not found.'], Response::HTTP_NOT_FOUND);
+        }
+
+        $path    = $request->request->getString('path');
+        $content = $request->request->getString('content');
+
+        if ($path === '') {
+            return $this->json(['error' => 'Path parameter is required.'], Response::HTTP_BAD_REQUEST);
+        }
+
+        // Map dist/ path to src/ for writing source files
+        $sourcePath = $this->mapDistPathToSrc($path);
+
+        try {
+            // Write the file to src/
+            $this->workspaceMgmtFacade->writeWorkspaceFile($workspaceId, $sourcePath, $content);
+
+            // Run build to update dist/ from src/
+            $this->workspaceMgmtFacade->runBuild($workspaceId);
+
+            // Get user email for commit author
+            $accountInfo = $this->getAccountInfo($user);
+
+            // Commit and push the changes (now includes both src/ and rebuilt dist/)
+            $this->workspaceMgmtFacade->commitAndPush(
+                $workspaceId,
+                'Manual HTML edit: ' . $sourcePath,
+                $accountInfo->email
+            );
+
+            return $this->json(['success' => true]);
+        } catch (Throwable $e) {
+            return $this->json(['error' => 'Failed to save file: ' . $e->getMessage()], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    /**
+     * Map a dist/ path to the corresponding src/ path.
+     *
+     * The HTML editor displays files from /dist but edits should be made to /src.
+     * After saving to /src, a build is run to update /dist.
+     *
+     * Example: dist/index.html -> src/index.html
+     */
+    private function mapDistPathToSrc(string $path): string
+    {
+        if (str_starts_with($path, 'dist/')) {
+            return 'src/' . substr($path, 5); // 'dist/' = 5 characters
+        }
+
+        return $path;
     }
 }
