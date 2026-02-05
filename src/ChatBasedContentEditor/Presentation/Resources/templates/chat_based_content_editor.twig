@@ -350,11 +350,14 @@
                             </div>{# end space-y-4 #}
                         </div>{# end overflow-hidden #}
                     </div>{# end container grid #}
+                {% endif %}
 
-                    {# Preview pages section - always visible #}
+                {# Preview pages section - visible for both edit and read-only modes #}
+                {% if workspace %}
                     <div {{ stimulus_controller('dist-files', {
                              pollUrl: path('chat_based_content_editor.presentation.dist_files', { workspaceId: workspace.id }),
-                             pollInterval: 3000
+                             pollInterval: 3000,
+                             readOnly: readOnly
                          }) }}
                          {{ stimulus_target('dist-files', 'container') }}
                          class="border-t border-dark-200 dark:border-dark-700 pt-6 hidden">
