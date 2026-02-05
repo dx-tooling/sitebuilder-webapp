@@ -148,7 +148,7 @@
                          loadError: 'editor.html_editor_load_error'|trans
                      }
                  }) }}
-                 data-action="html-editor:open->html-editor#openEditor"
+                 {{ stimulus_action('html-editor', 'openEditor', 'html-editor:open') }}
                  {% endif %}>
                 {% if workspace and not readOnly %}
                     <input type="hidden" name="_html_editor_csrf_token" value="{{ csrf_token('html_editor_save') }}">
