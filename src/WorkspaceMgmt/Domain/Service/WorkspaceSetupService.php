@@ -13,13 +13,10 @@ use App\WorkspaceMgmt\Infrastructure\Adapter\GitAdapterInterface;
 use App\WorkspaceMgmt\Infrastructure\SetupSteps\ProjectSetupStepsRegistryInterface;
 use App\WorkspaceMgmt\Infrastructure\SetupSteps\SetupStepsExecutorInterface;
 use Doctrine\ORM\EntityManagerInterface;
-use EnterpriseToolingForSymfony\SharedBundle\DateAndTime\Service\DateAndTimeService;
 use Exception;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Throwable;
-
-use function mb_substr;
 
 /**
  * Orchestrates workspace setup:
@@ -40,6 +37,7 @@ final class WorkspaceSetupService
         private readonly WorkspaceStatusGuardInterface      $statusGuard,
         private readonly ProjectSetupStepsRegistryInterface $setupStepsRegistry,
         private readonly SetupStepsExecutorInterface        $setupStepsExecutor,
+        private readonly BranchNameGeneratorInterface       $branchNameGenerator,
         private readonly EntityManagerInterface             $entityManager,
         private readonly LoggerInterface                    $logger,
     ) {
@@ -51,8 +49,10 @@ final class WorkspaceSetupService
      *
      * Can be called when workspace is already IN_SETUP (async flow where facade
      * already transitioned the status before dispatching the setup message).
+     *
+     * @param string $userEmail email of the user who triggered setup (used for human-friendly branch name)
      */
-    public function setup(Workspace $workspace): void
+    public function setup(Workspace $workspace, string $userEmail): void
     {
         $workspaceId = $workspace->getId();
         if ($workspaceId === null) {
@@ -77,7 +77,7 @@ final class WorkspaceSetupService
         }
 
         try {
-            $this->performSetup($workspace);
+            $this->performSetup($workspace, $userEmail);
 
             // Transition to AVAILABLE_FOR_CONVERSATION
             $workspace->setStatus(WorkspaceStatus::AVAILABLE_FOR_CONVERSATION);
@@ -109,7 +109,7 @@ final class WorkspaceSetupService
         return $this->workspaceRoot . '/' . $workspace->getId();
     }
 
-    private function performSetup(Workspace $workspace): void
+    private function performSetup(Workspace $workspace, string $userEmail): void
     {
         $workspaceId   = $workspace->getId();
         $workspacePath = $this->getWorkspacePath($workspace);
@@ -133,7 +133,7 @@ final class WorkspaceSetupService
         $this->gitAdapter->clone($projectInfo->gitUrl, $workspacePath, $projectInfo->githubToken);
 
         // Step 3: Generate branch name and checkout
-        $branchName = $this->generateBranchName($workspaceId);
+        $branchName = $this->branchNameGenerator->generate($workspaceId, $userEmail);
         $this->logger->debug('Creating branch', ['branchName' => $branchName]);
         $this->gitAdapter->checkoutNewBranch($workspacePath, $branchName);
 
@@ -167,13 +167,5 @@ final class WorkspaceSetupService
         $this->logger->info('Project setup steps completed', [
             'projectType' => $projectInfo->projectType->value,
         ]);
-    }
-
-    private function generateBranchName(string $workspaceId): string
-    {
-        $shortId   = mb_substr($workspaceId, 0, 8);
-        $timestamp = DateAndTimeService::getDateTimeImmutable()->format('Ymd-His');
-
-        return 'ws-' . $shortId . '-' . $timestamp;
     }
 }
