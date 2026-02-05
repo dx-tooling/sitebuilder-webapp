@@ -27,9 +27,12 @@ interface WorkspaceMgmtFacadeInterface
      * Returns immediately with workspace info. Check workspace status
      * to determine if setup is in progress.
      *
+     * @param string $projectId the project ID
+     * @param string $userEmail email of the user triggering setup (used for human-friendly branch name)
+     *
      * @return WorkspaceInfoDto workspace info (status may be IN_SETUP if setup was dispatched)
      */
-    public function dispatchSetupIfNeeded(string $projectId): WorkspaceInfoDto;
+    public function dispatchSetupIfNeeded(string $projectId, string $userEmail): WorkspaceInfoDto;
 
     /**
      * Transition workspace to IN_CONVERSATION status.

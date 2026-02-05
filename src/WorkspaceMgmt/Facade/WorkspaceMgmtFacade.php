@@ -66,7 +66,7 @@ final class WorkspaceMgmtFacade implements WorkspaceMgmtFacadeInterface
         return $this->toDto($workspace);
     }
 
-    public function dispatchSetupIfNeeded(string $projectId): WorkspaceInfoDto
+    public function dispatchSetupIfNeeded(string $projectId, string $userEmail): WorkspaceInfoDto
     {
         // Use transaction to prevent race conditions when creating workspace
         $this->entityManager->beginTransaction();
@@ -94,7 +94,7 @@ final class WorkspaceMgmtFacade implements WorkspaceMgmtFacadeInterface
                 $this->entityManager->flush();
 
                 // Dispatch async setup message
-                $this->messageBus->dispatch(new SetupWorkspaceMessage($workspaceId));
+                $this->messageBus->dispatch(new SetupWorkspaceMessage($workspaceId, $userEmail));
             }
 
             $this->entityManager->commit();
