@@ -14,6 +14,7 @@ interface DistFile {
 interface MockControllerState {
     pollUrlValue: string;
     pollIntervalValue: number;
+    readOnlyValue: boolean;
     hasListTarget: boolean;
     listTarget: HTMLElement | null;
     hasContainerTarget: boolean;
@@ -33,6 +34,7 @@ const createController = (
     // Default values
     state.pollUrlValue = "/workspace/test-id/dist-files";
     state.pollIntervalValue = 3000;
+    state.readOnlyValue = false;
 
     // Default targets (not present)
     state.hasListTarget = false;
@@ -219,6 +221,90 @@ describe("DistFilesController", () => {
             await runSinglePollCycle();
 
             expect(elements.list.children.length).toBe(3);
+
+            controller.disconnect();
+        });
+    });
+
+    describe("readOnly mode", () => {
+        it("should show preview link when readOnly is true", async () => {
+            const list = document.createElement("ul");
+            const container = document.createElement("div");
+            container.classList.add("hidden");
+            const controllerElement = document.createElement("div");
+
+            const controller = createController(
+                {
+                    hasListTarget: true,
+                    listTarget: list,
+                    hasContainerTarget: true,
+                    containerTarget: container,
+                    readOnlyValue: true,
+                },
+                controllerElement,
+            );
+
+            const files: DistFile[] = [{ path: "index.html", url: "/workspaces/ws-123/dist/index.html" }];
+            vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(JSON.stringify({ files }), { status: 200 }));
+
+            controller.connect();
+            await runSinglePollCycle();
+
+            const previewLink = list.querySelector('a[target="_blank"]');
+            expect(previewLink).not.toBeNull();
+            expect(previewLink?.getAttribute("href")).toBe("/workspaces/ws-123/dist/index.html");
+
+            controller.disconnect();
+        });
+
+        it("should show edit link when readOnly is false (default)", async () => {
+            const { controller, elements } = createFullController();
+            const files: DistFile[] = [{ path: "index.html", url: "/workspaces/ws-123/dist/index.html" }];
+
+            vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(JSON.stringify({ files }), { status: 200 }));
+
+            controller.connect();
+            await runSinglePollCycle();
+
+            const editLink = elements.list.querySelector('a[title="Edit HTML"]');
+            expect(editLink).not.toBeNull();
+
+            controller.disconnect();
+        });
+
+        it("should not show edit links for any file when readOnly is true", async () => {
+            const list = document.createElement("ul");
+            const container = document.createElement("div");
+            container.classList.add("hidden");
+            const controllerElement = document.createElement("div");
+
+            const controller = createController(
+                {
+                    hasListTarget: true,
+                    listTarget: list,
+                    hasContainerTarget: true,
+                    containerTarget: container,
+                    readOnlyValue: true,
+                },
+                controllerElement,
+            );
+
+            const files: DistFile[] = [
+                { path: "index.html", url: "/workspaces/ws-123/dist/index.html" },
+                { path: "about.html", url: "/workspaces/ws-123/dist/about.html" },
+                { path: "contact.html", url: "/workspaces/ws-123/dist/contact.html" },
+            ];
+            vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(JSON.stringify({ files }), { status: 200 }));
+
+            controller.connect();
+            await runSinglePollCycle();
+
+            const editLinks = list.querySelectorAll('a[title="Edit HTML"]');
+            expect(editLinks.length).toBe(0);
+
+            // But all preview links should be present
+            const previewLinks = list.querySelectorAll('a[target="_blank"]');
+            expect(previewLinks.length).toBe(3);
 
             controller.disconnect();
         });
