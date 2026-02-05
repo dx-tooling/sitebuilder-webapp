@@ -146,6 +146,9 @@ services:
         class: App\ChatBasedContentEditor\Facade\ChatBasedContentEditorFacade
 
     # Domain service bindings
+    App\WorkspaceMgmt\Domain\Service\BranchNameGeneratorInterface:
+        class: App\WorkspaceMgmt\Domain\Service\BranchNameGenerator
+
     App\WorkspaceMgmt\Domain\Service\WorkspaceStatusGuardInterface:
         class: App\WorkspaceMgmt\Domain\Service\WorkspaceStatusGuard
 

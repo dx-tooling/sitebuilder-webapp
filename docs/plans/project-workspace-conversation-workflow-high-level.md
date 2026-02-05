@@ -43,7 +43,7 @@ When a user wants to start a conversation on a project, and there is a workspace
 - The workspace is set into status IN_SETUP
 - The local workspace folder is removed
 - The git repository mapped to the project that is mapped to the workspace is cloned into the local workspace folder using the github token of the project
-- A new branch, whose name has the format `<abbreviated-workspace-id>-<date-and-time>`, is created from the main branch
+- A new branch, whose name has the format `<YYYY-MM-DD H:i:s>-usermailATdomainDOTtld-SHORTWORKSPACEID` (timestamp, sanitized user email, short workspace ID), is created from the main branch
 - The workspace is set into status AVAILABLE_FOR_CONVERSATION
 
 When a user wants to start a conversation on a project, and succeeds to do so because its workspace is in status AVAILABLE_FOR_CONVERSATION, then
