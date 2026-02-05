@@ -10,6 +10,10 @@ interface DistFilesResponse {
     error?: string;
 }
 
+interface HtmlEditorOpenEvent {
+    path: string;
+}
+
 /**
  * Stimulus controller for polling and displaying dist files.
  *
@@ -98,26 +102,47 @@ export default class extends Controller {
 
         for (const file of files) {
             const li = document.createElement("li");
-            const a = document.createElement("a");
-            a.href = file.url;
-            a.target = "_blank";
-            a.className =
-                "inline-flex items-center gap-1.5 text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 hover:underline";
-            a.innerHTML = `
-                <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+            const span = document.createElement("span");
+            span.className = "flex items-center space-x-2 whitespace-nowrap";
+
+            // Create edit link (icon only)
+            const editLink = document.createElement("a");
+            editLink.href = "#";
+            editLink.className = "etfswui-link-icon";
+            editLink.title = "Edit HTML";
+            editLink.innerHTML = `
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 flex-shrink-0">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125" />
                 </svg>
-                ${escapeHtml(file.path)}
             `;
-            li.appendChild(a);
+            editLink.addEventListener("click", (e) => {
+                e.preventDefault();
+                // Extract full path from URL: /workspaces/{workspaceId}/{fullPath} -> {fullPath}
+                const fullPath = file.url.split("/").slice(3).join("/");
+                this.openHtmlEditor(fullPath);
+            });
+
+            // Create preview link (icon + filename, inline to prevent line break)
+            const previewLink = document.createElement("a");
+            previewLink.href = file.url;
+            previewLink.target = "_blank";
+            previewLink.className =
+                "inline-flex items-center gap-1 text-primary-600 hover:text-primary-800 dark:text-primary-400 dark:hover:text-primary-300";
+            previewLink.title = "Open preview";
+            previewLink.innerHTML = `<svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg><span>${file.path}</span>`;
+
+            span.appendChild(editLink);
+            span.appendChild(previewLink);
+            li.appendChild(span);
             this.listTarget.appendChild(li);
         }
     }
-}
 
-function escapeHtml(s: string): string {
-    const div = document.createElement("div");
-    div.textContent = s;
-
-    return div.innerHTML;
+    private openHtmlEditor(path: string): void {
+        const event = new CustomEvent<HtmlEditorOpenEvent>("html-editor:open", {
+            bubbles: true,
+            detail: { path },
+        });
+        this.element.dispatchEvent(event);
+    }
 }

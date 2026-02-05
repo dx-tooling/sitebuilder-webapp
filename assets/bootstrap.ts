@@ -12,6 +12,7 @@ import LlmKeyVerificationController from "../src/ProjectMgmt/Presentation/Resour
 import ManifestUrlsController from "../src/ProjectMgmt/Presentation/Resources/assets/controllers/manifest_urls_controller.ts";
 import S3CredentialsController from "../src/ProjectMgmt/Presentation/Resources/assets/controllers/s3_credentials_controller.ts";
 import RemoteAssetBrowserController from "../src/RemoteContentAssets/Presentation/Resources/assets/controllers/remote_asset_browser_controller.ts";
+import HtmlEditorController from "../src/ChatBasedContentEditor/Presentation/Resources/assets/controllers/html_editor_controller.ts";
 
 const app = startStimulusApp();
 
@@ -25,5 +26,6 @@ app.register("llm-key-verification", LlmKeyVerificationController);
 app.register("manifest-urls", ManifestUrlsController);
 app.register("s3-credentials", S3CredentialsController);
 app.register("remote-asset-browser", RemoteAssetBrowserController);
+app.register("html-editor", HtmlEditorController);
 
 webuiBootstrap(app);

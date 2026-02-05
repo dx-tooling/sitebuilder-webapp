@@ -40,7 +40,7 @@
                  inProgress: 'js.editor.in_progress'|trans
              }
          }) }}
-         data-action="prompt-suggestions:insert->chat-based-content-editor#handleSuggestionInsert">
+            {{ stimulus_action('chat-based-content-editor', 'handleSuggestionInsert', 'prompt-suggestions:insert') }}>
 
         {# Flash messages #}
         {% for message in app.flashes('success') %}
@@ -104,175 +104,254 @@
             </div>
         {% endif %}
 
-        {# Header with project context #}
-        <div>
-            <div class="flex flex-col xl:flex-row xl:items-start xl:justify-between gap-4">
-                <div>
-                    <h1 class="text-2xl font-semibold text-dark-900 dark:text-dark-100">{{ 'editor.title'|trans }}</h1>
-                    {% if project %}
-                        <p class="text-dark-600 dark:text-dark-400 mt-1">
-                            {{ 'editor.working_on'|trans({'%project%': project.name})|raw }}
-                        </p>
-                    {% else %}
-                        <p class="text-dark-600 dark:text-dark-400 mt-1">{{ 'editor.description'|trans }}</p>
-                    {% endif %}
-                </div>
-                <div class="flex flex-wrap items-center gap-2 xl:justify-end">
-                    {% if canEdit %}
-                        <form method="POST" action="{{ path('chat_based_content_editor.presentation.finish', { conversationId: conversation.id }) }}" class="inline">
-                            <input type="hidden" name="_csrf_token" value="{{ csrf_token('conversation_finish') }}">
-                            <button type="submit"
-                                    class="px-3 py-1.5 rounded-md border border-dark-300 dark:border-dark-600 text-dark-700 dark:text-dark-300 text-sm font-medium hover:bg-dark-100 dark:hover:bg-dark-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:focus:ring-offset-dark-900">
-                                {{ 'editor.end_session'|trans }}
-                            </button>
-                        </form>
-                        <form method="POST" action="{{ path('chat_based_content_editor.presentation.send_to_review', { conversationId: conversation.id }) }}" class="inline">
-                            <input type="hidden" name="_csrf_token" value="{{ csrf_token('conversation_review') }}">
-                            <button type="submit"
-                                    class="px-3 py-1.5 rounded-md bg-primary-600 text-white text-sm font-medium hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:focus:ring-offset-dark-900">
-                                {{ 'editor.send_for_review'|trans }}
-                            </button>
-                        </form>
-                    {% endif %}
-                    <a href="{{ path('project_mgmt.presentation.list') }}"
-                       class="px-3 py-1.5 rounded-md border border-dark-300 dark:border-dark-600 text-dark-700 dark:text-dark-300 text-sm font-medium hover:bg-dark-100 dark:hover:bg-dark-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:focus:ring-offset-dark-900">
-                        {{ 'common.back_to_projects'|trans }}
-                    </a>
-                </div>
-            </div>
+        {# Action buttons - always visible, centered above header #}
+        <div class="flex flex-wrap justify-center items-center gap-2">
+            {% if canEdit %}
+                <form method="POST" action="{{ path('chat_based_content_editor.presentation.finish', { conversationId: conversation.id }) }}" class="inline">
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token('conversation_finish') }}">
+                    <button type="submit"
+                            class="px-3 py-1.5 rounded-md border border-dark-300 dark:border-dark-600 text-dark-700 dark:text-dark-300 text-sm font-medium hover:bg-dark-100 dark:hover:bg-dark-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:focus:ring-offset-dark-900">
+                        {{ 'editor.end_session'|trans }}
+                    </button>
+                </form>
+                <form method="POST" action="{{ path('chat_based_content_editor.presentation.send_to_review', { conversationId: conversation.id }) }}" class="inline">
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token('conversation_review') }}">
+                    <button type="submit"
+                            class="px-3 py-1.5 rounded-md bg-primary-600 text-white text-sm font-medium hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:focus:ring-offset-dark-900">
+                        {{ 'editor.send_for_review'|trans }}
+                    </button>
+                </form>
+            {% endif %}
+            <a href="{{ path('project_mgmt.presentation.list') }}"
+               class="px-3 py-1.5 rounded-md border border-dark-300 dark:border-dark-600 text-dark-700 dark:text-dark-300 text-sm font-medium hover:bg-dark-100 dark:hover:bg-dark-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:focus:ring-offset-dark-900">
+                {{ 'common.back_to_projects'|trans }}
+            </a>
         </div>
 
         {# Main content area - side-by-side on wide screens #}
         {% set hasRemoteAssets = workspace and not readOnly and project and project.remoteContentAssetsManifestUrls|length > 0 %}
         <div class="flex flex-col 2xl:flex-row 2xl:gap-8 2xl:items-start">
             {# Chat column - takes full width, or ~2/3 on wide screens #}
-            <div class="flex-1 min-w-0 space-y-6 {{ hasRemoteAssets ? '2xl:max-w-[65%]' : '' }}">
-                <div>
-                    <div {{ stimulus_target('chat-based-content-editor', 'messages') }}
-                         class="rounded-lg border border-dark-200 dark:border-dark-700 bg-white dark:bg-dark-800 p-4 min-h-[320px] max-h-[500px] 2xl:max-h-[600px] overflow-y-auto space-y-4">
-                        {% if turns is empty %}
-                            <p class="text-dark-500 dark:text-dark-400 text-sm">{{ 'editor.conversation_placeholder'|trans }}</p>
+            <div class="flex-1 min-w-0 space-y-6 {{ hasRemoteAssets ? '2xl:max-w-[65%]' : '' }}"
+                 {% if workspace and not readOnly %}
+                 {{ stimulus_controller('html-editor', {
+                     loadUrl: path('chat_based_content_editor.presentation.page_content', { workspaceId: workspace.id }),
+                     saveUrl: path('chat_based_content_editor.presentation.save_page', { workspaceId: workspace.id }),
+                     workspaceId: workspace.id,
+                     translations: {
+                         editing: 'editor.html_editor_editing'|trans,
+                         saveChanges: 'editor.html_editor_save_changes'|trans,
+                         close: 'editor.html_editor_close'|trans,
+                         saving: 'editor.html_editor_saving'|trans,
+                         saveSuccess: 'editor.html_editor_save_success'|trans,
+                         saveError: 'editor.html_editor_save_error'|trans,
+                         loadError: 'editor.html_editor_load_error'|trans
+                     }
+                 }) }}
+                 {{ stimulus_action('html-editor', 'openEditor', 'html-editor:open') }}
+                 {% endif %}>
+                {% if workspace and not readOnly %}
+                    <input type="hidden" name="_html_editor_csrf_token" value="{{ csrf_token('html_editor_save') }}">
+                {% endif %}
+
+                {# Chat area - slides up when HTML editor is open #}
+                <div {{ stimulus_target('html-editor', 'chatArea') }} class="grid grid-rows-[1fr] transition-[grid-template-rows] duration-300 ease-in-out">
+                    <div class="overflow-hidden">
+                        <div class="space-y-6">
+                            {# Header with project context (title only, buttons moved above) #}
+                            <div>
+                                <h1 class="text-2xl font-semibold text-dark-900 dark:text-dark-100">{{ 'editor.title'|trans }}</h1>
+                        {% if project %}
+                            <p class="text-dark-600 dark:text-dark-400 mt-1">
+                                {{ 'editor.working_on'|trans({'%project%': project.name})|raw }}
+                            </p>
                         {% else %}
-                            {% for turn in turns %}
-                                <div class="flex justify-end">
-                                    <div class="max-w-[85%] rounded-lg px-4 py-2 bg-primary-100 dark:bg-primary-900/30 text-dark-900 dark:text-dark-100 text-sm">{{ turn.instruction }}</div>
-                                </div>
-                                <div class="flex justify-start">
-                                    {# Note: Markdown rendering is handled by chat_based_content_editor_controller.ts #}
-                                    {# to avoid race conditions with technical container rendering #}
-                                    <div class="max-w-[85%] rounded-lg px-4 py-2 bg-dark-100 dark:bg-dark-700/50 text-dark-800 dark:text-dark-200 text-sm {{ turn.status == 'failed' ? 'border-l-2 border-red-500 pl-2' : '' }}"
-                                         data-turn-response="{{ turn.response ?: '' }}"></div>
-                                </div>
-                            {% endfor %}
+                            <p class="text-dark-600 dark:text-dark-400 mt-1">{{ 'editor.description'|trans }}</p>
                         {% endif %}
                     </div>
-                    <div class="flex justify-end mt-2">
-                        <label class="inline-flex items-center gap-1.5 text-xs text-dark-600 dark:text-dark-400 cursor-pointer select-none">
-                            <input type="checkbox"
-                                   {{ stimulus_target('chat-based-content-editor', 'autoScroll') }}
-                                   {{ stimulus_action('chat-based-content-editor', 'toggleAutoScroll', 'change') }}
-                                   checked
-                                   class="rounded border-dark-300 dark:border-dark-600 text-primary-600 focus:ring-primary-500 dark:focus:ring-offset-dark-800 w-3.5 h-3.5">
-                            <span>{{ 'editor.auto_scroll'|trans }}</span>
-                        </label>
-                    </div>
-                </div>
 
-                {# Context usage indicator - hide for read-only (no ongoing budget tracking) #}
-                {% if not readOnly %}
-                    <div {{ stimulus_target('chat-based-content-editor', 'contextUsage') }} class="space-y-1">
-                        <div class="flex items-center justify-between text-xs text-dark-600 dark:text-dark-400">
-                            <span {{ stimulus_target('chat-based-content-editor', 'contextUsageText') }}>AI budget: {{ contextUsage.usedTokens|number_format(0, '', ',') }} of {{ contextUsage.maxTokens|number_format(0, '', ',') }} used</span>
-                            <span {{ stimulus_target('chat-based-content-editor', 'contextUsageCost') }} class="font-medium">Est. ${{ contextUsage.totalCost|number_format(4, '.', ',') }}</span>
+                    <div>
+                        <div {{ stimulus_target('chat-based-content-editor', 'messages') }}
+                             class="rounded-lg border border-dark-200 dark:border-dark-700 bg-white dark:bg-dark-800 p-4 min-h-[320px] max-h-[500px] 2xl:max-h-[600px] overflow-y-auto space-y-4">
+                            {% if turns is empty %}
+                                <p class="text-dark-500 dark:text-dark-400 text-sm">{{ 'editor.conversation_placeholder'|trans }}</p>
+                            {% else %}
+                                {% for turn in turns %}
+                                    <div class="flex justify-end">
+                                        <div class="max-w-[85%] rounded-lg px-4 py-2 bg-primary-100 dark:bg-primary-900/30 text-dark-900 dark:text-dark-100 text-sm">{{ turn.instruction }}</div>
+                                    </div>
+                                    <div class="flex justify-start">
+                                        {# Note: Markdown rendering is handled by chat_based_content_editor_controller.ts #}
+                                        {# to avoid race conditions with technical container rendering #}
+                                        <div class="max-w-[85%] rounded-lg px-4 py-2 bg-dark-100 dark:bg-dark-700/50 text-dark-800 dark:text-dark-200 text-sm {{ turn.status == 'failed' ? 'border-l-2 border-red-500 pl-2' : '' }}"
+                                             data-turn-response="{{ turn.response ?: '' }}"></div>
+                                    </div>
+                                {% endfor %}
+                            {% endif %}
                         </div>
-                        <div class="h-1.5 w-full rounded-full bg-dark-200 dark:bg-dark-600 overflow-hidden">
-                            <div {{ stimulus_target('chat-based-content-editor', 'contextUsageBar') }}
-                                 class="h-full rounded-full bg-primary-500 dark:bg-primary-400 transition-[width] duration-300"
-                                 style="width: {{ contextUsage.maxTokens > 0 ? min(100 * contextUsage.usedTokens / contextUsage.maxTokens, 100) : 0 }}%"></div>
-                        </div>
-                    </div>
-                {% endif %}
-
-                {% if canEdit %}
-                    <form {{ stimulus_action('chat-based-content-editor', 'handleSubmit', 'submit') }}
-                          class="space-y-4">
-                        <input type="hidden" name="_csrf_token" value="{{ csrf_token('chat_based_content_editor_run') }}">
-                        <div>
-                            <label for="instruction" class="block text-sm font-medium text-dark-700 dark:text-dark-300 mb-1">{{ 'editor.input_label'|trans }}</label>
-                            <textarea {{ stimulus_target('chat-based-content-editor', 'instruction') }}
-                                      {{ stimulus_action('chat-based-content-editor', 'handleKeydown', 'keydown') }}
-                                      name="instruction"
-                                      id="instruction"
-                                      rows="3"
-                                      required
-                                      placeholder="{{ 'editor.input_placeholder'|trans }}"
-                                      class="w-full px-3 py-2 border border-dark-300 dark:border-dark-600 rounded-md bg-white dark:bg-dark-800 text-dark-900 dark:text-dark-100 text-sm"></textarea>
-                        </div>
-                        <div class="flex items-center gap-4">
-                            <button type="submit"
-                                    {{ stimulus_target('chat-based-content-editor', 'submit') }}
-                                    class="px-4 py-2 rounded-md bg-primary-600 text-white text-sm font-medium hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:focus:ring-offset-dark-900 disabled:opacity-50 disabled:cursor-not-allowed">
-                                {{ 'editor.make_changes'|trans }}
-                            </button>
-                            <label class="inline-flex items-center gap-1.5 text-sm text-dark-600 dark:text-dark-400 cursor-pointer select-none">
+                        <div class="flex justify-end mt-2">
+                            <label class="inline-flex items-center gap-1.5 text-xs text-dark-600 dark:text-dark-400 cursor-pointer select-none">
                                 <input type="checkbox"
-                                       {{ stimulus_target('chat-based-content-editor', 'submitOnEnter') }}
-                                       {{ stimulus_action('chat-based-content-editor', 'toggleSubmitOnEnter', 'change') }}
+                                       {{ stimulus_target('chat-based-content-editor', 'autoScroll') }}
+                                       {{ stimulus_action('chat-based-content-editor', 'toggleAutoScroll', 'change') }}
                                        checked
-                                       class="rounded border-dark-300 dark:border-dark-600 text-primary-600 focus:ring-primary-500 dark:focus:ring-offset-dark-800">
-                                <span>{{ 'editor.submit_on_enter'|trans }}</span>
+                                       class="rounded border-dark-300 dark:border-dark-600 text-primary-600 focus:ring-primary-500 dark:focus:ring-offset-dark-800 w-3.5 h-3.5">
+                                <span>{{ 'editor.auto_scroll'|trans }}</span>
                             </label>
                         </div>
-                    </form>
+                    </div>
 
-                    {# Prompt suggestions from .sitebuilder/prompt-suggestions.md #}
-                    {% if promptSuggestions is not empty %}
-                        <div {{ stimulus_controller('prompt-suggestions', { maxVisible: 3 }) }}
-                             class="mt-3">
-                            <h4 class="text-xs font-medium text-dark-500 dark:text-dark-400 mb-2">{{ 'editor.prompt_suggestions_headline'|trans }}</h4>
-                            <div class="flex flex-col gap-2">
-                                {% for suggestion in promptSuggestions %}
-                                    <button type="button"
-                                            {{ stimulus_target('prompt-suggestions', 'suggestion') }}
-                                            data-action="click->prompt-suggestions#insert mouseenter->prompt-suggestions#hoverStart mouseleave->prompt-suggestions#hoverEnd"
-                                            data-text="{{ suggestion }}"
-                                            class="prompt-suggestion px-3 py-1.5 text-xs border border-dark-300 dark:border-dark-600 text-dark-600 dark:text-dark-400 hover:bg-dark-100 dark:hover:bg-dark-700 hover:text-dark-900 dark:hover:text-dark-100 cursor-pointer {{ loop.index > 3 ? 'hidden' : '' }}">
-                                        {{ suggestion }}
-                                    </button>
-                                {% endfor %}
+                    {# Context usage indicator - hide for read-only (no ongoing budget tracking) #}
+                    {% if not readOnly %}
+                        <div {{ stimulus_target('chat-based-content-editor', 'contextUsage') }} class="space-y-1">
+                            <div class="flex items-center justify-between text-xs text-dark-600 dark:text-dark-400">
+                                <span {{ stimulus_target('chat-based-content-editor', 'contextUsageText') }}>AI budget: {{ contextUsage.usedTokens|number_format(0, '', ',') }} of {{ contextUsage.maxTokens|number_format(0, '', ',') }} used</span>
+                                <span {{ stimulus_target('chat-based-content-editor', 'contextUsageCost') }} class="font-medium">Est. ${{ contextUsage.totalCost|number_format(4, '.', ',') }}</span>
                             </div>
-                            {% if promptSuggestions|length > 3 %}
-                                <div class="mt-2">
-                                    <button type="button"
-                                            {{ stimulus_target('prompt-suggestions', 'expandButton') }}
-                                            {{ stimulus_action('prompt-suggestions', 'expand', 'click') }}
-                                            class="text-xs text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 hover:underline">
-                                        {{ 'editor.show_more_suggestions'|trans({'%count%': promptSuggestions|length - 3}) }}
-                                    </button>
-                                    <button type="button"
-                                            {{ stimulus_target('prompt-suggestions', 'collapseButton') }}
-                                            {{ stimulus_action('prompt-suggestions', 'collapse', 'click') }}
-                                            class="hidden text-xs text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 hover:underline">
-                                        {{ 'editor.hide_suggestions'|trans }}
-                                    </button>
-                                </div>
-                            {% endif %}
+                            <div class="h-1.5 w-full rounded-full bg-dark-200 dark:bg-dark-600 overflow-hidden">
+                                <div {{ stimulus_target('chat-based-content-editor', 'contextUsageBar') }}
+                                     class="h-full rounded-full bg-primary-500 dark:bg-primary-400 transition-[width] duration-300"
+                                     style="width: {{ contextUsage.maxTokens > 0 ? min(100 * contextUsage.usedTokens / contextUsage.maxTokens, 100) : 0 }}%"></div>
+                            </div>
                         </div>
                     {% endif %}
-                {% else %}
-                    <div class="rounded-md bg-dark-100 dark:bg-dark-700/50 p-4">
-                        <p class="text-sm text-dark-600 dark:text-dark-400">
-                            {% if conversation.status.value == 'finished' %}
-                                {{ 'editor.session_finished'|trans }}
-                            {% else %}
-                                {{ 'editor.cannot_edit'|trans }}
-                            {% endif %}
-                        </p>
-                    </div>
-                {% endif %}
 
-                {# Preview pages section - hide for read-only #}
+                    {% if canEdit %}
+                        <form {{ stimulus_action('chat-based-content-editor', 'handleSubmit', 'submit') }}
+                              class="space-y-4">
+                            <input type="hidden" name="_csrf_token" value="{{ csrf_token('chat_based_content_editor_run') }}">
+                            <div>
+                                <label for="instruction" class="block text-sm font-medium text-dark-700 dark:text-dark-300 mb-1">{{ 'editor.input_label'|trans }}</label>
+                                <textarea {{ stimulus_target('chat-based-content-editor', 'instruction') }}
+                                          {{ stimulus_action('chat-based-content-editor', 'handleKeydown', 'keydown') }}
+                                          name="instruction"
+                                          id="instruction"
+                                          rows="3"
+                                          required
+                                          placeholder="{{ 'editor.input_placeholder'|trans }}"
+                                          class="w-full px-3 py-2 border border-dark-300 dark:border-dark-600 rounded-md bg-white dark:bg-dark-800 text-dark-900 dark:text-dark-100 text-sm"></textarea>
+                            </div>
+                            <div class="flex items-center gap-4">
+                                <button type="submit"
+                                        {{ stimulus_target('chat-based-content-editor', 'submit') }}
+                                        class="px-4 py-2 rounded-md bg-primary-600 text-white text-sm font-medium hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:focus:ring-offset-dark-900 disabled:opacity-50 disabled:cursor-not-allowed">
+                                    {{ 'editor.make_changes'|trans }}
+                                </button>
+                                <label class="inline-flex items-center gap-1.5 text-sm text-dark-600 dark:text-dark-400 cursor-pointer select-none">
+                                    <input type="checkbox"
+                                           {{ stimulus_target('chat-based-content-editor', 'submitOnEnter') }}
+                                           {{ stimulus_action('chat-based-content-editor', 'toggleSubmitOnEnter', 'change') }}
+                                           checked
+                                           class="rounded border-dark-300 dark:border-dark-600 text-primary-600 focus:ring-primary-500 dark:focus:ring-offset-dark-800">
+                                    <span>{{ 'editor.submit_on_enter'|trans }}</span>
+                                </label>
+                            </div>
+                        </form>
+
+                        {# Prompt suggestions from .sitebuilder/prompt-suggestions.md #}
+                        {% if promptSuggestions is not empty %}
+                            <div {{ stimulus_controller('prompt-suggestions', { maxVisible: 3 }) }}
+                                 class="mt-3">
+                                <h4 class="text-xs font-medium text-dark-500 dark:text-dark-400 mb-2">{{ 'editor.prompt_suggestions_headline'|trans }}</h4>
+                                <div class="flex flex-col gap-2">
+                                    {% for suggestion in promptSuggestions %}
+                                        <button type="button"
+                                                {{ stimulus_target('prompt-suggestions', 'suggestion') }}
+                                                {{ stimulus_action('prompt-suggestions', 'insert', 'click') }}
+                                                {{ stimulus_action('prompt-suggestions', 'hoverStart', 'mouseenter') }}
+                                                {{ stimulus_action('prompt-suggestions', 'hoverEnd', 'mouseleave') }}
+                                                data-text="{{ suggestion }}"
+                                                class="prompt-suggestion px-3 py-1.5 text-xs border border-dark-300 dark:border-dark-600 text-dark-600 dark:text-dark-400 hover:bg-dark-100 dark:hover:bg-dark-700 hover:text-dark-900 dark:hover:text-dark-100 cursor-pointer {{ loop.index > 3 ? 'hidden' : '' }}">
+                                            {{ suggestion }}
+                                        </button>
+                                    {% endfor %}
+                                </div>
+                                {% if promptSuggestions|length > 3 %}
+                                    <div class="mt-2">
+                                        <button type="button"
+                                                {{ stimulus_target('prompt-suggestions', 'expandButton') }}
+                                                {{ stimulus_action('prompt-suggestions', 'expand', 'click') }}
+                                                class="text-xs text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 hover:underline">
+                                            {{ 'editor.show_more_suggestions'|trans({'%count%': promptSuggestions|length - 3}) }}
+                                        </button>
+                                        <button type="button"
+                                                {{ stimulus_target('prompt-suggestions', 'collapseButton') }}
+                                                {{ stimulus_action('prompt-suggestions', 'collapse', 'click') }}
+                                                class="hidden text-xs text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 hover:underline">
+                                            {{ 'editor.hide_suggestions'|trans }}
+                                        </button>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        {% endif %}
+                    {% else %}
+                            <div class="rounded-md bg-dark-100 dark:bg-dark-700/50 p-4">
+                                <p class="text-sm text-dark-600 dark:text-dark-400">
+                                    {% if conversation.status.value == 'finished' %}
+                                        {{ 'editor.session_finished'|trans }}
+                                    {% else %}
+                                        {{ 'editor.cannot_edit'|trans }}
+                                    {% endif %}
+                                </p>
+                            </div>
+                        {% endif %}
+                        </div>{# end space-y-6 #}
+                    </div>{# end overflow-hidden #}
+                </div>{# end chatArea grid #}
+
+                {# HTML Editor section - slides down when opened #}
                 {% if workspace and not readOnly %}
+                    {# HTML Editor Container - collapsed by default, includes title #}
+                    <div {{ stimulus_target('html-editor', 'container') }} class="grid grid-rows-[0fr] transition-[grid-template-rows] duration-300 ease-in-out">
+                        <div class="overflow-hidden">
+                            <div class="space-y-4 pt-6">
+                                <h1 class="text-2xl font-semibold text-dark-900 dark:text-dark-100">{{ 'editor.html_editor_title'|trans }}</h1>
+
+                                {# Page name display #}
+                                <div class="flex items-center gap-2 text-sm">
+                                    <span class="text-dark-500 dark:text-dark-400">{{ 'editor.html_editor_editing'|trans }}</span>
+                                    <span {{ stimulus_target('html-editor', 'pageNameDisplay') }} class="font-medium text-dark-900 dark:text-dark-100"></span>
+                                </div>
+
+                                {# Loading indicator #}
+                                <div {{ stimulus_target('html-editor', 'loading') }} class="hidden py-8 text-center text-dark-500 dark:text-dark-400">
+                                    <svg class="animate-spin h-6 w-6 mx-auto mb-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                    {{ 'common.loading'|trans }}
+                                </div>
+
+                                {# Error message #}
+                                <div {{ stimulus_target('html-editor', 'error') }} class="hidden rounded-md bg-red-50 dark:bg-red-900/20 p-3 text-sm text-red-700 dark:text-red-400"></div>
+
+                                {# Success message #}
+                                <div {{ stimulus_target('html-editor', 'success') }} class="hidden rounded-md bg-green-50 dark:bg-green-900/20 p-3 text-sm text-green-700 dark:text-green-400"></div>
+
+                                {# Textarea for HTML editing #}
+                                <textarea {{ stimulus_target('html-editor', 'textarea') }}
+                                          class="w-full h-96 font-mono text-sm border border-dark-300 dark:border-dark-600 rounded-md p-3 bg-white dark:bg-dark-800 text-dark-900 dark:text-dark-100 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"></textarea>
+
+                                {# Action buttons #}
+                                <div class="flex gap-3">
+                                    <button type="button"
+                                            {{ stimulus_target('html-editor', 'saveButton') }}
+                                            {{ stimulus_action('html-editor', 'saveChanges', 'click') }}
+                                            class="px-4 py-2 rounded-md bg-primary-600 text-white text-sm font-medium hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:focus:ring-offset-dark-900 disabled:opacity-50 disabled:cursor-not-allowed">
+                                        {{ 'editor.html_editor_save_changes'|trans }}
+                                    </button>
+                                    <button type="button"
+                                            {{ stimulus_target('html-editor', 'closeButton') }}
+                                            {{ stimulus_action('html-editor', 'closeEditor', 'click') }}
+                                            class="px-4 py-2 rounded-md border border-dark-300 dark:border-dark-600 text-dark-700 dark:text-dark-300 text-sm font-medium hover:bg-dark-100 dark:hover:bg-dark-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:focus:ring-offset-dark-900 disabled:opacity-50 disabled:cursor-not-allowed">
+                                        {{ 'editor.html_editor_close'|trans }}
+                                    </button>
+                                </div>
+                            </div>{# end space-y-4 #}
+                        </div>{# end overflow-hidden #}
+                    </div>{# end container grid #}
+
+                    {# Preview pages section - always visible #}
                     <div {{ stimulus_controller('dist-files', {
                              pollUrl: path('chat_based_content_editor.presentation.dist_files', { workspaceId: workspace.id }),
                              pollInterval: 3000
@@ -297,7 +376,8 @@
                          uploadCsrfToken: project.hasS3UploadConfigured() ? csrf_token('remote_asset_upload') : '',
                          workspaceId: workspace.id
                      }) }}
-                     data-action="remote-asset-browser:insert->chat-based-content-editor#handleAssetInsert remote-asset-browser:uploadComplete->chat-based-content-editor#handleUploadComplete">
+                        {{ stimulus_action('chat-based-content-editor', 'handleAssetInsert', 'remote-asset-browser:insert') }}
+                        {{ stimulus_action('chat-based-content-editor', 'handleUploadComplete', 'remote-asset-browser:uploadComplete') }}>
                     {# On narrow screens: border-top separator. On wide screens: left border #}
                     <div class="border-t 2xl:border-t-0 2xl:border-l border-dark-200 dark:border-dark-700 pt-6 2xl:pt-0 2xl:pl-6">
                         <div class="flex items-center gap-2 mb-3">

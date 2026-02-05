@@ -73,4 +73,18 @@ interface WorkspaceToolingServiceInterface extends BaseWorkspaceToolingFacadeInt
      * @return string JSON object: {"rule-name": "content", ...}. Returns "{}" if no rules found.
      */
     public function getWorkspaceRules(): string;
+
+    /**
+     * Run build (npm run build) in the specified workspace.
+     *
+     * This method runs the build process in an isolated Docker container.
+     * Unlike the agent's runBuild() method, this does not require an AgentExecutionContext
+     * and takes explicit parameters.
+     *
+     * @param string $workspacePath absolute path to the workspace directory
+     * @param string $agentImage    Docker image to use for the build
+     *
+     * @return string the build output
+     */
+    public function runBuildInWorkspace(string $workspacePath, string $agentImage): string;
 }

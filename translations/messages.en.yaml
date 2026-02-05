@@ -172,6 +172,14 @@ project:
 # Chat-Based Content Editor vertical
 editor:
     title: "Content editor"
+    html_editor_title: "HTML editor"
+    html_editor_editing: "Editing:"
+    html_editor_save_changes: "Save changes"
+    html_editor_close: "Close editor"
+    html_editor_saving: "Saving..."
+    html_editor_save_success: "Changes saved successfully"
+    html_editor_save_error: "Failed to save changes"
+    html_editor_load_error: "Failed to load page content"
     working_on: "Working on <strong>%project%</strong>"
     description: "Describe what you want changed in plain language. The assistant will take care of the edits and show progress."
     end_session: "End session"
