@@ -60,7 +60,7 @@ For details, see:
 
 - Docker Desktop
 - Mise (https://mise.jdx.dev)
-- an unixoid system like Linux, macOS, or Windows Subsytem for Linux
+- an unixoid system like Linux, macOS, or Windows Subsystem for Linux
 
 ### Setup
 
