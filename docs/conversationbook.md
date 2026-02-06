@@ -36,7 +36,7 @@ Project (1) ──── (1) Workspace
                        │                 • Done   – terminal chunk (success or error)
                        │
                        └──── ConversationMessage (many per conversation)
-                                 • user / assistant / tool_call / tool_call_result
+                                 • user / assistant only (see section 4.4)
                                  • ordered by sequence number
                                  • fed back to the LLM as history on follow-up turns
 ```
@@ -136,6 +136,51 @@ Pending ──→ Running ──→ Completed
 | `Completed` | Agent finished successfully |
 | `Failed` | Agent threw an exception |
 | `Cancelled` | Handler acknowledged the cancellation and stopped |
+
+### 4.4 Dual Persistence: Chunks vs. Messages
+
+A single turn produces data for **two independent persistence paths**. This is an important architectural distinction that is easy to overlook.
+
+```
+                                  Generator yields chunks
+                                          │
+                           ┌──────────────┼──────────────┐
+                           │              │              │
+                     chunkType=text  chunkType=event  chunkType=message
+                           │              │              │
+                           ▼              ▼              ▼
+                    EditSessionChunk  EditSessionChunk  ConversationMessage
+                    (type: text)      (type: event)     (role: user/assistant)
+                           │              │              │
+                           └──────┬───────┘              │
+                                  │                      │
+                           edit_session_chunks      conversation_messages
+                           table                    table
+                                  │                      │
+                           Read by: frontend        Read by: RunEditSessionHandler
+                           (poll + page resume)     (loadPreviousMessages on next turn)
+                                  │                      │
+                           Purpose: UI display      Purpose: LLM history replay
+```
+
+**What goes where:**
+
+| Data | `EditSessionChunk` (events) | `ConversationMessage` |
+|------|-----------------------------|-----------------------|
+| User instruction | — | Yes (role: `user`) |
+| Assistant text response | Yes (type: `text`, streamed) | Yes (role: `assistant`, complete) |
+| Tool call request | Yes (type: `event`, kind: `tool_calling`, with truncated inputs) | **No** — filtered out |
+| Tool call result | Yes (type: `event`, kind: `tool_called`, with truncated output) | **No** — filtered out |
+| Inference start/stop | Yes (type: `event`) | — |
+| Done marker | Yes (type: `done`) | — |
+
+**Why tool calls are excluded from `ConversationMessage`:** Within a single turn, the LLM API exchange may involve multiple round-trips (user message → assistant requests tool call → tool result → assistant requests another tool call → ... → assistant final text response). The NeuronAI `CallbackChatHistory` holds the full chain in memory during the turn. But only the bookend messages — the user instruction and the assistant's final text response — are persisted to `conversation_messages`. Tool call and tool call result messages are intentionally filtered out in `LlmContentEditorFacade` because replaying them in subsequent API calls causes 400 Bad Request errors (tool call IDs and schemas must match the current request's tool definitions exactly).
+
+This means the LLM on subsequent turns sees a compressed history: user said X, assistant responded Y — without the intermediate tool mechanics. This works because the assistant's final text response is a natural-language summary of everything it did, including tool calls.
+
+**Why tool calls _are_ kept in `EditSessionChunk`:** The frontend's technical container (the expandable chevron on each turn) shows what the agent did — which tools it called, with what inputs, and what results it got. This data comes from `event` chunks, not from `ConversationMessage`. That is why tool call details survive page reloads and appear in the UI even though they are absent from the LLM's conversation history.
+
+The "Dump agent context" troubleshooting feature shows only the `ConversationMessage` path — i.e., what the LLM will actually see on the next turn.
 
 ---
 
@@ -409,7 +454,7 @@ User        Browser/Stimulus          Controller            Messenger Worker    
  │               │                        │                        │  stream from LLM   │
  │               │                        │                        │  ┌──────────────┐  │
  │               │                        │                        │  │ foreach chunk│  │
- │               │                        │                        │  │ refresh()    │  │
+ │               │                        │                        │  │ DBAL status  │  │
  │               │                        │                        │  │ persist chunk│─>│
  │               │                        │                        │  │ flush()      │  │
  │               │  GET /poll?after=N     │                        │  └──────────────┘  │
