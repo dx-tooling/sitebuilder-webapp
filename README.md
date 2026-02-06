@@ -1,10 +1,10 @@
 # SiteBuilder Webapp
 
-[![Build image](https://img.shields.io/github/actions/workflow/status/dx-tooling/sitebuilder-webapp/ci-build-app-image.yml?branch=main&label=Build%20image)](https://github.com/dx-tooling/sitebuilder-webapp/actions/workflows/ci-build-app-image.yml)
-[![Quality](https://img.shields.io/github/actions/workflow/status/dx-tooling/sitebuilder-webapp/ci-quality.yml?branch=main&label=Quality)](https://github.com/dx-tooling/sitebuilder-webapp/actions/workflows/ci-quality.yml)
-[![PHP tests](https://img.shields.io/github/actions/workflow/status/dx-tooling/sitebuilder-webapp/ci-tests-php.yml?branch=main&label=PHP%20tests)](https://github.com/dx-tooling/sitebuilder-webapp/actions/workflows/ci-tests-php.yml)
-[![Frontend tests](https://img.shields.io/github/actions/workflow/status/dx-tooling/sitebuilder-webapp/ci-tests-frontend.yml?branch=main&label=Frontend%20tests)](https://github.com/dx-tooling/sitebuilder-webapp/actions/workflows/ci-tests-frontend.yml)
-[![Frontend build](https://img.shields.io/github/actions/workflow/status/dx-tooling/sitebuilder-webapp/ci-build-frontend.yml?branch=main&label=Frontend%20build)](https://github.com/dx-tooling/sitebuilder-webapp/actions/workflows/ci-build-frontend.yml)
+[![Build image](https://img.shields.io/github/actions/workflow/status/dx-tooling/sitebuilder-webapp/ci.yml?branch=main&label=Build%20image)](https://github.com/dx-tooling/sitebuilder-webapp/actions/workflows/ci.yml)
+[![Frontend build](https://img.shields.io/github/actions/workflow/status/dx-tooling/sitebuilder-webapp/ci.yml?branch=main&label=Frontend%20build)](https://github.com/dx-tooling/sitebuilder-webapp/actions/workflows/ci.yml)
+[![Frontend tests](https://img.shields.io/github/actions/workflow/status/dx-tooling/sitebuilder-webapp/ci.yml?branch=main&label=Frontend%20tests)](https://github.com/dx-tooling/sitebuilder-webapp/actions/workflows/ci.yml)
+[![PHP tests](https://img.shields.io/github/actions/workflow/status/dx-tooling/sitebuilder-webapp/ci.yml?branch=main&label=PHP%20tests)](https://github.com/dx-tooling/sitebuilder-webapp/actions/workflows/ci.yml)
+[![Quality](https://img.shields.io/github/actions/workflow/status/dx-tooling/sitebuilder-webapp/ci.yml?branch=main&label=Quality)](https://github.com/dx-tooling/sitebuilder-webapp/actions/workflows/ci.yml)
 
 SiteBuilder is a Symfony web application for AI-assisted content editing. It gives non-engineering teams a normie-friendly way to edit web content projects like marketing pages, while still keeping engineers happy with Git-backed source control and clean PR workflows.
 
