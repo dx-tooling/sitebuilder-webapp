@@ -144,7 +144,7 @@ jobs:
                   docker compose exec -T app mise exec node -- php bin/console tailwind:build
                   docker compose exec -T app mise exec node -- php bin/console typescript:build
                   echo "Running integration tests..."
-                  docker compose exec -T app php bin/console doctrine:database:drop --env=test --if-not-exists --force
+                  docker compose exec -T app php bin/console doctrine:database:drop --env=test --if-exists --force
                   docker compose exec -T app php bin/console doctrine:database:create --env=test
                   docker compose exec -T app php bin/console doctrine:migrations:migrate --env=test --no-interaction
                   docker compose exec -T app php vendor/bin/pest -v tests/Integration
