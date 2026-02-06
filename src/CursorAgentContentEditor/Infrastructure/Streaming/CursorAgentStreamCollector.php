@@ -33,6 +33,18 @@ final class CursorAgentStreamCollector
     private string $assistantBuffer = '';
     private bool $hasEmittedText    = false;
 
+    /**
+     * Tracks the last full incoming message (before delta extraction) for dedup.
+     */
+    private string $lastFullMessage = '';
+
+    /**
+     * Tracks all full messages we've seen to detect repeats.
+     *
+     * @var list<string>
+     */
+    private array $seenMessages = [];
+
     public function __construct()
     {
         /** @var SplQueue<EditStreamChunkDto> $queue */
@@ -224,16 +236,140 @@ final class CursorAgentStreamCollector
             }
 
             if (($item['type'] ?? null) === 'text' && is_string($item['text'] ?? null)) {
-                $text  = $item['text'];
-                $delta = $this->resolveAssistantDelta($text);
-                if ($delta === '') {
+                $fullText = trim($item['text']);
+                if ($fullText === '') {
                     continue;
                 }
 
-                $this->hasEmittedText = true;
+                // Check if this full message (or very similar) was already seen
+                if ($this->isMessageAlreadySeen($fullText)) {
+                    // Update buffer for delta tracking but don't emit
+                    $this->assistantBuffer = $fullText;
+
+                    continue;
+                }
+
+                // Extract delta from cumulative text
+                $delta = $this->resolveAssistantDelta($fullText);
+                if (trim($delta) === '') {
+                    continue;
+                }
+
+                // Add paragraph break if we already have content and this is a new sentence
+                $trimmedDelta = trim($delta);
+                if ($this->hasEmittedText && $this->shouldAddParagraphBreak($trimmedDelta)) {
+                    $this->chunks->enqueue(new EditStreamChunkDto('text', "\n\n"));
+                }
+
+                $this->hasEmittedText  = true;
+                $this->lastFullMessage = $fullText;
+                $this->recordSeenMessage($fullText);
                 $this->chunks->enqueue(new EditStreamChunkDto('text', $delta));
             }
         }
+    }
+
+    /**
+     * Check if a message (or very similar) was already seen.
+     */
+    private function isMessageAlreadySeen(string $message): bool
+    {
+        // Check against last full message first (most common case)
+        if ($this->isSimilarToMessage($message, $this->lastFullMessage)) {
+            return true;
+        }
+
+        // Check against all seen messages for exact or near duplicates
+        foreach ($this->seenMessages as $seen) {
+            if ($this->isSimilarToMessage($message, $seen)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Check if two messages are similar enough to be considered duplicates.
+     */
+    private function isSimilarToMessage(string $a, string $b): bool
+    {
+        if ($a === '' || $b === '') {
+            return false;
+        }
+
+        // Exact match
+        if ($a === $b) {
+            return true;
+        }
+
+        // One is a prefix of the other (cumulative update - the longer one is the "real" message)
+        if (str_starts_with($a, $b) || str_starts_with($b, $a)) {
+            return true;
+        }
+
+        // For messages of similar length, check similarity
+        $lenA = mb_strlen($a);
+        $lenB = mb_strlen($b);
+
+        // Only check similarity for messages of similar length (within 20%)
+        if (min($lenA, $lenB) / max($lenA, $lenB) < 0.8) {
+            return false;
+        }
+
+        // Use levenshtein for short texts
+        if ($lenA <= 255 && $lenB <= 255) {
+            $distance   = levenshtein($a, $b);
+            $similarity = 1 - ($distance / max($lenA, $lenB));
+
+            return $similarity > 0.85;
+        }
+
+        // For longer texts, check if they share a long common prefix
+        $commonLen = 0;
+        $minLen    = min($lenA, $lenB);
+        for ($i = 0; $i < $minLen; ++$i) {
+            if ($a[$i] !== $b[$i]) {
+                break;
+            }
+            ++$commonLen;
+        }
+
+        return $commonLen / $minLen > 0.85;
+    }
+
+    /**
+     * Record a message as seen (keep only recent messages to limit memory).
+     */
+    private function recordSeenMessage(string $message): void
+    {
+        // Only record substantial messages
+        if (mb_strlen($message) < 20) {
+            return;
+        }
+
+        $this->seenMessages[] = $message;
+
+        // Keep only the last 20 messages to limit memory
+        if (count($this->seenMessages) > 20) {
+            array_shift($this->seenMessages);
+        }
+    }
+
+    /**
+     * Determine if we should add a paragraph break before this text.
+     */
+    private function shouldAddParagraphBreak(string $text): bool
+    {
+        $text = trim($text);
+        if ($text === '') {
+            return false;
+        }
+
+        // Add paragraph if the new text starts with a capital letter (new sentence)
+        $firstChar = mb_substr($text, 0, 1);
+
+        return preg_match('/[A-Z]/', $firstChar) === 1;
     }
 
     /**
@@ -245,6 +381,8 @@ final class CursorAgentStreamCollector
             $this->resultSuccess      = true;
             $this->resultErrorMessage = null;
 
+            // Only emit result text if NO text was streamed during the session.
+            // The result is a complete summary that duplicates the streamed content.
             $result = $event['result'] ?? null;
             if (!$this->hasEmittedText && is_string($result) && $result !== '') {
                 $this->chunks->enqueue(new EditStreamChunkDto('text', $result));
@@ -331,12 +469,20 @@ final class CursorAgentStreamCollector
         return mb_substr($value, 0, $maxLength) . '...';
     }
 
+    /**
+     * Resolve the delta from cumulative assistant text.
+     *
+     * The Cursor agent streams assistant messages cumulatively - each message
+     * contains all text so far, not just the new part. We need to extract
+     * only the new text (delta) to avoid duplicates.
+     */
     private function resolveAssistantDelta(string $incoming): string
     {
         if ($incoming === '') {
             return '';
         }
 
+        // If incoming starts with the buffer, extract just the new part
         if ($this->assistantBuffer !== '' && str_starts_with($incoming, $this->assistantBuffer)) {
             $delta                 = substr($incoming, strlen($this->assistantBuffer));
             $this->assistantBuffer = $incoming;
@@ -344,9 +490,44 @@ final class CursorAgentStreamCollector
             return $delta;
         }
 
-        $this->assistantBuffer .= $incoming;
+        // Check if the buffer ends with the beginning of incoming (overlap case)
+        if ($this->assistantBuffer !== '') {
+            $overlap = $this->findOverlap($this->assistantBuffer, $incoming);
+            if ($overlap > 0) {
+                $delta                 = substr($incoming, $overlap);
+                $this->assistantBuffer = $this->assistantBuffer . $delta;
+
+                return $delta;
+            }
+        }
+
+        // Check if this exact text was already in the buffer (complete duplicate)
+        if (str_contains($this->assistantBuffer, $incoming)) {
+            return '';
+        }
+
+        // New independent text segment - update buffer and return
+        $this->assistantBuffer = $incoming;
 
         return $incoming;
+    }
+
+    /**
+     * Find how many characters of $suffix's beginning overlap with $prefix's end.
+     */
+    private function findOverlap(string $prefix, string $suffix): int
+    {
+        $maxCheck = min(strlen($prefix), strlen($suffix));
+
+        for ($len = $maxCheck; $len > 0; --$len) {
+            $prefixEnd   = substr($prefix, -$len);
+            $suffixStart = substr($suffix, 0, $len);
+            if ($prefixEnd === $suffixStart) {
+                return $len;
+            }
+        }
+
+        return 0;
     }
 
     /**

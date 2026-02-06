@@ -914,6 +914,20 @@ export default class extends Controller {
                 wrap.textContent = `✖ ${e.errorMessage ?? tr.unknownError}`;
                 wrap.classList.add("text-red-600/70", "dark:text-red-400/70");
                 break;
+            case "build_start":
+                wrap.textContent = "▶ Building workspace…";
+                wrap.classList.add("text-blue-600/70", "dark:text-blue-400/70");
+                break;
+            case "build_complete": {
+                const result = (e.toolResult ?? "").slice(0, 200);
+                wrap.innerHTML = `◀ Build completed. ${escapeHtml(result)}${(e.toolResult?.length ?? 0) > 200 ? "…" : ""}`;
+                wrap.classList.add("text-green-600/70", "dark:text-green-400/70");
+                break;
+            }
+            case "build_error":
+                wrap.textContent = `✖ Build failed: ${e.errorMessage ?? tr.unknownError}`;
+                wrap.classList.add("text-red-600/70", "dark:text-red-400/70");
+                break;
             default:
                 wrap.textContent = `[${e.kind}]`;
                 wrap.classList.add("text-dark-400", "dark:text-dark-500");
@@ -999,9 +1013,12 @@ export default class extends Controller {
     }
 
     private updateActivityIndicators(container: HTMLElement, event: AgentEvent): void {
-        // Only react to tool_calling events - Working badge tracks tool calls
-        if (event.kind === "tool_calling") {
+        // Working badge tracks tool calls and post-agent build
+        if (event.kind === "tool_calling" || event.kind === "build_start") {
             this.onToolCall(container);
+        }
+        if (event.kind === "build_complete" || event.kind === "build_error") {
+            this.completeActivityIndicators(container);
         }
     }
 

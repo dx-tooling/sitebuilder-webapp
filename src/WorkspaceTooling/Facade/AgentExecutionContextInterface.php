@@ -69,4 +69,11 @@ interface AgentExecutionContextInterface
      * @return string|null The suggested message, or null if none was set
      */
     public function getSuggestedCommitMessage(): ?string;
+
+    /**
+     * Get the Docker agent image to use for agent containers.
+     *
+     * @return string|null The agent image, or null if not set
+     */
+    public function getAgentImage(): ?string;
 }
