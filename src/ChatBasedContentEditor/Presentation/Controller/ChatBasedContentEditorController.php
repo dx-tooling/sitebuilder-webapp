@@ -271,8 +271,12 @@ final class ChatBasedContentEditorController extends AbstractController
         foreach ($conversation->getEditSessions() as $session) {
             $sessionStatus = $session->getStatus();
 
-            // Check if this is an active (Pending or Running) session
-            if ($sessionStatus === EditSessionStatus::Pending || $sessionStatus === EditSessionStatus::Running) {
+            // Check if this is an active (Pending, Running, or Cancelling) session
+            if (
+                $sessionStatus    === EditSessionStatus::Pending
+                || $sessionStatus === EditSessionStatus::Running
+                || $sessionStatus === EditSessionStatus::Cancelling
+            ) {
                 $activeSession = $session;
                 // Collect existing chunks for this active session
                 foreach ($session->getChunks() as $chunk) {
@@ -319,15 +323,16 @@ final class ChatBasedContentEditorController extends AbstractController
         }
 
         return $this->render('@chat_based_content_editor.presentation/chat_based_content_editor.twig', [
-            'conversation'    => $conversation,
-            'workspace'       => $workspace,
-            'project'         => $projectInfo,
-            'turns'           => $turns,
-            'readOnly'        => $readOnly,
-            'canEdit'         => $canEdit,
-            'runUrl'          => $readOnly ? '' : $this->generateUrl('chat_based_content_editor.presentation.run'),
-            'pollUrlTemplate' => $readOnly ? '' : $this->generateUrl('chat_based_content_editor.presentation.poll', ['sessionId' => '__SESSION_ID__']),
-            'contextUsage'    => [
+            'conversation'      => $conversation,
+            'workspace'         => $workspace,
+            'project'           => $projectInfo,
+            'turns'             => $turns,
+            'readOnly'          => $readOnly,
+            'canEdit'           => $canEdit,
+            'runUrl'            => $readOnly ? '' : $this->generateUrl('chat_based_content_editor.presentation.run'),
+            'pollUrlTemplate'   => $readOnly ? '' : $this->generateUrl('chat_based_content_editor.presentation.poll', ['sessionId' => '__SESSION_ID__']),
+            'cancelUrlTemplate' => $readOnly ? '' : $this->generateUrl('chat_based_content_editor.presentation.cancel', ['sessionId' => '__SESSION_ID__']),
+            'contextUsage'      => [
                 'usedTokens'   => $contextUsage->usedTokens,
                 'maxTokens'    => $contextUsage->maxTokens,
                 'modelName'    => $contextUsage->modelName,
@@ -517,6 +522,52 @@ final class ChatBasedContentEditorController extends AbstractController
         return $this->json([
             'sessionId' => $sessionId,
         ]);
+    }
+
+    #[Route(
+        path: '/chat-based-content-editor/cancel/{sessionId}',
+        name: 'chat_based_content_editor.presentation.cancel',
+        methods: [Request::METHOD_POST]
+    )]
+    public function cancel(
+        string        $sessionId,
+        Request       $request,
+        #[CurrentUser] UserInterface $user
+    ): Response {
+        if (!$this->isCsrfTokenValid('chat_based_content_editor_run', $request->request->getString('_csrf_token'))) {
+            return $this->json(['error' => $this->translator->trans('api.error.invalid_csrf')], Response::HTTP_FORBIDDEN);
+        }
+
+        $session = $this->entityManager->find(EditSession::class, $sessionId);
+
+        if ($session === null) {
+            return $this->json(['error' => $this->translator->trans('api.error.session_not_found')], Response::HTTP_NOT_FOUND);
+        }
+
+        // Verify user owns this conversation
+        $accountInfo  = $this->getAccountInfo($user);
+        $conversation = $session->getConversation();
+
+        if ($conversation->getUserId() !== $accountInfo->id) {
+            return $this->json(['error' => $this->translator->trans('api.error.not_authorized')], Response::HTTP_FORBIDDEN);
+        }
+
+        $status = $session->getStatus();
+
+        // If already in a terminal state, nothing to cancel
+        if (
+            $status    === EditSessionStatus::Completed
+            || $status === EditSessionStatus::Failed
+            || $status === EditSessionStatus::Cancelled
+        ) {
+            return $this->json(['success' => true, 'alreadyFinished' => true]);
+        }
+
+        // Set to Cancelling so the handler can detect it cooperatively
+        $session->setStatus(EditSessionStatus::Cancelling);
+        $this->entityManager->flush();
+
+        return $this->json(['success' => true]);
     }
 
     #[Route(

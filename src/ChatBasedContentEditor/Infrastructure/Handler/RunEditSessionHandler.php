@@ -56,6 +56,15 @@ final readonly class RunEditSessionHandler
             return;
         }
 
+        // Pre-start cancellation check: if cancel arrived before the worker picked this up
+        if ($session->getStatus() === EditSessionStatus::Cancelling) {
+            EditSessionChunk::createDoneChunk($session, false, 'Cancelled before execution started.');
+            $session->setStatus(EditSessionStatus::Cancelled);
+            $this->entityManager->flush();
+
+            return;
+        }
+
         $session->setStatus(EditSessionStatus::Running);
         $this->entityManager->flush();
 
@@ -107,6 +116,17 @@ final readonly class RunEditSessionHandler
             );
 
             foreach ($generator as $chunk) {
+                // Cooperative cancellation: refresh to pick up Cancelling status set by cancel endpoint
+                $this->entityManager->refresh($session);
+
+                if ($session->getStatus() === EditSessionStatus::Cancelling) {
+                    EditSessionChunk::createDoneChunk($session, false, 'Cancelled by user.');
+                    $session->setStatus(EditSessionStatus::Cancelled);
+                    $this->entityManager->flush();
+
+                    return;
+                }
+
                 if ($chunk->chunkType === 'text' && $chunk->content !== null) {
                     EditSessionChunk::createTextChunk($session, $chunk->content);
                 } elseif ($chunk->chunkType === 'event' && $chunk->event !== null) {

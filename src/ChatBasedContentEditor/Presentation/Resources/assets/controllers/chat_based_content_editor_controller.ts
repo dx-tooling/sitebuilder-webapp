@@ -34,12 +34,15 @@ interface TranslationsData {
     unknownError: string;
     allSet: string;
     inProgress: string;
+    stop: string;
+    stopping: string;
 }
 
 export default class extends Controller {
     static values = {
         runUrl: String,
         pollUrlTemplate: String,
+        cancelUrlTemplate: String,
         conversationId: String,
         contextUsageUrl: String,
         contextUsage: Object,
@@ -53,6 +56,7 @@ export default class extends Controller {
         "messages",
         "instruction",
         "submit",
+        "cancelButton",
         "autoScroll",
         "submitOnEnter",
         "contextUsage",
@@ -63,6 +67,7 @@ export default class extends Controller {
 
     declare readonly runUrlValue: string;
     declare readonly pollUrlTemplateValue: string;
+    declare readonly cancelUrlTemplateValue: string;
     declare readonly conversationIdValue: string;
     declare readonly contextUsageUrlValue: string;
     declare readonly contextUsageValue: ContextUsageData;
@@ -77,6 +82,8 @@ export default class extends Controller {
     declare readonly instructionTarget: HTMLTextAreaElement;
     declare readonly hasSubmitTarget: boolean;
     declare readonly submitTarget: HTMLButtonElement;
+    declare readonly hasCancelButtonTarget: boolean;
+    declare readonly cancelButtonTarget: HTMLButtonElement;
     declare readonly hasAutoScrollTarget: boolean;
     declare readonly autoScrollTarget: HTMLInputElement;
     declare readonly hasSubmitOnEnterTarget: boolean;
@@ -289,6 +296,45 @@ export default class extends Controller {
         }
     }
 
+    async handleCancel(): Promise<void> {
+        if (!this.currentPollingState || !this.cancelUrlTemplateValue) {
+            return;
+        }
+
+        const cancelUrl = this.cancelUrlTemplateValue.replace("__SESSION_ID__", this.currentPollingState.sessionId);
+        const t = this.translationsValue;
+
+        // Disable immediately to prevent double-clicks
+        if (this.hasCancelButtonTarget) {
+            this.cancelButtonTarget.disabled = true;
+            this.cancelButtonTarget.textContent = t.stopping;
+        }
+
+        try {
+            const csrfInput = document.querySelector('input[name="_csrf_token"]') as HTMLInputElement | null;
+
+            const formData = new FormData();
+            if (csrfInput) {
+                formData.append("_csrf_token", csrfInput.value);
+            }
+
+            await fetch(cancelUrl, {
+                method: "POST",
+                headers: { "X-Requested-With": "XMLHttpRequest" },
+                body: formData,
+            });
+
+            // Don't stop polling — let the polling loop detect the cancelled status
+            // and done chunk naturally, so all pre-cancellation output is displayed.
+        } catch {
+            // If the cancel request fails, re-enable the button so the user can retry
+            if (this.hasCancelButtonTarget) {
+                this.cancelButtonTarget.disabled = false;
+                this.cancelButtonTarget.textContent = t.stop;
+            }
+        }
+    }
+
     private startPolling(sessionId: string, container: HTMLElement, startingLastId: number = 0): void {
         this.currentPollingState = {
             sessionId,
@@ -345,7 +391,7 @@ export default class extends Controller {
                 this.updateContextBar(data.contextUsage);
             }
 
-            if (data.status === "completed" || data.status === "failed") {
+            if (data.status === "completed" || data.status === "failed" || data.status === "cancelled") {
                 this.stopPolling();
                 this.resetSubmitButton();
 
@@ -381,6 +427,9 @@ export default class extends Controller {
         this.submitTarget.disabled = false;
         this.submitTarget.textContent = t.makeChanges;
         this.submitTarget.classList.remove("!bg-gradient-to-r", "!from-purple-500", "!to-blue-500", "animate-pulse");
+        if (this.hasCancelButtonTarget) {
+            this.cancelButtonTarget.classList.add("hidden");
+        }
     }
 
     private setWorkingState(): void {
@@ -389,6 +438,12 @@ export default class extends Controller {
             this.submitTarget.disabled = true;
             this.submitTarget.innerHTML = `<span class="inline-flex items-center gap-1.5">✨ ${escapeHtml(t.makingChanges)}</span>`;
             this.submitTarget.classList.add("!bg-gradient-to-r", "!from-purple-500", "!to-blue-500", "animate-pulse");
+        }
+        if (this.hasCancelButtonTarget) {
+            this.cancelButtonTarget.classList.remove("hidden");
+            this.cancelButtonTarget.disabled = false;
+            const t = this.translationsValue;
+            this.cancelButtonTarget.textContent = t.stop;
         }
     }
 

@@ -15,6 +15,7 @@
          {{ stimulus_controller('chat-based-content-editor', {
              runUrl: runUrl,
              pollUrlTemplate: pollUrlTemplate,
+             cancelUrlTemplate: cancelUrlTemplate,
              conversationId: conversation.id,
              contextUsage: contextUsage,
              contextUsageUrl: contextUsageUrl,
@@ -37,7 +38,9 @@
                  aiResponseReceived: 'js.editor.ai_response_received'|trans,
                  unknownError: 'js.editor.unknown_error'|trans,
                  allSet: 'js.editor.all_set'|trans,
-                 inProgress: 'js.editor.in_progress'|trans
+                 inProgress: 'js.editor.in_progress'|trans,
+                 stop: 'js.editor.stop'|trans,
+                 stopping: 'js.editor.stopping'|trans
              }
          }) }}
             {{ stimulus_action('chat-based-content-editor', 'handleSuggestionInsert', 'prompt-suggestions:insert') }}>
@@ -236,6 +239,12 @@
                                         {{ stimulus_target('chat-based-content-editor', 'submit') }}
                                         class="px-4 py-2 rounded-md bg-primary-600 text-white text-sm font-medium hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:focus:ring-offset-dark-900 disabled:opacity-50 disabled:cursor-not-allowed">
                                     {{ 'editor.make_changes'|trans }}
+                                </button>
+                                <button type="button"
+                                        {{ stimulus_target('chat-based-content-editor', 'cancelButton') }}
+                                        {{ stimulus_action('chat-based-content-editor', 'handleCancel') }}
+                                        class="hidden px-4 py-2 rounded-md bg-red-600 text-white text-sm font-medium hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 dark:focus:ring-offset-dark-900 disabled:opacity-50 disabled:cursor-not-allowed">
+                                    {{ 'editor.stop'|trans }}
                                 </button>
                                 <label class="inline-flex items-center gap-1.5 text-sm text-dark-600 dark:text-dark-400 cursor-pointer select-none">
                                     <input type="checkbox"

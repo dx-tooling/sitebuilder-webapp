@@ -5,7 +5,10 @@ declare(strict_types=1);
 namespace App\ChatBasedContentEditor\Facade;
 
 use App\ChatBasedContentEditor\Domain\Entity\Conversation;
+use App\ChatBasedContentEditor\Domain\Entity\EditSession;
+use App\ChatBasedContentEditor\Domain\Entity\EditSessionChunk;
 use App\ChatBasedContentEditor\Domain\Enum\ConversationStatus;
+use App\ChatBasedContentEditor\Domain\Enum\EditSessionStatus;
 use App\WorkspaceMgmt\Facade\WorkspaceMgmtFacadeInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use EnterpriseToolingForSymfony\SharedBundle\DateAndTime\Service\DateAndTimeService;
@@ -118,5 +121,56 @@ final class ChatBasedContentEditorFacade implements ChatBasedContentEditorFacade
             ->getOneOrNullResult();
 
         return $conversation?->getId();
+    }
+
+    public function recoverStuckEditSessions(int $runningTimeoutMinutes = 30, int $cancellingTimeoutMinutes = 2): int
+    {
+        $recovered = 0;
+
+        // Recover sessions stuck in Running
+        $runningCutoff = DateAndTimeService::getDateTimeImmutable()->modify("-{$runningTimeoutMinutes} minutes");
+
+        /** @var list<EditSession> $stuckRunning */
+        $stuckRunning = $this->entityManager->createQueryBuilder()
+            ->select('s')
+            ->from(EditSession::class, 's')
+            ->where('s.status = :status')
+            ->andWhere('s.createdAt < :cutoff')
+            ->setParameter('status', EditSessionStatus::Running)
+            ->setParameter('cutoff', $runningCutoff)
+            ->getQuery()
+            ->getResult();
+
+        foreach ($stuckRunning as $session) {
+            EditSessionChunk::createDoneChunk($session, false, 'Session timed out.');
+            $session->setStatus(EditSessionStatus::Failed);
+            ++$recovered;
+        }
+
+        // Recover sessions stuck in Cancelling
+        $cancellingCutoff = DateAndTimeService::getDateTimeImmutable()->modify("-{$cancellingTimeoutMinutes} minutes");
+
+        /** @var list<EditSession> $stuckCancelling */
+        $stuckCancelling = $this->entityManager->createQueryBuilder()
+            ->select('s')
+            ->from(EditSession::class, 's')
+            ->where('s.status = :status')
+            ->andWhere('s.createdAt < :cutoff')
+            ->setParameter('status', EditSessionStatus::Cancelling)
+            ->setParameter('cutoff', $cancellingCutoff)
+            ->getQuery()
+            ->getResult();
+
+        foreach ($stuckCancelling as $session) {
+            EditSessionChunk::createDoneChunk($session, false, 'Cancelled by user.');
+            $session->setStatus(EditSessionStatus::Cancelled);
+            ++$recovered;
+        }
+
+        if ($recovered > 0) {
+            $this->entityManager->flush();
+        }
+
+        return $recovered;
     }
 }

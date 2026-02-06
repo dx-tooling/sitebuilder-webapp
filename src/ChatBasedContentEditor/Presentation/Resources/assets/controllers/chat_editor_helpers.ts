@@ -112,7 +112,7 @@ export function isSessionComplete(chunk: PollChunk): boolean {
  * Determine if a session status indicates work is in progress.
  */
 export function isActiveSessionStatus(status: string): boolean {
-    return status === "pending" || status === "running";
+    return status === "pending" || status === "running" || status === "cancelling";
 }
 
 /**
