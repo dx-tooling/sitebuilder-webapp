@@ -30,20 +30,15 @@ final class CursorAgentStreamCollector
 
     private ?string $lastSessionId = null;
 
-    private string $assistantBuffer = '';
-    private bool $hasEmittedText    = false;
+    /**
+     * Accumulates streaming parts with spaces between them.
+     */
+    private string $accumulatedParts = '';
 
     /**
-     * Tracks the last full incoming message (before delta extraction) for dedup.
+     * Whether we've emitted any complete messages yet.
      */
-    private string $lastFullMessage = '';
-
-    /**
-     * Tracks all full messages we've seen to detect repeats.
-     *
-     * @var list<string>
-     */
-    private array $seenMessages = [];
+    private bool $hasEmittedText = false;
 
     public function __construct()
     {
@@ -216,6 +211,17 @@ final class CursorAgentStreamCollector
     }
 
     /**
+     * Handle assistant text messages.
+     *
+     * The Cursor agent streams messages as follows:
+     * 1. Individual word/phrase parts arrive WITH their natural spacing (leading/trailing spaces)
+     * 2. At the end, the COMPLETE message arrives with the full properly-formatted text
+     *
+     * Strategy:
+     * - Accumulate incoming parts by direct concatenation (preserving their natural spacing)
+     * - When a new part matches the accumulated string, it's the complete message
+     * - Emit the complete message and reset for the next paragraph
+     *
      * @param array<string, mixed> $event
      */
     private function handleAssistant(array $event): void
@@ -236,140 +242,86 @@ final class CursorAgentStreamCollector
             }
 
             if (($item['type'] ?? null) === 'text' && is_string($item['text'] ?? null)) {
-                $fullText = trim($item['text']);
-                if ($fullText === '') {
+                // Preserve original spacing - don't trim!
+                $incomingText       = $item['text'];
+                $trimmedIncoming    = trim($incomingText);
+                $trimmedAccumulated = trim($this->accumulatedParts);
+
+                if ($trimmedIncoming === '') {
                     continue;
                 }
 
-                // Check if this full message (or very similar) was already seen
-                if ($this->isMessageAlreadySeen($fullText)) {
-                    // Update buffer for delta tracking but don't emit
-                    $this->assistantBuffer = $fullText;
+                // Check if this incoming text matches our accumulated parts (complete message arrived)
+                if ($trimmedAccumulated !== '' && $this->isCompleteMessage($trimmedIncoming, $trimmedAccumulated)) {
+                    // Add paragraph break if we already have content
+                    if ($this->hasEmittedText) {
+                        $this->chunks->enqueue(new EditStreamChunkDto('text', "\n\n"));
+                    }
+
+                    // Emit the complete message (use the trimmed incoming text as it has proper spacing)
+                    $this->chunks->enqueue(new EditStreamChunkDto('text', $trimmedIncoming));
+                    $this->hasEmittedText   = true;
+                    $this->accumulatedParts = '';
 
                     continue;
                 }
 
-                // Extract delta from cumulative text
-                $delta = $this->resolveAssistantDelta($fullText);
-                if (trim($delta) === '') {
-                    continue;
-                }
-
-                // Add paragraph break if we already have content and this is a new sentence
-                $trimmedDelta = trim($delta);
-                if ($this->hasEmittedText && $this->shouldAddParagraphBreak($trimmedDelta)) {
-                    $this->chunks->enqueue(new EditStreamChunkDto('text', "\n\n"));
-                }
-
-                $this->hasEmittedText  = true;
-                $this->lastFullMessage = $fullText;
-                $this->recordSeenMessage($fullText);
-                $this->chunks->enqueue(new EditStreamChunkDto('text', $delta));
+                // This is a streaming part - accumulate by direct concatenation (preserves natural spacing)
+                $this->accumulatedParts .= $incomingText;
             }
         }
     }
 
     /**
-     * Check if a message (or very similar) was already seen.
+     * Check if the incoming text represents the complete version of accumulated parts.
+     *
+     * The complete message has proper spacing between words, while our accumulated
+     * parts are joined with single spaces. We compare them with normalized whitespace.
      */
-    private function isMessageAlreadySeen(string $message): bool
+    private function isCompleteMessage(string $incoming, string $accumulated): bool
     {
-        // Check against last full message first (most common case)
-        if ($this->isSimilarToMessage($message, $this->lastFullMessage)) {
+        // Normalize whitespace for comparison
+        $normalizedIncoming    = preg_replace('/\s+/', ' ', $incoming)    ?? $incoming;
+        $normalizedAccumulated = preg_replace('/\s+/', ' ', $accumulated) ?? $accumulated;
+
+        // Exact match after normalization
+        if ($normalizedIncoming === $normalizedAccumulated) {
             return true;
         }
 
-        // Check against all seen messages for exact or near duplicates
-        foreach ($this->seenMessages as $seen) {
-            if ($this->isSimilarToMessage($message, $seen)) {
-                return true;
-            }
-        }
+        // Check similarity (allow for minor differences like punctuation spacing)
+        $lenIncoming    = mb_strlen($normalizedIncoming);
+        $lenAccumulated = mb_strlen($normalizedAccumulated);
 
-        return false;
-    }
-
-    /**
-     * Check if two messages are similar enough to be considered duplicates.
-     */
-    private function isSimilarToMessage(string $a, string $b): bool
-    {
-        if ($a === '' || $b === '') {
+        // Must be similar length (within 10%)
+        if ($lenIncoming === 0 || $lenAccumulated === 0) {
             return false;
         }
 
-        // Exact match
-        if ($a === $b) {
-            return true;
-        }
-
-        // One is a prefix of the other (cumulative update - the longer one is the "real" message)
-        if (str_starts_with($a, $b) || str_starts_with($b, $a)) {
-            return true;
-        }
-
-        // For messages of similar length, check similarity
-        $lenA = mb_strlen($a);
-        $lenB = mb_strlen($b);
-
-        // Only check similarity for messages of similar length (within 20%)
-        if (min($lenA, $lenB) / max($lenA, $lenB) < 0.8) {
+        $lengthRatio = min($lenIncoming, $lenAccumulated) / max($lenIncoming, $lenAccumulated);
+        if ($lengthRatio < 0.9) {
             return false;
         }
 
-        // Use levenshtein for short texts
-        if ($lenA <= 255 && $lenB <= 255) {
-            $distance   = levenshtein($a, $b);
-            $similarity = 1 - ($distance / max($lenA, $lenB));
+        // For reasonably sized strings, use levenshtein
+        if ($lenIncoming <= 255 && $lenAccumulated <= 255) {
+            $distance   = levenshtein($normalizedIncoming, $normalizedAccumulated);
+            $similarity = 1 - ($distance / max($lenIncoming, $lenAccumulated));
 
-            return $similarity > 0.85;
+            return $similarity > 0.9;
         }
 
-        // For longer texts, check if they share a long common prefix
+        // For longer strings, check prefix similarity
+        $minLen    = min($lenIncoming, $lenAccumulated);
         $commonLen = 0;
-        $minLen    = min($lenA, $lenB);
         for ($i = 0; $i < $minLen; ++$i) {
-            if ($a[$i] !== $b[$i]) {
+            if ($normalizedIncoming[$i] !== $normalizedAccumulated[$i]) {
                 break;
             }
             ++$commonLen;
         }
 
-        return $commonLen / $minLen > 0.85;
-    }
-
-    /**
-     * Record a message as seen (keep only recent messages to limit memory).
-     */
-    private function recordSeenMessage(string $message): void
-    {
-        // Only record substantial messages
-        if (mb_strlen($message) < 20) {
-            return;
-        }
-
-        $this->seenMessages[] = $message;
-
-        // Keep only the last 20 messages to limit memory
-        if (count($this->seenMessages) > 20) {
-            array_shift($this->seenMessages);
-        }
-    }
-
-    /**
-     * Determine if we should add a paragraph break before this text.
-     */
-    private function shouldAddParagraphBreak(string $text): bool
-    {
-        $text = trim($text);
-        if ($text === '') {
-            return false;
-        }
-
-        // Add paragraph if the new text starts with a capital letter (new sentence)
-        $firstChar = mb_substr($text, 0, 1);
-
-        return preg_match('/[A-Z]/', $firstChar) === 1;
+        return $commonLen / $minLen > 0.9;
     }
 
     /**
@@ -467,67 +419,6 @@ final class CursorAgentStreamCollector
         }
 
         return mb_substr($value, 0, $maxLength) . '...';
-    }
-
-    /**
-     * Resolve the delta from cumulative assistant text.
-     *
-     * The Cursor agent streams assistant messages cumulatively - each message
-     * contains all text so far, not just the new part. We need to extract
-     * only the new text (delta) to avoid duplicates.
-     */
-    private function resolveAssistantDelta(string $incoming): string
-    {
-        if ($incoming === '') {
-            return '';
-        }
-
-        // If incoming starts with the buffer, extract just the new part
-        if ($this->assistantBuffer !== '' && str_starts_with($incoming, $this->assistantBuffer)) {
-            $delta                 = substr($incoming, strlen($this->assistantBuffer));
-            $this->assistantBuffer = $incoming;
-
-            return $delta;
-        }
-
-        // Check if the buffer ends with the beginning of incoming (overlap case)
-        if ($this->assistantBuffer !== '') {
-            $overlap = $this->findOverlap($this->assistantBuffer, $incoming);
-            if ($overlap > 0) {
-                $delta                 = substr($incoming, $overlap);
-                $this->assistantBuffer = $this->assistantBuffer . $delta;
-
-                return $delta;
-            }
-        }
-
-        // Check if this exact text was already in the buffer (complete duplicate)
-        if (str_contains($this->assistantBuffer, $incoming)) {
-            return '';
-        }
-
-        // New independent text segment - update buffer and return
-        $this->assistantBuffer = $incoming;
-
-        return $incoming;
-    }
-
-    /**
-     * Find how many characters of $suffix's beginning overlap with $prefix's end.
-     */
-    private function findOverlap(string $prefix, string $suffix): int
-    {
-        $maxCheck = min(strlen($prefix), strlen($suffix));
-
-        for ($len = $maxCheck; $len > 0; --$len) {
-            $prefixEnd   = substr($prefix, -$len);
-            $suffixStart = substr($suffix, 0, $len);
-            if ($prefixEnd === $suffixStart) {
-                return $len;
-            }
-        }
-
-        return 0;
     }
 
     /**

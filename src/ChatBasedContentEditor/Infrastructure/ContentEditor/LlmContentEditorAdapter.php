@@ -41,7 +41,7 @@ final class LlmContentEditorAdapter implements ContentEditorAdapterInterface
             $instruction,
             $previousMessages,
             $apiKey,
-            $agentConfig
+            $agentConfig ?? new AgentConfigDto('', '', '')
         );
     }
 
