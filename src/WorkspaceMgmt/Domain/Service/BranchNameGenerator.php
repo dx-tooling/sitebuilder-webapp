@@ -13,13 +13,14 @@ use function str_replace;
 /**
  * Generates human-friendly workspace branch names.
  *
- * Format: <YYYY-MM-DD H:i:s>-usermailATdomainDOTtld-SHORTWORKSPACEID
+ * Format: <YYYY-MM-DD_HH-MM-SS>-usermailATdomainDOTtld-SHORTWORKSPACEID
+ * (underscore and hyphens only in timestamp for URL/shell safety)
  */
 final class BranchNameGenerator implements BranchNameGeneratorInterface
 {
     public function generate(string $workspaceId, string $userEmail): string
     {
-        $timestamp = DateAndTimeService::getDateTimeImmutable()->format('Y-m-d H:i:s');
+        $timestamp = DateAndTimeService::getDateTimeImmutable()->format('Y-m-d_H-i-s');
         $sanitized = $this->sanitizeEmailForBranchName($userEmail);
         $shortId   = mb_substr($workspaceId, 0, 8);
 
