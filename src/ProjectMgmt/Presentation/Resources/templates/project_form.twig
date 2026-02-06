@@ -64,24 +64,6 @@
                 <p class="mt-1 text-xs text-dark-500 dark:text-dark-400">{{ 'project.form.github_access_key_help'|trans }}</p>
             </div>
 
-            {# LLM Model Provider #}
-            <fieldset>
-                <legend class="etfswui-form-label mb-2">{{ 'project.form.llm_provider'|trans }}</legend>
-                <div class="space-y-2">
-                    {% for provider in llmProviders %}
-                        <label class="etfswui-form-radio-wrapper">
-                            <input type="radio"
-                                   name="llm_model_provider"
-                                   value="{{ provider.value }}"
-                                   class="etfswui-form-radio"
-                                   {{ (project and project.llmModelProvider.value == provider.value) or (not project and loop.first) ? 'checked' : '' }}
-                                   required>
-                            <span class="etfswui-form-radio-label">{{ provider.displayName }}</span>
-                        </label>
-                    {% endfor %}
-                </div>
-            </fieldset>
-
             {% set currentBackend = project ? project.contentEditorBackend.value : 'llm' %}
             <div>
                 <label for="content_editor_backend" class="etfswui-form-label">{{ 'project.form.content_editor_backend'|trans }}</label>
@@ -98,8 +80,46 @@
                 <p class="mt-1 text-xs text-dark-500 dark:text-dark-400">{{ 'project.form.content_editor_backend_help'|trans }}</p>
             </div>
 
-            {# LLM API Key with verification #}
-            <div {{ stimulus_controller('llm-key-verification', {
+            {# Content editor model provider (depends on backend) #}
+            <div id="llm_provider_section" class="{{ currentBackend == 'llm' ? '' : 'hidden' }}">
+                <fieldset>
+                    <legend class="etfswui-form-label mb-2">{{ 'project.form.llm_provider'|trans }}</legend>
+                    <div class="space-y-2">
+                        {% for provider in llmProviders %}
+                            <label class="etfswui-form-radio-wrapper">
+                                <input type="radio"
+                                       name="llm_model_provider"
+                                       value="{{ provider.value }}"
+                                       class="etfswui-form-radio"
+                                       data-required="true"
+                                       {{ (project and project.llmModelProvider.value == provider.value) or (not project and loop.first) ? 'checked' : '' }}
+                                       {{ currentBackend == 'llm' ? 'required' : 'disabled' }}>
+                                <span class="etfswui-form-radio-label">{{ provider.displayName }}</span>
+                            </label>
+                        {% endfor %}
+                    </div>
+                </fieldset>
+            </div>
+            <div id="cursor_provider_section" class="{{ currentBackend == 'cursor_agent' ? '' : 'hidden' }}">
+                <fieldset>
+                    <legend class="etfswui-form-label mb-2">{{ 'project.form.cursor_provider'|trans }}</legend>
+                    <div class="space-y-2">
+                        <label class="etfswui-form-radio-wrapper">
+                            <input type="radio"
+                                   name="llm_model_provider"
+                                   value="{{ (llmProviders|first).value }}"
+                                   class="etfswui-form-radio"
+                                   data-required="true"
+                                   {{ currentBackend == 'cursor_agent' ? 'checked' : '' }}
+                                   {{ currentBackend == 'cursor_agent' ? 'required' : 'disabled' }}>
+                            <span class="etfswui-form-radio-label">{{ 'project.form.cursor_provider_auto'|trans }}</span>
+                        </label>
+                    </div>
+                </fieldset>
+            </div>
+
+            {# API Key (depends on backend) #}
+            <div id="llm_api_key_section" class="{{ currentBackend == 'llm' ? '' : 'hidden' }}" {{ stimulus_controller('llm-key-verification', {
                 verifyUrl: path('project_mgmt.presentation.verify_llm_key'),
                 csrfToken: csrf_token('verify_llm_key')
             }) }}>
@@ -108,7 +128,9 @@
                        name="llm_api_key"
                        id="llm_api_key"
                        value="{{ project ? (displayLlmApiKey is defined ? displayLlmApiKey : project.llmApiKey) : '' }}"
-                       {{ (keysVisible is not defined or keysVisible) ? 'required' : 'disabled' }}
+                       data-required="{{ (keysVisible is not defined or keysVisible) ? 'true' : 'false' }}"
+                       data-force-disabled="{{ (keysVisible is defined and not keysVisible) ? 'true' : 'false' }}"
+                       {{ (keysVisible is not defined or keysVisible) and currentBackend == 'llm' ? 'required' : 'disabled' }}
                        placeholder="{{ (keysVisible is defined and not keysVisible) ? 'project.form.keys_managed_by_deployment'|trans : 'project.form.placeholder_llm_api_key'|trans }}"
                        class="etfswui-form-input"
                        {{ stimulus_target('llm-key-verification', 'input') }}
@@ -160,6 +182,57 @@
                     </div>
                 {% endif %}
             </div>
+            <div id="cursor_api_key_section" class="{{ currentBackend == 'cursor_agent' ? '' : 'hidden' }}">
+                <label for="cursor_api_key" class="etfswui-form-label">{{ 'project.form.cursor_api_key'|trans }}</label>
+                <input type="password"
+                       name="llm_api_key"
+                       id="cursor_api_key"
+                       value="{{ project ? (displayLlmApiKey is defined ? displayLlmApiKey : project.llmApiKey) : '' }}"
+                       data-required="{{ (keysVisible is not defined or keysVisible) ? 'true' : 'false' }}"
+                       data-force-disabled="{{ (keysVisible is defined and not keysVisible) ? 'true' : 'false' }}"
+                       {{ (keysVisible is not defined or keysVisible) and currentBackend == 'cursor_agent' ? 'required' : 'disabled' }}
+                       placeholder="{{ (keysVisible is defined and not keysVisible) ? 'project.form.keys_managed_by_deployment'|trans : 'project.form.placeholder_cursor_api_key'|trans }}"
+                       class="etfswui-form-input">
+                <p class="mt-1 text-xs text-dark-500 dark:text-dark-400">{{ 'project.form.cursor_api_key_help'|trans }}</p>
+            </div>
+
+            <script>
+                document.getElementById('content_editor_backend').addEventListener('change', function() {
+                    const isLlm = this.value === 'llm';
+                    const llmProviderSection = document.getElementById('llm_provider_section');
+                    const cursorProviderSection = document.getElementById('cursor_provider_section');
+                    const llmApiKeySection = document.getElementById('llm_api_key_section');
+                    const cursorApiKeySection = document.getElementById('cursor_api_key_section');
+
+                    const toggleSection = (section, isActive) => {
+                        section.classList.toggle('hidden', !isActive);
+                        section.querySelectorAll('input, button').forEach((element) => {
+                            const forceDisabled = element.dataset.forceDisabled === 'true';
+                            if (forceDisabled) {
+                                element.disabled = true;
+                                element.required = false;
+                                return;
+                            }
+
+                            element.disabled = !isActive;
+                            if (element.dataset.required === 'true') {
+                                element.required = isActive;
+                            }
+                        });
+                    };
+
+                    toggleSection(llmProviderSection, isLlm);
+                    toggleSection(cursorProviderSection, !isLlm);
+                    toggleSection(llmApiKeySection, isLlm);
+                    toggleSection(cursorApiKeySection, !isLlm);
+
+                    const activeProviderSection = isLlm ? llmProviderSection : cursorProviderSection;
+                    const firstProvider = activeProviderSection.querySelector('input[type="radio"]');
+                    if (firstProvider !== null) {
+                        firstProvider.checked = true;
+                    }
+                });
+            </script>
 
             {# GitHub Access Key Helper - shown after base required fields #}
             <div class="rounded-lg border border-dark-200 dark:border-dark-700 bg-dark-50 dark:bg-dark-800 p-4 text-sm text-dark-600 dark:text-dark-400 space-y-3">
