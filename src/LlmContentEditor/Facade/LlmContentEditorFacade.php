@@ -21,11 +21,14 @@ use NeuronAI\Chat\Messages\Message;
 use NeuronAI\Chat\Messages\ToolCallMessage;
 use NeuronAI\Chat\Messages\ToolCallResultMessage;
 use NeuronAI\Chat\Messages\UserMessage;
+use NeuronAI\SystemPrompt;
 use Psr\Log\LoggerInterface;
 use SplQueue;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Throwable;
 
+use function array_key_exists;
+use function is_array;
 use function is_string;
 
 final class LlmContentEditorFacade implements LlmContentEditorFacadeInterface
@@ -164,6 +167,66 @@ final class LlmContentEditorFacade implements LlmContentEditorFacadeInterface
         } catch (Throwable $e) {
             yield new EditStreamChunkDto('done', null, null, false, $e->getMessage());
         }
+    }
+
+    /**
+     * @param list<ConversationMessageDto> $previousMessages
+     */
+    public function buildAgentContextDump(
+        string         $instruction,
+        array          $previousMessages,
+        AgentConfigDto $agentConfig
+    ): string {
+        // Build the system prompt using the same logic as ContentEditorAgent::instructions()
+        $systemPrompt = (string) new SystemPrompt(
+            explode("\n", $agentConfig->backgroundInstructions),
+            explode("\n", $agentConfig->stepInstructions),
+            explode("\n", $agentConfig->outputInstructions),
+        );
+
+        $isFirstMessage = $previousMessages === [];
+
+        $lines   = [];
+        $lines[] = '=== SYSTEM PROMPT ===';
+        $lines[] = '';
+        $lines[] = $systemPrompt;
+        $lines[] = '';
+
+        // Format conversation history
+        if ($previousMessages !== []) {
+            $lines[] = '=== CONVERSATION HISTORY ===';
+            $lines[] = '';
+
+            foreach ($previousMessages as $msg) {
+                $lines[] = '--- ' . strtoupper($msg->role) . ' ---';
+
+                $decoded = json_decode($msg->contentJson, true);
+                if (is_array($decoded) && array_key_exists('content', $decoded) && is_string($decoded['content'])) {
+                    $lines[] = $decoded['content'];
+                } else {
+                    // For tool calls or complex content, show the raw JSON
+                    $lines[] = $msg->contentJson;
+                }
+
+                $lines[] = '';
+            }
+        }
+
+        // Format the current user instruction (as it would be sent)
+        $lines[] = '=== CURRENT USER MESSAGE ===';
+        $lines[] = '';
+
+        if ($isFirstMessage) {
+            $lines[] = sprintf(
+                'The working folder is: %s' . "\n\n" . 'Please perform the following task: %s',
+                '/workspace',
+                $instruction
+            );
+        } else {
+            $lines[] = $instruction;
+        }
+
+        return implode("\n", $lines);
     }
 
     public function verifyApiKey(LlmModelProvider $provider, string $apiKey): bool

@@ -112,7 +112,7 @@ export function isSessionComplete(chunk: PollChunk): boolean {
  * Determine if a session status indicates work is in progress.
  */
 export function isActiveSessionStatus(status: string): boolean {
-    return status === "pending" || status === "running";
+    return status === "pending" || status === "running" || status === "cancelling";
 }
 
 /**
@@ -161,6 +161,23 @@ export function getCompletedContainerStyle(): TechnicalContainerStyle {
         countColorClass: "text-green-500 dark:text-green-400 bg-green-100/50 dark:bg-green-900/30",
         chevronColorClass: "text-green-400 dark:text-green-500",
         messagesListBorderClass: "border-green-200/30 dark:border-green-700/20",
+    };
+}
+
+/**
+ * Get the styling configuration for a cancelled technical container.
+ */
+export function getCancelledContainerStyle(): TechnicalContainerStyle {
+    return {
+        headerBgClass:
+            "from-amber-50/80 to-orange-50/80 dark:from-amber-900/20 dark:to-orange-900/20 border-amber-200/50 dark:border-amber-700/30",
+        indicatorClass: "bg-amber-500 dark:bg-amber-400",
+        labelText: "Cancelled",
+        labelColorClass: "from-amber-600 to-amber-600 dark:from-amber-400 dark:to-amber-400",
+        sparkleEmoji: "⚠",
+        countColorClass: "text-amber-500 dark:text-amber-400 bg-amber-100/50 dark:bg-amber-900/30",
+        chevronColorClass: "text-amber-400 dark:text-amber-500",
+        messagesListBorderClass: "border-amber-200/30 dark:border-amber-700/20",
     };
 }
 

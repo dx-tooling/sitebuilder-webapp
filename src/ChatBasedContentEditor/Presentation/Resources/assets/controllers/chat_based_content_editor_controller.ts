@@ -11,6 +11,7 @@ import {
     formatInt,
     parseChunkPayload,
     payloadToAgentEvent,
+    getCancelledContainerStyle,
     getCompletedContainerStyle,
     getWorkingContainerStyle,
     getProgressAnimationState,
@@ -34,12 +35,16 @@ interface TranslationsData {
     unknownError: string;
     allSet: string;
     inProgress: string;
+    stop: string;
+    stopping: string;
+    cancelled: string;
 }
 
 export default class extends Controller {
     static values = {
         runUrl: String,
         pollUrlTemplate: String,
+        cancelUrlTemplate: String,
         conversationId: String,
         contextUsageUrl: String,
         contextUsage: Object,
@@ -53,6 +58,7 @@ export default class extends Controller {
         "messages",
         "instruction",
         "submit",
+        "cancelButton",
         "autoScroll",
         "submitOnEnter",
         "contextUsage",
@@ -63,6 +69,7 @@ export default class extends Controller {
 
     declare readonly runUrlValue: string;
     declare readonly pollUrlTemplateValue: string;
+    declare readonly cancelUrlTemplateValue: string;
     declare readonly conversationIdValue: string;
     declare readonly contextUsageUrlValue: string;
     declare readonly contextUsageValue: ContextUsageData;
@@ -77,6 +84,8 @@ export default class extends Controller {
     declare readonly instructionTarget: HTMLTextAreaElement;
     declare readonly hasSubmitTarget: boolean;
     declare readonly submitTarget: HTMLButtonElement;
+    declare readonly hasCancelButtonTarget: boolean;
+    declare readonly cancelButtonTarget: HTMLButtonElement;
     declare readonly hasAutoScrollTarget: boolean;
     declare readonly autoScrollTarget: HTMLInputElement;
     declare readonly hasSubmitOnEnterTarget: boolean;
@@ -289,6 +298,45 @@ export default class extends Controller {
         }
     }
 
+    async handleCancel(): Promise<void> {
+        if (!this.currentPollingState || !this.cancelUrlTemplateValue) {
+            return;
+        }
+
+        const cancelUrl = this.cancelUrlTemplateValue.replace("__SESSION_ID__", this.currentPollingState.sessionId);
+        const t = this.translationsValue;
+
+        // Disable immediately to prevent double-clicks
+        if (this.hasCancelButtonTarget) {
+            this.cancelButtonTarget.disabled = true;
+            this.cancelButtonTarget.textContent = t.stopping;
+        }
+
+        try {
+            const csrfInput = document.querySelector('input[name="_csrf_token"]') as HTMLInputElement | null;
+
+            const formData = new FormData();
+            if (csrfInput) {
+                formData.append("_csrf_token", csrfInput.value);
+            }
+
+            await fetch(cancelUrl, {
+                method: "POST",
+                headers: { "X-Requested-With": "XMLHttpRequest" },
+                body: formData,
+            });
+
+            // Don't stop polling — let the polling loop detect the cancelled status
+            // and done chunk naturally, so all pre-cancellation output is displayed.
+        } catch {
+            // If the cancel request fails, re-enable the button so the user can retry
+            if (this.hasCancelButtonTarget) {
+                this.cancelButtonTarget.disabled = false;
+                this.cancelButtonTarget.textContent = t.stop;
+            }
+        }
+    }
+
     private startPolling(sessionId: string, container: HTMLElement, startingLastId: number = 0): void {
         this.currentPollingState = {
             sessionId,
@@ -345,7 +393,7 @@ export default class extends Controller {
                 this.updateContextBar(data.contextUsage);
             }
 
-            if (data.status === "completed" || data.status === "failed") {
+            if (data.status === "completed" || data.status === "failed" || data.status === "cancelled") {
                 this.stopPolling();
                 this.resetSubmitButton();
 
@@ -381,6 +429,9 @@ export default class extends Controller {
         this.submitTarget.disabled = false;
         this.submitTarget.textContent = t.makeChanges;
         this.submitTarget.classList.remove("!bg-gradient-to-r", "!from-purple-500", "!to-blue-500", "animate-pulse");
+        if (this.hasCancelButtonTarget) {
+            this.cancelButtonTarget.classList.add("hidden");
+        }
     }
 
     private setWorkingState(): void {
@@ -389,6 +440,12 @@ export default class extends Controller {
             this.submitTarget.disabled = true;
             this.submitTarget.innerHTML = `<span class="inline-flex items-center gap-1.5">✨ ${escapeHtml(t.makingChanges)}</span>`;
             this.submitTarget.classList.add("!bg-gradient-to-r", "!from-purple-500", "!to-blue-500", "animate-pulse");
+        }
+        if (this.hasCancelButtonTarget) {
+            this.cancelButtonTarget.classList.remove("hidden");
+            this.cancelButtonTarget.disabled = false;
+            const t = this.translationsValue;
+            this.cancelButtonTarget.textContent = t.stop;
         }
     }
 
@@ -423,25 +480,36 @@ export default class extends Controller {
             innerContainer.innerHTML = "";
             innerContainer.classList.add("space-y-2");
 
+            const isCancelled = turn.status === "cancelled";
+
             // Create and add completed technical container if there are events
             if (turn.events && turn.events.length > 0) {
                 const technicalContainer = this.createCompletedTechnicalContainer(turn);
                 innerContainer.appendChild(technicalContainer);
             }
 
-            // Render the response text as markdown
-            const responseText = turn.response || innerContainer.dataset.turnResponse || "";
-            if (responseText) {
-                const textEl = document.createElement("div");
-                textEl.className = "whitespace-pre-wrap";
-                textEl.innerHTML = renderMarkdown(responseText, { streaming: false });
-                innerContainer.appendChild(textEl);
-            } else {
+            // For cancelled turns, show a distinct "Cancelled" indicator
+            if (isCancelled) {
                 const t = this.translationsValue;
-                const textEl = document.createElement("div");
-                textEl.className = "whitespace-pre-wrap text-dark-500 dark:text-dark-400";
-                textEl.textContent = t.noResponse;
-                innerContainer.appendChild(textEl);
+                const cancelledEl = document.createElement("div");
+                cancelledEl.className = "whitespace-pre-wrap text-amber-600 dark:text-amber-400 italic";
+                cancelledEl.textContent = t.cancelled;
+                innerContainer.appendChild(cancelledEl);
+            } else {
+                // Render the response text as markdown
+                const responseText = turn.response || innerContainer.dataset.turnResponse || "";
+                if (responseText) {
+                    const textEl = document.createElement("div");
+                    textEl.className = "whitespace-pre-wrap";
+                    textEl.innerHTML = renderMarkdown(responseText, { streaming: false });
+                    innerContainer.appendChild(textEl);
+                } else {
+                    const t = this.translationsValue;
+                    const textEl = document.createElement("div");
+                    textEl.className = "whitespace-pre-wrap text-dark-500 dark:text-dark-400";
+                    textEl.textContent = t.noResponse;
+                    innerContainer.appendChild(textEl);
+                }
             }
         });
     }
@@ -451,7 +519,7 @@ export default class extends Controller {
         container.className = "technical-messages-container";
         container.dataset.technicalMessages = "1";
 
-        const style = getCompletedContainerStyle();
+        const style = turn.status === "cancelled" ? getCancelledContainerStyle() : getCompletedContainerStyle();
 
         const header = document.createElement("button");
         header.type = "button";
@@ -626,10 +694,18 @@ export default class extends Controller {
             this.appendTechnicalEvent(container, event);
             this.scrollToBottom();
         } else if (chunk.chunkType === "done") {
-            if (payload.success === false && payload.errorMessage) {
+            const isCancellation = payload.success === false && payload.errorMessage?.includes("Cancelled");
+            if (payload.success === false && payload.errorMessage && !isCancellation) {
                 this.appendError(container, payload.errorMessage);
             }
-            this.markTechnicalContainerComplete(container);
+            if (isCancellation) {
+                const t = this.translationsValue;
+                const cancelledEl = document.createElement("div");
+                cancelledEl.className = "whitespace-pre-wrap text-amber-600 dark:text-amber-400 italic";
+                cancelledEl.textContent = t.cancelled;
+                container.appendChild(cancelledEl);
+            }
+            this.markTechnicalContainerComplete(container, isCancellation);
             this.scrollToBottom();
 
             return true;
@@ -1039,7 +1115,7 @@ export default class extends Controller {
         }
     }
 
-    private markTechnicalContainerComplete(container: HTMLElement): void {
+    private markTechnicalContainerComplete(container: HTMLElement, cancelled: boolean = false): void {
         const technicalContainer = this.getTechnicalMessagesContainer(container);
         if (!technicalContainer) {
             return;
@@ -1054,7 +1130,7 @@ export default class extends Controller {
         const header = technicalContainer.querySelector<HTMLElement>('[data-header="1"]');
         const sparkle = label?.previousElementSibling as HTMLElement | null;
 
-        const style = getCompletedContainerStyle();
+        const style = cancelled ? getCancelledContainerStyle() : getCompletedContainerStyle();
         const workingStyle = getWorkingContainerStyle();
 
         // Stop all animations

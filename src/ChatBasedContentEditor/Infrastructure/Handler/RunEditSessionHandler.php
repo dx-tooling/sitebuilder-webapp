@@ -56,6 +56,15 @@ final readonly class RunEditSessionHandler
             return;
         }
 
+        // Pre-start cancellation check: if cancel arrived before the worker picked this up
+        if ($session->getStatus() === EditSessionStatus::Cancelling) {
+            EditSessionChunk::createDoneChunk($session, false, 'Cancelled before execution started.');
+            $session->setStatus(EditSessionStatus::Cancelled);
+            $this->entityManager->flush();
+
+            return;
+        }
+
         $session->setStatus(EditSessionStatus::Running);
         $this->entityManager->flush();
 
@@ -107,6 +116,32 @@ final readonly class RunEditSessionHandler
             );
 
             foreach ($generator as $chunk) {
+                // Cooperative cancellation: check status directly via DBAL to avoid
+                // entityManager->refresh() which fails on readonly entity properties.
+                $currentStatus = $this->entityManager->getConnection()->fetchOne(
+                    'SELECT status FROM edit_sessions WHERE id = ?',
+                    [$session->getId()]
+                );
+
+                if ($currentStatus === EditSessionStatus::Cancelling->value) {
+                    // Persist a synthetic assistant message so the LLM on the next turn
+                    // understands this turn was interrupted and won't try to answer it.
+                    new ConversationMessage(
+                        $conversation,
+                        ConversationMessageRole::Assistant,
+                        json_encode(
+                            ['content' => '[Cancelled by the user — disregard this turn.]'],
+                            JSON_THROW_ON_ERROR
+                        )
+                    );
+
+                    EditSessionChunk::createDoneChunk($session, false, 'Cancelled by user.');
+                    $session->setStatus(EditSessionStatus::Cancelled);
+                    $this->entityManager->flush();
+
+                    return;
+                }
+
                 if ($chunk->chunkType === 'text' && $chunk->content !== null) {
                     EditSessionChunk::createTextChunk($session, $chunk->content);
                 } elseif ($chunk->chunkType === 'event' && $chunk->event !== null) {
