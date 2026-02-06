@@ -250,18 +250,18 @@ The conversation system spans multiple verticals. Here is how they interact thro
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
 │ ChatBasedContentEditor (owns conversations and edit sessions)       │
-│   Domain:   Conversation, EditSession, EditSessionChunk,           │
+│   Domain:   Conversation, EditSession, EditSessionChunk,            │
 │             ConversationMessage, ConversationService                │
-│   Facade:   ChatBasedContentEditorFacadeInterface                  │
+│   Facade:   ChatBasedContentEditorFacadeInterface                   │
 │             (releaseStaleConversations, recoverStuckEditSessions)   │
 │   Infra:    RunEditSessionHandler, ReleaseStaleConversationsCommand │
-│   Present:  ChatBasedContentEditorController, Stimulus controllers │
+│   Present:  ChatBasedContentEditorController, Stimulus controllers  │
 ├─────────────────────────────────────────────────────────────────────┤
 │ Uses facades from:                                                  │
-│   • WorkspaceMgmt    → workspace transitions, commit & push, PR    │
-│   • ProjectMgmt      → project info, LLM API key, agent config    │
-│   • Account          → user identity (email for commit author)     │
-│   • LlmContentEditor → agent execution (streamEditWithHistory)     │
+│   • WorkspaceMgmt    → workspace transitions, commit & push, PR     │
+│   • ProjectMgmt      → project info, LLM API key, agent config      │
+│   • Account          → user identity (email for commit author)      │
+│   • LlmContentEditor → agent execution (streamEditWithHistory)      │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
