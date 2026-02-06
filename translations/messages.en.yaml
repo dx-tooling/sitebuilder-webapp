@@ -206,6 +206,8 @@ editor:
     review_link: "Review link:"
     project_link: "Project link:"
     open_on_github: "Open on GitHub"
+    dump_agent_context_label: "Agent context:"
+    dump_agent_context: "Dump agent context"
     problem:
         title: "We hit a snag"
         description: "Something went wrong while preparing your work area. You can reset it and try again."
@@ -421,6 +423,7 @@ js:
         in_progress: "In progress"
         stop: "Stop"
         stopping: "Stopping..."
+        cancelled: "Cancelled"
     workspace:
         taking_longer: "This is taking longer than expected. Please try again."
         setup_failed: "We couldn't finish setup. Please try resetting the work area."

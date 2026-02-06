@@ -206,6 +206,8 @@ editor:
     review_link: "Review-Link:"
     project_link: "Projektlink:"
     open_on_github: "Auf GitHub öffnen"
+    dump_agent_context_label: "Agent-Kontext:"
+    dump_agent_context: "Agent-Kontext ausgeben"
     problem:
         title: "Es gab ein Problem"
         description: "Beim Vorbereiten Ihres Arbeitsbereichs ist etwas schiefgelaufen. Sie können ihn zurücksetzen und es erneut versuchen."
@@ -421,6 +423,7 @@ js:
         in_progress: "In Bearbeitung"
         stop: "Stopp"
         stopping: "Wird gestoppt..."
+        cancelled: "Abgebrochen"
     workspace:
         taking_longer: "Das dauert länger als erwartet. Bitte versuchen Sie es erneut."
         setup_failed: "Die Einrichtung konnte nicht abgeschlossen werden. Bitte setzen Sie den Arbeitsbereich zurück."

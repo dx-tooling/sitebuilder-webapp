@@ -42,6 +42,19 @@ interface LlmContentEditorFacadeInterface
     ): Generator;
 
     /**
+     * Build a plain text dump of the full agent context as it would be sent to the LLM API.
+     * Includes system prompt, conversation history, and the current user instruction.
+     * Used for debugging and troubleshooting.
+     *
+     * @param list<ConversationMessageDto> $previousMessages Messages from earlier turns
+     */
+    public function buildAgentContextDump(
+        string         $instruction,
+        array          $previousMessages,
+        AgentConfigDto $agentConfig
+    ): string;
+
+    /**
      * Verifies that an API key is valid for the given provider.
      * Makes a minimal API call to check authentication.
      *

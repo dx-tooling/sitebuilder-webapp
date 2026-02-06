@@ -165,6 +165,23 @@ export function getCompletedContainerStyle(): TechnicalContainerStyle {
 }
 
 /**
+ * Get the styling configuration for a cancelled technical container.
+ */
+export function getCancelledContainerStyle(): TechnicalContainerStyle {
+    return {
+        headerBgClass:
+            "from-amber-50/80 to-orange-50/80 dark:from-amber-900/20 dark:to-orange-900/20 border-amber-200/50 dark:border-amber-700/30",
+        indicatorClass: "bg-amber-500 dark:bg-amber-400",
+        labelText: "Cancelled",
+        labelColorClass: "from-amber-600 to-amber-600 dark:from-amber-400 dark:to-amber-400",
+        sparkleEmoji: "⚠",
+        countColorClass: "text-amber-500 dark:text-amber-400 bg-amber-100/50 dark:bg-amber-900/30",
+        chevronColorClass: "text-amber-400 dark:text-amber-500",
+        messagesListBorderClass: "border-amber-200/30 dark:border-amber-700/20",
+    };
+}
+
+/**
  * Get the styling configuration for a working/in-progress technical container.
  */
 export function getWorkingContainerStyle(): TechnicalContainerStyle {

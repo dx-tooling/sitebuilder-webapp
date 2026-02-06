@@ -107,7 +107,7 @@ The handler runs in the Messenger worker process:
 5. Build agent configuration from project settings (background/step/output instructions).
 6. Call `LlmContentEditorFacade::streamEditWithHistory()` which returns a PHP `Generator`.
 7. Iterate the generator. For each yielded chunk:
-   - **Cooperative cancellation check:** `entityManager->refresh($session)` to re-read the status from the database. If `Cancelling`, write a `Done` chunk, set `Cancelled`, and return.
+   - **Cooperative cancellation check:** a lightweight DBAL query reads just the `status` column from the database (see section 6.2 for why). If `Cancelling`, repair the conversation history with a synthetic assistant message and stop (see section 6.3 for the full rationale), write a `Done` chunk, set `Cancelled`, and return.
    - **Text chunk:** persist as `EditSessionChunk` (type `text`).
    - **Event chunk:** persist as `EditSessionChunk` (type `event`). Events include `inference_start`, `inference_stop`, `tool_calling`, `tool_called`, `agent_error`.
    - **Message chunk:** persist as a new `ConversationMessage` (grows the LLM history).
@@ -177,7 +177,9 @@ A separate polling loop (2500ms interval) fetches token/cost data from `GET /cha
 
 ## 6. Cancellation
 
-### 6.1 User-Initiated Cancel
+Cancellation looks simple on the surface — set a flag, check it, stop — but it has **four layers of non-obvious complexity**: cooperative signalling, entity hydration constraints, conversation history corruption, and frontend visual state.
+
+### 6.1 User-Initiated Cancel Flow
 
 1. User clicks the **Stop** button in the UI.
 2. Frontend sends `POST /chat-based-content-editor/cancel/{sessionId}` with CSRF token.
@@ -185,14 +187,64 @@ A separate polling loop (2500ms interval) fetches token/cost data from `GET /cha
    - If already terminal (`Completed`, `Failed`, `Cancelled`): returns `{ success: true, alreadyFinished: true }`.
    - Otherwise: sets status to `Cancelling` and flushes.
 4. Frontend keeps polling — it does **not** stop immediately. This ensures all chunks produced before cancellation are displayed.
-5. The handler detects `Cancelling` at the next `entityManager->refresh()` call, writes a `Done` chunk with message "Cancelled by user.", sets status to `Cancelled`, and returns.
-6. Frontend's next poll receives the `done` chunk and/or `cancelled` status, stops polling, and resets the UI.
+5. The handler detects `Cancelling` at the next DBAL status check (see 6.2), performs history cleanup (see 6.3), writes a `Done` chunk with message "Cancelled by user.", sets status to `Cancelled`, and returns.
+6. Frontend's next poll receives the `done` chunk and/or `cancelled` status, stops polling, transitions the technical container to cancelled visual state (see 6.4), and resets the UI.
 
-### 6.2 Why Cooperative Cancellation?
+### 6.2 Why Cooperative Cancellation? (And Why Not `refresh()`?)
 
 PHP does not support thread interruption. The Messenger handler runs synchronously in a worker process, iterating a generator that makes HTTP calls to the LLM API. The only safe way to stop it is to have the handler check a flag on each iteration — a database column that can be set by a separate HTTP request (the cancel endpoint).
 
-The `entityManager->refresh($session)` call issues one `SELECT` per iteration to re-read the status. This is negligible compared to the LLM network latency per chunk.
+The status check uses a direct DBAL query (`SELECT status FROM edit_sessions WHERE id = ?`) rather than `entityManager->refresh($session)`. This is because the `EditSession` entity uses PHP `readonly` properties (e.g. `$createdAt`, `$conversation`, `$instruction`), and Doctrine's `refresh()` tries to re-hydrate all mapped properties — which PHP 8.2+ blocks on already-initialized readonly properties, throwing `"Attempting to change readonly property"`. The DBAL query sidesteps this entirely by reading only the status value without touching the ORM entity.
+
+One `SELECT` per generator iteration is negligible compared to the LLM network latency per chunk.
+
+### 6.3 Conversation History Repair (Synthetic Assistant Message)
+
+This is the subtlest cancellation pitfall. By the time a cancel is detected in the generator loop, the conversation history is already partially written:
+
+1. `streamEditWithHistory()` creates a `UserMessage` and adds it to the chat history.
+2. The `CallbackChatHistory` callback fires, yielding a `message` chunk.
+3. The handler persists it as a `ConversationMessage` in the database.
+4. The agent starts LLM inference and tool execution...
+5. **Cancel is detected** — the handler returns.
+
+At this point the database has a **user message with no matching assistant message**. On the next turn, `loadPreviousMessages()` feeds the LLM a history with two consecutive `USER` messages:
+
+```
+USER:  "List all files you can see."    ← cancelled turn, no response
+USER:  "What is your name?"             ← new turn
+```
+
+The LLM interprets the first unanswered user message as the actual request and responds to it — answering the stale, cancelled question instead of the new one.
+
+**Fix:** When cancellation is detected in the loop, the handler persists a synthetic assistant `ConversationMessage` with content `"[Cancelled by the user — disregard this turn.]"` before setting the status to `Cancelled`. This closes the user-assistant pair so the next turn's history is well-formed:
+
+```
+USER:       "List all files you can see."
+ASSISTANT:  "[Cancelled by the user — disregard this turn.]"
+USER:       "What is your name?"
+```
+
+Note: this is only necessary for **in-loop** cancellation. Pre-start cancellation (before `streamEditWithHistory()` is called) never persists any messages, so no cleanup is needed.
+
+### 6.4 Frontend Visual Treatment of Cancelled Turns
+
+Cancelled turns must be visually distinguishable from completed or failed turns. Without this, a cancelled turn with no response looks identical to a completed turn that produced no output.
+
+**Three visual signals mark a cancelled turn:**
+
+| Element | Normal (completed) | Cancelled |
+|---------|-------------------|-----------|
+| User instruction bubble | Full opacity | 60% opacity (`opacity-60`) |
+| Assistant response area | No left border, shows response text | Amber left border (`border-l-2 border-amber-500`), italic "Cancelled" text |
+| Technical container (toolbar) | Green "All set" with checkmark | Amber "Cancelled" with warning icon |
+
+The technical container styling uses `getCancelledContainerStyle()` (amber/orange palette) instead of `getCompletedContainerStyle()` (green palette). This applies in two code paths:
+
+1. **Page reload** — `renderCompletedTurnsTechnicalContainers()` checks `turn.status === "cancelled"` and uses the amber style.
+2. **Live cancellation** — `handleChunk()` detects the cancellation done-chunk and passes `cancelled: true` to `markTechnicalContainerComplete()`.
+
+**CSS pitfall:** The technical container header has a shimmer animation (`@keyframes shimmer`) that gives a "working" effect. This animation is explicitly stopped via CSS selectors for completed (`from-green-50/80`) and failed (`from-red-50/80`) states. The amber cancelled state (`from-amber-50/80`) must also be included in this CSS stop-list, otherwise a cancelled container shows an active shimmer over a static amber background — misleadingly suggesting work is still happening.
 
 ---
 
