@@ -10,6 +10,7 @@ use App\LlmContentEditor\Facade\Enum\LlmModelProvider;
 use App\LlmContentEditor\Facade\LlmContentEditorFacadeInterface;
 use App\ProjectMgmt\Domain\Service\ProjectService;
 use App\ProjectMgmt\Facade\Dto\ExistingLlmApiKeyDto;
+use App\ProjectMgmt\Facade\Enum\ContentEditorBackend;
 use App\ProjectMgmt\Facade\Enum\ProjectType;
 use App\ProjectMgmt\Facade\ProjectMgmtFacadeInterface;
 use App\RemoteContentAssets\Facade\RemoteContentAssetsFacadeInterface;
@@ -135,10 +136,11 @@ final class ProjectController extends AbstractController
         $defaultTemplate = $this->projectMgmtFacade->getAgentConfigTemplate(ProjectType::DEFAULT);
 
         return $this->render('@project_mgmt.presentation/project_form.twig', [
-            'project'             => null,
-            'llmProviders'        => LlmModelProvider::cases(),
-            'existingLlmKeys'     => $this->projectMgmtFacade->getExistingLlmApiKeys($organizationId),
-            'agentConfigTemplate' => $defaultTemplate,
+            'project'               => null,
+            'llmProviders'          => LlmModelProvider::cases(),
+            'contentEditorBackends' => ContentEditorBackend::cases(),
+            'existingLlmKeys'       => $this->projectMgmtFacade->getExistingLlmApiKeys($organizationId),
+            'agentConfigTemplate'   => $defaultTemplate,
         ]);
     }
 
@@ -155,12 +157,13 @@ final class ProjectController extends AbstractController
             return $this->redirectToRoute('project_mgmt.presentation.new');
         }
 
-        $name             = $request->request->getString('name');
-        $gitUrl           = $request->request->getString('git_url');
-        $githubToken      = $request->request->getString('github_token');
-        $llmModelProvider = LlmModelProvider::tryFrom($request->request->getString('llm_model_provider'));
-        $llmApiKey        = $request->request->getString('llm_api_key');
-        $agentImage       = $this->resolveAgentImage($request);
+        $name                 = $request->request->getString('name');
+        $gitUrl               = $request->request->getString('git_url');
+        $githubToken          = $request->request->getString('github_token');
+        $llmModelProvider     = LlmModelProvider::tryFrom($request->request->getString('llm_model_provider'));
+        $contentEditorBackend = ContentEditorBackend::tryFrom($request->request->getString('content_editor_backend'));
+        $llmApiKey            = $request->request->getString('llm_api_key');
+        $agentImage           = $this->resolveAgentImage($request);
 
         // Agent configuration (optional - uses template defaults if empty)
         $agentBackgroundInstructions     = $this->nullIfEmpty($request->request->getString('agent_background_instructions'));
@@ -176,6 +179,12 @@ final class ProjectController extends AbstractController
 
         if ($llmModelProvider === null) {
             $this->addFlash('error', $this->translator->trans('flash.error.select_llm_provider'));
+
+            return $this->redirectToRoute('project_mgmt.presentation.new');
+        }
+
+        if ($contentEditorBackend === null) {
+            $this->addFlash('error', $this->translator->trans('flash.error.select_content_editor_backend'));
 
             return $this->redirectToRoute('project_mgmt.presentation.new');
         }
@@ -210,6 +219,7 @@ final class ProjectController extends AbstractController
             $llmModelProvider,
             $llmApiKey,
             ProjectType::DEFAULT,
+            $contentEditorBackend,
             $agentImage,
             $agentBackgroundInstructions,
             $agentStepInstructions,
@@ -266,13 +276,14 @@ final class ProjectController extends AbstractController
         $agentConfigTemplate = $this->projectMgmtFacade->getAgentConfigTemplate($project->getProjectType());
 
         return $this->render('@project_mgmt.presentation/project_form.twig', [
-            'project'             => $project,
-            'llmProviders'        => LlmModelProvider::cases(),
-            'existingLlmKeys'     => $existingLlmKeys,
-            'agentConfigTemplate' => $agentConfigTemplate,
-            'keysVisible'         => $keysVisible,
-            'displayGithubToken'  => $displayGithubToken,
-            'displayLlmApiKey'    => $displayLlmApiKey,
+            'project'               => $project,
+            'llmProviders'          => LlmModelProvider::cases(),
+            'contentEditorBackends' => ContentEditorBackend::cases(),
+            'existingLlmKeys'       => $existingLlmKeys,
+            'agentConfigTemplate'   => $agentConfigTemplate,
+            'keysVisible'           => $keysVisible,
+            'displayGithubToken'    => $displayGithubToken,
+            'displayLlmApiKey'      => $displayLlmApiKey,
         ]);
     }
 
@@ -296,13 +307,14 @@ final class ProjectController extends AbstractController
             return $this->redirectToRoute('project_mgmt.presentation.edit', ['id' => $id]);
         }
 
-        $name             = $request->request->getString('name');
-        $gitUrl           = $request->request->getString('git_url');
-        $keysVisible      = $project->isKeysVisible();
-        $githubToken      = $keysVisible ? $request->request->getString('github_token') : $project->getGithubToken();
-        $llmModelProvider = LlmModelProvider::tryFrom($request->request->getString('llm_model_provider'));
-        $llmApiKey        = $keysVisible ? $request->request->getString('llm_api_key') : $project->getLlmApiKey();
-        $agentImage       = $this->resolveAgentImage($request);
+        $name                 = $request->request->getString('name');
+        $gitUrl               = $request->request->getString('git_url');
+        $keysVisible          = $project->isKeysVisible();
+        $githubToken          = $keysVisible ? $request->request->getString('github_token') : $project->getGithubToken();
+        $llmModelProvider     = LlmModelProvider::tryFrom($request->request->getString('llm_model_provider'));
+        $contentEditorBackend = ContentEditorBackend::tryFrom($request->request->getString('content_editor_backend'));
+        $llmApiKey            = $keysVisible ? $request->request->getString('llm_api_key') : $project->getLlmApiKey();
+        $agentImage           = $this->resolveAgentImage($request);
 
         // Agent configuration (null means keep existing values)
         $agentBackgroundInstructions     = $this->nullIfEmpty($request->request->getString('agent_background_instructions'));
@@ -319,6 +331,12 @@ final class ProjectController extends AbstractController
 
         if ($llmModelProvider === null) {
             $this->addFlash('error', $this->translator->trans('flash.error.select_llm_provider'));
+
+            return $this->redirectToRoute('project_mgmt.presentation.edit', ['id' => $id]);
+        }
+
+        if ($contentEditorBackend === null) {
+            $this->addFlash('error', $this->translator->trans('flash.error.select_content_editor_backend'));
 
             return $this->redirectToRoute('project_mgmt.presentation.edit', ['id' => $id]);
         }
@@ -345,6 +363,7 @@ final class ProjectController extends AbstractController
             $llmModelProvider,
             $llmApiKey,
             ProjectType::DEFAULT,
+            $contentEditorBackend,
             $agentImage,
             $agentBackgroundInstructions,
             $agentStepInstructions,

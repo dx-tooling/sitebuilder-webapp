@@ -12,6 +12,7 @@ use App\ProjectMgmt\Domain\ValueObject\AgentConfigTemplate;
 use App\ProjectMgmt\Facade\Dto\AgentConfigTemplateDto;
 use App\ProjectMgmt\Facade\Dto\ExistingLlmApiKeyDto;
 use App\ProjectMgmt\Facade\Dto\ProjectInfoDto;
+use App\ProjectMgmt\Facade\Enum\ContentEditorBackend;
 use App\ProjectMgmt\Facade\Enum\ProjectType;
 use App\WorkspaceMgmt\Infrastructure\Service\GitHubUrlServiceInterface;
 use Doctrine\ORM\EntityManagerInterface;
@@ -48,6 +49,7 @@ final class ProjectMgmtFacade implements ProjectMgmtFacadeInterface
             $llmModelProvider,
             $prefab->llmApiKey,
             ProjectType::DEFAULT,
+            ContentEditorBackend::Llm,
             Project::DEFAULT_AGENT_IMAGE,
             null,
             null,
@@ -167,6 +169,7 @@ final class ProjectMgmtFacade implements ProjectMgmtFacadeInterface
             $project->getGitUrl(),
             $project->getGithubToken(),
             $project->getProjectType(),
+            $project->getContentEditorBackend(),
             $githubUrl,
             $project->getAgentImage(),
             $project->getLlmModelProvider(),

@@ -7,8 +7,8 @@ namespace App\LlmContentEditor\Facade\Dto;
 readonly class AgentEventDto
 {
     /**
-     * @param 'inference_start'|'inference_stop'|'tool_calling'|'tool_called'|'agent_error' $kind
-     * @param list<ToolInputEntryDto>|null                                                  $toolInputs
+     * @param 'inference_start'|'inference_stop'|'tool_calling'|'tool_called'|'agent_error'|'build_start'|'build_complete'|'build_error' $kind
+     * @param list<ToolInputEntryDto>|null                                                                                               $toolInputs
      */
     public function __construct(
         public string  $kind,

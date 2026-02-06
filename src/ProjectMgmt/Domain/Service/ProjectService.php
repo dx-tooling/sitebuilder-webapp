@@ -6,6 +6,7 @@ namespace App\ProjectMgmt\Domain\Service;
 
 use App\LlmContentEditor\Facade\Enum\LlmModelProvider;
 use App\ProjectMgmt\Domain\Entity\Project;
+use App\ProjectMgmt\Facade\Enum\ContentEditorBackend;
 use App\ProjectMgmt\Facade\Enum\ProjectType;
 use Doctrine\ORM\EntityManagerInterface;
 
@@ -24,25 +25,26 @@ final class ProjectService
      * @param list<string>|null $remoteContentAssetsManifestUrls
      */
     public function create(
-        string           $organizationId,
-        string           $name,
-        string           $gitUrl,
-        string           $githubToken,
-        LlmModelProvider $llmModelProvider,
-        string           $llmApiKey,
-        ProjectType      $projectType = ProjectType::DEFAULT,
-        string           $agentImage = Project::DEFAULT_AGENT_IMAGE,
-        ?string          $agentBackgroundInstructions = null,
-        ?string          $agentStepInstructions = null,
-        ?string          $agentOutputInstructions = null,
-        ?array           $remoteContentAssetsManifestUrls = null,
-        ?string          $s3BucketName = null,
-        ?string          $s3Region = null,
-        ?string          $s3AccessKeyId = null,
-        ?string          $s3SecretAccessKey = null,
-        ?string          $s3IamRoleArn = null,
-        ?string          $s3KeyPrefix = null,
-        bool             $keysVisible = true
+        string               $organizationId,
+        string               $name,
+        string               $gitUrl,
+        string               $githubToken,
+        LlmModelProvider     $llmModelProvider,
+        string               $llmApiKey,
+        ProjectType          $projectType = ProjectType::DEFAULT,
+        ContentEditorBackend $contentEditorBackend = ContentEditorBackend::Llm,
+        string               $agentImage = Project::DEFAULT_AGENT_IMAGE,
+        ?string              $agentBackgroundInstructions = null,
+        ?string              $agentStepInstructions = null,
+        ?string              $agentOutputInstructions = null,
+        ?array               $remoteContentAssetsManifestUrls = null,
+        ?string              $s3BucketName = null,
+        ?string              $s3Region = null,
+        ?string              $s3AccessKeyId = null,
+        ?string              $s3SecretAccessKey = null,
+        ?string              $s3IamRoleArn = null,
+        ?string              $s3KeyPrefix = null,
+        bool                 $keysVisible = true
     ): Project {
         $project = new Project(
             $organizationId,
@@ -52,6 +54,7 @@ final class ProjectService
             $llmModelProvider,
             $llmApiKey,
             $projectType,
+            $contentEditorBackend,
             $agentImage,
             $agentBackgroundInstructions,
             $agentStepInstructions,
@@ -79,24 +82,25 @@ final class ProjectService
      * @param list<string>|null $remoteContentAssetsManifestUrls
      */
     public function update(
-        Project          $project,
-        string           $name,
-        string           $gitUrl,
-        string           $githubToken,
-        LlmModelProvider $llmModelProvider,
-        string           $llmApiKey,
-        ProjectType      $projectType = ProjectType::DEFAULT,
-        string           $agentImage = Project::DEFAULT_AGENT_IMAGE,
-        ?string          $agentBackgroundInstructions = null,
-        ?string          $agentStepInstructions = null,
-        ?string          $agentOutputInstructions = null,
-        ?array           $remoteContentAssetsManifestUrls = null,
-        ?string          $s3BucketName = null,
-        ?string          $s3Region = null,
-        ?string          $s3AccessKeyId = null,
-        ?string          $s3SecretAccessKey = null,
-        ?string          $s3IamRoleArn = null,
-        ?string          $s3KeyPrefix = null
+        Project              $project,
+        string               $name,
+        string               $gitUrl,
+        string               $githubToken,
+        LlmModelProvider     $llmModelProvider,
+        string               $llmApiKey,
+        ProjectType          $projectType = ProjectType::DEFAULT,
+        ContentEditorBackend $contentEditorBackend = ContentEditorBackend::Llm,
+        string               $agentImage = Project::DEFAULT_AGENT_IMAGE,
+        ?string              $agentBackgroundInstructions = null,
+        ?string              $agentStepInstructions = null,
+        ?string              $agentOutputInstructions = null,
+        ?array               $remoteContentAssetsManifestUrls = null,
+        ?string              $s3BucketName = null,
+        ?string              $s3Region = null,
+        ?string              $s3AccessKeyId = null,
+        ?string              $s3SecretAccessKey = null,
+        ?string              $s3IamRoleArn = null,
+        ?string              $s3KeyPrefix = null
     ): void {
         $project->setName($name);
         $project->setGitUrl($gitUrl);
@@ -104,6 +108,7 @@ final class ProjectService
         $project->setLlmModelProvider($llmModelProvider);
         $project->setLlmApiKey($llmApiKey);
         $project->setProjectType($projectType);
+        $project->setContentEditorBackend($contentEditorBackend);
         $project->setAgentImage($agentImage);
 
         if ($agentBackgroundInstructions !== null) {

@@ -32,6 +32,9 @@ RUN install -m 0755 -d /etc/apt/keyrings && \
     apt-get update -y && \
     apt-get install -y docker-ce-cli
 
+# Install Cursor CLI for agent execution
+RUN curl -fsS https://cursor.com/install | bash
+
 # Clean up to reduce image size
 RUN apt-get clean && rm -rf /var/lib/apt/lists/*
 
