@@ -10,7 +10,7 @@ namespace App\WorkspaceMgmt\Domain\Service;
 interface BranchNameGeneratorInterface
 {
     /**
-     * Generate a branch name in format: &lt;YYYY-MM-DD H:i:s&gt;-usermailATdomainDOTtld-SHORTWORKSPACEID.
+     * Generate a branch name in format: &lt;YYYY-MM-DD_HH-MM-SS&gt;-usermailATdomainDOTtld-SHORTWORKSPACEID (URL/shell safe).
      */
     public function generate(string $workspaceId, string $userEmail): string;
 }
