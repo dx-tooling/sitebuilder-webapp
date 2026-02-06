@@ -1,14 +1,16 @@
 # SiteBuilder Webapp
 
-[![Build image](https://img.shields.io/github/actions/workflow/status/dx-tooling/sitebuilder-webapp/ci-build-app-image.yml?branch=main&label=Build%20image)](https://github.com/dx-tooling/sitebuilder-webapp/actions/workflows/ci-build-app-image.yml)
-[![Quality](https://img.shields.io/github/actions/workflow/status/dx-tooling/sitebuilder-webapp/ci-quality.yml?branch=main&label=Quality)](https://github.com/dx-tooling/sitebuilder-webapp/actions/workflows/ci-quality.yml)
-[![PHP tests](https://img.shields.io/github/actions/workflow/status/dx-tooling/sitebuilder-webapp/ci-tests-php.yml?branch=main&label=PHP%20tests)](https://github.com/dx-tooling/sitebuilder-webapp/actions/workflows/ci-tests-php.yml)
-[![Frontend tests](https://img.shields.io/github/actions/workflow/status/dx-tooling/sitebuilder-webapp/ci-tests-frontend.yml?branch=main&label=Frontend%20tests)](https://github.com/dx-tooling/sitebuilder-webapp/actions/workflows/ci-tests-frontend.yml)
-[![Frontend build](https://img.shields.io/github/actions/workflow/status/dx-tooling/sitebuilder-webapp/ci-build-frontend.yml?branch=main&label=Frontend%20build)](https://github.com/dx-tooling/sitebuilder-webapp/actions/workflows/ci-build-frontend.yml)
+[![Build image](https://img.shields.io/github/actions/workflow/status/dx-tooling/sitebuilder-webapp/ci.yml?branch=main&label=Build%20image)](https://github.com/dx-tooling/sitebuilder-webapp/actions/workflows/ci.yml)
+[![Frontend build](https://img.shields.io/github/actions/workflow/status/dx-tooling/sitebuilder-webapp/ci.yml?branch=main&label=Frontend%20build)](https://github.com/dx-tooling/sitebuilder-webapp/actions/workflows/ci.yml)
+[![Frontend tests](https://img.shields.io/github/actions/workflow/status/dx-tooling/sitebuilder-webapp/ci.yml?branch=main&label=Frontend%20tests)](https://github.com/dx-tooling/sitebuilder-webapp/actions/workflows/ci.yml)
+[![PHP tests](https://img.shields.io/github/actions/workflow/status/dx-tooling/sitebuilder-webapp/ci.yml?branch=main&label=PHP%20tests)](https://github.com/dx-tooling/sitebuilder-webapp/actions/workflows/ci.yml)
+[![Quality](https://img.shields.io/github/actions/workflow/status/dx-tooling/sitebuilder-webapp/ci.yml?branch=main&label=Quality)](https://github.com/dx-tooling/sitebuilder-webapp/actions/workflows/ci.yml)
 
 SiteBuilder is a Symfony web application for AI-assisted content editing. It gives non-engineering teams a normie-friendly way to edit web content projects like marketing pages, while still keeping engineers happy with Git-backed source control and clean PR workflows.
 
-The app lets users connect set up content management projects backed by Git repositories, work inside isolated workspaces, and use chat-based workflows to edit files with an AI agent. It manages workspace lifecycle and review steps so changes can be inspected before merging.
+It is a [DX·Tooling](https://dx-tooling.org) project, sponsored by <a href="https://www.joboo.de"><img src="https://webassets.cdn.www.joboo.de/assets/images/joboo-inverted.png" alt="JOBOO! GmbH" height="18" /></a>
+
+The app lets users set up content management projects backed by Git repositories, work inside isolated workspaces, and use chat-based workflows to edit files with an AI agent. It manages workspace lifecycle and review steps so changes can be inspected before merging.
 
 <p align="center">
   <img src="https://dx-tooling.org/sitebuilder-assets/webapp-screenshots/web-versions/SiteBuilder-content-editor-landing-page-preview-and-GitHub-PR-for-changes-1600x987.png" alt="SiteBuilder: content editor, landing page result, and GitHub PR for the changes." width="640">
@@ -58,7 +60,7 @@ For details, see:
 
 - Docker Desktop
 - Mise (https://mise.jdx.dev)
-- an unixoid system like Linux, macOS, or Windows Subsytem for Linux
+- an unixoid system like Linux, macOS, or Windows Subsystem for Linux
 
 ### Setup
 
