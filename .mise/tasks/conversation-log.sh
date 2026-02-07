@@ -28,8 +28,12 @@ else
 fi
 echo "---"
 
+# Ensure the log file exists so tail -F doesn't fail silently.
+# The messenger container writes the log; both containers share the volume.
+docker compose exec -T messenger touch "${LOG_FILE}"
+
 if [ "${SHOW_ALL}" == "true" ]; then
-    docker compose exec -T app tail -n "${INITIAL_LINES}" -F "${LOG_FILE}" 2>/dev/null
+    docker compose exec -T messenger tail -n "${INITIAL_LINES}" -F "${LOG_FILE}"
 else
-    docker compose exec -T app tail -n 1000 -F "${LOG_FILE}" 2>/dev/null | grep --line-buffered "${CONVERSATION_UUID}"
+    docker compose exec -T messenger tail -n 1000 -F "${LOG_FILE}" | grep --line-buffered "${CONVERSATION_UUID}"
 fi
