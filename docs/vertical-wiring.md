@@ -2,8 +2,6 @@
 
 This diagram shows **which verticals call which other verticals’ facade interface methods** — the wiring between verticals only. Internal calls within a vertical are omitted. See [archbook.md](archbook.md) for the overall facade/vertical architecture.
 
-**Interactive version:** open [vertical-wiring-diagram.html](vertical-wiring-diagram.html) in a browser to highlight arrows on hover.
-
 ```mermaid
 flowchart LR
     subgraph callers["Callers"]
