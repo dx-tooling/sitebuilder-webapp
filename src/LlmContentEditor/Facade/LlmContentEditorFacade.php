@@ -205,6 +205,9 @@ final class LlmContentEditorFacade implements LlmContentEditorFacadeInterface
             explode("\n", $agentConfig->stepInstructions),
             explode("\n", $agentConfig->outputInstructions),
         );
+        if ($agentConfig->workingFolderPath !== null && $agentConfig->workingFolderPath !== '') {
+            $systemPrompt .= "\n\nWORKING FOLDER (use for all path-based tools): " . $agentConfig->workingFolderPath;
+        }
 
         $isFirstMessage = $previousMessages === [];
 

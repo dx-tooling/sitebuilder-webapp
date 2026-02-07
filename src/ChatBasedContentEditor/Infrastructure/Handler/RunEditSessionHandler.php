@@ -100,11 +100,13 @@ final readonly class RunEditSessionHandler
                 $project->remoteContentAssetsManifestUrls
             );
 
-            // Build agent configuration from project settings
+            // Build agent configuration from project settings.
+            // Pass working folder path so it is in the system prompt and survives context-window trimming (#79).
             $agentConfig = new AgentConfigDto(
                 $project->agentBackgroundInstructions,
                 $project->agentStepInstructions,
                 $project->agentOutputInstructions,
+                '/workspace',
             );
 
             $generator = $this->facade->streamEditWithHistory(

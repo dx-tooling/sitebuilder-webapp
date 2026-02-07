@@ -52,6 +52,21 @@ class ContentEditorAgent extends BaseCodingAgent
     }
 
     /**
+     * System prompt includes working folder path when set, so it survives context-window trimming.
+     *
+     * @see https://github.com/dx-tooling/sitebuilder-webapp/issues/79
+     */
+    public function instructions(): string
+    {
+        $base = parent::instructions();
+        if ($this->agentConfig->workingFolderPath !== null && $this->agentConfig->workingFolderPath !== '') {
+            $base .= "\n\nWORKING FOLDER (use for all path-based tools): " . $this->agentConfig->workingFolderPath;
+        }
+
+        return $base;
+    }
+
+    /**
      * @return list<string>
      */
     protected function getBackgroundInstructions(): array
