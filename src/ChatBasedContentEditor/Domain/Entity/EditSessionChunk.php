@@ -28,7 +28,8 @@ class EditSessionChunk
         return new self(
             $session,
             EditSessionChunkType::Text,
-            json_encode(['content' => $content], JSON_THROW_ON_ERROR)
+            json_encode(['content' => $content], JSON_THROW_ON_ERROR),
+            null
         );
     }
 
@@ -36,12 +37,13 @@ class EditSessionChunk
      * @throws Exception
      * @throws JsonException
      */
-    public static function createEventChunk(EditSession $session, string $eventJson): self
+    public static function createEventChunk(EditSession $session, string $eventJson, ?int $contextBytes = null): self
     {
         return new self(
             $session,
             EditSessionChunkType::Event,
-            $eventJson
+            $eventJson,
+            $contextBytes
         );
     }
 
@@ -54,7 +56,8 @@ class EditSessionChunk
         return new self(
             $session,
             EditSessionChunkType::Done,
-            json_encode(['success' => $success, 'errorMessage' => $errorMessage], JSON_THROW_ON_ERROR)
+            json_encode(['success' => $success, 'errorMessage' => $errorMessage], JSON_THROW_ON_ERROR),
+            null
         );
     }
 
@@ -64,12 +67,14 @@ class EditSessionChunk
     private function __construct(
         EditSession          $session,
         EditSessionChunkType $chunkType,
-        string               $payloadJson
+        string               $payloadJson,
+        ?int                 $contextBytes = null
     ) {
-        $this->session     = $session;
-        $this->chunkType   = $chunkType;
-        $this->payloadJson = $payloadJson;
-        $this->createdAt   = DateAndTimeService::getDateTimeImmutable();
+        $this->session      = $session;
+        $this->chunkType    = $chunkType;
+        $this->payloadJson  = $payloadJson;
+        $this->contextBytes = $contextBytes;
+        $this->createdAt    = DateAndTimeService::getDateTimeImmutable();
 
         $session->addChunk($this);
     }
@@ -120,9 +125,24 @@ class EditSessionChunk
     )]
     private readonly string $payloadJson;
 
+    /**
+     * Actual byte length of tool inputs + result for this event (for context-usage).
+     * Only set for event chunks; NULL for legacy rows or non-event chunks.
+     */
+    #[ORM\Column(
+        type: Types::INTEGER,
+        nullable: true
+    )]
+    private readonly ?int $contextBytes;
+
     public function getPayloadJson(): string
     {
         return $this->payloadJson;
+    }
+
+    public function getContextBytes(): ?int
+    {
+        return $this->contextBytes;
     }
 
     #[ORM\Column(

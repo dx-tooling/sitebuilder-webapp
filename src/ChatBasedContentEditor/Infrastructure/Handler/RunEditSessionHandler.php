@@ -145,8 +145,9 @@ final readonly class RunEditSessionHandler
                 if ($chunk->chunkType === 'text' && $chunk->content !== null) {
                     EditSessionChunk::createTextChunk($session, $chunk->content);
                 } elseif ($chunk->chunkType === 'event' && $chunk->event !== null) {
-                    $eventJson = $this->serializeEvent($chunk->event);
-                    EditSessionChunk::createEventChunk($session, $eventJson);
+                    $eventJson    = $this->serializeEvent($chunk->event);
+                    $contextBytes = ($chunk->event->inputBytes ?? 0) + ($chunk->event->resultBytes ?? 0);
+                    EditSessionChunk::createEventChunk($session, $eventJson, $contextBytes > 0 ? $contextBytes : null);
                 } elseif ($chunk->chunkType === 'message' && $chunk->message !== null) {
                     // Persist new conversation messages
                     $this->persistConversationMessage($conversation, $chunk->message);
