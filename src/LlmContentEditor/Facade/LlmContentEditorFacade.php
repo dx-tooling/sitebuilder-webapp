@@ -39,6 +39,8 @@ final class LlmContentEditorFacade implements LlmContentEditorFacadeInterface
         private readonly WorkspaceToolingServiceInterface $workspaceTooling,
         private readonly HttpClientInterface              $httpClient,
         private readonly LoggerInterface                  $logger,
+        private readonly LoggerInterface                  $llmWireLogger,
+        private readonly bool                             $llmWireLogEnabled,
     ) {
         $this->messageSerializer = new MessageSerializer();
     }
@@ -129,7 +131,8 @@ final class LlmContentEditorFacade implements LlmContentEditorFacadeInterface
             $this->workspaceTooling,
             LlmModelName::defaultForContentEditor(),
             $llmApiKey,
-            $agentConfig
+            $agentConfig,
+            $this->llmWireLogEnabled ? $this->llmWireLogger : null,
         );
         $agent->withChatHistory($chatHistory);
 

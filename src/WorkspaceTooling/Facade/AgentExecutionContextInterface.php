@@ -37,6 +37,16 @@ interface AgentExecutionContextInterface
     public function clearContext(): void;
 
     /**
+     * Get the workspace ID for the current agent run.
+     */
+    public function getWorkspaceId(): ?string;
+
+    /**
+     * Get the conversation ID for the current agent run.
+     */
+    public function getConversationId(): ?string;
+
+    /**
      * Get remote content assets manifest URLs configured for the current project.
      *
      * @return list<string>
