@@ -214,9 +214,18 @@ If the user refreshes or navigates away and returns:
 
 This makes the streaming UI fully resumable across page loads.
 
-### 5.3 Context Usage Polling
+### 5.3 Context Usage Polling (AI Budget Bar)
 
 A separate polling loop (2500ms interval) fetches token/cost data from `GET /chat-based-content-editor/{conversationId}/context-usage` to update the "AI budget" bar. This is independent of the chunk polling.
+
+**Two metrics, two semantics:**
+
+| Metric | Meaning | Behavior |
+|--------|---------|----------|
+| **Bar (X of Y used)** | **Current context** — bytes/tokens that would be in the next LLM request | Messages + system-prompt estimate + **only the active running session’s** event chunk bytes (tool calls/results). When no turn is running, or when the frontend does not send a session, event chunks are excluded — so the bar **can shrink** when a turn ends. |
+| **Est. $Z** | **Cumulative cost** — total input + output cost so far | All conversation messages + all event chunks (input) and all text chunks (output). **Only grows**; does not depend on which session is active. |
+
+**How the bar reflects the current turn:** While a turn is in progress, the frontend includes `?sessionId={id}` on the context-usage request. The backend then adds that session’s event chunk bytes (when its status is `Running`) to the current-context sum, so the bar grows during tool use and shrinks once the turn completes and polling continues without a session. Cost is always computed from the full conversation and does not change when the bar shrinks.
 
 ---
 
