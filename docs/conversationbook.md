@@ -202,6 +202,8 @@ The frontend does **not** use WebSockets or Server-Sent Events. Instead, it uses
 5. If `status` is `completed`, `failed`, or `cancelled`, stop polling even if no `done` chunk arrived yet (defensive).
 6. Otherwise, schedule the next poll after 500ms (non-overlapping `setTimeout`, never `setInterval`).
 
+**Why "Thinking" can last several seconds with no tool badges:** The LLM API streams tool-call arguments in many small chunks. The agent only emits an `event` chunk (e.g. `tool_calling`) when the **full** tool call has been received and parsed. Until then, the session has no new chunks to return, so the frontend keeps showing "Thinking". On the wire (see **LLM Logging Book**), you will see many `← chunk` lines with small `tool_calls[].function.arguments` fragments; that traffic is normal and indicates the model is actively streaming a tool call.
+
 ### 5.2 Page Resume
 
 If the user refreshes or navigates away and returns:

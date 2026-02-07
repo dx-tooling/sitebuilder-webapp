@@ -131,6 +131,12 @@ The full request body includes:
 
 Nothing is redacted. This is intentional -- the wire log exists precisely because you need to see exactly what the LLM receives and returns.
 
+#### Many chunks during tool-call argument streaming
+
+When the model decides to call a tool, the API **streams** the tool-call payload. Each SSE chunk can contain a small fragment of `choices[0].delta.tool_calls[0].function.arguments` (e.g. a few characters of JSON or SVG). The wire log therefore emits one `← chunk` line per SSE line. For a large tool call (e.g. `generate_image` with a long description, or a tool that receives a big JSON blob), you will see **dozens of chunks** in quick succession, each with a tiny `"arguments":"..."` fragment. This is expected: the log is faithfully recording the wire.
+
+During that time the **UI can appear "stuck"**: the frontend shows only "Thinking" and no tool activity. That is because the agent (NeuronAI) does not yield to the application until the **entire** tool call is assembled from the stream. No `event` chunks (e.g. `tool_calling`) are written to the session until the full arguments are received and parsed. So from the user's perspective, nothing happens for several seconds while the wire log shows steady chunk traffic. Once the tool call is complete, the conversation log gets a single `TOOL_CALL` line and the UI updates with the tool badge.
+
 ### 4.2 Conversation Log (`llm-conversation.log`)
 
 The same turn produces a much more concise output:
