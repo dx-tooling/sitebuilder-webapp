@@ -104,7 +104,7 @@ The handler runs in the Messenger worker process:
 2. Set status to `Running`. Flush.
 3. Load the conversation's previous messages for multi-turn context.
 4. Set the execution context (workspace path, project config, Docker image).
-5. Build agent configuration from project settings (background/step/output instructions).
+5. Build agent configuration from project settings (background/step/output instructions). The working folder path (`/workspace`) is included in the system prompt so it survives context-window trimming (see [#79](https://github.com/dx-tooling/sitebuilder-webapp/issues/79)).
 6. Call `LlmContentEditorFacade::streamEditWithHistory()` which returns a PHP `Generator`.
 7. Iterate the generator. For each yielded chunk:
    - **Cooperative cancellation check:** a lightweight DBAL query reads just the `status` column from the database (see section 6.2 for why). If `Cancelling`, repair the conversation history with a synthetic assistant message and stop (see section 6.3 for the full rationale), write a `Done` chunk, set `Cancelled`, and return.
