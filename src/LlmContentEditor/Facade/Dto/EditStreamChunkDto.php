@@ -7,7 +7,7 @@ namespace App\LlmContentEditor\Facade\Dto;
 readonly class EditStreamChunkDto
 {
     /**
-     * @param 'text'|'event'|'message'|'done' $chunkType
+     * @param 'text'|'event'|'message'|'done'|'progress' $chunkType
      */
     public function __construct(
         public string                  $chunkType,

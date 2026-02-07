@@ -15,6 +15,7 @@ use App\LlmContentEditor\Infrastructure\ChatHistory\CallbackChatHistory;
 use App\LlmContentEditor\Infrastructure\ChatHistory\MessageSerializer;
 use App\LlmContentEditor\Infrastructure\ConversationLog\LlmConversationLogObserver;
 use App\LlmContentEditor\Infrastructure\Observer\AgentEventCollectingObserver;
+use App\LlmContentEditor\Infrastructure\ProgressMessageResolver;
 use App\WorkspaceTooling\Facade\WorkspaceToolingServiceInterface;
 use Generator;
 use NeuronAI\Chat\Messages\AssistantMessage;
@@ -46,6 +47,7 @@ final class LlmContentEditorFacade implements LlmContentEditorFacadeInterface
         private readonly LoggerInterface                  $llmWireLogger,
         private readonly LoggerInterface                  $llmConversationLogger,
         private readonly bool                             $llmWireLogEnabled,
+        private readonly ProgressMessageResolver          $progressMessageResolver,
     ) {
         $this->messageSerializer = new MessageSerializer();
     }
@@ -162,6 +164,10 @@ final class LlmContentEditorFacade implements LlmContentEditorFacadeInterface
 
                 foreach ($queue->drain() as $eventDto) {
                     yield new EditStreamChunkDto('event', null, $eventDto, null, null);
+                    $progressMessage = $this->progressMessageResolver->messageForEvent($eventDto);
+                    if ($progressMessage !== null) {
+                        yield new EditStreamChunkDto('progress', $progressMessage, null, null, null);
+                    }
                 }
                 if (is_string($chunk)) {
                     $accumulatedContent .= $chunk;
@@ -180,6 +186,10 @@ final class LlmContentEditorFacade implements LlmContentEditorFacadeInterface
 
             foreach ($queue->drain() as $eventDto) {
                 yield new EditStreamChunkDto('event', null, $eventDto, null, null);
+                $progressMessage = $this->progressMessageResolver->messageForEvent($eventDto);
+                if ($progressMessage !== null) {
+                    yield new EditStreamChunkDto('progress', $progressMessage, null, null, null);
+                }
             }
 
             yield new EditStreamChunkDto('done', null, null, true, null);

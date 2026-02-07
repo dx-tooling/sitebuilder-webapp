@@ -51,6 +51,20 @@ class EditSessionChunk
      * @throws Exception
      * @throws JsonException
      */
+    public static function createProgressChunk(EditSession $session, string $message): self
+    {
+        return new self(
+            $session,
+            EditSessionChunkType::Progress,
+            json_encode(['message' => $message], JSON_THROW_ON_ERROR),
+            null
+        );
+    }
+
+    /**
+     * @throws Exception
+     * @throws JsonException
+     */
     public static function createDoneChunk(EditSession $session, bool $success, ?string $errorMessage = null): self
     {
         return new self(

@@ -150,6 +150,8 @@ final readonly class RunEditSessionHandler
                     $eventJson    = $this->serializeEvent($chunk->event);
                     $contextBytes = ($chunk->event->inputBytes ?? 0) + ($chunk->event->resultBytes ?? 0);
                     EditSessionChunk::createEventChunk($session, $eventJson, $contextBytes > 0 ? $contextBytes : null);
+                } elseif ($chunk->chunkType === 'progress' && $chunk->content !== null) {
+                    EditSessionChunk::createProgressChunk($session, $chunk->content);
                 } elseif ($chunk->chunkType === 'message' && $chunk->message !== null) {
                     // Persist new conversation messages
                     $this->persistConversationMessage($conversation, $chunk->message);

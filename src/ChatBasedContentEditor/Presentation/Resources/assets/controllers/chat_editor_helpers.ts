@@ -63,6 +63,8 @@ export interface ChunkPayload {
     toolResult?: string;
     errorMessage?: string;
     success?: boolean;
+    /** Progress chunk: short human-readable status message */
+    message?: string;
 }
 
 /**
