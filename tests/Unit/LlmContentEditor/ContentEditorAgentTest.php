@@ -78,7 +78,7 @@ final class ContentEditorAgentTest extends TestCase
     public function testInstructionsOmitWorkingFolderWhenNull(): void
     {
         $configWithoutPath = new AgentConfigDto('Background', 'Step 1', 'Output');
-        $agent = new ContentEditorAgent(
+        $agent             = new ContentEditorAgent(
             $this->createMockWorkspaceTooling(),
             LlmModelName::defaultForContentEditor(),
             'sk-test-key',

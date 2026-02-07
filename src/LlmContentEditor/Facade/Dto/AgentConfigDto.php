@@ -16,9 +16,9 @@ namespace App\LlmContentEditor\Facade\Dto;
 final readonly class AgentConfigDto
 {
     public function __construct(
-        public string $backgroundInstructions,
-        public string $stepInstructions,
-        public string $outputInstructions,
+        public string  $backgroundInstructions,
+        public string  $stepInstructions,
+        public string  $outputInstructions,
         public ?string $workingFolderPath = null,
     ) {
     }
