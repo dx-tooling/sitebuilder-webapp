@@ -353,3 +353,75 @@ describe("ChatBasedContentEditorController activity indicators", () => {
         expect(thinkingBadge?.classList.contains("activity-badge-inactive")).toBe(true);
     });
 });
+
+describe("ChatBasedContentEditorController handleChunk progress chunks", () => {
+    it("appends progress line when chunk type is progress and payload has message", () => {
+        const instance = Object.create(ChatBasedContentEditorController.prototype) as ChatBasedContentEditorController;
+        (instance as unknown as { translationsValue: Record<string, string> }).translationsValue = {
+            cancelled: "Cancelled",
+        };
+
+        const container = document.createElement("div");
+        const technicalContainer = (
+            instance as unknown as { createTechnicalMessagesContainer: () => HTMLElement }
+        ).createTechnicalMessagesContainer();
+        container.appendChild(technicalContainer);
+
+        const chunk = {
+            id: 1,
+            chunkType: "progress",
+            payload: JSON.stringify({ message: "Reading about.html" }),
+        };
+        (
+            instance as unknown as {
+                handleChunk: (
+                    chunk: { id: number; chunkType: string; payload: string },
+                    container: HTMLElement,
+                ) => boolean;
+            }
+        ).handleChunk(chunk, container);
+
+        const progressWrapper = container.querySelector<HTMLElement>('[data-progress-wrapper="1"]');
+        expect(progressWrapper).not.toBeNull();
+        const progressContainer = progressWrapper!.querySelector<HTMLElement>('[data-progress-container="1"]');
+        expect(progressContainer).not.toBeNull();
+        const lines = progressContainer!.querySelectorAll("div");
+        expect(lines.length).toBe(1);
+        expect(lines[0].textContent).toBe("Reading about.html");
+    });
+
+    it("appends multiple progress lines in order", () => {
+        const instance = Object.create(ChatBasedContentEditorController.prototype) as ChatBasedContentEditorController;
+        (instance as unknown as { translationsValue: Record<string, string> }).translationsValue = {
+            cancelled: "Cancelled",
+        };
+
+        const container = document.createElement("div");
+        const technicalContainer = (
+            instance as unknown as { createTechnicalMessagesContainer: () => HTMLElement }
+        ).createTechnicalMessagesContainer();
+        container.appendChild(technicalContainer);
+
+        const handleChunk = (
+            instance as unknown as {
+                handleChunk: (
+                    chunk: { id: number; chunkType: string; payload: string },
+                    container: HTMLElement,
+                ) => boolean;
+            }
+        ).handleChunk.bind(instance);
+
+        handleChunk({ id: 1, chunkType: "progress", payload: JSON.stringify({ message: "Thinking…" }) }, container);
+        handleChunk(
+            { id: 2, chunkType: "progress", payload: JSON.stringify({ message: "Editing dist/landing-1.html" }) },
+            container,
+        );
+
+        const progressContainer = container.querySelector<HTMLElement>('[data-progress-container="1"]');
+        expect(progressContainer).not.toBeNull();
+        const lines = progressContainer!.querySelectorAll("div");
+        expect(lines.length).toBe(2);
+        expect(lines[0].textContent).toBe("Thinking…");
+        expect(lines[1].textContent).toBe("Editing dist/landing-1.html");
+    });
+});
