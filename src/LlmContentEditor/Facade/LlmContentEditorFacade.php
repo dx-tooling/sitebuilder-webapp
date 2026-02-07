@@ -74,7 +74,8 @@ final class LlmContentEditorFacade implements LlmContentEditorFacadeInterface
         string         $instruction,
         array          $previousMessages,
         string         $llmApiKey,
-        AgentConfigDto $agentConfig
+        AgentConfigDto $agentConfig,
+        string         $locale = 'en',
     ): Generator {
         // Convert previous message DTOs to NeuronAI messages
         $initialMessages = [];
@@ -164,7 +165,7 @@ final class LlmContentEditorFacade implements LlmContentEditorFacadeInterface
 
                 foreach ($queue->drain() as $eventDto) {
                     yield new EditStreamChunkDto('event', null, $eventDto, null, null);
-                    $progressMessage = $this->progressMessageResolver->messageForEvent($eventDto);
+                    $progressMessage = $this->progressMessageResolver->messageForEvent($eventDto, $locale);
                     if ($progressMessage !== null) {
                         yield new EditStreamChunkDto('progress', $progressMessage, null, null, null);
                     }
@@ -186,7 +187,7 @@ final class LlmContentEditorFacade implements LlmContentEditorFacadeInterface
 
             foreach ($queue->drain() as $eventDto) {
                 yield new EditStreamChunkDto('event', null, $eventDto, null, null);
-                $progressMessage = $this->progressMessageResolver->messageForEvent($eventDto);
+                $progressMessage = $this->progressMessageResolver->messageForEvent($eventDto, $locale);
                 if ($progressMessage !== null) {
                     yield new EditStreamChunkDto('progress', $progressMessage, null, null, null);
                 }

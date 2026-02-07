@@ -114,7 +114,8 @@ final readonly class RunEditSessionHandler
                 $session->getInstruction(),
                 $previousMessages,
                 $project->llmApiKey,
-                $agentConfig
+                $agentConfig,
+                $message->locale,
             );
 
             foreach ($generator as $chunk) {

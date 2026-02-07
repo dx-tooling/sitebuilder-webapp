@@ -6,49 +6,76 @@ namespace App\LlmContentEditor\Infrastructure;
 
 use App\LlmContentEditor\Facade\Dto\AgentEventDto;
 use App\LlmContentEditor\Facade\Dto\ToolInputEntryDto;
+use Symfony\Contracts\Translation\TranslatorInterface;
 
 /**
  * Maps agent events to short, human-readable progress messages for the chat UI.
  * Used to make the agent feel "chatty" while working on large tasks.
+ * Messages are translated according to the given locale (matches app UI language).
  */
 final readonly class ProgressMessageResolver
 {
-    public function messageForEvent(AgentEventDto $event): ?string
+    private const string DOMAIN = 'progress';
+
+    public function __construct(
+        private TranslatorInterface $translator
+    ) {
+    }
+
+    public function messageForEvent(AgentEventDto $event, string $locale): ?string
     {
         return match ($event->kind) {
-            'inference_start' => 'Thinking…',
-            'tool_calling'    => $this->messageForToolCalling($event),
+            'inference_start' => $this->trans('thinking', [], $locale),
+            'tool_calling'    => $this->messageForToolCalling($event, $locale),
             default           => null,
         };
     }
 
-    private function messageForToolCalling(AgentEventDto $event): ?string
+    private function messageForToolCalling(AgentEventDto $event, string $locale): ?string
     {
         $toolName = $event->toolName ?? '';
         $path     = $this->getInputValue($event->toolInputs, 'path');
         $label    = $path !== null ? $this->basenameForDisplay($path) : null;
 
-        $message = match ($toolName) {
-            'get_workspace_rules' => 'Loading workspace rules',
-            'get_folder_content'  => $label !== null ? sprintf('Listing folder %s', $label) : 'Listing folder',
-            'get_file_content'   => $label !== null ? sprintf('Reading %s', $label) : 'Reading file',
-            'get_file_info'      => $label !== null ? sprintf('Checking file %s', $label) : 'Checking file',
-            'get_file_lines'     => $label !== null ? sprintf('Reading lines from %s', $label) : 'Reading lines',
-            'search_in_file'     => $label !== null ? sprintf('Searching in %s', $label) : 'Searching in file',
-            'replace_in_file'    => $label !== null ? sprintf('Editing %s', $label) : 'Editing file',
-            'apply_diff_to_file' => $label !== null ? sprintf('Applying changes to %s', $label) : 'Applying changes',
-            'run_quality_checks' => 'Running quality checks',
-            'run_tests'          => 'Running tests',
-            'run_build'          => 'Running build',
-            'list_remote_content_asset_urls' => 'Fetching remote asset URLs',
-            'search_remote_content_asset_urls' => 'Searching remote assets',
-            'get_remote_asset_info' => 'Getting remote asset info',
-            'suggest_commit_message' => 'Suggesting commit message',
-            'get_preview_url'    => $label !== null ? sprintf('Getting preview URL for %s', $label) : 'Getting preview URL',
-            default              => $label !== null ? sprintf('Running %s on %s', $toolName, $label) : null,
+        $key = match ($toolName) {
+            'get_workspace_rules'              => 'loading_workspace_rules',
+            'get_folder_content'               => $label !== null ? 'listing_folder' : 'listing_folder_only',
+            'get_file_content'                 => $label !== null ? 'reading_file' : 'reading_file_only',
+            'get_file_info'                    => $label !== null ? 'checking_file' : 'checking_file_only',
+            'get_file_lines'                   => $label !== null ? 'reading_lines' : 'reading_lines_only',
+            'search_in_file'                   => $label !== null ? 'searching_in_file' : 'searching_in_file_only',
+            'replace_in_file'                  => $label !== null ? 'editing_file' : 'editing_file_only',
+            'apply_diff_to_file'               => $label !== null ? 'applying_changes' : 'applying_changes_only',
+            'run_quality_checks'               => 'running_quality_checks',
+            'run_tests'                        => 'running_tests',
+            'run_build'                        => 'running_build',
+            'list_remote_content_asset_urls'   => 'fetching_remote_asset_urls',
+            'search_remote_content_asset_urls' => 'searching_remote_assets',
+            'get_remote_asset_info'            => 'getting_remote_asset_info',
+            'suggest_commit_message'           => 'suggesting_commit_message',
+            'get_preview_url'                  => $label !== null ? 'getting_preview_url' : 'getting_preview_url_only',
+            default                            => $label !== null ? 'running_tool_on' : null,
         };
 
-        return $message;
+        if ($key === null) {
+            return null;
+        }
+
+        $params = $label !== null ? ['%label%' => $label] : [];
+        if ($key === 'running_tool_on' && $label !== null) {
+            $params['%tool%']  = $toolName;
+            $params['%label%'] = $label;
+        }
+
+        return $this->trans($key, $params, $locale);
+    }
+
+    /**
+     * @param array<string, string> $params
+     */
+    private function trans(string $id, array $params, string $locale): string
+    {
+        return $this->translator->trans($id, $params, self::DOMAIN, $locale);
     }
 
     /**

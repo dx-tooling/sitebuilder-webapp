@@ -603,7 +603,7 @@ final class ChatBasedContentEditorController extends AbstractController
             return $this->json(['error' => 'Failed to create session.'], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
 
-        $this->messageBus->dispatch(new RunEditSessionMessage($sessionId));
+        $this->messageBus->dispatch(new RunEditSessionMessage($sessionId, $request->getLocale()));
 
         return $this->json([
             'sessionId' => $sessionId,
