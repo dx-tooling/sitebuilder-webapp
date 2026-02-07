@@ -17,6 +17,7 @@ use App\LlmContentEditor\Facade\Dto\AgentConfigDto;
 use App\LlmContentEditor\Facade\Dto\AgentEventDto;
 use App\LlmContentEditor\Facade\Dto\ConversationMessageDto;
 use App\LlmContentEditor\Facade\Dto\ToolInputEntryDto;
+use App\LlmContentEditor\Facade\Enum\EditStreamChunkType;
 use App\LlmContentEditor\Facade\LlmContentEditorFacadeInterface;
 use App\ProjectMgmt\Facade\ProjectMgmtFacadeInterface;
 use App\WorkspaceMgmt\Facade\WorkspaceMgmtFacadeInterface;
@@ -145,18 +146,18 @@ final readonly class RunEditSessionHandler
                     return;
                 }
 
-                if ($chunk->chunkType === 'text' && $chunk->content !== null) {
+                if ($chunk->chunkType === EditStreamChunkType::Text && $chunk->content !== null) {
                     EditSessionChunk::createTextChunk($session, $chunk->content);
-                } elseif ($chunk->chunkType === 'event' && $chunk->event !== null) {
+                } elseif ($chunk->chunkType === EditStreamChunkType::Event && $chunk->event !== null) {
                     $eventJson    = $this->serializeEvent($chunk->event);
                     $contextBytes = ($chunk->event->inputBytes ?? 0) + ($chunk->event->resultBytes ?? 0);
                     EditSessionChunk::createEventChunk($session, $eventJson, $contextBytes > 0 ? $contextBytes : null);
-                } elseif ($chunk->chunkType === 'progress' && $chunk->content !== null) {
+                } elseif ($chunk->chunkType === EditStreamChunkType::Progress && $chunk->content !== null) {
                     EditSessionChunk::createProgressChunk($session, $chunk->content);
-                } elseif ($chunk->chunkType === 'message' && $chunk->message !== null) {
+                } elseif ($chunk->chunkType === EditStreamChunkType::Message && $chunk->message !== null) {
                     // Persist new conversation messages
                     $this->persistConversationMessage($conversation, $chunk->message);
-                } elseif ($chunk->chunkType === 'done') {
+                } elseif ($chunk->chunkType === EditStreamChunkType::Done) {
                     EditSessionChunk::createDoneChunk(
                         $session,
                         $chunk->success ?? false,
