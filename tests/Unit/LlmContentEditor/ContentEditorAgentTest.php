@@ -31,7 +31,7 @@ final class ContentEditorAgentTest extends TestCase
         $text         = implode("\n", $instructions);
 
         self::assertStringContainsString('PATH RULES (critical)', $text);
-        self::assertStringContainsString('Never use /workspace', $text);
+        self::assertStringContainsString('Never use a path that is not under the working folder', $text);
         self::assertStringContainsString('Directory does not exist', $text);
         self::assertStringContainsString('Do not retry the same path', $text);
     }
@@ -54,7 +54,38 @@ final class ContentEditorAgentTest extends TestCase
         $exploreStep = $steps[0];
         self::assertStringContainsString('EXPLORE', $exploreStep);
         self::assertStringContainsString('working folder', $exploreStep);
-        self::assertStringContainsString("path from the user's message", $exploreStep);
+        self::assertStringContainsString('path given in the system prompt', $exploreStep);
+    }
+
+    public function testInstructionsIncludeWorkingFolderWhenSet(): void
+    {
+        $configWithPath = new AgentConfigDto(
+            'Background',
+            'Step 1',
+            'Output',
+            '/workspace'
+        );
+        $agent = new ContentEditorAgent(
+            $this->createMockWorkspaceTooling(),
+            LlmModelName::defaultForContentEditor(),
+            'sk-test-key',
+            $configWithPath
+        );
+        $instructions = $agent->instructions();
+        self::assertStringContainsString('WORKING FOLDER (use for all path-based tools): /workspace', $instructions);
+    }
+
+    public function testInstructionsOmitWorkingFolderWhenNull(): void
+    {
+        $configWithoutPath = new AgentConfigDto('Background', 'Step 1', 'Output');
+        $agent = new ContentEditorAgent(
+            $this->createMockWorkspaceTooling(),
+            LlmModelName::defaultForContentEditor(),
+            'sk-test-key',
+            $configWithoutPath
+        );
+        $instructions = $agent->instructions();
+        self::assertStringNotContainsString('WORKING FOLDER (use for all path-based tools)', $instructions);
     }
 
     public function testAgentUsesProvidedConfig(): void

@@ -124,7 +124,7 @@ Each agent turn produces entries in this order:
 A single user prompt that triggers tool calls produces **multiple** request-response-stream sequences (one per LLM API round-trip).
 
 The full request body includes:
-- The system prompt
+- The system prompt (including the working folder path, e.g. `WORKING FOLDER: /workspace`, so it survives context-window trimming)
 - Complete conversation history
 - All tool definitions (JSON schema)
 - The current user message
