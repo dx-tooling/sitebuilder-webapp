@@ -25,7 +25,7 @@ final class ProgressMessageResolverTest extends TestCase
             ->willReturn('Thinking…');
 
         $resolver = $this->createResolver($translator);
-        $event   = new AgentEventDto('inference_start');
+        $event    = new AgentEventDto('inference_start');
 
         self::assertSame('Thinking…', $resolver->messageForEvent($event, 'en'));
     }
@@ -38,7 +38,7 @@ final class ProgressMessageResolverTest extends TestCase
             ->willReturn('Denke nach…');
 
         $resolver = $this->createResolver($translator);
-        $event   = new AgentEventDto('inference_start');
+        $event    = new AgentEventDto('inference_start');
 
         self::assertSame('Denke nach…', $resolver->messageForEvent($event, 'de'));
     }
@@ -51,7 +51,7 @@ final class ProgressMessageResolverTest extends TestCase
             ->willReturn('Reading about.html');
 
         $resolver = $this->createResolver($translator);
-        $event   = new AgentEventDto(
+        $event    = new AgentEventDto(
             'tool_calling',
             'get_file_content',
             [new ToolInputEntryDto('path', '/workspace/dist/about.html')],
@@ -68,7 +68,7 @@ final class ProgressMessageResolverTest extends TestCase
             ->willReturn('Editing landing-1.html');
 
         $resolver = $this->createResolver($translator);
-        $event   = new AgentEventDto(
+        $event    = new AgentEventDto(
             'tool_calling',
             'replace_in_file',
             [new ToolInputEntryDto('path', '/workspace/dist/landing-1.html')],
@@ -85,7 +85,7 @@ final class ProgressMessageResolverTest extends TestCase
             ->willReturn('Running build');
 
         $resolver = $this->createResolver($translator);
-        $event   = new AgentEventDto('tool_calling', 'run_build', []);
+        $event    = new AgentEventDto('tool_calling', 'run_build', []);
 
         self::assertSame('Running build', $resolver->messageForEvent($event, 'en'));
     }
@@ -98,7 +98,7 @@ final class ProgressMessageResolverTest extends TestCase
             ->willReturn('Loading workspace rules');
 
         $resolver = $this->createResolver($translator);
-        $event   = new AgentEventDto('tool_calling', 'get_workspace_rules');
+        $event    = new AgentEventDto('tool_calling', 'get_workspace_rules');
 
         self::assertSame('Loading workspace rules', $resolver->messageForEvent($event, 'en'));
     }
@@ -109,7 +109,7 @@ final class ProgressMessageResolverTest extends TestCase
         $translator->expects(self::never())->method('trans');
 
         $resolver = $this->createResolver($translator);
-        $event   = new AgentEventDto('inference_stop');
+        $event    = new AgentEventDto('inference_stop');
 
         self::assertNull($resolver->messageForEvent($event, 'en'));
     }
@@ -122,7 +122,7 @@ final class ProgressMessageResolverTest extends TestCase
             ->willReturn('Running custom_tool on foo.txt');
 
         $resolver = $this->createResolver($translator);
-        $event   = new AgentEventDto(
+        $event    = new AgentEventDto(
             'tool_calling',
             'custom_tool',
             [new ToolInputEntryDto('path', '/workspace/foo.txt')],
@@ -137,7 +137,7 @@ final class ProgressMessageResolverTest extends TestCase
         $translator->expects(self::never())->method('trans');
 
         $resolver = $this->createResolver($translator);
-        $event   = new AgentEventDto('tool_calling', 'unknown_tool', []);
+        $event    = new AgentEventDto('tool_calling', 'unknown_tool', []);
 
         self::assertNull($resolver->messageForEvent($event, 'en'));
     }
