@@ -318,7 +318,8 @@ final class ChatBasedContentEditorController extends AbstractController
             ];
         }
 
-        $contextUsage = $this->contextUsageService->getContextUsage($conversation);
+        $activeSessionIdForContext = $activeSession !== null ? $activeSession->getId() : null;
+        $contextUsage              = $this->contextUsageService->getContextUsage($conversation, $activeSessionIdForContext);
 
         // Load prompt suggestions only for editable sessions
         $promptSuggestions = [];
@@ -365,14 +366,23 @@ final class ChatBasedContentEditorController extends AbstractController
         methods: [Request::METHOD_GET],
         requirements: ['conversationId' => '[a-f0-9-]{36}']
     )]
-    public function contextUsage(string $conversationId): Response
+    public function contextUsage(string $conversationId, Request $request): Response
     {
         $conversation = $this->entityManager->find(Conversation::class, $conversationId);
         if ($conversation === null) {
             return $this->json(['error' => 'Conversation not found.'], Response::HTTP_NOT_FOUND);
         }
 
-        $dto = $this->contextUsageService->getContextUsage($conversation);
+        $sessionId       = $request->query->get('sessionId');
+        $activeSessionId = null;
+        if ($sessionId !== null && $sessionId !== '') {
+            $session = $this->entityManager->find(EditSession::class, $sessionId);
+            if ($session instanceof EditSession && $session->getConversation()->getId() === $conversation->getId()) {
+                $activeSessionId = $sessionId;
+            }
+        }
+
+        $dto = $this->contextUsageService->getContextUsage($conversation, $activeSessionId);
 
         return $this->json([
             'usedTokens'   => $dto->usedTokens,
@@ -692,7 +702,7 @@ final class ChatBasedContentEditorController extends AbstractController
         }
 
         $conversation = $session->getConversation();
-        $contextUsage = $this->contextUsageService->getContextUsage($conversation);
+        $contextUsage = $this->contextUsageService->getContextUsage($conversation, $session->getId());
 
         return $this->json([
             'chunks'       => $chunkData,

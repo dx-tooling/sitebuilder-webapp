@@ -150,7 +150,10 @@ export default class extends Controller {
     }
 
     private async pollContextUsage(): Promise<void> {
-        const url = this.contextUsageUrlValue;
+        let url = this.contextUsageUrlValue;
+        if (this.currentPollingState) {
+            url += `?sessionId=${encodeURIComponent(this.currentPollingState.sessionId)}`;
+        }
         try {
             const res = await fetch(url, { headers: { "X-Requested-With": "XMLHttpRequest" } });
             if (res.ok) {
