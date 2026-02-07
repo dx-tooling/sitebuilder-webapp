@@ -20,6 +20,24 @@ if [ "${SHOW_ALL}" != "true" ] && [ -z "${CONVERSATION_UUID}" ]; then
     exit 1
 fi
 
+# Check that LLM_WIRE_LOG_ENABLED=1 in the messenger container
+WIRE_ENABLED=$(docker compose exec -T messenger php -r \
+    'require "vendor/autoload.php"; (new Symfony\Component\Dotenv\Dotenv())->loadEnv(".env"); echo $_ENV["LLM_WIRE_LOG_ENABLED"] ?? "0";' 2>/dev/null)
+
+if [ "${WIRE_ENABLED}" != "1" ]; then
+    echo "ERROR: LLM wire logging is not enabled in the messenger container."
+    echo ""
+    echo "  LLM_WIRE_LOG_ENABLED is currently '${WIRE_ENABLED}'."
+    echo ""
+    echo "  To enable it, ensure LLM_WIRE_LOG_ENABLED=1 is set in .env.dev"
+    echo "  (or .env.local), then restart the messenger:"
+    echo ""
+    echo "    docker compose exec messenger php bin/console cache:clear"
+    echo "    docker compose restart messenger"
+    echo ""
+    exit 1
+fi
+
 echo "Streaming LLM wire logs from ${LOG_FILE}..."
 if [ "${SHOW_ALL}" == "true" ]; then
     echo "Filter: none (showing all entries)"
