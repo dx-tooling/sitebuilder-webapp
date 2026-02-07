@@ -2,6 +2,7 @@ monolog:
     channels:
         - deprecation
         - llm_wire
+        - llm_conversation
 
 when@dev:
     monolog:
@@ -10,7 +11,8 @@ when@dev:
                 type: stream
                 path: "%kernel.logs_dir%/%kernel.environment%.log"
                 level: debug
-                channels: ["!event", "!doctrine", "!llm_wire"]
+                channels:
+                    ["!event", "!doctrine", "!llm_wire", "!llm_conversation"]
             # uncomment to get logging in your browser
             # you may have to allow bigger header sizes in your Web server configuration
             #firephp:
@@ -22,12 +24,25 @@ when@dev:
             console:
                 type: console
                 process_psr_3_messages: false
-                channels: ["!event", "!doctrine", "!console", "!llm_wire"]
+                channels:
+                    [
+                        "!event",
+                        "!doctrine",
+                        "!console",
+                        "!llm_wire",
+                        "!llm_conversation",
+                    ]
             llm_wire:
                 type: stream
                 path: "%kernel.logs_dir%/llm-wire.log"
                 level: debug
                 channels: ["llm_wire"]
+            llm_conversation:
+                type: stream
+                path: "%kernel.logs_dir%/llm-conversation.log"
+                level: debug
+                channels: ["llm_conversation"]
+                formatter: 'App\LlmContentEditor\Infrastructure\ConversationLog\ConversationLogFormatter'
 
 when@test:
     monolog:
@@ -37,7 +52,7 @@ when@test:
                 action_level: error
                 handler: nested
                 excluded_http_codes: [404, 405]
-                channels: ["!event", "!llm_wire"]
+                channels: ["!event", "!llm_wire", "!llm_conversation"]
             nested:
                 type: stream
                 path: "%kernel.logs_dir%/%kernel.environment%.log"
@@ -51,7 +66,8 @@ when@prod:
                 type: stream
                 path: "%kernel.logs_dir%/%kernel.environment%.main.log"
                 level: info
-                channels: ["!event", "!deprecation", "!llm_wire"]
+                channels:
+                    ["!event", "!deprecation", "!llm_wire", "!llm_conversation"]
                 formatter: monolog.formatter.logstash
 
             # Error trigger that creates comprehensive error logs (including debug)
@@ -61,7 +77,8 @@ when@prod:
                 handler: errors_file
                 excluded_http_codes: [404, 405]
                 buffer_size: 50
-                channels: ["!event", "!deprecation", "!llm_wire"]
+                channels:
+                    ["!event", "!deprecation", "!llm_wire", "!llm_conversation"]
 
             errors_file:
                 type: stream
@@ -73,7 +90,8 @@ when@prod:
             console:
                 type: console
                 process_psr_3_messages: false
-                channels: ["!event", "!deprecation", "!llm_wire"]
+                channels:
+                    ["!event", "!deprecation", "!llm_wire", "!llm_conversation"]
 
             # Suppress deprecation logs completely in production
             deprecation:
@@ -86,3 +104,9 @@ when@prod:
                 path: "%kernel.logs_dir%/llm-wire.log"
                 level: debug
                 channels: ["llm_wire"]
+            llm_conversation:
+                type: stream
+                path: "%kernel.logs_dir%/llm-conversation.log"
+                level: debug
+                channels: ["llm_conversation"]
+                formatter: 'App\LlmContentEditor\Infrastructure\ConversationLog\ConversationLogFormatter'

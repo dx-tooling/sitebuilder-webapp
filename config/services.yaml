@@ -163,9 +163,14 @@ services:
     App\LlmContentEditor\Infrastructure\WireLog\LlmWireLogProcessor:
         tags:
             - { name: monolog.processor, channel: llm_wire }
+            - { name: monolog.processor, channel: llm_conversation }
 
-    # LLM content editor facade - inject the llm_wire channel logger + enable flag
+    # Conversation log formatter - human-readable plain-text output
+    App\LlmContentEditor\Infrastructure\ConversationLog\ConversationLogFormatter: ~
+
+    # LLM content editor facade - inject loggers + enable flag
     App\LlmContentEditor\Facade\LlmContentEditorFacade:
         arguments:
             $llmWireLogger: "@monolog.logger.llm_wire"
+            $llmConversationLogger: "@monolog.logger.llm_conversation"
             $llmWireLogEnabled: "%env(bool:LLM_WIRE_LOG_ENABLED)%"
