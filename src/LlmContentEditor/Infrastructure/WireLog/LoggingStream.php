@@ -39,7 +39,7 @@ final class LoggingStream implements StreamInterface
 
         // Flush complete lines (SSE events are newline-delimited)
         while (($pos = strpos($this->lineBuffer, "\n")) !== false) {
-            $line = substr($this->lineBuffer, 0, $pos);
+            $line             = substr($this->lineBuffer, 0, $pos);
             $this->lineBuffer = substr($this->lineBuffer, $pos + 1);
 
             $trimmed = trim($line);

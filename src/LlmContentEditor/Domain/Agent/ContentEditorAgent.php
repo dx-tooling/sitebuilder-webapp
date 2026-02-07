@@ -9,7 +9,6 @@ use App\LlmContentEditor\Facade\Dto\AgentConfigDto;
 use App\LlmContentEditor\Infrastructure\WireLog\LlmWireLogMiddleware;
 use App\WorkspaceTooling\Facade\WorkspaceToolingServiceInterface;
 use EtfsCodingAgent\Agent\BaseCodingAgent;
-use GuzzleHttp\HandlerStack;
 use NeuronAI\Providers\AIProviderInterface;
 use NeuronAI\Providers\HttpClientOptions;
 use NeuronAI\Providers\OpenAI\OpenAI;
@@ -25,7 +24,7 @@ class ContentEditorAgent extends BaseCodingAgent
         private readonly LlmModelName                     $model,
         private readonly string                           $apiKey,
         private readonly AgentConfigDto                   $agentConfig,
-        private readonly ?LoggerInterface                  $wireLogger = null,
+        private readonly ?LoggerInterface                 $wireLogger = null,
     ) {
         parent::__construct($sitebuilderFacade);
     }

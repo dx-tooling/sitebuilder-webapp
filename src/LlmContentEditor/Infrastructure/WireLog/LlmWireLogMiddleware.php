@@ -45,7 +45,7 @@ final class LlmWireLogMiddleware
                 $promise = $handler($request, $options);
 
                 return $promise->then(
-                    static function (ResponseInterface $response) use ($logger, $request, $options): ResponseInterface {
+                    static function (ResponseInterface $response) use ($logger, $options): ResponseInterface {
                         $logger->debug('← response', [
                             'status'  => $response->getStatusCode(),
                             'headers' => self::flattenHeaders($response->getHeaders()),
@@ -87,7 +87,7 @@ final class LlmWireLogMiddleware
     /**
      * Flatten multi-value headers to simple strings for readable log output.
      *
-     * @param array<string, list<string>> $headers
+     * @param array<array<string>> $headers
      *
      * @return array<string, string>
      */
@@ -95,7 +95,7 @@ final class LlmWireLogMiddleware
     {
         $flat = [];
         foreach ($headers as $name => $values) {
-            $flat[$name] = implode(', ', $values);
+            $flat[(string) $name] = implode(', ', $values);
         }
 
         return $flat;

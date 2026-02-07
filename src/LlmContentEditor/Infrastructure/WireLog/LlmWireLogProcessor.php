@@ -21,18 +21,16 @@ final readonly class LlmWireLogProcessor implements ProcessorInterface
 
     public function __invoke(LogRecord $record): LogRecord
     {
-        $extra = $record->extra;
-
         $conversationId = $this->executionContext->getConversationId();
         if ($conversationId !== null) {
-            $extra['conversationId'] = $conversationId;
+            $record->extra['conversationId'] = $conversationId;
         }
 
         $workspaceId = $this->executionContext->getWorkspaceId();
         if ($workspaceId !== null) {
-            $extra['workspaceId'] = $workspaceId;
+            $record->extra['workspaceId'] = $workspaceId;
         }
 
-        return $record->with(extra: $extra);
+        return $record;
     }
 }
