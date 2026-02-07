@@ -2,9 +2,12 @@
 
 This diagram shows **which verticals call which other verticals’ facade interface methods** — the wiring between verticals only. Internal calls within a vertical are omitted. See [archbook.md](archbook.md) for the overall facade/vertical architecture.
 
+**Interactive version:** open [vertical-wiring-diagram.html](vertical-wiring-diagram.html) in a browser to highlight arrows on hover.
+
 ```mermaid
-flowchart TB
-    subgraph callers[" "]
+flowchart LR
+    subgraph callers["Callers"]
+        direction TB
         CBCE["ChatBasedContentEditor"]
         LLM["LlmContentEditor"]
         WSM["WorkspaceMgmt"]
@@ -16,6 +19,7 @@ flowchart TB
     end
 
     subgraph facades["Facades (callees)"]
+        direction TB
         ACC[(Account)]
         PRJF[(ProjectMgmt)]
         WSMF[(WorkspaceMgmt)]
@@ -27,35 +31,37 @@ flowchart TB
         CBCEF[(ChatBasedContentEditor)]
     end
 
-    CBCE -->|"getAccountInfoByEmail, getAccountInfoById"| ACC
-    CBCE -->|"getProjectInfo"| PRJF
-    CBCE -->|"getWorkspaceById, getWorkspaceForProject, dispatchSetupIfNeeded, resetProblemWorkspace, readWorkspaceFile, writeWorkspaceFile, runBuild, commitAndPush, transitionToInConversation, transitionToAvailableForConversation, transitionToInReview, ensurePullRequest"| WSMF
-    CBCE -->|"streamEditWithHistory, buildAgentContextDump"| LLMF
+    CBCE -->|account lookup| ACC
+    CBCE -->|getProjectInfo| PRJF
+    CBCE -->|workspace lifecycle, commit, PR| WSMF
+    CBCE -->|streamEdit, context dump| LLMF
 
-    LLM -->|"runQualityChecks, runTests, runBuild, suggestCommitMessage, getPreviewUrl, listRemoteContentAssetUrls, searchRemoteContentAssetUrls, getRemoteAssetInfo, getWorkspaceRules"| WSTF
-    LLM -->|"getAgentConfigTemplate"| PRJF
+    LLM -->|tools: build, preview, assets, rules| WSTF
+    LLM -->|getAgentConfigTemplate| PRJF
 
-    WSM -->|"getProjectInfo"| PRJF
-    WSM -->|"getLatestConversationId"| CBCEF
+    WSM -->|getProjectInfo| PRJF
+    WSM -->|getLatestConversationId| CBCEF
 
-    WST -->|"fetchAndMergeAssetUrls, getRemoteAssetInfo"| RCAF
+    WST -->|fetchAndMergeAssetUrls, getRemoteAssetInfo| RCAF
 
-    ORG -->|"loadPrefabs"| PRE
-    ORG -->|"createProjectFromPrefab"| PRJF
-    ORG -->|"dispatchSetupIfNeeded"| WSMF
-    ORG -->|"getAccountInfoByEmail, getAccountInfoByIds, getAccountCoreEmailById, getAccountForLogin, getCurrentlyActiveOrganizationIdForAccountCore, mustSetPassword, register"| ACC
+    ORG -->|loadPrefabs| PRE
+    ORG -->|createProjectFromPrefab| PRJF
+    ORG -->|dispatchSetupIfNeeded| WSMF
+    ORG -->|account, register| ACC
 
-    PRJ -->|"getAccountInfoByEmail, getAccountInfoById, getCurrentlyActiveOrganizationIdForAccountCore"| ACC
-    PRJ -->|"releaseStaleConversations, getOngoingConversationUserId, getLatestConversationId, finishAllOngoingConversationsForWorkspace"| CBCEF
-    PRJ -->|"getWorkspaceForProject, deleteWorkspace, resetWorkspaceForSetup"| WSMF
-    PRJ -->|"verifyApiKey"| LLMF
-    PRJ -->|"isValidManifestUrl"| RCAF
+    PRJ -->|account, org| ACC
+    PRJ -->|conversation cleanup| CBCEF
+    PRJ -->|workspace CRUD| WSMF
+    PRJ -->|verifyApiKey| LLMF
+    PRJ -->|isValidManifestUrl| RCAF
 
-    RCA -->|"getProjectInfo"| PRJF
+    RCA -->|getProjectInfo| PRJF
 
-    COM -->|"getAccountCoreIdByEmail"| ACC
-    COM -->|"userCanReviewWorkspaces"| ORGF
+    COM -->|getAccountCoreIdByEmail| ACC
+    COM -->|userCanReviewWorkspaces| ORGF
 ```
+
+Method details are in the summary table below.
 
 ## Summary by direction
 

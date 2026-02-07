@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Vertical facade wiring (interactive)</title>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({
+      startOnLoad: false,
+      flowchart: { useMaxWidth: true, htmlLabels: true },
+    });
+    const container = document.getElementById('diagram');
+    const { svg } = await mermaid.render('vertical-wiring', container.textContent.trim());
+    container.innerHTML = svg;
+    container.classList.remove('mermaid');
+    // Highlight edge paths on hover
+    container.querySelectorAll('.edgePath').forEach((el) => {
+      const path = el.querySelector('path');
+      if (!path) return;
+      el.style.cursor = 'pointer';
+      path.style.transition = 'stroke-width 0.15s, opacity 0.15s, stroke 0.15s';
+      el.addEventListener('mouseenter', () => {
+        path.style.strokeWidth = '3';
+        path.style.opacity = '1';
+        path.style.stroke = 'var(--hover-stroke, #0d9488)';
+      });
+      el.addEventListener('mouseleave', () => {
+        path.style.strokeWidth = '';
+        path.style.opacity = '';
+        path.style.stroke = '';
+      });
+    });
+  </script>
+  <style>
+    :root { --hover-stroke: #0d9488; }
+    body { font-family: system-ui, sans-serif; margin: 1rem; background: #fff; }
+    h1 { font-size: 1.1rem; margin-bottom: 0.5rem; }
+    #diagram { overflow: auto; max-width: 100%; }
+    #diagram svg { max-width: 100%; height: auto; }
+  </style>
+</head>
+<body>
+  <h1>Vertical facade wiring (hover arrows to highlight)</h1>
+  <div id="diagram" class="mermaid">
+flowchart LR
+    subgraph callers["Callers"]
+        direction TB
+        CBCE["ChatBasedContentEditor"]
+        LLM["LlmContentEditor"]
+        WSM["WorkspaceMgmt"]
+        WST["WorkspaceTooling"]
+        ORG["Organization"]
+        PRJ["ProjectMgmt"]
+        RCA["RemoteContentAssets"]
+        COM["Common"]
+    end
+
+    subgraph facades["Facades (callees)"]
+        direction TB
+        ACC[(Account)]
+        PRJF[(ProjectMgmt)]
+        WSMF[(WorkspaceMgmt)]
+        LLMF[(LlmContentEditor)]
+        WSTF[(WorkspaceTooling)]
+        RCAF[(RemoteContentAssets)]
+        PRE[(Prefab)]
+        ORGF[(Organization)]
+        CBCEF[(ChatBasedContentEditor)]
+    end
+
+    CBCE -->|account lookup| ACC
+    CBCE -->|getProjectInfo| PRJF
+    CBCE -->|workspace lifecycle, commit, PR| WSMF
+    CBCE -->|streamEdit, context dump| LLMF
+
+    LLM -->|tools: build, preview, assets, rules| WSTF
+    LLM -->|getAgentConfigTemplate| PRJF
+
+    WSM -->|getProjectInfo| PRJF
+    WSM -->|getLatestConversationId| CBCEF
+
+    WST -->|fetchAndMergeAssetUrls, getRemoteAssetInfo| RCAF
+
+    ORG -->|loadPrefabs| PRE
+    ORG -->|createProjectFromPrefab| PRJF
+    ORG -->|dispatchSetupIfNeeded| WSMF
+    ORG -->|account, register| ACC
+
+    PRJ -->|account, org| ACC
+    PRJ -->|conversation cleanup| CBCEF
+    PRJ -->|workspace CRUD| WSMF
+    PRJ -->|verifyApiKey| LLMF
+    PRJ -->|isValidManifestUrl| RCAF
+
+    RCA -->|getProjectInfo| PRJF
+
+    COM -->|getAccountCoreIdByEmail| ACC
+    COM -->|userCanReviewWorkspaces| ORGF
+  </div>
+</body>
+</html>
