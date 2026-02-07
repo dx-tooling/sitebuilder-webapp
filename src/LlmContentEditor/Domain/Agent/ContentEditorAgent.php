@@ -6,13 +6,16 @@ namespace App\LlmContentEditor\Domain\Agent;
 
 use App\LlmContentEditor\Domain\Enum\LlmModelName;
 use App\LlmContentEditor\Facade\Dto\AgentConfigDto;
+use App\LlmContentEditor\Infrastructure\WireLog\LlmWireLogMiddleware;
 use App\WorkspaceTooling\Facade\WorkspaceToolingServiceInterface;
 use EtfsCodingAgent\Agent\BaseCodingAgent;
 use NeuronAI\Providers\AIProviderInterface;
+use NeuronAI\Providers\HttpClientOptions;
 use NeuronAI\Providers\OpenAI\OpenAI;
 use NeuronAI\Tools\PropertyType;
 use NeuronAI\Tools\Tool;
 use NeuronAI\Tools\ToolProperty;
+use Psr\Log\LoggerInterface;
 
 class ContentEditorAgent extends BaseCodingAgent
 {
@@ -21,15 +24,30 @@ class ContentEditorAgent extends BaseCodingAgent
         private readonly LlmModelName                     $model,
         private readonly string                           $apiKey,
         private readonly AgentConfigDto                   $agentConfig,
+        private readonly ?LoggerInterface                 $wireLogger = null,
     ) {
         parent::__construct($sitebuilderFacade);
     }
 
     protected function provider(): AIProviderInterface
     {
+        $httpOptions = null;
+
+        if ($this->wireLogger !== null) {
+            $httpOptions = new HttpClientOptions(
+                null,
+                null,
+                null,
+                LlmWireLogMiddleware::createHandlerStack($this->wireLogger),
+            );
+        }
+
         return new OpenAI(
             $this->apiKey,
             $this->model->value,
+            [],
+            false,
+            $httpOptions,
         );
     }
 

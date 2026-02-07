@@ -13,6 +13,7 @@ use App\LlmContentEditor\Facade\Enum\LlmModelProvider;
 use App\LlmContentEditor\Infrastructure\AgentEventQueue;
 use App\LlmContentEditor\Infrastructure\ChatHistory\CallbackChatHistory;
 use App\LlmContentEditor\Infrastructure\ChatHistory\MessageSerializer;
+use App\LlmContentEditor\Infrastructure\ConversationLog\LlmConversationLogObserver;
 use App\LlmContentEditor\Infrastructure\Observer\AgentEventCollectingObserver;
 use App\WorkspaceTooling\Facade\WorkspaceToolingServiceInterface;
 use Generator;
@@ -30,6 +31,9 @@ use Throwable;
 use function array_key_exists;
 use function is_array;
 use function is_string;
+use function mb_strlen;
+use function mb_substr;
+use function sprintf;
 
 final class LlmContentEditorFacade implements LlmContentEditorFacadeInterface
 {
@@ -39,6 +43,9 @@ final class LlmContentEditorFacade implements LlmContentEditorFacadeInterface
         private readonly WorkspaceToolingServiceInterface $workspaceTooling,
         private readonly HttpClientInterface              $httpClient,
         private readonly LoggerInterface                  $logger,
+        private readonly LoggerInterface                  $llmWireLogger,
+        private readonly LoggerInterface                  $llmConversationLogger,
+        private readonly bool                             $llmWireLogEnabled,
     ) {
         $this->messageSerializer = new MessageSerializer();
     }
@@ -129,17 +136,24 @@ final class LlmContentEditorFacade implements LlmContentEditorFacadeInterface
             $this->workspaceTooling,
             LlmModelName::defaultForContentEditor(),
             $llmApiKey,
-            $agentConfig
+            $agentConfig,
+            $this->llmWireLogEnabled ? $this->llmWireLogger : null,
         );
         $agent->withChatHistory($chatHistory);
 
         $queue = new AgentEventQueue();
         $agent->attach(new AgentEventCollectingObserver($queue));
 
+        if ($this->llmWireLogEnabled) {
+            $agent->attach(new LlmConversationLogObserver($this->llmConversationLogger));
+            $this->llmConversationLogger->info(sprintf('USER → %s', $prompt));
+        }
+
         try {
             $message = new UserMessage($prompt);
             $stream  = $agent->stream($message);
 
+            $accumulatedContent = '';
             foreach ($stream as $chunk) {
                 // Yield any queued messages for persistence
                 while (!$messageQueue->isEmpty()) {
@@ -150,8 +164,13 @@ final class LlmContentEditorFacade implements LlmContentEditorFacadeInterface
                     yield new EditStreamChunkDto('event', null, $eventDto, null, null);
                 }
                 if (is_string($chunk)) {
+                    $accumulatedContent .= $chunk;
                     yield new EditStreamChunkDto('text', $chunk, null, null, null);
                 }
+            }
+
+            if ($this->llmWireLogEnabled) {
+                $this->llmConversationLogger->info(sprintf('ASSISTANT → %s', $this->truncateForLog($accumulatedContent, 300)));
             }
 
             // Yield any remaining queued messages
@@ -165,6 +184,9 @@ final class LlmContentEditorFacade implements LlmContentEditorFacadeInterface
 
             yield new EditStreamChunkDto('done', null, null, true, null);
         } catch (Throwable $e) {
+            if ($this->llmWireLogEnabled) {
+                $this->llmConversationLogger->info(sprintf('ERROR → %s', $e->getMessage()));
+            }
             yield new EditStreamChunkDto('done', null, null, false, $e->getMessage());
         }
     }
@@ -262,6 +284,18 @@ final class LlmContentEditorFacade implements LlmContentEditorFacadeInterface
         ]);
 
         return $response->getStatusCode() === 200;
+    }
+
+    /**
+     * Truncate a string for human-readable conversation log output.
+     */
+    private function truncateForLog(string $value, int $maxLength): string
+    {
+        if (mb_strlen($value) > $maxLength) {
+            return mb_substr($value, 0, $maxLength) . '…';
+        }
+
+        return $value;
     }
 
     /**

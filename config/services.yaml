@@ -158,3 +158,19 @@ services:
 
     App\WorkspaceMgmt\Infrastructure\SetupSteps\SetupStepsExecutorInterface:
         class: App\WorkspaceMgmt\Infrastructure\SetupSteps\SetupStepsExecutor
+
+    # LLM wire log processor - enriches llm_wire log records with conversation context
+    App\LlmContentEditor\Infrastructure\WireLog\LlmWireLogProcessor:
+        tags:
+            - { name: monolog.processor, channel: llm_wire }
+            - { name: monolog.processor, channel: llm_conversation }
+
+    # Conversation log formatter - human-readable plain-text output
+    App\LlmContentEditor\Infrastructure\ConversationLog\ConversationLogFormatter: ~
+
+    # LLM content editor facade - inject loggers + enable flag
+    App\LlmContentEditor\Facade\LlmContentEditorFacade:
+        arguments:
+            $llmWireLogger: "@monolog.logger.llm_wire"
+            $llmConversationLogger: "@monolog.logger.llm_conversation"
+            $llmWireLogEnabled: "%env(bool:LLM_WIRE_LOG_ENABLED)%"
