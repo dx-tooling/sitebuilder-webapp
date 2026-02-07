@@ -28,7 +28,7 @@ final readonly class ConversationContextUsageService
             ->getSingleScalarResult();
 
         $eventChunksBytes = (int) $this->entityManager->createQuery(
-            'SELECT COALESCE(SUM(LENGTH(ch.payloadJson)), 0) FROM App\ChatBasedContentEditor\Domain\Entity\EditSessionChunk ch JOIN ch.session s WHERE s.conversation = :c AND ch.chunkType = :event'
+            'SELECT COALESCE(SUM(COALESCE(ch.contextBytes, LENGTH(ch.payloadJson))), 0) FROM App\ChatBasedContentEditor\Domain\Entity\EditSessionChunk ch JOIN ch.session s WHERE s.conversation = :c AND ch.chunkType = :event'
         )
             ->setParameter('c', $conversation)
             ->setParameter('event', 'event')

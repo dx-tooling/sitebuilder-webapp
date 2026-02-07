@@ -17,8 +17,12 @@ use SplSubject;
 use Stringable;
 
 use function is_object;
+use function json_encode;
 use function mb_strlen;
 use function mb_substr;
+use function strlen;
+
+use const JSON_THROW_ON_ERROR;
 
 final class AgentEventCollectingObserver implements SplObserver
 {
@@ -58,7 +62,9 @@ final class AgentEventCollectingObserver implements SplObserver
             $toolInputs[] = new ToolInputEntryDto((string) $key, $this->truncateValue($value, 100));
         }
 
-        return new AgentEventDto('tool_calling', $toolName, $toolInputs, null, null);
+        $inputBytes = strlen((string) json_encode($inputs, JSON_THROW_ON_ERROR));
+
+        return new AgentEventDto('tool_calling', $toolName, $toolInputs, null, null, $inputBytes, null);
     }
 
     private function mapToolCalled(ToolCalled $data): AgentEventDto
@@ -66,7 +72,9 @@ final class AgentEventCollectingObserver implements SplObserver
         $toolName = $data->tool->getName();
         $result   = $data->tool->getResult();
 
-        return new AgentEventDto('tool_called', $toolName, null, $this->truncateValue($result, 200), null);
+        $resultBytes = strlen((string) $result);
+
+        return new AgentEventDto('tool_called', $toolName, null, $this->truncateValue($result, 200), null, null, $resultBytes);
     }
 
     private function mapAgentError(AgentError $data): AgentEventDto
