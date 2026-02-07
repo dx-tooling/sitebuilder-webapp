@@ -150,6 +150,15 @@ describe("chat_editor_helpers", () => {
             };
             expect(isSessionComplete(chunk)).toBe(false);
         });
+
+        it("should return false for progress chunks", () => {
+            const chunk: PollChunk = {
+                id: 1,
+                chunkType: "progress",
+                payload: '{"message":"Reading about.html"}',
+            };
+            expect(isSessionComplete(chunk)).toBe(false);
+        });
     });
 
     describe("isActiveSessionStatus", () => {

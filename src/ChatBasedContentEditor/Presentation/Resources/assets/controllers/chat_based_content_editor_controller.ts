@@ -18,6 +18,8 @@ import {
 } from "./chat_editor_helpers.ts";
 import { renderMarkdown } from "./markdown_renderer.ts";
 
+const PROGRESS_MAX_LINES = 10;
+
 interface TranslationsData {
     aiBudget: string;
     estimatedCost: string;
@@ -692,6 +694,9 @@ export default class extends Controller {
             // Render markdown to HTML
             textEl.innerHTML = renderMarkdown(newRaw, { streaming: true });
             this.scrollToBottom();
+        } else if (chunk.chunkType === "progress" && payload.message) {
+            this.appendProgressLine(container, payload.message);
+            this.scrollToBottom();
         } else if (chunk.chunkType === "event") {
             const event = payloadToAgentEvent(payload);
             this.appendTechnicalEvent(container, event);
@@ -717,10 +722,62 @@ export default class extends Controller {
         return false;
     }
 
+    private getOrCreateProgressWrapper(container: HTMLElement): HTMLElement {
+        const existing = container.querySelector<HTMLElement>('[data-progress-wrapper="1"]');
+        if (existing) {
+            return existing;
+        }
+        const wrapper = document.createElement("div");
+        wrapper.className = "relative overflow-hidden max-h-[12.5rem] rounded";
+        wrapper.dataset.progressWrapper = "1";
+
+        const fadeOverlay = document.createElement("div");
+        fadeOverlay.className =
+            "absolute inset-x-0 top-0 h-10 pointer-events-none z-10 bg-gradient-to-b from-dark-100 to-transparent dark:from-dark-700";
+        fadeOverlay.setAttribute("aria-hidden", "true");
+
+        const progressContainer = document.createElement("div");
+        progressContainer.className = "space-y-0.5 pr-2";
+        progressContainer.dataset.progressContainer = "1";
+
+        wrapper.appendChild(fadeOverlay);
+        wrapper.appendChild(progressContainer);
+
+        const textEl = container.querySelector<HTMLElement>('[data-text-stream="1"]');
+        if (textEl) {
+            container.insertBefore(wrapper, textEl);
+        } else {
+            container.appendChild(wrapper);
+        }
+        return progressContainer;
+    }
+
+    private getOrCreateProgressContainer(container: HTMLElement): HTMLElement {
+        const wrapper = container.querySelector<HTMLElement>('[data-progress-wrapper="1"]');
+        if (wrapper) {
+            const inner = wrapper.querySelector<HTMLElement>('[data-progress-container="1"]');
+            if (inner) {
+                return inner;
+            }
+        }
+        return this.getOrCreateProgressWrapper(container);
+    }
+
+    private appendProgressLine(container: HTMLElement, message: string): void {
+        const progressContainer = this.getOrCreateProgressContainer(container);
+        while (progressContainer.children.length >= PROGRESS_MAX_LINES) {
+            progressContainer.firstElementChild?.remove();
+        }
+        const line = document.createElement("div");
+        line.className = "text-sm text-dark-500 dark:text-dark-400 italic leading-tight";
+        line.textContent = message;
+        progressContainer.appendChild(line);
+    }
+
     private getOrCreateTextElement(container: HTMLElement): HTMLElement {
-        const lastChild = container.lastElementChild;
-        if (lastChild instanceof HTMLElement && lastChild.dataset.textStream === "1") {
-            return lastChild;
+        const existing = container.querySelector<HTMLElement>('[data-text-stream="1"]');
+        if (existing) {
+            return existing;
         }
 
         const textEl = document.createElement("div");

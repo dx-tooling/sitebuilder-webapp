@@ -9,12 +9,14 @@ use App\LlmContentEditor\Domain\Enum\LlmModelName;
 use App\LlmContentEditor\Facade\Dto\AgentConfigDto;
 use App\LlmContentEditor\Facade\Dto\ConversationMessageDto;
 use App\LlmContentEditor\Facade\Dto\EditStreamChunkDto;
+use App\LlmContentEditor\Facade\Enum\EditStreamChunkType;
 use App\LlmContentEditor\Facade\Enum\LlmModelProvider;
 use App\LlmContentEditor\Infrastructure\AgentEventQueue;
 use App\LlmContentEditor\Infrastructure\ChatHistory\CallbackChatHistory;
 use App\LlmContentEditor\Infrastructure\ChatHistory\MessageSerializer;
 use App\LlmContentEditor\Infrastructure\ConversationLog\LlmConversationLogObserver;
 use App\LlmContentEditor\Infrastructure\Observer\AgentEventCollectingObserver;
+use App\LlmContentEditor\Infrastructure\ProgressMessageResolver;
 use App\WorkspaceTooling\Facade\WorkspaceToolingServiceInterface;
 use Generator;
 use NeuronAI\Chat\Messages\AssistantMessage;
@@ -46,6 +48,7 @@ final class LlmContentEditorFacade implements LlmContentEditorFacadeInterface
         private readonly LoggerInterface                  $llmWireLogger,
         private readonly LoggerInterface                  $llmConversationLogger,
         private readonly bool                             $llmWireLogEnabled,
+        private readonly ProgressMessageResolver          $progressMessageResolver,
     ) {
         $this->messageSerializer = new MessageSerializer();
     }
@@ -59,7 +62,7 @@ final class LlmContentEditorFacade implements LlmContentEditorFacadeInterface
     {
         // This method is deprecated and should not be used.
         // Yield an error chunk since we can't proceed without an API key.
-        yield new EditStreamChunkDto('done', null, null, false, 'streamEdit is deprecated. Use streamEditWithHistory with an API key.');
+        yield new EditStreamChunkDto(EditStreamChunkType::Done, null, null, false, 'streamEdit is deprecated. Use streamEditWithHistory with an API key.');
     }
 
     /**
@@ -72,7 +75,8 @@ final class LlmContentEditorFacade implements LlmContentEditorFacadeInterface
         string         $instruction,
         array          $previousMessages,
         string         $llmApiKey,
-        AgentConfigDto $agentConfig
+        AgentConfigDto $agentConfig,
+        string         $locale = 'en',
     ): Generator {
         // Convert previous message DTOs to NeuronAI messages
         $initialMessages = [];
@@ -157,15 +161,19 @@ final class LlmContentEditorFacade implements LlmContentEditorFacadeInterface
             foreach ($stream as $chunk) {
                 // Yield any queued messages for persistence
                 while (!$messageQueue->isEmpty()) {
-                    yield new EditStreamChunkDto('message', null, null, null, null, $messageQueue->dequeue());
+                    yield new EditStreamChunkDto(EditStreamChunkType::Message, null, null, null, null, $messageQueue->dequeue());
                 }
 
                 foreach ($queue->drain() as $eventDto) {
-                    yield new EditStreamChunkDto('event', null, $eventDto, null, null);
+                    yield new EditStreamChunkDto(EditStreamChunkType::Event, null, $eventDto, null, null);
+                    $progressMessage = $this->progressMessageResolver->messageForEvent($eventDto, $locale);
+                    if ($progressMessage !== null) {
+                        yield new EditStreamChunkDto(EditStreamChunkType::Progress, $progressMessage, null, null, null);
+                    }
                 }
                 if (is_string($chunk)) {
                     $accumulatedContent .= $chunk;
-                    yield new EditStreamChunkDto('text', $chunk, null, null, null);
+                    yield new EditStreamChunkDto(EditStreamChunkType::Text, $chunk, null, null, null);
                 }
             }
 
@@ -175,19 +183,23 @@ final class LlmContentEditorFacade implements LlmContentEditorFacadeInterface
 
             // Yield any remaining queued messages
             while (!$messageQueue->isEmpty()) {
-                yield new EditStreamChunkDto('message', null, null, null, null, $messageQueue->dequeue());
+                yield new EditStreamChunkDto(EditStreamChunkType::Message, null, null, null, null, $messageQueue->dequeue());
             }
 
             foreach ($queue->drain() as $eventDto) {
-                yield new EditStreamChunkDto('event', null, $eventDto, null, null);
+                yield new EditStreamChunkDto(EditStreamChunkType::Event, null, $eventDto, null, null);
+                $progressMessage = $this->progressMessageResolver->messageForEvent($eventDto, $locale);
+                if ($progressMessage !== null) {
+                    yield new EditStreamChunkDto(EditStreamChunkType::Progress, $progressMessage, null, null, null);
+                }
             }
 
-            yield new EditStreamChunkDto('done', null, null, true, null);
+            yield new EditStreamChunkDto(EditStreamChunkType::Done, null, null, true, null);
         } catch (Throwable $e) {
             if ($this->llmWireLogEnabled) {
                 $this->llmConversationLogger->info(sprintf('ERROR → %s', $e->getMessage()));
             }
-            yield new EditStreamChunkDto('done', null, null, false, $e->getMessage());
+            yield new EditStreamChunkDto(EditStreamChunkType::Done, null, null, false, $e->getMessage());
         }
     }
 

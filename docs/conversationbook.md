@@ -110,6 +110,7 @@ The handler runs in the Messenger worker process:
    - **Cooperative cancellation check:** a lightweight DBAL query reads just the `status` column from the database (see section 6.2 for why). If `Cancelling`, repair the conversation history with a synthetic assistant message and stop (see section 6.3 for the full rationale), write a `Done` chunk, set `Cancelled`, and return.
    - **Text chunk:** persist as `EditSessionChunk` (type `text`).
    - **Event chunk:** persist as `EditSessionChunk` (type `event`). Events include `inference_start`, `inference_stop`, `tool_calling`, `tool_called`, `agent_error`.
+   - **Progress chunk:** persist as `EditSessionChunk` (type `progress`). Short human-readable status messages (e.g. "Reading about.html", "Editing landing-1.html") derived from tool calls; shown in the chat bubble to make the agent feel "chatty" during long tasks.
    - **Message chunk:** persist as a new `ConversationMessage` (grows the LLM history).
    - **Done chunk:** persist as `EditSessionChunk` (type `done`).
 8. After the generator is exhausted, set status to `Completed`.
@@ -146,15 +147,15 @@ A single turn produces data for **two independent persistence paths**. This is a
                                           │
                            ┌──────────────┼──────────────┐
                            │              │              │
-                     chunkType=text  chunkType=event  chunkType=message
-                           │              │              │
-                           ▼              ▼              ▼
-                    EditSessionChunk  EditSessionChunk  ConversationMessage
-                    (type: text)      (type: event)     (role: user/assistant)
-                           │              │              │
-                           └──────┬───────┘              │
-                                  │                      │
-                           edit_session_chunks      conversation_messages
+                     chunkType=text  chunkType=event  chunkType=progress  chunkType=message
+                           │              │              │                    │
+                           ▼              ▼              ▼                    ▼
+                    EditSessionChunk  EditSessionChunk  EditSessionChunk  ConversationMessage
+                    (type: text)      (type: event)     (type: progress)   (role: user/assistant)
+                           │              │              │                    │
+                           └──────┬───────┴──────────────┘                    │
+                                  │                                           │
+                           edit_session_chunks                          conversation_messages
                            table                    table
                                   │                      │
                            Read by: frontend        Read by: RunEditSessionHandler
@@ -171,6 +172,7 @@ A single turn produces data for **two independent persistence paths**. This is a
 | Assistant text response | Yes (type: `text`, streamed) | Yes (role: `assistant`, complete) |
 | Tool call request | Yes (type: `event`, kind: `tool_calling`, with truncated inputs) | **No** — filtered out |
 | Tool call result | Yes (type: `event`, kind: `tool_called`, with truncated output) | **No** — filtered out |
+| Progress message | Yes (type: `progress`, human-readable status e.g. "Reading X", "Editing Y") | **No** — UI only |
 | Inference start/stop | Yes (type: `event`) | — |
 | Done marker | Yes (type: `done`) | — |
 
@@ -198,6 +200,7 @@ The frontend does **not** use WebSockets or Server-Sent Events. Instead, it uses
 4. Frontend processes each chunk:
    - `text` → append to the streaming markdown renderer
    - `event` → update the technical messages container (Working/Thinking badges)
+   - `progress` → append a short status line in the chat bubble (e.g. "Reading about.html", "Editing …") so the agent feels "chatty" during long tasks
    - `done` → stop polling, reset UI
 5. If `status` is `completed`, `failed`, or `cancelled`, stop polling even if no `done` chunk arrived yet (defensive).
 6. Otherwise, schedule the next poll after 500ms (non-overlapping `setTimeout`, never `setInterval`).
