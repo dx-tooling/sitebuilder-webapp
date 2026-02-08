@@ -72,7 +72,7 @@ REMOTE CONTENT ASSETS:
 
 WORKSPACE RULES:
 - Projects may define custom rules in .sitebuilder/rules/ folders (Markdown files)
-- You MUST call get_workspace_rules ONCE at the very beginning of the session (on your first turn only, never again)
+- You MUST call get_workspace_rules whenever you start working on a task
 - If rules exist, they define project-specific conventions, constraints, and requirements you must follow
 - If no rules exist (empty JSON object {}), this is normal - simply follow these default instructions
 - When rules exist, apply them in addition to these default instructions throughout the entire session
@@ -93,6 +93,7 @@ INSTRUCTIONS;
 6. VERIFY: Run run_quality_checks to ensure code standards are met.
 7. TEST: Run run_tests to verify functionality.
 8. BUILD: Run run_build to confirm the project compiles successfully.
+9. VERIFY: Running a build will likely generate files in folders like `dist` or `output` or `public`. .gitignore files or project rules might give a hint which folders contain generated code. Do a sanity check on generated files to ensure good results.
 INSTRUCTIONS;
 
         $outputInstructions = <<<'INSTRUCTIONS'
