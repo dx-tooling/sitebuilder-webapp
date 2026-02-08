@@ -102,12 +102,14 @@ final readonly class RunEditSessionHandler
             );
 
             // Build agent configuration from project settings.
-            // Pass working folder path so it is in the system prompt and survives context-window trimming (#79).
+            // Pass working folder path and all notes to self from this conversation (#79, #83).
+            $notesToSelf = $this->extractNotesToSelf($previousMessages);
             $agentConfig = new AgentConfigDto(
                 $project->agentBackgroundInstructions,
                 $project->agentStepInstructions,
                 $project->agentOutputInstructions,
                 '/workspace',
+                $notesToSelf !== '' ? $notesToSelf : null,
             );
 
             $generator = $this->facade->streamEditWithHistory(
@@ -206,6 +208,33 @@ final readonly class RunEditSessionHandler
         }
 
         return $messages;
+    }
+
+    /**
+     * Extract all note-to-self message contents from this conversation for the system prompt.
+     *
+     * @param list<ConversationMessageDto> $previousMessages
+     *
+     * @see https://github.com/dx-tooling/sitebuilder-webapp/issues/83
+     */
+    private function extractNotesToSelf(array $previousMessages): string
+    {
+        $contents = [];
+        foreach ($previousMessages as $dto) {
+            if ($dto->role !== 'assistant_note') {
+                continue;
+            }
+            try {
+                $decoded = json_decode($dto->contentJson, true, 512, JSON_THROW_ON_ERROR);
+                if (is_array($decoded) && array_key_exists('content', $decoded) && is_string($decoded['content'])) {
+                    $contents[] = $decoded['content'];
+                }
+            } catch (Throwable) {
+                // Skip invalid JSON
+            }
+        }
+
+        return implode("\n", $contents);
     }
 
     /**

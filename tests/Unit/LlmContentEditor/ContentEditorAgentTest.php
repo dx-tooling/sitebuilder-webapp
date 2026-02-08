@@ -88,6 +88,30 @@ final class ContentEditorAgentTest extends TestCase
         self::assertStringNotContainsString('WORKING FOLDER (use for all path-based tools)', $instructions);
     }
 
+    /**
+     * @see https://github.com/dx-tooling/sitebuilder-webapp/issues/83
+     */
+    public function testInstructionsIncludeNotesToSelfWhenSet(): void
+    {
+        $config = new AgentConfigDto(
+            'Background',
+            'Step 1',
+            'Output',
+            null,
+            "Added footer.\nUser may ask for styling next."
+        );
+        $agent = new ContentEditorAgent(
+            $this->createMockWorkspaceTooling(),
+            LlmModelName::defaultForContentEditor(),
+            'sk-test-key',
+            $config
+        );
+        $instructions = $agent->instructions();
+        self::assertStringContainsString('NOTES TO SELF (from previous turns in this conversation, for context only):', $instructions);
+        self::assertStringContainsString('Added footer.', $instructions);
+        self::assertStringContainsString('User may ask for styling next.', $instructions);
+    }
+
     public function testAgentUsesProvidedConfig(): void
     {
         $customConfig = new AgentConfigDto(

@@ -52,15 +52,20 @@ class ContentEditorAgent extends BaseCodingAgent
     }
 
     /**
-     * System prompt includes working folder path when set, so it survives context-window trimming.
+     * System prompt includes working folder path and notes to self from previous turns when set,
+     * so they survive context-window trimming.
      *
      * @see https://github.com/dx-tooling/sitebuilder-webapp/issues/79
+     * @see https://github.com/dx-tooling/sitebuilder-webapp/issues/83
      */
     public function instructions(): string
     {
         $base = parent::instructions();
         if ($this->agentConfig->workingFolderPath !== null && $this->agentConfig->workingFolderPath !== '') {
             $base .= "\n\nWORKING FOLDER (use for all path-based tools): " . $this->agentConfig->workingFolderPath;
+        }
+        if ($this->agentConfig->notesToSelf !== null && $this->agentConfig->notesToSelf !== '') {
+            $base .= "\n\nNOTES TO SELF (from previous turns in this conversation, for context only):\n" . $this->agentConfig->notesToSelf;
         }
 
         return $base;
