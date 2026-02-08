@@ -47,7 +47,7 @@ final class NoteToSelfParserTest extends TestCase
         $result = $this->parser->parse($content);
 
         self::assertNotNull($result);
-        self::assertSame('First part [NOTE TO SELF: first note] middle ', $result->visibleContent);
+        self::assertSame('First part [NOTE TO SELF: first note] middle', $result->visibleContent);
         self::assertSame('last note', $result->noteContent);
     }
 
