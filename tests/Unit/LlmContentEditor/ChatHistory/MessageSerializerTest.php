@@ -22,10 +22,10 @@ final class MessageSerializerTest extends TestCase
         $this->serializer = new MessageSerializer();
     }
 
-    public function testFromDtoWithAssistantNoteReturnsAssistantMessageWithPrefixedContent(): void
+    public function testFromDtoWithAssistantNoteToSelfReturnsAssistantMessageWithPrefixedContent(): void
     {
         $dto = new ConversationMessageDto(
-            'assistant_note',
+            ConversationMessageDto::ROLE_ASSISTANT_NOTE_TO_SELF,
             '{"content":"I added the footer. User may ask for styling next."}'
         );
 
@@ -38,9 +38,9 @@ final class MessageSerializerTest extends TestCase
         self::assertStringContainsString('I added the footer. User may ask for styling next.', $content);
     }
 
-    public function testFromDtoWithAssistantNoteAndEmptyContent(): void
+    public function testFromDtoWithAssistantNoteToSelfAndEmptyContent(): void
     {
-        $dto = new ConversationMessageDto('assistant_note', '{"content":""}');
+        $dto = new ConversationMessageDto(ConversationMessageDto::ROLE_ASSISTANT_NOTE_TO_SELF, '{"content":""}');
 
         $message = $this->serializer->fromDto($dto);
 

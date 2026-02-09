@@ -34,13 +34,10 @@ use Throwable;
 use function array_key_exists;
 use function is_array;
 use function is_string;
-use function json_encode;
 use function mb_strlen;
 use function mb_substr;
 use function sprintf;
 use function trim;
-
-use const JSON_THROW_ON_ERROR;
 
 final class LlmContentEditorFacade implements LlmContentEditorFacadeInterface
 {
@@ -83,8 +80,8 @@ final class LlmContentEditorFacade implements LlmContentEditorFacadeInterface
         AgentConfigDto $agentConfig,
         string         $locale = 'en',
     ): Generator {
-        // Convert previous message DTOs to NeuronAI messages. Include assistant_note so the
-        // context is conversation-shaped: user, assistant, assistant_note, user, assistant, ...
+        // Convert previous message DTOs to NeuronAI messages. Include assistant_note_to_self so the
+        // context is conversation-shaped: user, assistant, assistant_note_to_self, user, assistant, ...
         $initialMessages = [];
         foreach ($previousMessages as $dto) {
             try {
@@ -112,7 +109,7 @@ final class LlmContentEditorFacade implements LlmContentEditorFacadeInterface
         }
 
         // Create a queue to collect new messages for persistence. Notes from write_note_to_self
-        // are collected and enqueued after the assistant message so order is: assistant, assistant_note(s).
+        // are collected and enqueued after the assistant message so order is: assistant, assistant_note_to_self(s).
         /** @var SplQueue<ConversationMessageDto> $messageQueue */
         $messageQueue = new SplQueue();
         /** @var list<ConversationMessageDto> $pendingNotes */
@@ -123,14 +120,10 @@ final class LlmContentEditorFacade implements LlmContentEditorFacadeInterface
         $chatHistory->setOnNewMessageCallback(function (Message $message) use ($messageQueue, &$pendingNotes): void {
             if ($message instanceof ToolCallMessage) {
                 foreach ($message->getTools() as $tool) {
-                    if ($tool instanceof Tool && $tool->getName() === 'write_note_to_self') {
-                        $inputs = $tool->getInputs();
-                        $note   = array_key_exists('note', $inputs) && is_string($inputs['note']) ? $inputs['note'] : '';
-                        if ($note !== '') {
-                            $pendingNotes[] = new ConversationMessageDto(
-                                'assistant_note',
-                                json_encode(['content' => $note], JSON_THROW_ON_ERROR)
-                            );
+                    if ($tool instanceof Tool) {
+                        $dto = ConversationMessageDto::fromWriteNoteToSelfTool($tool);
+                        if ($dto !== null) {
+                            $pendingNotes[] = $dto;
                         }
                     }
                 }
@@ -215,7 +208,7 @@ final class LlmContentEditorFacade implements LlmContentEditorFacadeInterface
                 $this->llmConversationLogger->info(sprintf('ASSISTANT → %s', $this->truncateForLog($accumulatedContent, 300)));
             }
 
-            // Yield any remaining queued messages (assistant + assistant_note(s) from callback)
+            // Yield any remaining queued messages (assistant + assistant_note_to_self(s) from callback)
             while (!$messageQueue->isEmpty()) {
                 yield new EditStreamChunkDto(EditStreamChunkType::Message, null, null, null, null, $messageQueue->dequeue());
             }
@@ -232,6 +225,10 @@ final class LlmContentEditorFacade implements LlmContentEditorFacadeInterface
         } catch (Throwable $e) {
             if ($this->llmWireLogEnabled) {
                 $this->llmConversationLogger->info(sprintf('ERROR → %s', $e->getMessage()));
+            }
+            // Persist any assistant note-to-self from this turn so the next turn still sees them
+            foreach ($pendingNotes as $dto) {
+                yield new EditStreamChunkDto(EditStreamChunkType::Message, null, null, null, null, $dto);
             }
             yield new EditStreamChunkDto(EditStreamChunkType::Done, null, null, false, $e->getMessage());
         }
@@ -263,13 +260,13 @@ final class LlmContentEditorFacade implements LlmContentEditorFacadeInterface
         $lines[] = $systemPrompt;
         $lines[] = '';
 
-        // Format conversation history (includes note-to-self so dump reflects full agent context)
+        // Format conversation history (includes assistant note-to-self so dump reflects full agent context)
         if ($previousMessages !== []) {
             $lines[] = '=== CONVERSATION HISTORY ===';
             $lines[] = '';
 
             foreach ($previousMessages as $msg) {
-                $label   = $msg->role === 'assistant_note' ? 'NOTE TO SELF' : strtoupper($msg->role);
+                $label   = $msg->role === ConversationMessageDto::ROLE_ASSISTANT_NOTE_TO_SELF ? 'NOTE TO SELF' : strtoupper($msg->role);
                 $lines[] = '--- ' . $label . ' ---';
 
                 $decoded = json_decode($msg->contentJson, true);

@@ -437,6 +437,7 @@ final class ChatBasedContentEditorController extends AbstractController
             $projectInfo->agentBackgroundInstructions,
             $projectInfo->agentStepInstructions,
             $projectInfo->agentOutputInstructions,
+            '/workspace',
         );
 
         // Collect conversation messages as DTOs

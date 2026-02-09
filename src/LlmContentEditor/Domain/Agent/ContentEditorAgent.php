@@ -6,6 +6,7 @@ namespace App\LlmContentEditor\Domain\Agent;
 
 use App\LlmContentEditor\Domain\Enum\LlmModelName;
 use App\LlmContentEditor\Facade\Dto\AgentConfigDto;
+use App\LlmContentEditor\Facade\Dto\ConversationMessageDto;
 use App\LlmContentEditor\Infrastructure\WireLog\LlmWireLogMiddleware;
 use App\WorkspaceTooling\Facade\WorkspaceToolingServiceInterface;
 use EtfsCodingAgent\Agent\BaseCodingAgent;
@@ -191,7 +192,7 @@ class ContentEditorAgent extends BaseCodingAgent
             )->setCallable(fn (): string => $this->sitebuilderFacade->getWorkspaceRules()),
 
             Tool::make(
-                'write_note_to_self',
+                ConversationMessageDto::TOOL_NAME_WRITE_NOTE_TO_SELF,
                 'Like a notepad you can use anytime during a turn. Call it whenever you want to remember something long-term — concise notes on what was done, what might be relevant later (files touched, user intent, follow-ups). Turns can be long; you can scribble on this notepad as you go. Not shown as a chat message; may appear as a tool call like other tools.'
             )->addProperty(
                 new ToolProperty(

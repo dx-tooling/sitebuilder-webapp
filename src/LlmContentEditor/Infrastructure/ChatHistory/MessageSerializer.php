@@ -52,11 +52,11 @@ final class MessageSerializer
         $content = $data['content'] ?? '';
 
         return match ($dto->role) {
-            'user'           => new UserMessage($content),
-            'assistant'      => new AssistantMessage($content !== '' ? $content : null),
-            'assistant_note' => new AssistantMessage('[Note to self from previous turn:] ' . $content),
-            'tool_call'      => $this->deserializeToolCall($data),
-            default          => $this->deserializeToolCallResult($data),
+            'user'                                              => new UserMessage($content),
+            'assistant'                                         => new AssistantMessage($content !== '' ? $content : null),
+            ConversationMessageDto::ROLE_ASSISTANT_NOTE_TO_SELF => new AssistantMessage('[Note to self from previous turn:] ' . $content),
+            'tool_call'                                         => $this->deserializeToolCall($data),
+            default                                             => $this->deserializeToolCallResult($data),
         };
     }
 
