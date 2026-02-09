@@ -51,3 +51,6 @@ public/workspaces/*
 /.npm/
 
 .playwright-mcp/
+
+# Generated conversation log viewer files (in project root)
+/conversation-log-*.html

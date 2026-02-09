@@ -40,4 +40,16 @@ interface ChatBasedContentEditorFacadeInterface
      * Returns the most recent conversation regardless of status.
      */
     public function getLatestConversationId(string $workspaceId): ?string;
+
+    /**
+     * Recover edit sessions stuck in non-terminal states.
+     *
+     * - Sessions in Running state for longer than $runningTimeoutMinutes are marked as Failed.
+     * - Sessions in Cancelling state for longer than $cancellingTimeoutMinutes are marked as Cancelled.
+     *
+     * A done chunk is written for each recovered session so the frontend polling loop terminates.
+     *
+     * @return int the number of sessions recovered
+     */
+    public function recoverStuckEditSessions(int $runningTimeoutMinutes = 30, int $cancellingTimeoutMinutes = 2): int;
 }

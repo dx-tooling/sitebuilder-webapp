@@ -41,10 +41,10 @@ WORKSPACE CONVENTIONS:
 - README.md contains project documentation and instructions
 
 PATH RULES (critical):
-- The working folder path is given in the user's message. Use it for ALL path-based tools (get_folder_content, get_file_content, get_file_lines, replace_in_file, apply_diff_to_file, run_quality_checks, run_tests, run_build).
-- "Workspace root" and "working folder" are the same. Both mean the path from the user's message.
-- Never use /workspace or any path not under the working folder.
-- If a tool returns "Directory does not exist" or "File does not exist", the path you used is wrong. Do not retry the same path. Re-read the user's message for the correct working folder and use paths under it.
+- The working folder path is stated in the system prompt below (section "WORKING FOLDER"). Use it for ALL path-based tools (get_folder_content, get_file_content, get_file_lines, replace_in_file, apply_diff_to_file, run_quality_checks, run_tests, run_build).
+- "Workspace root" and "working folder" are the same. Both mean the path from the system prompt.
+- Never use a path that is not under the working folder.
+- If a tool returns "Directory does not exist" or "File does not exist", the path you used is wrong. Do not retry the same path. Use the working folder from the system prompt and paths under it.
 
 EFFICIENT FILE READING:
 - Use get_file_info first to check file size before reading
@@ -72,7 +72,7 @@ REMOTE CONTENT ASSETS:
 
 WORKSPACE RULES:
 - Projects may define custom rules in .sitebuilder/rules/ folders (Markdown files)
-- You MUST call get_workspace_rules ONCE at the very beginning of the session (on your first turn only, never again)
+- You MUST call get_workspace_rules whenever you start working on a task
 - If rules exist, they define project-specific conventions, constraints, and requirements you must follow
 - If no rules exist (empty JSON object {}), this is normal - simply follow these default instructions
 - When rules exist, apply them in addition to these default instructions throughout the entire session
@@ -85,7 +85,7 @@ WORK SCOPE:
 INSTRUCTIONS;
 
         $stepInstructions = <<<'INSTRUCTIONS'
-1. EXPLORE: List the working folder (the path from the user's message) to understand its structure.
+1. EXPLORE: List the working folder (the path given in the system prompt) to understand its structure.
 2. UNDERSTAND: Read package.json and README.md to learn about the project.
 3. INVESTIGATE: Use get_file_info + search_in_file to efficiently explore files.
 4. PLAN: Understand what files need to be created or modified.
@@ -93,6 +93,7 @@ INSTRUCTIONS;
 6. VERIFY: Run run_quality_checks to ensure code standards are met.
 7. TEST: Run run_tests to verify functionality.
 8. BUILD: Run run_build to confirm the project compiles successfully.
+9. VERIFY: Running a build will likely generate files in folders like `dist` or `output` or `public`. .gitignore files or project rules might give a hint which folders contain generated code. Do a sanity check on generated files to ensure good results.
 INSTRUCTIONS;
 
         $outputInstructions = <<<'INSTRUCTIONS'

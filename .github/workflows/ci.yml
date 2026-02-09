@@ -1,0 +1,193 @@
+# Single CI workflow so all jobs are attributed to the push commit.
+# Previously, workflow_run-triggered jobs were displayed under main's commit (GitHub docs:
+# for workflow_run, GITHUB_SHA/GITHUB_REF are "Last commit on default branch" / "Default branch").
+
+name: CI
+
+on:
+    push:
+        branches:
+            - "**"
+
+env:
+    ETFS_PROJECT_NAME: ci
+    APP_IMAGE: ghcr.io/${{ github.repository }}/app:ci
+
+jobs:
+    build-app-image:
+        name: Build app image
+        runs-on: ubuntu-latest
+        permissions:
+            contents: read
+            packages: write
+        steps:
+            - uses: actions/checkout@v4
+            - name: Set up Docker Buildx
+              uses: docker/setup-buildx-action@v3
+            - name: Login to GitHub Container Registry
+              uses: docker/login-action@v3
+              with:
+                  registry: ghcr.io
+                  username: ${{ github.actor }}
+                  password: ${{ secrets.GITHUB_TOKEN }}
+            - name: Build and push app image
+              uses: docker/build-push-action@v6
+              with:
+                  context: .
+                  file: docker/app/Dockerfile
+                  push: true
+                  tags: ${{ env.APP_IMAGE }}
+                  cache-from: type=gha
+                  cache-to: type=gha,mode=max
+
+    build-frontend:
+        name: Frontend build
+        runs-on: ubuntu-latest
+        needs: [build-app-image]
+        env:
+            HOST_PROJECT_PATH: ${{ github.workspace }}
+        steps:
+            - uses: actions/checkout@v4
+            - name: Login to GitHub Container Registry
+              uses: docker/login-action@v3
+              with:
+                  registry: ghcr.io
+                  username: ${{ github.actor }}
+                  password: ${{ secrets.GITHUB_TOKEN }}
+            - name: Pull app image
+              run: docker pull ${{ env.APP_IMAGE }}
+            - name: Start Docker services
+              run: docker compose -f docker-compose.yml -f docker-compose.ci.yml up -d app
+            - name: Install dependencies
+              run: |
+                  docker compose exec -T app mise trust
+                  docker compose exec -T app mise install
+                  docker compose exec -T app composer install
+                  docker compose exec -T app mise exec node -- npm install --no-save
+            - name: Build frontend assets
+              run: |
+                  docker compose exec -T app rm -rf public/assets
+                  docker compose exec -T app mise exec node -- php bin/console tailwind:build
+                  docker compose exec -T app php bin/console asset-map:compile
+
+    tests-frontend:
+        name: Frontend tests
+        runs-on: ubuntu-latest
+        needs: [build-app-image]
+        env:
+            HOST_PROJECT_PATH: ${{ github.workspace }}
+        steps:
+            - uses: actions/checkout@v4
+            - name: Login to GitHub Container Registry
+              uses: docker/login-action@v3
+              with:
+                  registry: ghcr.io
+                  username: ${{ github.actor }}
+                  password: ${{ secrets.GITHUB_TOKEN }}
+            - name: Pull app image
+              run: docker pull ${{ env.APP_IMAGE }}
+            - name: Start Docker services
+              run: docker compose -f docker-compose.yml -f docker-compose.ci.yml up -d app
+            - name: Install dependencies
+              run: |
+                  docker compose exec -T app mise trust
+                  docker compose exec -T app mise install
+                  docker compose exec -T app composer install
+                  docker compose exec -T app mise exec node -- npm install --no-save
+            - name: Run frontend tests
+              run: docker compose exec -T app mise exec node -- npm test
+
+    tests-php:
+        name: PHP tests
+        runs-on: ubuntu-latest
+        needs: [build-app-image]
+        env:
+            HOST_PROJECT_PATH: ${{ github.workspace }}
+        steps:
+            - uses: actions/checkout@v4
+            - name: Login to GitHub Container Registry
+              uses: docker/login-action@v3
+              with:
+                  registry: ghcr.io
+                  username: ${{ github.actor }}
+                  password: ${{ secrets.GITHUB_TOKEN }}
+            - name: Pull app image
+              run: docker pull ${{ env.APP_IMAGE }}
+            - name: Start Docker services
+              run: docker compose -f docker-compose.yml -f docker-compose.ci.yml up -d app mariadb
+            - name: Wait for MariaDB
+              run: |
+                  for i in {1..30}; do
+                    docker compose exec -T mariadb mariadb -uroot -psecret -e "SELECT 1" && break
+                    echo "Waiting for MariaDB... ($i/30)"
+                    sleep 2
+                  done
+            - name: Install dependencies
+              run: |
+                  docker compose exec -T app mise trust
+                  docker compose exec -T app mise install
+                  docker compose exec -T app composer install
+                  docker compose exec -T app mise exec node -- npm install --no-save
+            - name: Setup database
+              run: |
+                  docker compose exec -T app php bin/console doctrine:database:create --if-not-exists
+                  docker compose exec -T app php bin/console doctrine:migrations:migrate --no-interaction
+            - name: Run PHP tests
+              run: |
+                  echo "Running architecture tests..."
+                  docker compose exec -T app php vendor/bin/pest -v --group=architecture
+                  echo "Running shell-scripts tests..."
+                  docker compose exec -T app mise exec bats -- bats tests/ShellScripts
+                  echo "Running unit tests..."
+                  docker compose exec -T app php vendor/bin/pest -v tests/Unit
+                  echo "Building frontend assets for integration tests..."
+                  docker compose exec -T app mise exec node -- php bin/console tailwind:build
+                  docker compose exec -T app mise exec node -- php bin/console typescript:build
+                  echo "Running integration tests..."
+                  docker compose exec -T app php bin/console doctrine:database:drop --env=test --if-exists --force
+                  docker compose exec -T app php bin/console doctrine:database:create --env=test
+                  docker compose exec -T app php bin/console doctrine:migrations:migrate --env=test --no-interaction
+                  docker compose exec -T app php vendor/bin/pest -v tests/Integration
+                  echo "Running application tests..."
+                  docker compose exec -T app php bin/console doctrine:database:drop --env=test --if-exists --force
+                  docker compose exec -T app php bin/console doctrine:database:create --env=test
+                  docker compose exec -T app php bin/console doctrine:migrations:migrate --env=test --no-interaction
+                  docker compose exec -T app php vendor/bin/pest -v tests/Application
+
+    quality:
+        name: Quality checks
+        runs-on: ubuntu-latest
+        needs: [build-app-image]
+        env:
+            HOST_PROJECT_PATH: ${{ github.workspace }}
+        steps:
+            - uses: actions/checkout@v4
+            - name: Login to GitHub Container Registry
+              uses: docker/login-action@v3
+              with:
+                  registry: ghcr.io
+                  username: ${{ github.actor }}
+                  password: ${{ secrets.GITHUB_TOKEN }}
+            - name: Pull app image
+              run: docker pull ${{ env.APP_IMAGE }}
+            - name: Start Docker services
+              run: docker compose -f docker-compose.yml -f docker-compose.ci.yml up -d app mariadb
+            - name: Install dependencies
+              run: |
+                  docker compose exec -T app mise trust
+                  docker compose exec -T app mise install
+                  docker compose exec -T app composer install
+                  docker compose exec -T app mise exec node -- npm install --no-save
+            - name: Setup database
+              run: |
+                  docker compose exec -T app php bin/console doctrine:database:create --if-not-exists
+                  docker compose exec -T app php bin/console doctrine:migrations:migrate --no-interaction
+            - name: Run quality checks
+              run: |
+                  docker compose exec -T app php bin/console doctrine:schema:validate
+                  docker compose exec -T app php bin/php-cs-fixer.php fix
+                  docker compose exec -T app mise exec node -- npm run prettier:fix
+                  docker compose exec -T app mise exec node -- npm run lint
+                  docker compose exec -T app mise exec node -- npm exec tsc
+                  docker compose exec -T app php vendor/bin/phpstan --memory-limit=1024M
+                  git diff --exit-code

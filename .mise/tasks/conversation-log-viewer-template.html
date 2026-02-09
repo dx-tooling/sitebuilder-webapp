@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LLM Wire Log Viewer</title>
+<style>
+:root {
+  --bg: #0d1117; --bg-card: #161b22; --bg-hover: #1c2129; --bg-inner: #0d1117;
+  --border: #30363d; --text: #e6edf3; --text-dim: #8b949e; --text-muted: #484f58;
+  --blue: #58a6ff; --green: #3fb950; --orange: #d29922; --red: #f85149;
+  --purple: #bc8cff; --cyan: #39d2c0;
+  --mono: 'SF Mono','Cascadia Code','Fira Code',Consolas,monospace;
+  --sans: -apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:14px;line-height:1.6}
+header{position:sticky;top:0;z-index:100;background:var(--bg);border-bottom:1px solid var(--border);padding:16px 24px}
+header h1{font-size:18px;font-weight:600;margin-bottom:4px}
+#meta{color:var(--text-dim);font-size:13px;font-family:var(--mono)}
+#meta span{margin-right:16px}
+#controls{position:sticky;top:64px;z-index:99;background:var(--bg);border-bottom:1px solid var(--border);padding:10px 24px;display:flex;align-items:center;gap:12px}
+#search{flex:1;background:var(--bg-card);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px;padding:6px 12px;font-family:var(--sans);outline:none}
+#search:focus{border-color:var(--blue)}
+#search::placeholder{color:var(--text-muted)}
+#stats{color:var(--text-dim);font-size:13px;white-space:nowrap}
+.ctrl-btn{background:var(--bg-card);border:1px solid var(--border);border-radius:6px;color:var(--text-dim);font-size:12px;padding:5px 10px;cursor:pointer;font-family:var(--sans);white-space:nowrap}
+.ctrl-btn:hover{border-color:var(--blue);color:var(--blue)}
+main{padding:16px 24px;max-width:1400px}
+.turn{background:var(--bg-card);border:1px solid var(--border);border-radius:8px;margin-bottom:10px;overflow:hidden}
+.turn-header{padding:10px 16px;cursor:pointer;display:flex;align-items:center;gap:10px;user-select:none}
+.turn-header:hover{background:var(--bg-hover)}
+.turn-num{font-family:var(--mono);font-size:11px;color:var(--text-muted);min-width:32px}
+.turn-time{font-family:var(--mono);font-size:12px;color:var(--text-dim)}
+.turn-arrow{color:var(--blue);font-size:12px}
+.turn-model{font-size:12px;color:var(--cyan);font-family:var(--mono)}
+.badge{font-size:11px;font-family:var(--mono);padding:1px 6px;border-radius:4px}
+.badge-ok{color:var(--green);background:rgba(63,185,80,.1)}
+.badge-err{color:var(--red);background:rgba(248,81,73,.1)}
+.badge-tool{color:var(--orange);background:rgba(210,153,34,.1)}
+.badge-text{color:var(--blue);background:rgba(88,166,255,.1)}
+.turn-summary{font-size:12px;color:var(--text-dim);flex:1;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.turn-chevron{color:var(--text-muted);font-size:11px;transition:transform .15s}
+.turn.open .turn-chevron{transform:rotate(90deg)}
+.turn-body{display:none;border-top:1px solid var(--border);padding:16px}
+.turn.open .turn-body{display:block}
+.section{margin-bottom:16px}
+.section:last-child{margin-bottom:0}
+.section-title{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);margin-bottom:6px}
+.msg{background:var(--bg-inner);border:1px solid var(--border);border-radius:6px;margin-bottom:6px;overflow:hidden}
+.msg:last-child{margin-bottom:0}
+.msg-role{display:inline-block;font-size:10px;font-weight:700;font-family:var(--mono);text-transform:uppercase;padding:2px 8px;border-radius:3px;margin:6px 8px 2px}
+.msg-role.system{color:var(--purple);background:rgba(188,140,255,.1)}
+.msg-role.user{color:var(--blue);background:rgba(88,166,255,.1)}
+.msg-role.assistant{color:var(--green);background:rgba(63,185,80,.1)}
+.msg-role.tool{color:var(--orange);background:rgba(210,153,34,.1)}
+.msg-content{padding:2px 12px 8px;font-family:var(--mono);font-size:12px;white-space:pre-wrap;word-break:break-word;color:var(--text-dim);max-height:200px;overflow:hidden;position:relative}
+.msg-content.expanded{max-height:none;overflow:visible}
+.msg-content:not(.expanded)::after{content:'';position:absolute;bottom:0;left:0;right:0;height:40px;background:linear-gradient(transparent,var(--bg-inner))}
+.msg-toggle{display:block;width:100%;background:none;border:none;border-top:1px solid var(--border);color:var(--blue);font-size:11px;padding:4px;cursor:pointer;font-family:var(--sans)}
+.msg-toggle:hover{background:rgba(88,166,255,.05)}
+.output-box{background:var(--bg-inner);border:1px solid var(--border);border-radius:6px;padding:12px;font-family:var(--mono);font-size:12px;white-space:pre-wrap;word-break:break-word;color:var(--text);max-height:300px;overflow:hidden;position:relative}
+.output-box.expanded{max-height:none;overflow:visible}
+.output-box:not(.expanded)::after{content:'';position:absolute;bottom:0;left:0;right:0;height:40px;background:linear-gradient(transparent,var(--bg-inner))}
+.tool-call{background:var(--bg-inner);border:1px solid var(--border);border-radius:6px;padding:8px 12px;margin-bottom:6px;font-family:var(--mono);font-size:12px}
+.tool-call:last-child{margin-bottom:0}
+.tool-name{color:var(--orange);font-weight:700}
+.tool-args{color:var(--text-dim);margin-top:4px;white-space:pre-wrap;word-break:break-word;max-height:200px;overflow:auto}
+.expand-btn{background:none;border:1px solid var(--border);color:var(--text-dim);font-size:11px;padding:2px 8px;border-radius:4px;cursor:pointer;font-family:var(--sans);margin-top:6px}
+.expand-btn:hover{border-color:var(--blue);color:var(--blue)}
+.tools-avail{font-size:11px;color:var(--text-muted);margin-top:6px;font-family:var(--mono)}
+.no-results{text-align:center;padding:48px;color:var(--text-muted);font-size:15px}
+.chunk-count{font-size:11px;color:var(--text-muted);margin-top:4px}
+mark{background:rgba(210,153,34,.35);color:inherit;border-radius:2px;padding:0 1px}
+</style>
+</head>
+<body>
+<header>
+  <h1>LLM Wire Log Viewer</h1>
+  <div id="meta"></div>
+</header>
+<div id="controls">
+  <input type="text" id="search" placeholder="Search messages, tool names, content…">
+  <button class="ctrl-btn" id="expand-all">Expand All</button>
+  <button class="ctrl-btn" id="collapse-all">Collapse All</button>
+  <div id="stats"></div>
+</div>
+<main id="entries"></main>
+
+<script id="log-data" type="text/plain">
+__LOG_DATA_B64__
+</script>
+
+<script>
+(function() {
+  'use strict';
+
+  /* ── Decode base64 log data ──────────────────────────────────── */
+
+  const rawB64 = document.getElementById('log-data').textContent.trim();
+  let rawText;
+  try {
+    var bin = atob(rawB64.replace(/\s/g, ''));
+    var bytes = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    rawText = new TextDecoder('utf-8').decode(bytes);
+  } catch (ex) { document.getElementById('entries').innerHTML = '<div class="no-results">Failed to decode log data: ' + ex.message + '</div>'; return; }
+
+  /* ── Parse Monolog LineFormatter lines ────────────────────────── */
+
+  const MSG_TYPES = ['\u2192 request', '\u2190 response', '\u2190 chunk', '\u2190 body'];
+
+  function parseJsonSeq(str) {
+    var results = [], pos = 0;
+    while (pos < str.length) {
+      while (pos < str.length && str[pos] === ' ') pos++;
+      if (pos >= str.length) break;
+      var ch = str[pos];
+      if (ch !== '{' && ch !== '[') break;
+      var close = ch === '{' ? '}' : ']', depth = 0, inStr = false, esc = false, end = pos;
+      for (var i = pos; i < str.length; i++) {
+        var c = str[i];
+        if (esc) { esc = false; continue; }
+        if (c === '\\' && inStr) { esc = true; continue; }
+        if (c === '"') { inStr = !inStr; continue; }
+        if (inStr) continue;
+        if (c === ch) depth++;
+        if (c === close) { depth--; if (depth === 0) { end = i + 1; break; } }
+      }
+      try { results.push(JSON.parse(str.substring(pos, end))); } catch { results.push({}); }
+      pos = end;
+    }
+    return results;
+  }
+
+  function parseLine(line) {
+    var dtMatch = line.match(/^\[(.*?)\]/);
+    if (!dtMatch) return null;
+    var datetime = dtMatch[1];
+    var msgType = null, msgEnd = -1;
+    for (var k = 0; k < MSG_TYPES.length; k++) {
+      var idx = line.indexOf(MSG_TYPES[k]);
+      if (idx !== -1) { msgType = MSG_TYPES[k]; msgEnd = idx + MSG_TYPES[k].length; break; }
+    }
+    if (!msgType) return null;
+    var rest = line.substring(msgEnd).trim();
+    var objs = parseJsonSeq(rest);
+    return { datetime: datetime, message: msgType, context: objs[0] || {}, extra: objs[1] || {} };
+  }
+
+  var entries = rawText.split('\n').filter(function(l) { return l.trim(); }).map(parseLine).filter(Boolean);
+
+  /* ── Group entries into turns (request → response → stream) ── */
+
+  function groupIntoTurns(entries) {
+    var turns = [], cur = null;
+    for (var i = 0; i < entries.length; i++) {
+      var e = entries[i];
+      if (e.message === '\u2192 request') {
+        if (cur) turns.push(cur);
+        cur = { request: e, response: null, chunks: [], body: null };
+      } else if (cur) {
+        if (e.message === '\u2190 response') cur.response = e;
+        else if (e.message === '\u2190 chunk') cur.chunks.push(e);
+        else if (e.message === '\u2190 body') cur.body = e;
+      }
+    }
+    if (cur) turns.push(cur);
+    return turns;
+  }
+
+  var turns = groupIntoTurns(entries);
+
+  /* ── Assemble streamed content from SSE chunks ───────────────── */
+
+  function assembleStream(chunks) {
+    var text = '', toolCalls = {};
+    for (var i = 0; i < chunks.length; i++) {
+      var line = chunks[i].context && chunks[i].context.line || '';
+      if (line.indexOf('data: ') !== 0 || line === 'data: [DONE]') continue;
+      try {
+        var data = JSON.parse(line.substring(6));
+        var delta = data.choices && data.choices[0] && data.choices[0].delta;
+        if (!delta) continue;
+        if (delta.content) text += delta.content;
+        if (delta.tool_calls) {
+          for (var j = 0; j < delta.tool_calls.length; j++) {
+            var tc = delta.tool_calls[j], idx = tc.index || 0;
+            if (!toolCalls[idx]) toolCalls[idx] = { id: '', name: '', arguments: '' };
+            if (tc.id) toolCalls[idx].id = tc.id;
+            if (tc.function && tc.function.name) toolCalls[idx].name = tc.function.name;
+            if (tc.function && tc.function.arguments) toolCalls[idx].arguments += tc.function.arguments;
+          }
+        }
+      } catch (ex) {}
+    }
+    var tcArr = [];
+    for (var k in toolCalls) { if (toolCalls.hasOwnProperty(k)) tcArr.push(toolCalls[k]); }
+    return { text: text, toolCalls: tcArr };
+  }
+
+  /* ── Helpers ─────────────────────────────────────────────────── */
+
+  function esc(s) { var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+  function fmtTime(dt) {
+    try { return new Date(dt).toLocaleTimeString('en-GB', { hour12: false }); }
+    catch { return dt; }
+  }
+
+  function trunc(s, n) { return !s ? '' : s.length > n ? s.substring(0, n) + '\u2026' : s; }
+
+  function prettyJson(s) {
+    try {
+      var obj = typeof s === 'string' ? JSON.parse(s) : s;
+      return JSON.stringify(obj, null, 2);
+    } catch { return String(s); }
+  }
+
+  /* ── Render a single turn ────────────────────────────────────── */
+
+  function renderTurn(turn, idx) {
+    var req = turn.request, ctx = req.context || {};
+    var body = ctx.body || {};
+    if (typeof body === 'string') { try { body = JSON.parse(body); } catch {} }
+    var model = body.model || '?';
+    var messages = body.messages || [];
+    var tools = body.tools || [];
+    var status = turn.response && turn.response.context && turn.response.context.status;
+    var stream = assembleStream(turn.chunks);
+    var time = fmtTime(req.datetime);
+    var statusCls = status && status < 400 ? 'badge-ok' : 'badge-err';
+    var statusTxt = status ? '' + status : '\u2014';
+
+    var outBadges = '';
+    if (stream.toolCalls.length) outBadges += '<span class="badge badge-tool">' + stream.toolCalls.length + ' tool call' + (stream.toolCalls.length > 1 ? 's' : '') + '</span> ';
+    if (stream.text) outBadges += '<span class="badge badge-text">text</span> ';
+
+    var summary = '';
+    if (stream.text && !stream.toolCalls.length) summary = trunc(stream.text.replace(/\n/g, ' '), 80);
+    else if (stream.toolCalls.length) summary = stream.toolCalls.map(function(tc) { return tc.name; }).join(', ');
+
+    var h = '<div class="turn" data-idx="' + idx + '">';
+    h += '<div class="turn-header" onclick="V.toggle(' + idx + ')">';
+    h += '<span class="turn-num">#' + (idx + 1) + '</span>';
+    h += '<span class="turn-time">' + esc(time) + '</span>';
+    h += '<span class="turn-arrow">\u2192</span>';
+    h += '<span class="turn-model">' + esc(model) + '</span>';
+    h += '<span class="badge ' + statusCls + '">' + statusTxt + '</span> ';
+    h += outBadges;
+    h += '<span class="turn-summary">' + esc(summary) + '</span>';
+    h += '<span class="turn-chevron">\u25B6</span>';
+    h += '</div>';
+    h += '<div class="turn-body">';
+
+    /* Messages Sent */
+    if (messages.length) {
+      h += '<div class="section"><div class="section-title">Messages Sent (' + messages.length + ')</div>';
+      for (var m = 0; m < messages.length; m++) {
+        var msg = messages[m], role = msg.role || 'unknown';
+        var content = '';
+        if (typeof msg.content === 'string') content = msg.content;
+        else if (Array.isArray(msg.content)) content = msg.content.map(function(c) { return c.text || JSON.stringify(c); }).join('\n');
+        else if (msg.content) content = JSON.stringify(msg.content, null, 2);
+
+        var extra = '';
+        if (msg.tool_call_id) extra = 'tool_call_id: ' + msg.tool_call_id + '\n';
+        if (msg.tool_calls) {
+          extra += msg.tool_calls.map(function(tc) {
+            return '\u2192 ' + (tc.function && tc.function.name || '?') + '(' + (tc.function && tc.function.arguments || '') + ')';
+          }).join('\n');
+          if (!content) content = '(tool call request)';
+        }
+        var full = extra ? extra + (content ? '\n' + content : '') : content;
+        var isLong = full.length > 400;
+        var mid = 'msg-' + idx + '-' + m;
+        h += '<div class="msg">';
+        h += '<span class="msg-role ' + esc(role) + '">' + esc(role) + '</span>';
+        h += '<div class="msg-content' + (isLong ? '' : ' expanded') + '" id="' + mid + '">' + esc(full) + '</div>';
+        if (isLong) h += '<button class="msg-toggle" onclick="V.expand(\'' + mid + '\')">Show more</button>';
+        h += '</div>';
+      }
+      if (tools.length) {
+        h += '<div class="tools-avail">' + tools.length + ' tool(s): ' + tools.map(function(t) { return t.function && t.function.name || '?'; }).join(', ') + '</div>';
+      }
+      h += '</div>';
+    }
+
+    /* LLM Output */
+    if (stream.text || stream.toolCalls.length) {
+      h += '<div class="section"><div class="section-title">LLM Output</div>';
+      for (var t = 0; t < stream.toolCalls.length; t++) {
+        var tc = stream.toolCalls[t];
+        var args = tc.arguments;
+        try { args = prettyJson(args); } catch {}
+        h += '<div class="tool-call"><span class="tool-name">' + esc(tc.name) + '</span>';
+        h += '<div class="tool-args">' + esc(args) + '</div></div>';
+      }
+      if (stream.text) {
+        var isLongOut = stream.text.length > 600;
+        var oid = 'out-' + idx;
+        h += '<div class="output-box' + (isLongOut ? '' : ' expanded') + '" id="' + oid + '">' + esc(stream.text) + '</div>';
+        if (isLongOut) h += '<button class="expand-btn" onclick="V.expand(\'' + oid + '\')">Show full output</button>';
+      }
+      h += '</div>';
+    }
+
+    /* Chunks info */
+    if (turn.chunks.length) {
+      h += '<div class="chunk-count">' + turn.chunks.length + ' SSE chunks streamed</div>';
+    }
+
+    h += '</div></div>';
+    return h;
+  }
+
+  /* ── Metadata ────────────────────────────────────────────────── */
+
+  var cid = (entries.length && entries[0].extra && entries[0].extra.conversationId) || 'unknown';
+  document.title = 'Wire Log \u2014 ' + cid;
+  document.getElementById('meta').innerHTML =
+    '<span>Conversation: ' + esc(cid) + '</span>' +
+    '<span>' + turns.length + ' turn(s)</span>' +
+    '<span>' + entries.length + ' raw entries</span>';
+
+  /* ── Render all turns (with optional search filter) ──────────── */
+
+  function renderAll(filter) {
+    var container = document.getElementById('entries');
+    var lf = (filter || '').toLowerCase();
+    var html = '', shown = 0;
+    for (var i = 0; i < turns.length; i++) {
+      if (lf) {
+        var haystack = JSON.stringify(turns[i].request.context || '') + JSON.stringify(assembleStream(turns[i].chunks));
+        if (haystack.toLowerCase().indexOf(lf) === -1) continue;
+      }
+      html += renderTurn(turns[i], i);
+      shown++;
+    }
+    if (!shown) html = '<div class="no-results">No matching turns found.</div>';
+    container.innerHTML = html;
+    document.getElementById('stats').textContent = shown + ' / ' + turns.length + ' turns';
+  }
+
+  renderAll();
+
+  /* ── Interactivity ───────────────────────────────────────────── */
+
+  window.V = {
+    toggle: function(idx) {
+      var el = document.querySelector('.turn[data-idx="' + idx + '"]');
+      if (el) el.classList.toggle('open');
+    },
+    expand: function(id) {
+      var el = document.getElementById(id);
+      if (!el) return;
+      var wasExpanded = el.classList.toggle('expanded');
+      var btn = el.nextElementSibling;
+      if (btn && btn.tagName === 'BUTTON') btn.textContent = wasExpanded ? 'Show less' : 'Show more';
+    }
+  };
+
+  var searchTimer;
+  document.getElementById('search').addEventListener('input', function(e) {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(function() { renderAll(e.target.value); }, 250);
+  });
+
+  document.getElementById('expand-all').addEventListener('click', function() {
+    var items = document.querySelectorAll('.turn');
+    for (var i = 0; i < items.length; i++) items[i].classList.add('open');
+  });
+
+  document.getElementById('collapse-all').addEventListener('click', function() {
+    var items = document.querySelectorAll('.turn');
+    for (var i = 0; i < items.length; i++) items[i].classList.remove('open');
+  });
+
+})();
+</script>
+</body>
+</html>

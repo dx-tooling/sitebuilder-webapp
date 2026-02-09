@@ -133,7 +133,7 @@ The agent always sees `/workspace` as its working directory. The actual filesyst
 2. Translated to a host path (for Docker-in-Docker)
 3. Mounted as `/workspace` in the agent container
 
-This simplifies the agent's view - it only needs to work with `/workspace` paths.
+This simplifies the agent's view - it only needs to work with `/workspace` paths. The path is also stated in the LLM system prompt so the agent always has it even when earlier conversation messages are trimmed to stay within the context window.
 
 ### Docker-in-Docker Path Translation
 

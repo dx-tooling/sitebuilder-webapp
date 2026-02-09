@@ -9,7 +9,8 @@ use EnterpriseToolingForSymfony\SharedBundle\WorkerSystem\SymfonyMessage\Immedia
 readonly class RunEditSessionMessage implements ImmediateSymfonyMessageInterface
 {
     public function __construct(
-        public string $sessionId
+        public string $sessionId,
+        public string $locale = 'en',
     ) {
     }
 }

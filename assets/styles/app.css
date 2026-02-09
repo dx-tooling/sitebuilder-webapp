@@ -28,9 +28,10 @@
     }
 }
 
-/* Stop shimmer animation when container shows completion */
+/* Stop shimmer animation when container shows completion or cancellation */
 .technical-messages-container [data-header="1"].from-green-50\/80::before,
-.technical-messages-container [data-header="1"].from-red-50\/80::before {
+.technical-messages-container [data-header="1"].from-red-50\/80::before,
+.technical-messages-container [data-header="1"].from-amber-50\/80::before {
     animation: none;
     background: none;
 }

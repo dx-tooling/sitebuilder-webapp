@@ -6,7 +6,8 @@ namespace App\ChatBasedContentEditor\Domain\Enum;
 
 enum EditSessionChunkType: string
 {
-    case Text  = 'text';
-    case Event = 'event';
-    case Done  = 'done';
+    case Text     = 'text';
+    case Event    = 'event';
+    case Done     = 'done';
+    case Progress = 'progress';
 }

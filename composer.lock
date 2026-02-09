@@ -1775,12 +1775,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/dx-tooling/etfs-coding-agent.git",
-                "reference": "e8e1bd0ba5b7363d756f0ddc865468abf9ab8fd2"
+                "reference": "b7dfb71d3b14ccc944c0963b29c71d7d533b06fc"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/dx-tooling/etfs-coding-agent/zipball/e8e1bd0ba5b7363d756f0ddc865468abf9ab8fd2",
-                "reference": "e8e1bd0ba5b7363d756f0ddc865468abf9ab8fd2",
+                "url": "https://api.github.com/repos/dx-tooling/etfs-coding-agent/zipball/b7dfb71d3b14ccc944c0963b29c71d7d533b06fc",
+                "reference": "b7dfb71d3b14ccc944c0963b29c71d7d533b06fc",
                 "shasum": ""
             },
             "require": {
@@ -1819,7 +1819,7 @@
                 "source": "https://github.com/dx-tooling/etfs-coding-agent/tree/main",
                 "issues": "https://github.com/dx-tooling/etfs-coding-agent/issues"
             },
-            "time": "2026-01-20T07:21:46+00:00"
+            "time": "2026-02-07T10:58:21+00:00"
         },
         {
             "name": "enterprise-tooling-for-symfony/shared-bundle",
