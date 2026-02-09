@@ -54,7 +54,7 @@ class CallbackChatHistory extends AbstractChatHistory implements TurnActivityPro
 
     /**
      * @param list<Message> $initialMessages Messages from previous conversation turns
-     * @param int           $contextWindow   Maximum token count for context window
+     * @param int           $contextWindow   Maximum token count for context window (should match LlmModelName::maxContextTokens())
      */
     public function __construct(
         array $initialMessages = [],

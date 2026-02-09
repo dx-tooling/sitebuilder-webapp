@@ -111,8 +111,10 @@ final class LlmContentEditorFacade implements LlmContentEditorFacadeInterface
         /** @var SplQueue<ConversationMessageDto> $messageQueue */
         $messageQueue = new SplQueue();
 
-        // Create chat history with previous messages and a callback for new ones
-        $chatHistory = new CallbackChatHistory($initialMessages);
+        // Create chat history with previous messages and a callback for new ones.
+        // Use the model's actual context window so trimming matches the model's capacity.
+        $model       = LlmModelName::defaultForContentEditor();
+        $chatHistory = new CallbackChatHistory($initialMessages, $model->maxContextTokens());
         $chatHistory->setOnNewMessageCallback(function (Message $message) use ($messageQueue): void {
             if ($message instanceof AssistantMessage) {
                 $content = $message->getContent();
@@ -143,7 +145,7 @@ final class LlmContentEditorFacade implements LlmContentEditorFacadeInterface
 
         $agent = new ContentEditorAgent(
             $this->workspaceTooling,
-            LlmModelName::defaultForContentEditor(),
+            $model,
             $llmApiKey,
             $agentConfig,
             $this->llmWireLogEnabled ? $this->llmWireLogger : null,
