@@ -3,14 +3,6 @@
 {% block title %}{{ 'editor.title'|trans }}{% endblock %}
 
 {% block content %}
-    {# Heartbeat controller to track user presence (prevents stale conversation locks) - skip for read-only #}
-    {% if not readOnly %}
-        <div {{ stimulus_controller('conversation-heartbeat', {
-                 heartbeatUrl: path('chat_based_content_editor.presentation.heartbeat', { conversationId: conversation.id }),
-                 interval: 10000
-             }) }}></div>
-    {% endif %}
-
     <div class="space-y-6"
          {{ stimulus_controller('chat-based-content-editor', {
              runUrl: runUrl,
@@ -108,8 +100,22 @@
             </div>
         {% endif %}
 
-        {# Action buttons - always visible, centered above header #}
-        <div class="flex flex-wrap justify-center items-center gap-2">
+        {# Action buttons - always visible, centered above header. Heartbeat + countdown only when editable. #}
+        <div class="flex flex-wrap justify-center items-center gap-2"
+             {% if canEdit %}
+             {{ stimulus_controller('conversation-heartbeat', {
+                 heartbeatUrl: path('chat_based_content_editor.presentation.heartbeat', { conversationId: conversation.id }),
+                 interval: 10000,
+                 sessionTimeoutMinutes: sessionTimeoutMinutes,
+                 finishUrl: path('chat_based_content_editor.presentation.finish', { conversationId: conversation.id }),
+                 finishCsrfToken: csrf_token('conversation_finish'),
+                 projectListUrl: path('project_mgmt.presentation.list'),
+                 translations: {
+                     endsIn: 'editor.session_ends_in'|trans,
+                     continue: 'editor.session_continue'|trans
+                 }
+             }) }}
+             {% endif %}>
             {% if canEdit %}
                 <form method="POST" action="{{ path('chat_based_content_editor.presentation.finish', { conversationId: conversation.id }) }}" class="inline">
                     <input type="hidden" name="_csrf_token" value="{{ csrf_token('conversation_finish') }}">
@@ -130,6 +136,19 @@
                class="px-3 py-1.5 rounded-md border border-dark-300 dark:border-dark-600 text-dark-700 dark:text-dark-300 text-sm font-medium hover:bg-dark-100 dark:hover:bg-dark-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:focus:ring-offset-dark-900">
                 {{ 'common.back_to_projects'|trans }}
             </a>
+            {% if canEdit %}
+                <span data-conversation-heartbeat-target="countdown"
+                      class="text-sm text-dark-600 dark:text-dark-400 tabular-nums"></span>
+                <button type="button"
+                        data-action="click->conversation-heartbeat#continueClicked"
+                        title="{{ 'editor.session_continue'|trans }}"
+                        aria-label="{{ 'editor.session_continue'|trans }}"
+                        class="p-1.5 rounded-md border border-dark-300 dark:border-dark-600 text-dark-700 dark:text-dark-300 hover:bg-dark-100 dark:hover:bg-dark-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-dark-900">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                    </svg>
+                </button>
+            {% endif %}
         </div>
 
         {# Main content area - side-by-side on wide screens #}

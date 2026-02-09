@@ -29,11 +29,11 @@ interface ChatBasedContentEditorFacadeInterface
      * A conversation is considered stale if the user hasn't sent a heartbeat
      * (updated lastActivityAt) within the specified timeout.
      *
-     * @param int $timeoutMinutes number of minutes after which a conversation is considered stale
+     * @param int|null $timeoutMinutes number of minutes after which a conversation is considered stale (default: configured session_timeout_minutes)
      *
      * @return list<string> list of workspace IDs that were released
      */
-    public function releaseStaleConversations(int $timeoutMinutes = 5): array;
+    public function releaseStaleConversations(?int $timeoutMinutes = null): array;
 
     /**
      * Get the ID of the latest conversation for a workspace.

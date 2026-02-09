@@ -184,6 +184,8 @@ editor:
     working_on: "Arbeitet an <strong>%project%</strong>"
     description: "Beschreiben Sie, was Sie ändern möchten, in einfacher Sprache. Der Assistent kümmert sich um die Änderungen und zeigt den Fortschritt an."
     end_session: "Sitzung beenden"
+    session_continue: "Weiter"
+    session_ends_in: "Sitzung endet in"
     send_for_review: "Zur Überprüfung senden"
     conversation_placeholder: "Ihre Unterhaltung wird hier angezeigt. Beschreiben Sie unten eine Änderung, um zu beginnen."
     auto_scroll: "Neueste Nachricht im Blick behalten"

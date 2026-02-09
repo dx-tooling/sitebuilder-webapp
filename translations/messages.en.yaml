@@ -184,6 +184,8 @@ editor:
     working_on: "Working on <strong>%project%</strong>"
     description: "Describe what you want changed in plain language. The assistant will take care of the edits and show progress."
     end_session: "End session"
+    session_continue: "Continue"
+    session_ends_in: "Session ends in"
     send_for_review: "Send for review"
     conversation_placeholder: "Your conversation will show up here. Describe a change below to get started."
     auto_scroll: "Keep newest message in view"

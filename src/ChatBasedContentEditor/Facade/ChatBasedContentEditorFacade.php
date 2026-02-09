@@ -21,6 +21,7 @@ final class ChatBasedContentEditorFacade implements ChatBasedContentEditorFacade
     public function __construct(
         private readonly EntityManagerInterface       $entityManager,
         private readonly WorkspaceMgmtFacadeInterface $workspaceMgmtFacade,
+        private readonly int                          $sessionTimeoutMinutes,
     ) {
     }
 
@@ -63,23 +64,28 @@ final class ChatBasedContentEditorFacade implements ChatBasedContentEditorFacade
         return $conversation?->getUserId();
     }
 
-    public function releaseStaleConversations(int $timeoutMinutes = 5): array
+    public function releaseStaleConversations(?int $timeoutMinutes = null): array
     {
-        $cutoffTime = DateAndTimeService::getDateTimeImmutable()->modify("-{$timeoutMinutes} minutes");
+        $minutes    = $timeoutMinutes ?? $this->sessionTimeoutMinutes;
+        $cutoffTime = DateAndTimeService::getDateTimeImmutable()->modify("-{$minutes} minutes");
 
         // Find ongoing conversations where:
-        // - lastActivityAt is set and is older than cutoff time, OR
-        // - lastActivityAt is null and createdAt is older than cutoff time (legacy/new conversations)
+        // - no edit session is currently running (agent not working),
+        // - and (lastActivityAt is set and older than cutoff, OR lastActivityAt is null and createdAt older than cutoff)
         /** @var list<Conversation> $staleConversations */
         $staleConversations = $this->entityManager->createQueryBuilder()
             ->select('c')
             ->from(Conversation::class, 'c')
             ->where('c.status = :status')
             ->andWhere(
+                'NOT EXISTS (SELECT 1 FROM ' . EditSession::class . ' e WHERE e.conversation = c AND e.status = :runningStatus)'
+            )
+            ->andWhere(
                 '(c.lastActivityAt IS NOT NULL AND c.lastActivityAt < :cutoffTime) OR ' .
                 '(c.lastActivityAt IS NULL AND c.createdAt < :cutoffTime)'
             )
             ->setParameter('status', ConversationStatus::ONGOING)
+            ->setParameter('runningStatus', EditSessionStatus::Running)
             ->setParameter('cutoffTime', $cutoffTime)
             ->getQuery()
             ->getResult();

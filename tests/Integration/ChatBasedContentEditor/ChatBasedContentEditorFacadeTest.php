@@ -6,7 +6,9 @@ namespace App\Tests\Integration\ChatBasedContentEditor;
 
 use App\Account\Domain\Entity\AccountCore;
 use App\ChatBasedContentEditor\Domain\Entity\Conversation;
+use App\ChatBasedContentEditor\Domain\Entity\EditSession;
 use App\ChatBasedContentEditor\Domain\Enum\ConversationStatus;
+use App\ChatBasedContentEditor\Domain\Enum\EditSessionStatus;
 use App\ChatBasedContentEditor\Facade\ChatBasedContentEditorFacadeInterface;
 use App\ProjectMgmt\Domain\Entity\Project;
 use App\WorkspaceMgmt\Domain\Entity\Workspace;
@@ -193,6 +195,49 @@ final class ChatBasedContentEditorFacadeTest extends KernelTestCase
         $updatedConversation = $this->entityManager->find(Conversation::class, $conversationId);
         self::assertNotNull($updatedConversation);
         self::assertSame(ConversationStatus::FINISHED, $updatedConversation->getStatus());
+    }
+
+    public function testReleaseStaleConversationsDoesNotReleaseWhenAgentIsWorking(): void
+    {
+        // Arrange: Conversation that would be stale (lastActivityAt 6 min ago) but has a Running edit session
+        $user      = $this->createTestUser('user@example.com');
+        $project   = $this->createProject('Test Project');
+        $projectId = $project->getId();
+        self::assertNotNull($projectId);
+
+        $workspace   = $this->createWorkspace($projectId, WorkspaceStatus::IN_CONVERSATION);
+        $workspaceId = $workspace->getId();
+        $userId      = $user->getId();
+        self::assertNotNull($workspaceId);
+        self::assertNotNull($userId);
+
+        $conversation   = $this->createConversation($workspaceId, $userId);
+        $conversationId = $conversation->getId();
+        self::assertNotNull($conversationId);
+
+        $conversation->updateLastActivity();
+        $runningSession = new EditSession($conversation, 'test instruction');
+        $runningSession->setStatus(EditSessionStatus::Running);
+        $this->entityManager->persist($runningSession);
+        $this->entityManager->flush();
+
+        // Time travel to 10:06 (past the 5-minute timeout)
+        $this->mockClock->modify('+6 minutes');
+
+        // Act: Release stale conversations
+        $releasedWorkspaceIds = $this->facade->releaseStaleConversations(5);
+
+        // Assert: Conversation must NOT be released because it has a Running edit session
+        self::assertCount(0, $releasedWorkspaceIds);
+
+        $this->entityManager->clear();
+        $updatedConversation = $this->entityManager->find(Conversation::class, $conversationId);
+        self::assertNotNull($updatedConversation);
+        self::assertSame(ConversationStatus::ONGOING, $updatedConversation->getStatus());
+
+        $updatedWorkspace = $this->entityManager->find(Workspace::class, $workspaceId);
+        self::assertNotNull($updatedWorkspace);
+        self::assertSame(WorkspaceStatus::IN_CONVERSATION, $updatedWorkspace->getStatus());
     }
 
     private function createTestUser(string $email): AccountCore

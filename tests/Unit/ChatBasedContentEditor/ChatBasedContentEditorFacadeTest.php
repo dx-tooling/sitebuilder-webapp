@@ -67,7 +67,7 @@ final class ChatBasedContentEditorFacadeTest extends TestCase
             });
 
         // Act
-        $facade = new ChatBasedContentEditorFacade($entityManager, $workspaceFacade);
+        $facade = new ChatBasedContentEditorFacade($entityManager, $workspaceFacade, 5);
         $result = $facade->releaseStaleConversations(5);
 
         // Assert
@@ -103,7 +103,7 @@ final class ChatBasedContentEditorFacadeTest extends TestCase
         $workspaceFacade->expects($this->never())->method('transitionToAvailableForConversation');
 
         // Act
-        $facade = new ChatBasedContentEditorFacade($entityManager, $workspaceFacade);
+        $facade = new ChatBasedContentEditorFacade($entityManager, $workspaceFacade, 5);
         $result = $facade->releaseStaleConversations(5);
 
         // Assert
@@ -153,7 +153,7 @@ final class ChatBasedContentEditorFacadeTest extends TestCase
             ->with('workspace-1');
 
         // Act
-        $facade = new ChatBasedContentEditorFacade($entityManager, $workspaceFacade);
+        $facade = new ChatBasedContentEditorFacade($entityManager, $workspaceFacade, 5);
         $result = $facade->releaseStaleConversations(5);
 
         // Assert
@@ -193,7 +193,7 @@ final class ChatBasedContentEditorFacadeTest extends TestCase
         $workspaceFacade = $this->createMock(WorkspaceMgmtFacadeInterface::class);
 
         // Act
-        $facade = new ChatBasedContentEditorFacade($entityManager, $workspaceFacade);
+        $facade = new ChatBasedContentEditorFacade($entityManager, $workspaceFacade, 5);
         $result = $facade->getLatestConversationId('workspace-1');
 
         // Assert
@@ -224,7 +224,7 @@ final class ChatBasedContentEditorFacadeTest extends TestCase
         $workspaceFacade = $this->createMock(WorkspaceMgmtFacadeInterface::class);
 
         // Act
-        $facade = new ChatBasedContentEditorFacade($entityManager, $workspaceFacade);
+        $facade = new ChatBasedContentEditorFacade($entityManager, $workspaceFacade, 5);
         $result = $facade->getLatestConversationId('workspace-1');
 
         // Assert
