@@ -1,5 +1,23 @@
 # Agentic Content Editing Abstraction Layer
 
+## Brief
+
+We need to properly integrate the self-contained Cursor CLI binary as an alternative Content Editor Agent that can be used alongside our homegrown solution based on the NeuronAI framework. Branch `feat/cursor-agent-integration` contains a proof of concept.
+
+The focus is on one main aspect: the **architectural patterns around a clean integration point**. How can we design the codebase in a way that allows the very-different-in-nature agent implementations ("make" versus "buy") to look as uniform and compatible to as much of the codebase as possible?
+
+We need a kind of facade or anti-corruption layer — similar to how a good design makes a local Unix filesystem and a remote S3 bucket feel "uniform" for other layers and verticals of the codebase. The abstraction should be as little leaky as possible. We don't want to face the fact that these are two very-different-in-nature sub-systems at every turn of the code.
+
+If this requires slicing the existing architecture into more verticals, re-designing the cut, and/or reshaping the encapsulation surface of the current agent system, then so be it.
+
+Additional constraints:
+
+- The vertical should be named `AgenticContentEditing` — that's more fitting than a generic `ContentEditing`.
+- A certain amount of deliberate "leaking" is in order: call sites outside of the new vertical's facade should be able to *know* what backend they are running — they just shouldn't need a parade of `if type=cursor else` constructs on top of it. The agentic backend must remain configurable per project.
+- Alongside `tool_calling`/`tool_called` normalization, `tool_error` should be part of the canonical event kinds.
+
+---
+
 ## Problem Analysis: Why the PoC Leaks
 
 The `feat/cursor-agent-integration` branch has the right idea (adapter pattern, separate vertical for Cursor) but the abstraction is placed incorrectly and leaks in several ways:
