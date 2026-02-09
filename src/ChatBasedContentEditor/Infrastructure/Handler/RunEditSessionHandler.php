@@ -101,8 +101,7 @@ final readonly class RunEditSessionHandler
                 $project->remoteContentAssetsManifestUrls
             );
 
-            // Build agent configuration from project settings.
-            // Pass working folder path so it is in the system prompt and survives context-window trimming (#79).
+            // Build agent configuration from project settings (#79).
             $agentConfig = new AgentConfigDto(
                 $project->agentBackgroundInstructions,
                 $project->agentStepInstructions,

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\LlmContentEditor\Infrastructure\ChatHistory;
 
+use App\LlmContentEditor\Domain\TurnActivityProviderInterface;
 use Closure;
 use NeuronAI\Chat\History\AbstractChatHistory;
 use NeuronAI\Chat\History\ChatHistoryInterface;
@@ -16,16 +17,23 @@ use Override;
  * A ChatHistory implementation that:
  * 1. Can be pre-loaded with messages from a previous conversation
  * 2. Notifies via callback when new messages are added (for persistence)
+ * 3. Automatically tracks all tool calls via TurnActivityJournal and exposes a summary for the system prompt
  *
- * This allows the facade to manage conversation history without directly
- * depending on database entities.
+ * The journal records every tool call/result automatically (no LLM cooperation needed)
+ * and its summary is appended to the system prompt on each LLM API request,
+ * so the model always knows what it already did — even after context-window trimming.
  */
-class CallbackChatHistory extends AbstractChatHistory
+class CallbackChatHistory extends AbstractChatHistory implements TurnActivityProviderInterface
 {
     /**
      * @var Closure(Message): void|null
      */
     private ?Closure $onNewMessage = null;
+
+    /**
+     * Automatically tracks all tool calls and results within the current chat turn.
+     */
+    private readonly TurnActivityJournal $journal;
 
     /**
      * Tracks the most recent UserMessage added to history.
@@ -46,7 +54,7 @@ class CallbackChatHistory extends AbstractChatHistory
 
     /**
      * @param list<Message> $initialMessages Messages from previous conversation turns
-     * @param int           $contextWindow   Maximum token count for context window
+     * @param int           $contextWindow   Maximum token count for context window (should match LlmModelName::maxContextTokens())
      */
     public function __construct(
         array $initialMessages = [],
@@ -54,6 +62,7 @@ class CallbackChatHistory extends AbstractChatHistory
     ) {
         parent::__construct($contextWindow);
         $this->history = $initialMessages;
+        $this->journal = new TurnActivityJournal();
     }
 
     /**
@@ -73,7 +82,8 @@ class CallbackChatHistory extends AbstractChatHistory
      * Called when a new message is added to the history.
      * We use this hook to:
      * 1. Track the latest genuine UserMessage for trim recovery
-     * 2. Notify the persistence callback.
+     * 2. Record completed tool calls in the journal (from ToolCallResultMessage)
+     * 3. Notify the persistence callback.
      */
     protected function onNewMessage(Message $message): void
     {
@@ -81,9 +91,18 @@ class CallbackChatHistory extends AbstractChatHistory
             $this->latestUserMessage = $message;
         }
 
+        if ($message instanceof ToolCallResultMessage) {
+            $this->journal->recordToolResults($message);
+        }
+
         if ($this->onNewMessage !== null) {
             ($this->onNewMessage)($message);
         }
+    }
+
+    public function getTurnActivitySummary(): string
+    {
+        return $this->journal->getSummary();
     }
 
     /**

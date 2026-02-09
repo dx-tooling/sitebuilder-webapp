@@ -121,6 +121,7 @@ project:
         placeholder_custom_image: "myregistry/myimage:tag"
         custom_image_help: "Enter a Docker image name with tag (e.g., node:latest, myregistry.io/myimage:v1)."
         agent_config_advanced: "Agent Configuration (Advanced)"
+        reset_agent_config_to_defaults: "Reset to defaults"
         agent_config_description: "Customize how the AI agent behaves when editing this project. These settings control the agent's instructions and workflow."
         background_instructions: "Background Instructions"
         background_instructions_placeholder: "System context and workspace conventions..."

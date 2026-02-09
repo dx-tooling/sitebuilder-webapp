@@ -121,6 +121,7 @@ project:
         placeholder_custom_image: "myregistry/myimage:tag"
         custom_image_help: "Geben Sie einen Docker-Image-Namen mit Tag ein (z.B. node:latest, myregistry.io/myimage:v1)."
         agent_config_advanced: "Agentenkonfiguration (Erweitert)"
+        reset_agent_config_to_defaults: "Auf Standard zurücksetzen"
         agent_config_description: "Passen Sie an, wie sich der KI-Agent beim Bearbeiten dieses Projekts verhält. Diese Einstellungen steuern die Anweisungen und den Workflow des Agenten."
         background_instructions: "Hintergrundanweisungen"
         background_instructions_placeholder: "Systemkontext und Workspace-Konventionen..."

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\LlmContentEditor\Domain\Agent;
 
 use App\LlmContentEditor\Domain\Enum\LlmModelName;
+use App\LlmContentEditor\Domain\TurnActivityProviderInterface;
 use App\LlmContentEditor\Facade\Dto\AgentConfigDto;
 use App\LlmContentEditor\Infrastructure\WireLog\LlmWireLogMiddleware;
 use App\WorkspaceTooling\Facade\WorkspaceToolingServiceInterface;
@@ -53,14 +54,28 @@ class ContentEditorAgent extends BaseCodingAgent
 
     /**
      * System prompt includes working folder path when set, so it survives context-window trimming.
+     * When the chat history has a TurnActivityJournal, the journal summary is appended so the model
+     * always knows what tool calls it has already made — even after aggressive context-window trimming
+     * removes the actual tool-call messages from the history.
+     *
+     * Called before each LLM API request within the agentic loop (each recursive stream() call).
      *
      * @see https://github.com/dx-tooling/sitebuilder-webapp/issues/79
+     * @see https://github.com/dx-tooling/sitebuilder-webapp/issues/83
      */
     public function instructions(): string
     {
         $base = parent::instructions();
         if ($this->agentConfig->workingFolderPath !== null && $this->agentConfig->workingFolderPath !== '') {
             $base .= "\n\nWORKING FOLDER (use for all path-based tools): " . $this->agentConfig->workingFolderPath;
+        }
+
+        $history = $this->resolveChatHistory();
+        if ($history instanceof TurnActivityProviderInterface) {
+            $summary = $history->getTurnActivitySummary();
+            if ($summary !== '') {
+                $base .= "\n\n---\nACTIONS PERFORMED SO FAR THIS TURN:\n" . $summary;
+            }
         }
 
         return $base;

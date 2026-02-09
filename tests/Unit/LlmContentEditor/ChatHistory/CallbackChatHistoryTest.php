@@ -15,6 +15,7 @@ use PHPUnit\Framework\TestCase;
 
 /**
  * @see https://github.com/dx-tooling/sitebuilder-webapp/issues/75
+ * @see https://github.com/dx-tooling/sitebuilder-webapp/issues/83
  */
 final class CallbackChatHistoryTest extends TestCase
 {
@@ -198,5 +199,95 @@ final class CallbackChatHistoryTest extends TestCase
 
         // The latest user message should be the one that was preserved
         self::assertSame('Second instruction', $foundUserContent);
+    }
+
+    /**
+     * Tool calls are automatically tracked via TurnActivityJournal.
+     * The summary is available through getTurnActivitySummary().
+     *
+     * @see https://github.com/dx-tooling/sitebuilder-webapp/issues/83
+     */
+    public function testToolCallsAreAutomaticallyTrackedInJournal(): void
+    {
+        $history = new CallbackChatHistory([], 100000);
+
+        $history->addMessage(new UserMessage('Create a new page'));
+
+        $tool = Tool::make('list_directory', 'List directory')
+            ->setCallId('call_1')
+            ->setInputs(['path' => '/workspace/src'])
+            ->setResult('index.html, about.html');
+
+        $history->addMessage(new ToolCallMessage(null, [$tool]));
+        $history->addMessage(new ToolCallResultMessage([$tool]));
+
+        $summary = $history->getTurnActivitySummary();
+        self::assertStringContainsString('[list_directory]', $summary);
+        self::assertStringContainsString('path="/workspace/src"', $summary);
+        self::assertStringContainsString('index.html, about.html', $summary);
+    }
+
+    /**
+     * Journal accumulates entries across multiple tool call rounds,
+     * mimicking the agentic loop's recursive stream() calls.
+     */
+    public function testJournalAccumulatesAcrossMultipleToolCallRounds(): void
+    {
+        $history = new CallbackChatHistory([], 100000);
+
+        $history->addMessage(new UserMessage('Build a craftsmen page'));
+
+        // Round 1: list files
+        $tool1 = Tool::make('list_directory', 'List')
+            ->setCallId('call_1')
+            ->setInputs(['path' => '/workspace'])
+            ->setResult('src/, dist/');
+        $history->addMessage(new ToolCallMessage(null, [$tool1]));
+        $history->addMessage(new ToolCallResultMessage([$tool1]));
+
+        // Round 2: write file
+        $tool2 = Tool::make('write_to_file', 'Write')
+            ->setCallId('call_2')
+            ->setInputs(['path' => '/workspace/src/craftsmen.html', 'content' => '<html>new</html>'])
+            ->setResult('File written successfully.');
+        $history->addMessage(new ToolCallMessage(null, [$tool2]));
+        $history->addMessage(new ToolCallResultMessage([$tool2]));
+
+        $summary = $history->getTurnActivitySummary();
+        self::assertStringContainsString('1. [list_directory]', $summary);
+        self::assertStringContainsString('2. [write_to_file]', $summary);
+        self::assertStringContainsString('craftsmen.html', $summary);
+    }
+
+    /**
+     * Journal is empty when no tool calls have been made yet.
+     */
+    public function testJournalIsEmptyBeforeAnyToolCalls(): void
+    {
+        $history = new CallbackChatHistory([], 100000);
+
+        $history->addMessage(new UserMessage('Hello'));
+        $history->addMessage(new AssistantMessage('Hi'));
+
+        self::assertSame('', $history->getTurnActivitySummary());
+    }
+
+    /**
+     * ToolCallMessage alone (without corresponding ToolCallResultMessage)
+     * does NOT produce journal entries — entries are recorded on result only.
+     */
+    public function testToolCallMessageAloneDoesNotProduceJournalEntry(): void
+    {
+        $history = new CallbackChatHistory([], 100000);
+
+        $history->addMessage(new UserMessage('Do something'));
+
+        $tool = Tool::make('list_directory', 'List')
+            ->setCallId('call_1')
+            ->setInputs(['path' => '/workspace']);
+        $history->addMessage(new ToolCallMessage(null, [$tool]));
+
+        // No ToolCallResultMessage added yet
+        self::assertSame('', $history->getTurnActivitySummary());
     }
 }
