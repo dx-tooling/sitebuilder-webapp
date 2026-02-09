@@ -15,15 +15,17 @@ use App\LlmContentEditor\Infrastructure\AgentEventQueue;
 use App\LlmContentEditor\Infrastructure\ChatHistory\CallbackChatHistory;
 use App\LlmContentEditor\Infrastructure\ChatHistory\MessageSerializer;
 use App\LlmContentEditor\Infrastructure\ConversationLog\LlmConversationLogObserver;
-use App\LlmContentEditor\Infrastructure\NoteToSelf\NoteToSelfParser;
 use App\LlmContentEditor\Infrastructure\Observer\AgentEventCollectingObserver;
 use App\LlmContentEditor\Infrastructure\ProgressMessageResolver;
 use App\WorkspaceTooling\Facade\WorkspaceToolingServiceInterface;
 use Generator;
+use NeuronAI\Chat\Messages\AssistantMessage;
 use NeuronAI\Chat\Messages\Message;
+use NeuronAI\Chat\Messages\ToolCallMessage;
 use NeuronAI\Chat\Messages\ToolCallResultMessage;
 use NeuronAI\Chat\Messages\UserMessage;
 use NeuronAI\SystemPrompt;
+use NeuronAI\Tools\Tool;
 use Psr\Log\LoggerInterface;
 use SplQueue;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
@@ -36,6 +38,7 @@ use function json_encode;
 use function mb_strlen;
 use function mb_substr;
 use function sprintf;
+use function trim;
 
 use const JSON_THROW_ON_ERROR;
 
@@ -80,13 +83,10 @@ final class LlmContentEditorFacade implements LlmContentEditorFacadeInterface
         AgentConfigDto $agentConfig,
         string         $locale = 'en',
     ): Generator {
-        // Convert previous message DTOs to NeuronAI messages. Exclude assistant_note from
-        // conversation history — note-to-self content is injected into the system prompt instead.
+        // Convert previous message DTOs to NeuronAI messages. Include assistant_note so the
+        // context is conversation-shaped: user, assistant, assistant_note, user, assistant, ...
         $initialMessages = [];
         foreach ($previousMessages as $dto) {
-            if ($dto->role === 'assistant_note') {
-                continue;
-            }
             try {
                 $initialMessages[] = $this->messageSerializer->fromDto($dto);
             } catch (Throwable) {
@@ -111,19 +111,52 @@ final class LlmContentEditorFacade implements LlmContentEditorFacadeInterface
             $prompt = $instruction;
         }
 
-        // Create a queue to collect new messages for persistence
+        // Create a queue to collect new messages for persistence. Notes from write_note_to_self
+        // are collected and enqueued after the assistant message so order is: assistant, assistant_note(s).
         /** @var SplQueue<ConversationMessageDto> $messageQueue */
         $messageQueue = new SplQueue();
+        /** @var list<ConversationMessageDto> $pendingNotes */
+        $pendingNotes = [];
 
         // Create chat history with previous messages and a callback for new ones
         $chatHistory = new CallbackChatHistory($initialMessages);
-        $chatHistory->setOnNewMessageCallback(function (Message $message) use ($messageQueue): void {
-            // Only persist user messages here. Assistant (and note-to-self) messages are
-            // persisted after the stream so we can parse [NOTE TO SELF: ...] and store
-            // visible content and note separately. Tool call/result messages are never
-            // persisted (replaying them causes 400 Bad Request).
-            $shouldSave = $message instanceof UserMessage && !$message instanceof ToolCallResultMessage;
+        $chatHistory->setOnNewMessageCallback(function (Message $message) use ($messageQueue, &$pendingNotes): void {
+            if ($message instanceof ToolCallMessage) {
+                foreach ($message->getTools() as $tool) {
+                    if ($tool instanceof Tool && $tool->getName() === 'write_note_to_self') {
+                        $inputs = $tool->getInputs();
+                        $note   = array_key_exists('note', $inputs) && is_string($inputs['note']) ? $inputs['note'] : '';
+                        if ($note !== '') {
+                            $pendingNotes[] = new ConversationMessageDto(
+                                'assistant_note',
+                                json_encode(['content' => $note], JSON_THROW_ON_ERROR)
+                            );
+                        }
+                    }
+                }
 
+                return;
+            }
+
+            if ($message instanceof AssistantMessage) {
+                $content = $message->getContent();
+                if (is_string($content) && trim($content) !== '') {
+                    try {
+                        $messageQueue->enqueue($this->messageSerializer->toDto($message));
+                    } catch (Throwable) {
+                        // Skip messages that can't be serialized
+                    }
+                }
+                foreach ($pendingNotes as $dto) {
+                    $messageQueue->enqueue($dto);
+                }
+                $pendingNotes = [];
+
+                return;
+            }
+
+            // Persist user messages. Tool call/result messages are never persisted.
+            $shouldSave = $message instanceof UserMessage && !$message instanceof ToolCallResultMessage;
             if (!$shouldSave) {
                 return;
             }
@@ -158,6 +191,7 @@ final class LlmContentEditorFacade implements LlmContentEditorFacadeInterface
             $stream  = $agent->stream($message);
 
             $accumulatedContent = '';
+
             foreach ($stream as $chunk) {
                 // Yield any queued messages for persistence
                 while (!$messageQueue->isEmpty()) {
@@ -181,25 +215,7 @@ final class LlmContentEditorFacade implements LlmContentEditorFacadeInterface
                 $this->llmConversationLogger->info(sprintf('ASSISTANT → %s', $this->truncateForLog($accumulatedContent, 300)));
             }
 
-            // Persist assistant message(s): parse [NOTE TO SELF: ...] and store visible + note separately
-            $parseResult = (new NoteToSelfParser())->parse($accumulatedContent);
-            if ($parseResult !== null) {
-                $messageQueue->enqueue(new ConversationMessageDto(
-                    'assistant',
-                    json_encode(['content' => $parseResult->visibleContent], JSON_THROW_ON_ERROR)
-                ));
-                $messageQueue->enqueue(new ConversationMessageDto(
-                    'assistant_note',
-                    json_encode(['content' => $parseResult->noteContent], JSON_THROW_ON_ERROR)
-                ));
-            } elseif (trim($accumulatedContent) !== '') {
-                $messageQueue->enqueue(new ConversationMessageDto(
-                    'assistant',
-                    json_encode(['content' => $accumulatedContent], JSON_THROW_ON_ERROR)
-                ));
-            }
-
-            // Yield any remaining queued messages
+            // Yield any remaining queued messages (assistant + assistant_note(s) from callback)
             while (!$messageQueue->isEmpty()) {
                 yield new EditStreamChunkDto(EditStreamChunkType::Message, null, null, null, null, $messageQueue->dequeue());
             }
@@ -237,10 +253,6 @@ final class LlmContentEditorFacade implements LlmContentEditorFacadeInterface
         );
         if ($agentConfig->workingFolderPath !== null && $agentConfig->workingFolderPath !== '') {
             $systemPrompt .= "\n\nWORKING FOLDER (use for all path-based tools): " . $agentConfig->workingFolderPath;
-        }
-        $notesToSelf = $this->extractNoteContentsForDump($previousMessages);
-        if ($notesToSelf !== '') {
-            $systemPrompt .= "\n\nNOTES TO SELF (from previous turns in this conversation, for context only):\n" . $notesToSelf;
         }
 
         $isFirstMessage = $previousMessages === [];
@@ -334,26 +346,5 @@ final class LlmContentEditorFacade implements LlmContentEditorFacadeInterface
         }
 
         return $value;
-    }
-
-    /**
-     * Extract note-to-self message contents from previous messages (for dump and system prompt).
-     *
-     * @param list<ConversationMessageDto> $previousMessages
-     */
-    private function extractNoteContentsForDump(array $previousMessages): string
-    {
-        $contents = [];
-        foreach ($previousMessages as $dto) {
-            if ($dto->role !== 'assistant_note') {
-                continue;
-            }
-            $decoded = json_decode($dto->contentJson, true);
-            if (is_array($decoded) && array_key_exists('content', $decoded) && is_string($decoded['content'])) {
-                $contents[] = $decoded['content'];
-            }
-        }
-
-        return implode("\n", $contents);
     }
 }

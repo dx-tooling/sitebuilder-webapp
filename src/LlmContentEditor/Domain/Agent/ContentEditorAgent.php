@@ -52,20 +52,15 @@ class ContentEditorAgent extends BaseCodingAgent
     }
 
     /**
-     * System prompt includes working folder path and notes to self from previous turns when set,
-     * so they survive context-window trimming.
+     * System prompt includes working folder path when set, so it survives context-window trimming.
      *
      * @see https://github.com/dx-tooling/sitebuilder-webapp/issues/79
-     * @see https://github.com/dx-tooling/sitebuilder-webapp/issues/83
      */
     public function instructions(): string
     {
         $base = parent::instructions();
         if ($this->agentConfig->workingFolderPath !== null && $this->agentConfig->workingFolderPath !== '') {
             $base .= "\n\nWORKING FOLDER (use for all path-based tools): " . $this->agentConfig->workingFolderPath;
-        }
-        if ($this->agentConfig->notesToSelf !== null && $this->agentConfig->notesToSelf !== '') {
-            $base .= "\n\nNOTES TO SELF (from previous turns in this conversation, for context only):\n" . $this->agentConfig->notesToSelf;
         }
 
         return $base;
@@ -194,6 +189,18 @@ class ContentEditorAgent extends BaseCodingAgent
                 'get_workspace_rules',
                 'Get project-specific rules from .sitebuilder/rules/ folders. Returns a JSON object where keys are rule names (filename without .md extension) and values are the rule contents (Markdown text). IMPORTANT: You must call this tool at least once at the start of every session to understand project-specific conventions and requirements.'
             )->setCallable(fn (): string => $this->sitebuilderFacade->getWorkspaceRules()),
+
+            Tool::make(
+                'write_note_to_self',
+                'Like a notepad you can use anytime during a turn. Call it whenever you want to remember something long-term — concise notes on what was done, what might be relevant later (files touched, user intent, follow-ups). Turns can be long; you can scribble on this notepad as you go. Not shown as a chat message; may appear as a tool call like other tools.'
+            )->addProperty(
+                new ToolProperty(
+                    'note',
+                    PropertyType::STRING,
+                    'The note content (concise).',
+                    true
+                )
+            )->setCallable(fn (string $note): string => 'Note saved for next turn.'),
         ]);
     }
 }

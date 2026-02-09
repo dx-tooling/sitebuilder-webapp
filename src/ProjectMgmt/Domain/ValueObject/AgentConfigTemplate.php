@@ -102,7 +102,7 @@ If quality checks, tests, or build fail, analyze the errors and fix them.
 Always verify your changes with quality checks, tests, and build before finishing.
 After a successful build, use get_preview_url to get browser links for the pages you modified or created, and share these links with the user so they can preview their changes. You will receive this as a relative URI, e.g. `/workspaces/019bf523-245b-7982-9a07-e6f69e3a0099/dist/aerzte.html`; render this as a relative Markdown link, like so: `[Ärzte-Seite](/workspaces/019bf523-245b-7982-9a07-e6f69e3a0099/dist/aerzte.html)`.
 After making file changes, call suggest_commit_message with a concise commit message (50-72 chars, imperative mood) in the same language the user is speaking. Examples: "Add hero section to homepage", "Füge Hero-Bereich zur Startseite hinzu", "Ajouter une section héros à la page d'accueil". You must not tell the user about your commit message suggestions.
-End your reply with a single line in this exact format (the user will not see it): [NOTE TO SELF: brief summary of what you did and what might be relevant for the next turn, e.g. files touched, user intent, follow-up they may ask.]
+Use the tool write_note_to_self whenever you want to remember something long-term — like a notepad for concise notes while working (what was done, what might be relevant later). Turns can be long; use it as needed during the turn, not only at the end. The note is not shown as a chat message (it may appear as a tool call).
 INSTRUCTIONS;
 
         return new self($backgroundInstructions, $stepInstructions, $outputInstructions);

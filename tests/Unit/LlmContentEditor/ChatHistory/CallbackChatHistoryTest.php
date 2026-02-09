@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\LlmContentEditor\ChatHistory;
 
+use App\LlmContentEditor\Facade\Dto\ConversationMessageDto;
 use App\LlmContentEditor\Infrastructure\ChatHistory\CallbackChatHistory;
 use NeuronAI\Chat\Messages\AssistantMessage;
 use NeuronAI\Chat\Messages\Message;
@@ -12,6 +13,12 @@ use NeuronAI\Chat\Messages\ToolCallResultMessage;
 use NeuronAI\Chat\Messages\UserMessage;
 use NeuronAI\Tools\Tool;
 use PHPUnit\Framework\TestCase;
+
+use function array_key_exists;
+use function is_string;
+use function json_encode;
+
+use const JSON_THROW_ON_ERROR;
 
 /**
  * @see https://github.com/dx-tooling/sitebuilder-webapp/issues/75
@@ -198,5 +205,44 @@ final class CallbackChatHistoryTest extends TestCase
 
         // The latest user message should be the one that was preserved
         self::assertSame('Second instruction', $foundUserContent);
+    }
+
+    /**
+     * When the persistence callback receives a ToolCallMessage with write_note_to_self,
+     * it should enqueue an assistant_note DTO (facade behavior for note-to-self).
+     *
+     * @see https://github.com/dx-tooling/sitebuilder-webapp/issues/83
+     */
+    public function testCallbackReceivesToolCallMessageWithWriteNoteToSelf(): void
+    {
+        $history = new CallbackChatHistory([]);
+
+        /** @var list<ConversationMessageDto> $enqueued */
+        $enqueued = [];
+        $history->setOnNewMessageCallback(function (Message $message) use (&$enqueued): void {
+            if (!$message instanceof ToolCallMessage) {
+                return;
+            }
+            foreach ($message->getTools() as $tool) {
+                if ($tool instanceof Tool && $tool->getName() === 'write_note_to_self') {
+                    $inputs = $tool->getInputs();
+                    $note   = array_key_exists('note', $inputs) && is_string($inputs['note']) ? $inputs['note'] : '';
+                    if ($note !== '') {
+                        $enqueued[] = new ConversationMessageDto(
+                            'assistant_note',
+                            json_encode(['content' => $note], JSON_THROW_ON_ERROR)
+                        );
+                    }
+                }
+            }
+        });
+
+        $tool = Tool::make('write_note_to_self', 'Note to self')
+            ->setInputs(['note' => 'Added footer; user may ask for styling next.']);
+        $history->addMessage(new ToolCallMessage(null, [$tool]));
+
+        self::assertCount(1, $enqueued);
+        self::assertSame('assistant_note', $enqueued[0]->role);
+        self::assertStringContainsString('Added footer; user may ask for styling next.', $enqueued[0]->contentJson);
     }
 }
