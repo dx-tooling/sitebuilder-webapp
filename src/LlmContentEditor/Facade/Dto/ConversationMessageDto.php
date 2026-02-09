@@ -7,14 +7,14 @@ namespace App\LlmContentEditor\Facade\Dto;
 /**
  * DTO representing a message in a conversation for cross-vertical communication.
  * The role maps to NeuronAI message types (user, assistant, tool_call, tool_call_result)
- * or to internal turn activity summaries (assistant_note_to_self).
+ * or to automatically generated turn activity summaries (turn_activity_summary).
  */
 readonly class ConversationMessageDto
 {
-    public const string ROLE_ASSISTANT_NOTE_TO_SELF = 'assistant_note_to_self';
+    public const string ROLE_TURN_ACTIVITY_SUMMARY = 'turn_activity_summary';
 
     /**
-     * @param 'user'|'assistant'|'assistant_note_to_self'|'tool_call'|'tool_call_result' $role
+     * @param 'user'|'assistant'|'turn_activity_summary'|'tool_call'|'tool_call_result' $role
      */
     public function __construct(
         public string $role,

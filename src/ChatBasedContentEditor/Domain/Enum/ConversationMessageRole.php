@@ -12,7 +12,7 @@ enum ConversationMessageRole: string
 {
     case User                = 'user';
     case Assistant           = 'assistant';
-    case AssistantNoteToSelf = 'assistant_note_to_self';
+    case TurnActivitySummary = 'turn_activity_summary';
     case ToolCall            = 'tool_call';
     case ToolCallResult      = 'tool_call_result';
 }

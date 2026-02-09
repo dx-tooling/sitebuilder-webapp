@@ -23,13 +23,13 @@ final class MessageSerializerTest extends TestCase
     }
 
     /**
-     * Turn activity summaries (and legacy note-to-self messages) stored as assistant_note_to_self
-     * are deserialized as AssistantMessage with a "[Summary of previous turn actions:]" prefix.
+     * Turn activity summaries stored as turn_activity_summary are deserialized
+     * as AssistantMessage with a "[Summary of previous turn actions:]" prefix.
      */
-    public function testFromDtoWithAssistantNoteToSelfReturnsAssistantMessageWithPrefixedContent(): void
+    public function testFromDtoWithTurnActivitySummaryReturnsAssistantMessageWithPrefixedContent(): void
     {
         $dto = new ConversationMessageDto(
-            ConversationMessageDto::ROLE_ASSISTANT_NOTE_TO_SELF,
+            ConversationMessageDto::ROLE_TURN_ACTIVITY_SUMMARY,
             '{"content":"1. [list_directory] path=\"/workspace\" → src/, dist/"}'
         );
 
@@ -42,9 +42,9 @@ final class MessageSerializerTest extends TestCase
         self::assertStringContainsString('list_directory', $content);
     }
 
-    public function testFromDtoWithAssistantNoteToSelfAndEmptyContent(): void
+    public function testFromDtoWithTurnActivitySummaryAndEmptyContent(): void
     {
-        $dto = new ConversationMessageDto(ConversationMessageDto::ROLE_ASSISTANT_NOTE_TO_SELF, '{"content":""}');
+        $dto = new ConversationMessageDto(ConversationMessageDto::ROLE_TURN_ACTIVITY_SUMMARY, '{"content":""}');
 
         $message = $this->serializer->fromDto($dto);
 

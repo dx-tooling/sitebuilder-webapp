@@ -13,7 +13,7 @@ Two levels of "session" exist in the codebase. The naming can be confusing, so t
 | **Conversation** | `Conversation` | An entire chat between one user and the agent for one workspace. Contains many turns. | `ONGOING`, `FINISHED` |
 | **EditSession** | `EditSession` | A single turn: one user instruction in, one agent response out. Lives inside a Conversation. | `Pending`, `Running`, `Cancelling`, `Completed`, `Failed`, `Cancelled` |
 | **EditSessionChunk** | `EditSessionChunk` | One streaming fragment produced by the agent during an EditSession. | (no status — immutable) |
-| **ConversationMessage** | `ConversationMessage` | A persisted message in the conversation history (user, assistant, or assistant_note_to_self for assistant note-to-self). Used for multi-turn LLM context. | (no status — immutable) |
+| **ConversationMessage** | `ConversationMessage` | A persisted message in the conversation history (user, assistant, or turn_activity_summary for automatic turn activity summaries). Used for multi-turn LLM context. | (no status — immutable) |
 
 The UI label "End session" means ending the **Conversation**. The "Stop" button cancels the current **EditSession**.
 
@@ -36,7 +36,7 @@ Project (1) ──── (1) Workspace
                        │                 • Done   – terminal chunk (success or error)
                        │
                        └──── ConversationMessage (many per conversation)
-                                 • user, assistant, assistant_note_to_self (see section 4.4)
+                                 • user, assistant, turn_activity_summary (see section 4.4)
                                  • ordered by sequence number
                                  • fed back to the LLM as history on follow-up turns
 ```
@@ -170,7 +170,7 @@ A single turn produces data for **two independent persistence paths**. This is a
 |------|-----------------------------|-----------------------|
 | User instruction | — | Yes (role: `user`) |
 | Assistant text response | Yes (type: `text`, streamed) | Yes (role: `assistant`, complete) |
-| Turn activity summary | — (automatically generated, not a tool call) | Yes (role: `assistant_note_to_self`) — see section 4.5 |
+| Turn activity summary | — (automatically generated, not a tool call) | Yes (role: `turn_activity_summary`) — see section 4.5 |
 | Tool call request | Yes (type: `event`, kind: `tool_calling`, with truncated inputs) | **No** — filtered out |
 | Tool call result | Yes (type: `event`, kind: `tool_called`, with truncated output) | **No** — filtered out |
 | Progress message | Yes (type: `progress`, human-readable status e.g. "Reading X", "Editing Y") | **No** — UI only |
@@ -185,7 +185,7 @@ This means the LLM on subsequent turns sees a compressed history: user said X, a
 
 The "Dump agent context" troubleshooting feature shows the `ConversationMessage` path — i.e., what the LLM will actually see on the next turn, including turn activity summaries (labeled as `--- TURN ACTIVITY SUMMARY ---`).
 
-### 4.5 Turn Activity Journal (assistant_note_to_self)
+### 4.5 Turn Activity Journal (turn_activity_summary)
 
 **What it is:** An automatic, infrastructure-level record of every tool call and its result within a chat turn. It gives the LLM reliable memory of its own actions, even after aggressive context-window trimming removes the actual tool-call messages from the history. See [#83](https://github.com/dx-tooling/sitebuilder-webapp/issues/83).
 
@@ -195,9 +195,9 @@ The "Dump agent context" troubleshooting feature shows the `ConversationMessage`
 
 **In-turn injection (system prompt):** On **each** LLM API request within the agentic loop, `ContentEditorAgent::instructions()` calls `getTurnActivitySummary()` on the chat history and appends it to the **system prompt** as "ACTIONS PERFORMED SO FAR THIS TURN:" followed by a numbered list of tool calls. This is rebuilt fresh on every `stream()` call, so the journal grows as tools are executed: request 1 sees nothing; request 2 sees the first tool call; request N sees all tool calls so far. Because the journal lives in the system prompt (not the message history), it **survives context-window trimming**.
 
-**Cross-turn persistence:** At the end of a chat turn, `LlmContentEditorFacade` gets the journal summary and persists it as a single `ConversationMessage` with role `assistant_note_to_self`. On the next turn, `MessageSerializer` maps it back to an `AssistantMessage` with prefix `[Summary of previous turn actions:]`. This gives the LLM context about what happened in previous turns.
+**Cross-turn persistence:** At the end of a chat turn, `LlmContentEditorFacade` gets the journal summary and persists it as a single `ConversationMessage` with role `turn_activity_summary`. On the next turn, `MessageSerializer` maps it back to an `AssistantMessage` with prefix `[Summary of previous turn actions:]`. This gives the LLM context about what happened in previous turns.
 
-**Where it lives:** In `conversation_messages` with role `assistant_note_to_self` and `content_json` like `{"content": "1. [list_directory] ..."}`.
+**Where it lives:** In `conversation_messages` with role `turn_activity_summary` and `content_json` like `{"content": "1. [list_directory] ..."}`.
 
 **Self-awareness in long turns:** With many LLM API requests per chat turn, the agent can "trip over itself" (e.g. treat files it created earlier in the turn as "already present"). The automatic journal in the system prompt -- combined with the "THIS TURN" self-awareness line in the default instructions -- ensures the agent can correctly attribute its own actions.
 
@@ -520,7 +520,7 @@ User        Browser/Stimulus          Controller            Messenger Worker    
 | **Enum** | `src/ChatBasedContentEditor/Domain/Enum/EditSessionStatus.php` | Pending, Running, Cancelling, Completed, Failed, Cancelled |
 | **Enum** | `src/ChatBasedContentEditor/Domain/Enum/ConversationStatus.php` | ONGOING, FINISHED |
 | **Enum** | `src/ChatBasedContentEditor/Domain/Enum/EditSessionChunkType.php` | Text, Event, Done |
-| **Enum** | `src/ChatBasedContentEditor/Domain/Enum/ConversationMessageRole.php` | user, assistant, assistant_note_to_self, tool_call, tool_call_result |
+| **Enum** | `src/ChatBasedContentEditor/Domain/Enum/ConversationMessageRole.php` | user, assistant, turn_activity_summary, tool_call, tool_call_result |
 | **Service** | `src/ChatBasedContentEditor/Domain/Service/ConversationService.php` | Start, finish, review, find |
 | **Facade** | `src/ChatBasedContentEditor/Facade/ChatBasedContentEditorFacade.php` | Stale cleanup, stuck session recovery |
 | **Handler** | `src/ChatBasedContentEditor/Infrastructure/Handler/RunEditSessionHandler.php` | Async agent execution + cancellation |

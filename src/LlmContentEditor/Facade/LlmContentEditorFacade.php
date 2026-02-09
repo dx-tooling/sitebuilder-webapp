@@ -79,8 +79,8 @@ final class LlmContentEditorFacade implements LlmContentEditorFacadeInterface
         AgentConfigDto $agentConfig,
         string         $locale = 'en',
     ): Generator {
-        // Convert previous message DTOs to NeuronAI messages. Include assistant_note_to_self so the
-        // context is conversation-shaped: user, assistant, assistant_note_to_self, user, assistant, ...
+        // Convert previous message DTOs to NeuronAI messages. Include turn_activity_summary so the
+        // context is conversation-shaped: user, assistant, turn_activity_summary, user, assistant, ...
         $initialMessages = [];
         foreach ($previousMessages as $dto) {
             try {
@@ -192,11 +192,11 @@ final class LlmContentEditorFacade implements LlmContentEditorFacadeInterface
                 yield new EditStreamChunkDto(EditStreamChunkType::Message, null, null, null, null, $messageQueue->dequeue());
             }
 
-            // Persist the turn activity journal as an assistant_note_to_self for cross-turn memory
+            // Persist the turn activity journal as a turn_activity_summary for cross-turn memory
             $journalSummary = $chatHistory->getTurnActivitySummary();
             if ($journalSummary !== '') {
                 $noteDto = new ConversationMessageDto(
-                    ConversationMessageDto::ROLE_ASSISTANT_NOTE_TO_SELF,
+                    ConversationMessageDto::ROLE_TURN_ACTIVITY_SUMMARY,
                     json_encode(['content' => $journalSummary], JSON_THROW_ON_ERROR),
                 );
                 yield new EditStreamChunkDto(EditStreamChunkType::Message, null, null, null, null, $noteDto);
@@ -220,7 +220,7 @@ final class LlmContentEditorFacade implements LlmContentEditorFacadeInterface
             if ($journalSummary !== '') {
                 try {
                     $noteDto = new ConversationMessageDto(
-                        ConversationMessageDto::ROLE_ASSISTANT_NOTE_TO_SELF,
+                        ConversationMessageDto::ROLE_TURN_ACTIVITY_SUMMARY,
                         json_encode(['content' => $journalSummary], JSON_THROW_ON_ERROR),
                     );
                     yield new EditStreamChunkDto(EditStreamChunkType::Message, null, null, null, null, $noteDto);
@@ -264,7 +264,7 @@ final class LlmContentEditorFacade implements LlmContentEditorFacadeInterface
             $lines[] = '';
 
             foreach ($previousMessages as $msg) {
-                $label   = $msg->role === ConversationMessageDto::ROLE_ASSISTANT_NOTE_TO_SELF ? 'TURN ACTIVITY SUMMARY' : strtoupper($msg->role);
+                $label   = $msg->role === ConversationMessageDto::ROLE_TURN_ACTIVITY_SUMMARY ? 'TURN ACTIVITY SUMMARY' : strtoupper($msg->role);
                 $lines[] = '--- ' . $label . ' ---';
 
                 $decoded = json_decode($msg->contentJson, true);
