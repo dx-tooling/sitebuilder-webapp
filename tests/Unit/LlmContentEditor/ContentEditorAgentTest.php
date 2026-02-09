@@ -7,9 +7,15 @@ namespace App\Tests\Unit\LlmContentEditor;
 use App\LlmContentEditor\Domain\Agent\ContentEditorAgent;
 use App\LlmContentEditor\Domain\Enum\LlmModelName;
 use App\LlmContentEditor\Facade\Dto\AgentConfigDto;
+use App\LlmContentEditor\Facade\Dto\ConversationMessageDto;
+use App\LlmContentEditor\Infrastructure\ChatHistory\CallbackChatHistory;
 use App\ProjectMgmt\Domain\ValueObject\AgentConfigTemplate;
 use App\ProjectMgmt\Facade\Enum\ProjectType;
 use App\WorkspaceTooling\Facade\WorkspaceToolingServiceInterface;
+use NeuronAI\Chat\Messages\ToolCallMessage;
+use NeuronAI\Chat\Messages\ToolCallResultMessage;
+use NeuronAI\Chat\Messages\UserMessage;
+use NeuronAI\Tools\Tool;
 use PHPUnit\Framework\TestCase;
 use ReflectionMethod;
 
@@ -86,6 +92,33 @@ final class ContentEditorAgentTest extends TestCase
         );
         $instructions = $agent->instructions();
         self::assertStringNotContainsString('WORKING FOLDER (use for all path-based tools)', $instructions);
+    }
+
+    public function testInstructionsIncludeAccumulatedTurnNotesWhenHistoryProvidesThem(): void
+    {
+        $history = new CallbackChatHistory([], 100000);
+        $history->addMessage(new UserMessage('Do task'));
+        $toolCall = Tool::make(ConversationMessageDto::TOOL_NAME_WRITE_NOTE_TO_SELF, 'Note')
+            ->setCallId('call_1')
+            ->setInputs(['note' => 'Created chemie.html with tracking; next: build.']);
+        $history->addMessage(new ToolCallMessage(null, [$toolCall]));
+        $toolResult = Tool::make(ConversationMessageDto::TOOL_NAME_WRITE_NOTE_TO_SELF, 'Note')
+            ->setCallId('call_1')
+            ->setInputs(['note' => 'Created chemie.html with tracking; next: build.'])
+            ->setResult('ok');
+        $history->addMessage(new ToolCallResultMessage([$toolResult]));
+
+        $agent = new ContentEditorAgent(
+            $this->createMockWorkspaceTooling(),
+            LlmModelName::defaultForContentEditor(),
+            'sk-test-key',
+            $this->createDefaultAgentConfig()
+        );
+        $agent->withChatHistory($history);
+
+        $instructions = $agent->instructions();
+        self::assertStringContainsString('SUMMARY OF WHAT YOU HAVE DONE SO FAR THIS TURN', $instructions);
+        self::assertStringContainsString('Created chemie.html with tracking; next: build.', $instructions);
     }
 
     public function testAgentUsesProvidedConfig(): void

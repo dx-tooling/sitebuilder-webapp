@@ -235,4 +235,74 @@ final class CallbackChatHistoryTest extends TestCase
         self::assertSame(ConversationMessageDto::ROLE_ASSISTANT_NOTE_TO_SELF, $enqueued[0]->role);
         self::assertStringContainsString('Added footer; user may ask for styling next.', $enqueued[0]->contentJson);
     }
+
+    /**
+     * When write_note_to_self is called and then the tool result is added,
+     * the note is accumulated for the system prompt (no message injection).
+     * getAccumulatedTurnNotes() returns it so the agent can append it to the system prompt.
+     *
+     * @see https://github.com/dx-tooling/sitebuilder-webapp/issues/83
+     */
+    public function testInTurnNoteAccumulatedForSystemPrompt(): void
+    {
+        $history = new CallbackChatHistory([], 100000);
+
+        $callId = 'call_note_1';
+        $note   = 'Created chemie.html with tracking; next: build and verify.';
+
+        $history->addMessage(new UserMessage('User instruction'));
+        $toolCall = Tool::make(ConversationMessageDto::TOOL_NAME_WRITE_NOTE_TO_SELF, 'Note to self')
+            ->setCallId($callId)
+            ->setInputs(['note' => $note]);
+        $history->addMessage(new ToolCallMessage(null, [$toolCall]));
+
+        self::assertSame('', $history->getAccumulatedTurnNotes(), 'No notes until tool result is added');
+
+        $toolResult = Tool::make(ConversationMessageDto::TOOL_NAME_WRITE_NOTE_TO_SELF, 'Note to self')
+            ->setCallId($callId)
+            ->setInputs(['note' => $note])
+            ->setResult('Note saved for next turn.');
+        $history->addMessage(new ToolCallResultMessage([$toolResult]));
+
+        $messages = $history->getMessages();
+        self::assertCount(3, $messages, 'No AssistantMessage injected; notes go to system prompt only');
+        self::assertInstanceOf(UserMessage::class, $messages[0]);
+        self::assertInstanceOf(ToolCallMessage::class, $messages[1]);
+        self::assertInstanceOf(ToolCallResultMessage::class, $messages[2]);
+
+        $accumulated = $history->getAccumulatedTurnNotes();
+        self::assertStringStartsWith('- ', $accumulated);
+        self::assertStringContainsString($note, $accumulated);
+    }
+
+    /**
+     * Multiple write_note_to_self results in one batch are all accumulated;
+     * getAccumulatedTurnNotes() returns them as bullet lines for the system prompt.
+     */
+    public function testInTurnMultipleNotesAccumulatedForSystemPrompt(): void
+    {
+        $history = new CallbackChatHistory([], 100000);
+
+        $history->addMessage(new UserMessage('Do something'));
+        $tool1 = Tool::make(ConversationMessageDto::TOOL_NAME_WRITE_NOTE_TO_SELF, 'Note')
+            ->setCallId('call_1')
+            ->setInputs(['note' => 'First note']);
+        $tool2 = Tool::make(ConversationMessageDto::TOOL_NAME_WRITE_NOTE_TO_SELF, 'Note')
+            ->setCallId('call_2')
+            ->setInputs(['note' => 'Second note']);
+        $history->addMessage(new ToolCallMessage(null, [$tool1, $tool2]));
+
+        $result1 = Tool::make(ConversationMessageDto::TOOL_NAME_WRITE_NOTE_TO_SELF, 'Note')
+            ->setCallId('call_1')->setInputs(['note' => 'First note'])->setResult('ok');
+        $result2 = Tool::make(ConversationMessageDto::TOOL_NAME_WRITE_NOTE_TO_SELF, 'Note')
+            ->setCallId('call_2')->setInputs(['note' => 'Second note'])->setResult('ok');
+        $history->addMessage(new ToolCallResultMessage([$result1, $result2]));
+
+        $messages = $history->getMessages();
+        self::assertCount(3, $messages);
+
+        $accumulated = $history->getAccumulatedTurnNotes();
+        self::assertStringContainsString('- First note', $accumulated);
+        self::assertStringContainsString('- Second note', $accumulated);
+    }
 }

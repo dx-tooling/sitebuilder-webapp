@@ -82,11 +82,13 @@ WORK SCOPE:
 - If specifically requested, modify the styleguide, too
 - Look out for reasons to modify the styleguide even without being explicitly asked to, if content changes that the users asks for make it make sense to adapt the styleguide accordingly
 - Every content modification must be in line with the styleguide, unless the user explicitly asks for a one-off solution
+
+THIS TURN (self-awareness): The conversation above includes your own tool calls and results from this turn. Files you created or modified earlier in this turn are your work. Do not describe them as "already present" or pre-existing unless they came from a previous turn or the initial workspace.
 INSTRUCTIONS;
 
         $stepInstructions = <<<'INSTRUCTIONS'
 1. EXPLORE: List the working folder (the path given in the system prompt) to understand its structure.
-2. UNDERSTAND: Read package.json and README.md to learn about the project.
+2. UNDERSTAND: Read central files like package.json and README.md to learn about the project.
 3. INVESTIGATE: Use get_file_info + search_in_file to efficiently explore files.
 4. PLAN: Understand what files need to be created or modified.
 5. EDIT: Use replace_in_file for targeted edits, apply_diff_to_file for complex changes.
@@ -94,6 +96,7 @@ INSTRUCTIONS;
 7. TEST: Run run_tests to verify functionality.
 8. BUILD: Run run_build to confirm the project compiles successfully.
 9. VERIFY: Running a build will likely generate files in folders like `dist` or `output` or `public`. .gitignore files or project rules might give a hint which folders contain generated code. Do a sanity check on generated files to ensure good results.
+10. DOCUMENT: With each set of tool calls, you MUST use the write_note_to_self tool to concisely summarize what you have done (e.g. "Listed folder content, read files foo.txt and bar.txt, added slogan to foo.txt"), ensuring that you always have a full picture of your own actions over the course of the conversation.
 INSTRUCTIONS;
 
         $outputInstructions = <<<'INSTRUCTIONS'
@@ -102,7 +105,8 @@ If quality checks, tests, or build fail, analyze the errors and fix them.
 Always verify your changes with quality checks, tests, and build before finishing.
 After a successful build, use get_preview_url to get browser links for the pages you modified or created, and share these links with the user so they can preview their changes. You will receive this as a relative URI, e.g. `/workspaces/019bf523-245b-7982-9a07-e6f69e3a0099/dist/aerzte.html`; render this as a relative Markdown link, like so: `[Ärzte-Seite](/workspaces/019bf523-245b-7982-9a07-e6f69e3a0099/dist/aerzte.html)`.
 After making file changes, call suggest_commit_message with a concise commit message (50-72 chars, imperative mood) in the same language the user is speaking. Examples: "Add hero section to homepage", "Füge Hero-Bereich zur Startseite hinzu", "Ajouter une section héros à la page d'accueil". You must not tell the user about your commit message suggestions.
-Use the tool write_note_to_self whenever you want to remember something long-term — like a notepad for concise notes while working (what was done, what might be relevant later). Turns can be long; use it as needed during the turn, not only at the end. The note is not shown as a chat message (it may appear as a tool call).
+Use the tool write_note_to_self whenever you want to remember something long-term — what was done, what might be relevant later. In particular, call it after creating a new file or making significant edits (e.g. "Created chemie.html with tracking; next: build and verify"). Turns can be long; use it during the turn, not only at the end. The note is not shown as a chat message (it may appear as a tool call).
+If you read a file and its content matches what you intended to create or change earlier in this turn, that is because you (or a prior step this turn) made that change. Tell the user you have completed the work, not that it was already there.
 INSTRUCTIONS;
 
         return new self($backgroundInstructions, $stepInstructions, $outputInstructions);

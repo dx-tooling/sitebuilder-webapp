@@ -4,28 +4,53 @@ declare(strict_types=1);
 
 namespace App\LlmContentEditor\Infrastructure\ChatHistory;
 
+use App\LlmContentEditor\Domain\TurnNotesProviderInterface;
+use App\LlmContentEditor\Facade\Dto\ConversationMessageDto;
 use Closure;
 use NeuronAI\Chat\History\AbstractChatHistory;
 use NeuronAI\Chat\History\ChatHistoryInterface;
 use NeuronAI\Chat\Messages\Message;
+use NeuronAI\Chat\Messages\ToolCallMessage;
 use NeuronAI\Chat\Messages\ToolCallResultMessage;
 use NeuronAI\Chat\Messages\UserMessage;
+use NeuronAI\Tools\Tool;
 use Override;
+
+use function array_key_exists;
+use function implode;
+use function is_string;
 
 /**
  * A ChatHistory implementation that:
  * 1. Can be pre-loaded with messages from a previous conversation
  * 2. Notifies via callback when new messages are added (for persistence)
+ * 3. Accumulates write_note_to_self notes for the current turn and exposes them for the system prompt
  *
- * This allows the facade to manage conversation history without directly
- * depending on database entities.
+ * Notes are not injected into the message flow; they are appended to the system prompt
+ * on each LLM request as "Summary of what you have done so far this turn".
  */
-class CallbackChatHistory extends AbstractChatHistory
+class CallbackChatHistory extends AbstractChatHistory implements TurnNotesProviderInterface
 {
     /**
      * @var Closure(Message): void|null
      */
     private ?Closure $onNewMessage = null;
+
+    /**
+     * Notes from write_note_to_self tool calls in this turn, by tool call_id.
+     * When we see the corresponding tool result, we move the note to accumulatedTurnNotes.
+     *
+     * @var array<string, string>
+     */
+    private array $pendingInTurnNotes = [];
+
+    /**
+     * All notes from write_note_to_self in this turn, in order. Exposed via getAccumulatedTurnNotes()
+     * and appended to the system prompt on each API request.
+     *
+     * @var list<string>
+     */
+    private array $accumulatedTurnNotes = [];
 
     /**
      * Tracks the most recent UserMessage added to history.
@@ -73,7 +98,9 @@ class CallbackChatHistory extends AbstractChatHistory
      * Called when a new message is added to the history.
      * We use this hook to:
      * 1. Track the latest genuine UserMessage for trim recovery
-     * 2. Notify the persistence callback.
+     * 2. Store write_note_to_self note content by call_id
+     * 3. When we see the tool result, append the note(s) to accumulatedTurnNotes (for system prompt)
+     * 4. Notify the persistence callback.
      */
     protected function onNewMessage(Message $message): void
     {
@@ -81,9 +108,47 @@ class CallbackChatHistory extends AbstractChatHistory
             $this->latestUserMessage = $message;
         }
 
+        if ($message instanceof ToolCallMessage) {
+            foreach ($message->getTools() as $tool) {
+                if ($tool instanceof Tool && $tool->getName() === ConversationMessageDto::TOOL_NAME_WRITE_NOTE_TO_SELF) {
+                    $inputs = $tool->getInputs();
+                    $note   = array_key_exists('note', $inputs) && is_string($inputs['note']) ? $inputs['note'] : '';
+                    if ($note !== '') {
+                        $callId                                                    = $tool->getCallId();
+                        $this->pendingInTurnNotes[$callId !== null ? $callId : ''] = $note;
+                    }
+                }
+            }
+        }
+
+        if ($message instanceof ToolCallResultMessage) {
+            foreach ($message->getTools() as $tool) {
+                if (!$tool instanceof Tool || $tool->getName() !== ConversationMessageDto::TOOL_NAME_WRITE_NOTE_TO_SELF) {
+                    continue;
+                }
+                $callId = $tool->getCallId();
+                $key    = $callId !== null ? $callId : '';
+                if (array_key_exists($key, $this->pendingInTurnNotes)) {
+                    $this->accumulatedTurnNotes[] = $this->pendingInTurnNotes[$key];
+                    unset($this->pendingInTurnNotes[$key]);
+                }
+            }
+        }
+
         if ($this->onNewMessage !== null) {
             ($this->onNewMessage)($message);
         }
+    }
+
+    public function getAccumulatedTurnNotes(): string
+    {
+        if ($this->accumulatedTurnNotes === []) {
+            return '';
+        }
+
+        $lines = array_map(static fn (string $note): string => '- ' . $note, $this->accumulatedTurnNotes);
+
+        return implode("\n", $lines);
     }
 
     /**

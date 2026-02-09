@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\LlmContentEditor\Domain\Agent;
 
 use App\LlmContentEditor\Domain\Enum\LlmModelName;
+use App\LlmContentEditor\Domain\TurnNotesProviderInterface;
 use App\LlmContentEditor\Facade\Dto\AgentConfigDto;
 use App\LlmContentEditor\Facade\Dto\ConversationMessageDto;
 use App\LlmContentEditor\Infrastructure\WireLog\LlmWireLogMiddleware;
@@ -54,14 +55,26 @@ class ContentEditorAgent extends BaseCodingAgent
 
     /**
      * System prompt includes working folder path when set, so it survives context-window trimming.
+     * When the chat history provides accumulated notes from this turn (write_note_to_self), they
+     * are appended as "Summary of what you have done so far this turn" so the model sees them
+     * on every API request within the turn.
      *
      * @see https://github.com/dx-tooling/sitebuilder-webapp/issues/79
+     * @see https://github.com/dx-tooling/sitebuilder-webapp/issues/83
      */
     public function instructions(): string
     {
         $base = parent::instructions();
         if ($this->agentConfig->workingFolderPath !== null && $this->agentConfig->workingFolderPath !== '') {
             $base .= "\n\nWORKING FOLDER (use for all path-based tools): " . $this->agentConfig->workingFolderPath;
+        }
+
+        $history = $this->resolveChatHistory();
+        if ($history instanceof TurnNotesProviderInterface) {
+            $notes = $history->getAccumulatedTurnNotes();
+            if ($notes !== '') {
+                $base .= "\n\n---\nSUMMARY OF WHAT YOU HAVE DONE SO FAR THIS TURN (from your notes):\n" . $notes;
+            }
         }
 
         return $base;
