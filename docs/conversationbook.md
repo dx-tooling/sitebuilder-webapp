@@ -13,7 +13,7 @@ Two levels of "session" exist in the codebase. The naming can be confusing, so t
 | **Conversation** | `Conversation` | An entire chat between one user and the agent for one workspace. Contains many turns. | `ONGOING`, `FINISHED` |
 | **EditSession** | `EditSession` | A single turn: one user instruction in, one agent response out. Lives inside a Conversation. | `Pending`, `Running`, `Cancelling`, `Completed`, `Failed`, `Cancelled` |
 | **EditSessionChunk** | `EditSessionChunk` | One streaming fragment produced by the agent during an EditSession. | (no status — immutable) |
-| **ConversationMessage** | `ConversationMessage` | A persisted message in the conversation history (user or assistant), used for multi-turn LLM context. | (no status — immutable) |
+| **ConversationMessage** | `ConversationMessage` | A persisted message in the conversation history (user, assistant, or assistant_note for note-to-self). Used for multi-turn LLM context. | (no status — immutable) |
 
 The UI label "End session" means ending the **Conversation**. The "Stop" button cancels the current **EditSession**.
 
@@ -36,7 +36,7 @@ Project (1) ──── (1) Workspace
                        │                 • Done   – terminal chunk (success or error)
                        │
                        └──── ConversationMessage (many per conversation)
-                                 • user / assistant only (see section 4.4)
+                                 • user, assistant, assistant_note (see section 4.4)
                                  • ordered by sequence number
                                  • fed back to the LLM as history on follow-up turns
 ```
@@ -170,6 +170,7 @@ A single turn produces data for **two independent persistence paths**. This is a
 |------|-----------------------------|-----------------------|
 | User instruction | — | Yes (role: `user`) |
 | Assistant text response | Yes (type: `text`, streamed) | Yes (role: `assistant`, complete) |
+| Note-to-self | Yes (type: `event`, if shown as tool call for `write_note_to_self`) | Yes (role: `assistant_note`) — see section 4.5 |
 | Tool call request | Yes (type: `event`, kind: `tool_calling`, with truncated inputs) | **No** — filtered out |
 | Tool call result | Yes (type: `event`, kind: `tool_called`, with truncated output) | **No** — filtered out |
 | Progress message | Yes (type: `progress`, human-readable status e.g. "Reading X", "Editing Y") | **No** — UI only |
@@ -182,7 +183,19 @@ This means the LLM on subsequent turns sees a compressed history: user said X, a
 
 **Why tool calls _are_ kept in `EditSessionChunk`:** The frontend's technical container (the expandable chevron on each turn) shows what the agent did — which tools it called, with what inputs, and what results it got. This data comes from `event` chunks, not from `ConversationMessage`. That is why tool call details survive page reloads and appear in the UI even though they are absent from the LLM's conversation history.
 
-The "Dump agent context" troubleshooting feature shows only the `ConversationMessage` path — i.e., what the LLM will actually see on the next turn.
+The "Dump agent context" troubleshooting feature shows the `ConversationMessage` path — i.e., what the LLM will actually see on the next turn, including note-to-self messages (labeled as `--- NOTE TO SELF ---`).
+
+### 4.5 Note-to-self (assistant_note)
+
+**What it is:** Short, internal summaries the agent can write whenever it wants to remember something long-term (e.g. what was done, what might be relevant next). They improve multi-turn intelligence without cluttering the visible chat.
+
+**How it is produced:** The agent has a tool `write_note_to_self` (required string `note`). Output instructions encourage the agent to call it whenever it wants to scribble a note — during the turn, not only at the end (turns can be long). When the facade callback sees a `ToolCallMessage` with this tool, it collects the note; when the final `AssistantMessage` is received, it persists the assistant message first, then the collected notes, so the stored order is assistant → assistant_note(s). See [#83](https://github.com/dx-tooling/sitebuilder-webapp/issues/83).
+
+**Where it lives:** In `conversation_messages` with role `assistant_note` and `content_json` like `{"content": "…"}`. The `MessageSerializer` maps them back to `AssistantMessage` with a `[Note to self from previous turn:]` prefix when building LLM context.
+
+**Context shape:** The context sent to the LLM is **conversation-shaped**: system prompt → user → assistant → assistant_note (→ …) → user → assistant → assistant_note → …. Notes are not injected into the system prompt; they appear in the message stream so the agent sees a natural turn order. When trimming context (e.g. for token limits), only large tool-call/tool-result payloads are intended to be stripped; the user/assistant/assistant_note sequence is preserved.
+
+**UI:** Note-to-self is **not** shown as part of the assistant's chat bubble (the visible reply is the only assistant text there). It **may** be shown as a tool call in the technical details (same as other tools), so the agent’s use of the notepad can appear there if desired.
 
 ---
 
@@ -502,7 +515,7 @@ User        Browser/Stimulus          Controller            Messenger Worker    
 | **Enum** | `src/ChatBasedContentEditor/Domain/Enum/EditSessionStatus.php` | Pending, Running, Cancelling, Completed, Failed, Cancelled |
 | **Enum** | `src/ChatBasedContentEditor/Domain/Enum/ConversationStatus.php` | ONGOING, FINISHED |
 | **Enum** | `src/ChatBasedContentEditor/Domain/Enum/EditSessionChunkType.php` | Text, Event, Done |
-| **Enum** | `src/ChatBasedContentEditor/Domain/Enum/ConversationMessageRole.php` | user, assistant, tool_call, tool_call_result |
+| **Enum** | `src/ChatBasedContentEditor/Domain/Enum/ConversationMessageRole.php` | user, assistant, assistant_note, tool_call, tool_call_result |
 | **Service** | `src/ChatBasedContentEditor/Domain/Service/ConversationService.php` | Start, finish, review, find |
 | **Facade** | `src/ChatBasedContentEditor/Facade/ChatBasedContentEditorFacade.php` | Stale cleanup, stuck session recovery |
 | **Handler** | `src/ChatBasedContentEditor/Infrastructure/Handler/RunEditSessionHandler.php` | Async agent execution + cancellation |
