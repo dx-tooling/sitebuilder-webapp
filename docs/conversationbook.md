@@ -170,7 +170,7 @@ A single turn produces data for **two independent persistence paths**. This is a
 |------|-----------------------------|-----------------------|
 | User instruction | — | Yes (role: `user`) |
 | Assistant text response | Yes (type: `text`, streamed) | Yes (role: `assistant`, complete) |
-| Assistant note-to-self | Yes (type: `event`, if shown as tool call for `write_note_to_self`) | Yes (role: `assistant_note_to_self`) — see section 4.5 |
+| Turn activity summary | — (automatically generated, not a tool call) | Yes (role: `assistant_note_to_self`) — see section 4.5 |
 | Tool call request | Yes (type: `event`, kind: `tool_calling`, with truncated inputs) | **No** — filtered out |
 | Tool call result | Yes (type: `event`, kind: `tool_called`, with truncated output) | **No** — filtered out |
 | Progress message | Yes (type: `progress`, human-readable status e.g. "Reading X", "Editing Y") | **No** — UI only |
@@ -183,23 +183,24 @@ This means the LLM on subsequent turns sees a compressed history: user said X, a
 
 **Why tool calls _are_ kept in `EditSessionChunk`:** The frontend's technical container (the expandable chevron on each turn) shows what the agent did — which tools it called, with what inputs, and what results it got. This data comes from `event` chunks, not from `ConversationMessage`. That is why tool call details survive page reloads and appear in the UI even though they are absent from the LLM's conversation history.
 
-The "Dump agent context" troubleshooting feature shows the `ConversationMessage` path — i.e., what the LLM will actually see on the next turn, including assistant note-to-self messages (labeled as `--- NOTE TO SELF ---`).
+The "Dump agent context" troubleshooting feature shows the `ConversationMessage` path — i.e., what the LLM will actually see on the next turn, including turn activity summaries (labeled as `--- TURN ACTIVITY SUMMARY ---`).
 
-### 4.5 Assistant note-to-self (assistant_note_to_self)
+### 4.5 Turn Activity Journal (assistant_note_to_self)
 
-**What it is:** Short, internal summaries the assistant can write whenever it wants to remember something long-term (e.g. what was done, what might be relevant next). They improve multi-turn intelligence without cluttering the visible chat.
+**What it is:** An automatic, infrastructure-level record of every tool call and its result within a chat turn. It gives the LLM reliable memory of its own actions, even after aggressive context-window trimming removes the actual tool-call messages from the history. See [#83](https://github.com/dx-tooling/sitebuilder-webapp/issues/83).
 
-**How it is produced:** The agent has a tool `write_note_to_self` (required string `note`). Output instructions encourage the agent to call it whenever it wants to scribble a note — during the turn, not only at the end (turns can be long). When the facade callback sees a `ToolCallMessage` with this tool, it collects the note; when the final `AssistantMessage` is received, it persists the assistant message first, then the collected notes, so the stored order is assistant → assistant_note_to_self(s). See [#83](https://github.com/dx-tooling/sitebuilder-webapp/issues/83).
+**Terminology:** A single "chat turn" (one user message → one final assistant response) consists of **multiple LLM API requests** (one per tool-call cycle in the agentic loop). The journal operates at the **LLM-request** level.
 
-**Where it lives:** In `conversation_messages` with role `assistant_note_to_self` and `content_json` like `{"content": "…"}`. The `MessageSerializer` maps them back to `AssistantMessage` with a `[Note to self from previous turn:]` prefix when building LLM context. Those persisted notes are replayed only at the start of the **next** user turn.
+**How it works:** `CallbackChatHistory` composes a `TurnActivityJournal` that automatically records every completed tool call (name, parameters, truncated result) from `ToolCallResultMessage` events. No LLM cooperation is needed — the infrastructure does this automatically.
 
-**In-turn visibility:** Within a single turn there are many API requests (user → assistant tool_calls → tool results → assistant …). So that the agent can see its own notes during the turn, notes are **not** injected into the message flow (which would create consecutive assistant messages and can trigger API errors). Instead, `CallbackChatHistory` accumulates all `write_note_to_self` notes for the current turn and exposes them via `getAccumulatedTurnNotes()`. On **each** LLM API request in that turn, `ContentEditorAgent::instructions()` appends a section to the **system prompt**: "SUMMARY OF WHAT YOU HAVE DONE SO FAR THIS TURN (from your notes):" followed by the accumulated notes as bullet points. So the model sees a growing summary at the end of the system prompt (request 1: none; request 2: first note(s); request 3: all notes so far; etc.), which avoids message-sequence issues and keeps all notes visible every time.
+**In-turn injection (system prompt):** On **each** LLM API request within the agentic loop, `ContentEditorAgent::instructions()` calls `getTurnActivitySummary()` on the chat history and appends it to the **system prompt** as "ACTIONS PERFORMED SO FAR THIS TURN:" followed by a numbered list of tool calls. This is rebuilt fresh on every `stream()` call, so the journal grows as tools are executed: request 1 sees nothing; request 2 sees the first tool call; request N sees all tool calls so far. Because the journal lives in the system prompt (not the message history), it **survives context-window trimming**.
 
-**Context shape:** The context is system prompt (including the turn summary when present) + conversation messages (user, assistant with tool_calls, user tool results, …). Persisted notes from **previous** turns are replayed as assistant_note_to_self in the message list; **current**-turn notes appear only in the system prompt summary.
+**Cross-turn persistence:** At the end of a chat turn, `LlmContentEditorFacade` gets the journal summary and persists it as a single `ConversationMessage` with role `assistant_note_to_self`. On the next turn, `MessageSerializer` maps it back to an `AssistantMessage` with prefix `[Summary of previous turn actions:]`. This gives the LLM context about what happened in previous turns.
 
-**Self-awareness in long turns:** With many API calls per turn, the agent can "trip over itself" (e.g. treat files it created earlier in the turn as "already present"). Default instructions include a "THIS TURN" self-awareness line and encourage calling `write_note_to_self` after creating or editing files; together with the system-prompt summary, this helps the agent attribute its own actions correctly.
+**Where it lives:** In `conversation_messages` with role `assistant_note_to_self` and `content_json` like `{"content": "1. [list_directory] ..."}`.
 
-**UI:** Assistant note-to-self is **not** shown as part of the assistant's chat bubble (the visible reply is the only assistant text there). It **may** be shown as a tool call in the technical details (same as other tools), so the agent’s use of the notepad can appear there if desired.
+**Self-awareness in long turns:** With many LLM API requests per chat turn, the agent can "trip over itself" (e.g. treat files it created earlier in the turn as "already present"). The automatic journal in the system prompt -- combined with the "THIS TURN" self-awareness line in the default instructions -- ensures the agent can correctly attribute its own actions.
+
 
 ---
 

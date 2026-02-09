@@ -5,9 +5,8 @@ declare(strict_types=1);
 namespace App\LlmContentEditor\Domain\Agent;
 
 use App\LlmContentEditor\Domain\Enum\LlmModelName;
-use App\LlmContentEditor\Domain\TurnNotesProviderInterface;
+use App\LlmContentEditor\Domain\TurnActivityProviderInterface;
 use App\LlmContentEditor\Facade\Dto\AgentConfigDto;
-use App\LlmContentEditor\Facade\Dto\ConversationMessageDto;
 use App\LlmContentEditor\Infrastructure\WireLog\LlmWireLogMiddleware;
 use App\WorkspaceTooling\Facade\WorkspaceToolingServiceInterface;
 use EtfsCodingAgent\Agent\BaseCodingAgent;
@@ -55,9 +54,11 @@ class ContentEditorAgent extends BaseCodingAgent
 
     /**
      * System prompt includes working folder path when set, so it survives context-window trimming.
-     * When the chat history provides accumulated notes from this turn (write_note_to_self), they
-     * are appended as "Summary of what you have done so far this turn" so the model sees them
-     * on every API request within the turn.
+     * When the chat history has a TurnActivityJournal, the journal summary is appended so the model
+     * always knows what tool calls it has already made — even after aggressive context-window trimming
+     * removes the actual tool-call messages from the history.
+     *
+     * Called before each LLM API request within the agentic loop (each recursive stream() call).
      *
      * @see https://github.com/dx-tooling/sitebuilder-webapp/issues/79
      * @see https://github.com/dx-tooling/sitebuilder-webapp/issues/83
@@ -70,10 +71,10 @@ class ContentEditorAgent extends BaseCodingAgent
         }
 
         $history = $this->resolveChatHistory();
-        if ($history instanceof TurnNotesProviderInterface) {
-            $notes = $history->getAccumulatedTurnNotes();
-            if ($notes !== '') {
-                $base .= "\n\n---\nSUMMARY OF WHAT YOU HAVE DONE SO FAR THIS TURN (from your notes):\n" . $notes;
+        if ($history instanceof TurnActivityProviderInterface) {
+            $summary = $history->getTurnActivitySummary();
+            if ($summary !== '') {
+                $base .= "\n\n---\nACTIONS PERFORMED SO FAR THIS TURN:\n" . $summary;
             }
         }
 
@@ -203,18 +204,6 @@ class ContentEditorAgent extends BaseCodingAgent
                 'get_workspace_rules',
                 'Get project-specific rules from .sitebuilder/rules/ folders. Returns a JSON object where keys are rule names (filename without .md extension) and values are the rule contents (Markdown text). IMPORTANT: You must call this tool at least once at the start of every session to understand project-specific conventions and requirements.'
             )->setCallable(fn (): string => $this->sitebuilderFacade->getWorkspaceRules()),
-
-            Tool::make(
-                ConversationMessageDto::TOOL_NAME_WRITE_NOTE_TO_SELF,
-                'Like a notepad you can use anytime during a turn. Call it whenever you want to remember something long-term — concise notes on what was done, what might be relevant later (files touched, user intent, follow-ups). Turns can be long; you can scribble on this notepad as you go. Not shown as a chat message; may appear as a tool call like other tools.'
-            )->addProperty(
-                new ToolProperty(
-                    'note',
-                    PropertyType::STRING,
-                    'The note content (concise).',
-                    true
-                )
-            )->setCallable(fn (string $note): string => 'Note saved for next turn.'),
         ]);
     }
 }

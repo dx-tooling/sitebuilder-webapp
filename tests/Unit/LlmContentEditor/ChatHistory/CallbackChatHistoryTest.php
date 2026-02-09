@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\LlmContentEditor\ChatHistory;
 
-use App\LlmContentEditor\Facade\Dto\ConversationMessageDto;
 use App\LlmContentEditor\Infrastructure\ChatHistory\CallbackChatHistory;
 use NeuronAI\Chat\Messages\AssistantMessage;
 use NeuronAI\Chat\Messages\Message;
@@ -16,6 +15,7 @@ use PHPUnit\Framework\TestCase;
 
 /**
  * @see https://github.com/dx-tooling/sitebuilder-webapp/issues/75
+ * @see https://github.com/dx-tooling/sitebuilder-webapp/issues/83
  */
 final class CallbackChatHistoryTest extends TestCase
 {
@@ -202,107 +202,92 @@ final class CallbackChatHistoryTest extends TestCase
     }
 
     /**
-     * When the persistence callback receives a ToolCallMessage with write_note_to_self,
-     * it should enqueue an assistant_note_to_self DTO (facade behavior for note-to-self).
+     * Tool calls are automatically tracked via TurnActivityJournal.
+     * The summary is available through getTurnActivitySummary().
      *
      * @see https://github.com/dx-tooling/sitebuilder-webapp/issues/83
      */
-    public function testCallbackReceivesToolCallMessageWithWriteNoteToSelf(): void
-    {
-        $history = new CallbackChatHistory([]);
-
-        /** @var list<ConversationMessageDto> $enqueued */
-        $enqueued = [];
-        $history->setOnNewMessageCallback(function (Message $message) use (&$enqueued): void {
-            if (!$message instanceof ToolCallMessage) {
-                return;
-            }
-            foreach ($message->getTools() as $tool) {
-                if ($tool instanceof Tool) {
-                    $dto = ConversationMessageDto::fromWriteNoteToSelfTool($tool);
-                    if ($dto !== null) {
-                        $enqueued[] = $dto;
-                    }
-                }
-            }
-        });
-
-        $tool = Tool::make(ConversationMessageDto::TOOL_NAME_WRITE_NOTE_TO_SELF, 'Note to self')
-            ->setInputs(['note' => 'Added footer; user may ask for styling next.']);
-        $history->addMessage(new ToolCallMessage(null, [$tool]));
-
-        self::assertCount(1, $enqueued);
-        self::assertSame(ConversationMessageDto::ROLE_ASSISTANT_NOTE_TO_SELF, $enqueued[0]->role);
-        self::assertStringContainsString('Added footer; user may ask for styling next.', $enqueued[0]->contentJson);
-    }
-
-    /**
-     * When write_note_to_self is called and then the tool result is added,
-     * the note is accumulated for the system prompt (no message injection).
-     * getAccumulatedTurnNotes() returns it so the agent can append it to the system prompt.
-     *
-     * @see https://github.com/dx-tooling/sitebuilder-webapp/issues/83
-     */
-    public function testInTurnNoteAccumulatedForSystemPrompt(): void
+    public function testToolCallsAreAutomaticallyTrackedInJournal(): void
     {
         $history = new CallbackChatHistory([], 100000);
 
-        $callId = 'call_note_1';
-        $note   = 'Created chemie.html with tracking; next: build and verify.';
+        $history->addMessage(new UserMessage('Create a new page'));
 
-        $history->addMessage(new UserMessage('User instruction'));
-        $toolCall = Tool::make(ConversationMessageDto::TOOL_NAME_WRITE_NOTE_TO_SELF, 'Note to self')
-            ->setCallId($callId)
-            ->setInputs(['note' => $note]);
-        $history->addMessage(new ToolCallMessage(null, [$toolCall]));
+        $tool = Tool::make('list_directory', 'List directory')
+            ->setCallId('call_1')
+            ->setInputs(['path' => '/workspace/src'])
+            ->setResult('index.html, about.html');
 
-        self::assertSame('', $history->getAccumulatedTurnNotes(), 'No notes until tool result is added');
+        $history->addMessage(new ToolCallMessage(null, [$tool]));
+        $history->addMessage(new ToolCallResultMessage([$tool]));
 
-        $toolResult = Tool::make(ConversationMessageDto::TOOL_NAME_WRITE_NOTE_TO_SELF, 'Note to self')
-            ->setCallId($callId)
-            ->setInputs(['note' => $note])
-            ->setResult('Note saved for next turn.');
-        $history->addMessage(new ToolCallResultMessage([$toolResult]));
-
-        $messages = $history->getMessages();
-        self::assertCount(3, $messages, 'No AssistantMessage injected; notes go to system prompt only');
-        self::assertInstanceOf(UserMessage::class, $messages[0]);
-        self::assertInstanceOf(ToolCallMessage::class, $messages[1]);
-        self::assertInstanceOf(ToolCallResultMessage::class, $messages[2]);
-
-        $accumulated = $history->getAccumulatedTurnNotes();
-        self::assertStringStartsWith('- ', $accumulated);
-        self::assertStringContainsString($note, $accumulated);
+        $summary = $history->getTurnActivitySummary();
+        self::assertStringContainsString('[list_directory]', $summary);
+        self::assertStringContainsString('path="/workspace/src"', $summary);
+        self::assertStringContainsString('index.html, about.html', $summary);
     }
 
     /**
-     * Multiple write_note_to_self results in one batch are all accumulated;
-     * getAccumulatedTurnNotes() returns them as bullet lines for the system prompt.
+     * Journal accumulates entries across multiple tool call rounds,
+     * mimicking the agentic loop's recursive stream() calls.
      */
-    public function testInTurnMultipleNotesAccumulatedForSystemPrompt(): void
+    public function testJournalAccumulatesAcrossMultipleToolCallRounds(): void
+    {
+        $history = new CallbackChatHistory([], 100000);
+
+        $history->addMessage(new UserMessage('Build a craftsmen page'));
+
+        // Round 1: list files
+        $tool1 = Tool::make('list_directory', 'List')
+            ->setCallId('call_1')
+            ->setInputs(['path' => '/workspace'])
+            ->setResult('src/, dist/');
+        $history->addMessage(new ToolCallMessage(null, [$tool1]));
+        $history->addMessage(new ToolCallResultMessage([$tool1]));
+
+        // Round 2: write file
+        $tool2 = Tool::make('write_to_file', 'Write')
+            ->setCallId('call_2')
+            ->setInputs(['path' => '/workspace/src/craftsmen.html', 'content' => '<html>new</html>'])
+            ->setResult('File written successfully.');
+        $history->addMessage(new ToolCallMessage(null, [$tool2]));
+        $history->addMessage(new ToolCallResultMessage([$tool2]));
+
+        $summary = $history->getTurnActivitySummary();
+        self::assertStringContainsString('1. [list_directory]', $summary);
+        self::assertStringContainsString('2. [write_to_file]', $summary);
+        self::assertStringContainsString('craftsmen.html', $summary);
+    }
+
+    /**
+     * Journal is empty when no tool calls have been made yet.
+     */
+    public function testJournalIsEmptyBeforeAnyToolCalls(): void
+    {
+        $history = new CallbackChatHistory([], 100000);
+
+        $history->addMessage(new UserMessage('Hello'));
+        $history->addMessage(new AssistantMessage('Hi'));
+
+        self::assertSame('', $history->getTurnActivitySummary());
+    }
+
+    /**
+     * ToolCallMessage alone (without corresponding ToolCallResultMessage)
+     * does NOT produce journal entries — entries are recorded on result only.
+     */
+    public function testToolCallMessageAloneDoesNotProduceJournalEntry(): void
     {
         $history = new CallbackChatHistory([], 100000);
 
         $history->addMessage(new UserMessage('Do something'));
-        $tool1 = Tool::make(ConversationMessageDto::TOOL_NAME_WRITE_NOTE_TO_SELF, 'Note')
+
+        $tool = Tool::make('list_directory', 'List')
             ->setCallId('call_1')
-            ->setInputs(['note' => 'First note']);
-        $tool2 = Tool::make(ConversationMessageDto::TOOL_NAME_WRITE_NOTE_TO_SELF, 'Note')
-            ->setCallId('call_2')
-            ->setInputs(['note' => 'Second note']);
-        $history->addMessage(new ToolCallMessage(null, [$tool1, $tool2]));
+            ->setInputs(['path' => '/workspace']);
+        $history->addMessage(new ToolCallMessage(null, [$tool]));
 
-        $result1 = Tool::make(ConversationMessageDto::TOOL_NAME_WRITE_NOTE_TO_SELF, 'Note')
-            ->setCallId('call_1')->setInputs(['note' => 'First note'])->setResult('ok');
-        $result2 = Tool::make(ConversationMessageDto::TOOL_NAME_WRITE_NOTE_TO_SELF, 'Note')
-            ->setCallId('call_2')->setInputs(['note' => 'Second note'])->setResult('ok');
-        $history->addMessage(new ToolCallResultMessage([$result1, $result2]));
-
-        $messages = $history->getMessages();
-        self::assertCount(3, $messages);
-
-        $accumulated = $history->getAccumulatedTurnNotes();
-        self::assertStringContainsString('- First note', $accumulated);
-        self::assertStringContainsString('- Second note', $accumulated);
+        // No ToolCallResultMessage added yet
+        self::assertSame('', $history->getTurnActivitySummary());
     }
 }

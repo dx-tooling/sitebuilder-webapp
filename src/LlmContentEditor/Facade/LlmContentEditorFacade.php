@@ -21,23 +21,22 @@ use App\WorkspaceTooling\Facade\WorkspaceToolingServiceInterface;
 use Generator;
 use NeuronAI\Chat\Messages\AssistantMessage;
 use NeuronAI\Chat\Messages\Message;
-use NeuronAI\Chat\Messages\ToolCallMessage;
 use NeuronAI\Chat\Messages\ToolCallResultMessage;
 use NeuronAI\Chat\Messages\UserMessage;
 use NeuronAI\SystemPrompt;
-use NeuronAI\Tools\Tool;
 use Psr\Log\LoggerInterface;
 use SplQueue;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Throwable;
 
-use function array_key_exists;
 use function is_array;
 use function is_string;
 use function mb_strlen;
 use function mb_substr;
 use function sprintf;
 use function trim;
+
+use const JSON_THROW_ON_ERROR;
 
 final class LlmContentEditorFacade implements LlmContentEditorFacadeInterface
 {
@@ -108,29 +107,13 @@ final class LlmContentEditorFacade implements LlmContentEditorFacadeInterface
             $prompt = $instruction;
         }
 
-        // Create a queue to collect new messages for persistence. Notes from write_note_to_self
-        // are collected and enqueued after the assistant message so order is: assistant, assistant_note_to_self(s).
+        // Create a queue to collect new messages for persistence.
         /** @var SplQueue<ConversationMessageDto> $messageQueue */
         $messageQueue = new SplQueue();
-        /** @var list<ConversationMessageDto> $pendingNotes */
-        $pendingNotes = [];
 
         // Create chat history with previous messages and a callback for new ones
         $chatHistory = new CallbackChatHistory($initialMessages);
-        $chatHistory->setOnNewMessageCallback(function (Message $message) use ($messageQueue, &$pendingNotes): void {
-            if ($message instanceof ToolCallMessage) {
-                foreach ($message->getTools() as $tool) {
-                    if ($tool instanceof Tool) {
-                        $dto = ConversationMessageDto::fromWriteNoteToSelfTool($tool);
-                        if ($dto !== null) {
-                            $pendingNotes[] = $dto;
-                        }
-                    }
-                }
-
-                return;
-            }
-
+        $chatHistory->setOnNewMessageCallback(function (Message $message) use ($messageQueue): void {
             if ($message instanceof AssistantMessage) {
                 $content = $message->getContent();
                 if (is_string($content) && trim($content) !== '') {
@@ -140,10 +123,6 @@ final class LlmContentEditorFacade implements LlmContentEditorFacadeInterface
                         // Skip messages that can't be serialized
                     }
                 }
-                foreach ($pendingNotes as $dto) {
-                    $messageQueue->enqueue($dto);
-                }
-                $pendingNotes = [];
 
                 return;
             }
@@ -208,9 +187,19 @@ final class LlmContentEditorFacade implements LlmContentEditorFacadeInterface
                 $this->llmConversationLogger->info(sprintf('ASSISTANT → %s', $this->truncateForLog($accumulatedContent, 300)));
             }
 
-            // Yield any remaining queued messages (assistant + assistant_note_to_self(s) from callback)
+            // Yield any remaining queued messages (assistant message from callback)
             while (!$messageQueue->isEmpty()) {
                 yield new EditStreamChunkDto(EditStreamChunkType::Message, null, null, null, null, $messageQueue->dequeue());
+            }
+
+            // Persist the turn activity journal as an assistant_note_to_self for cross-turn memory
+            $journalSummary = $chatHistory->getTurnActivitySummary();
+            if ($journalSummary !== '') {
+                $noteDto = new ConversationMessageDto(
+                    ConversationMessageDto::ROLE_ASSISTANT_NOTE_TO_SELF,
+                    json_encode(['content' => $journalSummary], JSON_THROW_ON_ERROR),
+                );
+                yield new EditStreamChunkDto(EditStreamChunkType::Message, null, null, null, null, $noteDto);
             }
 
             foreach ($queue->drain() as $eventDto) {
@@ -226,9 +215,18 @@ final class LlmContentEditorFacade implements LlmContentEditorFacadeInterface
             if ($this->llmWireLogEnabled) {
                 $this->llmConversationLogger->info(sprintf('ERROR → %s', $e->getMessage()));
             }
-            // Persist any assistant note-to-self from this turn so the next turn still sees them
-            foreach ($pendingNotes as $dto) {
-                yield new EditStreamChunkDto(EditStreamChunkType::Message, null, null, null, null, $dto);
+            // Even on error, persist what journal we have for cross-turn context
+            $journalSummary = $chatHistory->getTurnActivitySummary();
+            if ($journalSummary !== '') {
+                try {
+                    $noteDto = new ConversationMessageDto(
+                        ConversationMessageDto::ROLE_ASSISTANT_NOTE_TO_SELF,
+                        json_encode(['content' => $journalSummary], JSON_THROW_ON_ERROR),
+                    );
+                    yield new EditStreamChunkDto(EditStreamChunkType::Message, null, null, null, null, $noteDto);
+                } catch (Throwable) {
+                    // Ignore serialization errors in error path
+                }
             }
             yield new EditStreamChunkDto(EditStreamChunkType::Done, null, null, false, $e->getMessage());
         }
@@ -266,7 +264,7 @@ final class LlmContentEditorFacade implements LlmContentEditorFacadeInterface
             $lines[] = '';
 
             foreach ($previousMessages as $msg) {
-                $label   = $msg->role === ConversationMessageDto::ROLE_ASSISTANT_NOTE_TO_SELF ? 'NOTE TO SELF' : strtoupper($msg->role);
+                $label   = $msg->role === ConversationMessageDto::ROLE_ASSISTANT_NOTE_TO_SELF ? 'TURN ACTIVITY SUMMARY' : strtoupper($msg->role);
                 $lines[] = '--- ' . $label . ' ---';
 
                 $decoded = json_decode($msg->contentJson, true);

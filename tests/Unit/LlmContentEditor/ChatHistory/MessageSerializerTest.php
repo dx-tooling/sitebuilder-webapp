@@ -22,11 +22,15 @@ final class MessageSerializerTest extends TestCase
         $this->serializer = new MessageSerializer();
     }
 
+    /**
+     * Turn activity summaries (and legacy note-to-self messages) stored as assistant_note_to_self
+     * are deserialized as AssistantMessage with a "[Summary of previous turn actions:]" prefix.
+     */
     public function testFromDtoWithAssistantNoteToSelfReturnsAssistantMessageWithPrefixedContent(): void
     {
         $dto = new ConversationMessageDto(
             ConversationMessageDto::ROLE_ASSISTANT_NOTE_TO_SELF,
-            '{"content":"I added the footer. User may ask for styling next."}'
+            '{"content":"1. [list_directory] path=\"/workspace\" → src/, dist/"}'
         );
 
         $message = $this->serializer->fromDto($dto);
@@ -34,8 +38,8 @@ final class MessageSerializerTest extends TestCase
         self::assertInstanceOf(AssistantMessage::class, $message);
         $content = $message->getContent();
         self::assertIsString($content);
-        self::assertStringStartsWith('[Note to self from previous turn:] ', $content);
-        self::assertStringContainsString('I added the footer. User may ask for styling next.', $content);
+        self::assertStringStartsWith('[Summary of previous turn actions:] ', $content);
+        self::assertStringContainsString('list_directory', $content);
     }
 
     public function testFromDtoWithAssistantNoteToSelfAndEmptyContent(): void
@@ -45,6 +49,6 @@ final class MessageSerializerTest extends TestCase
         $message = $this->serializer->fromDto($dto);
 
         self::assertInstanceOf(AssistantMessage::class, $message);
-        self::assertSame('[Note to self from previous turn:] ', $message->getContent());
+        self::assertSame('[Summary of previous turn actions:] ', $message->getContent());
     }
 }

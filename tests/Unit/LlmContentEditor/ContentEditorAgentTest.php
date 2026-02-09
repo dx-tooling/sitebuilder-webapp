@@ -7,7 +7,6 @@ namespace App\Tests\Unit\LlmContentEditor;
 use App\LlmContentEditor\Domain\Agent\ContentEditorAgent;
 use App\LlmContentEditor\Domain\Enum\LlmModelName;
 use App\LlmContentEditor\Facade\Dto\AgentConfigDto;
-use App\LlmContentEditor\Facade\Dto\ConversationMessageDto;
 use App\LlmContentEditor\Infrastructure\ChatHistory\CallbackChatHistory;
 use App\ProjectMgmt\Domain\ValueObject\AgentConfigTemplate;
 use App\ProjectMgmt\Facade\Enum\ProjectType;
@@ -94,19 +93,24 @@ final class ContentEditorAgentTest extends TestCase
         self::assertStringNotContainsString('WORKING FOLDER (use for all path-based tools)', $instructions);
     }
 
-    public function testInstructionsIncludeAccumulatedTurnNotesWhenHistoryProvidesThem(): void
+    /**
+     * When tool calls have been made, the turn activity journal summary
+     * is injected into the system prompt so the LLM knows what it already did.
+     *
+     * @see https://github.com/dx-tooling/sitebuilder-webapp/issues/83
+     */
+    public function testInstructionsIncludeTurnActivitySummaryWhenToolCallsMade(): void
     {
         $history = new CallbackChatHistory([], 100000);
-        $history->addMessage(new UserMessage('Do task'));
-        $toolCall = Tool::make(ConversationMessageDto::TOOL_NAME_WRITE_NOTE_TO_SELF, 'Note')
+        $history->addMessage(new UserMessage('Build a craftsmen page'));
+
+        // Simulate a completed tool call (list_directory)
+        $tool = Tool::make('list_directory', 'List directory')
             ->setCallId('call_1')
-            ->setInputs(['note' => 'Created chemie.html with tracking; next: build.']);
-        $history->addMessage(new ToolCallMessage(null, [$toolCall]));
-        $toolResult = Tool::make(ConversationMessageDto::TOOL_NAME_WRITE_NOTE_TO_SELF, 'Note')
-            ->setCallId('call_1')
-            ->setInputs(['note' => 'Created chemie.html with tracking; next: build.'])
-            ->setResult('ok');
-        $history->addMessage(new ToolCallResultMessage([$toolResult]));
+            ->setInputs(['path' => '/workspace/src'])
+            ->setResult('index.html, about.html, styles.css');
+        $history->addMessage(new ToolCallMessage(null, [$tool]));
+        $history->addMessage(new ToolCallResultMessage([$tool]));
 
         $agent = new ContentEditorAgent(
             $this->createMockWorkspaceTooling(),
@@ -117,8 +121,29 @@ final class ContentEditorAgentTest extends TestCase
         $agent->withChatHistory($history);
 
         $instructions = $agent->instructions();
-        self::assertStringContainsString('SUMMARY OF WHAT YOU HAVE DONE SO FAR THIS TURN', $instructions);
-        self::assertStringContainsString('Created chemie.html with tracking; next: build.', $instructions);
+        self::assertStringContainsString('ACTIONS PERFORMED SO FAR THIS TURN', $instructions);
+        self::assertStringContainsString('[list_directory]', $instructions);
+        self::assertStringContainsString('path="/workspace/src"', $instructions);
+    }
+
+    /**
+     * When no tool calls have been made yet, the activity section is omitted.
+     */
+    public function testInstructionsOmitActivitySectionWhenNoToolCalls(): void
+    {
+        $history = new CallbackChatHistory([], 100000);
+        $history->addMessage(new UserMessage('Hello'));
+
+        $agent = new ContentEditorAgent(
+            $this->createMockWorkspaceTooling(),
+            LlmModelName::defaultForContentEditor(),
+            'sk-test-key',
+            $this->createDefaultAgentConfig()
+        );
+        $agent->withChatHistory($history);
+
+        $instructions = $agent->instructions();
+        self::assertStringNotContainsString('ACTIONS PERFORMED SO FAR THIS TURN', $instructions);
     }
 
     public function testAgentUsesProvidedConfig(): void

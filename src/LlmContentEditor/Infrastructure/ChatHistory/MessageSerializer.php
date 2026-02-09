@@ -54,7 +54,7 @@ final class MessageSerializer
         return match ($dto->role) {
             'user'                                              => new UserMessage($content),
             'assistant'                                         => new AssistantMessage($content !== '' ? $content : null),
-            ConversationMessageDto::ROLE_ASSISTANT_NOTE_TO_SELF => new AssistantMessage('[Note to self from previous turn:] ' . $content),
+            ConversationMessageDto::ROLE_ASSISTANT_NOTE_TO_SELF => new AssistantMessage('[Summary of previous turn actions:] ' . $content),
             'tool_call'                                         => $this->deserializeToolCall($data),
             default                                             => $this->deserializeToolCallResult($data),
         };

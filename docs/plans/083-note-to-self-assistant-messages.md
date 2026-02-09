@@ -1,8 +1,10 @@
 # Implementation Plan: Agent note-to-self messages (#83)
 
-> **Issue:** [#83 — Enhancement: Agent note-to-self messages for improved multi-turn intelligence](https://github.com/dx-tooling/sitebuilder-webapp/issues/83)
+> **SUPERSEDED**: This plan described the original `write_note_to_self` tool approach, which was replaced by the **automatic Turn Activity Journal**. The journal records every tool call at the infrastructure level (no LLM cooperation needed) and injects a summary into the system prompt before each LLM API request. See the updated issue #83 for the current approach.
 
-## Summary
+> **Issue:** [#83 — Enhancement: Automatic turn activity journal for reliable agent memory across LLM requests](https://github.com/dx-tooling/sitebuilder-webapp/issues/83)
+
+## Summary (original, superseded)
 
 Introduce **note-to-self** assistant messages: short, internal summaries produced by the agent at the end of each turn. They are persisted and always included in the context sent to the LLM API, but **never shown in the chat UI**. The "Dump agent context" troubleshooting feature must include them so it continues to reflect the full, actual agent context.
 

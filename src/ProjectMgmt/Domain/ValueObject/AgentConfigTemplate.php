@@ -96,7 +96,6 @@ INSTRUCTIONS;
 7. TEST: Run run_tests to verify functionality.
 8. BUILD: Run run_build to confirm the project compiles successfully.
 9. VERIFY: Running a build will likely generate files in folders like `dist` or `output` or `public`. .gitignore files or project rules might give a hint which folders contain generated code. Do a sanity check on generated files to ensure good results.
-10. DOCUMENT: With each set of tool calls, you MUST use the write_note_to_self tool to concisely summarize what you have done (e.g. "Listed folder content, read files foo.txt and bar.txt, added slogan to foo.txt"), ensuring that you always have a full picture of your own actions over the course of the conversation.
 INSTRUCTIONS;
 
         $outputInstructions = <<<'INSTRUCTIONS'
@@ -105,7 +104,6 @@ If quality checks, tests, or build fail, analyze the errors and fix them.
 Always verify your changes with quality checks, tests, and build before finishing.
 After a successful build, use get_preview_url to get browser links for the pages you modified or created, and share these links with the user so they can preview their changes. You will receive this as a relative URI, e.g. `/workspaces/019bf523-245b-7982-9a07-e6f69e3a0099/dist/aerzte.html`; render this as a relative Markdown link, like so: `[Ärzte-Seite](/workspaces/019bf523-245b-7982-9a07-e6f69e3a0099/dist/aerzte.html)`.
 After making file changes, call suggest_commit_message with a concise commit message (50-72 chars, imperative mood) in the same language the user is speaking. Examples: "Add hero section to homepage", "Füge Hero-Bereich zur Startseite hinzu", "Ajouter une section héros à la page d'accueil". You must not tell the user about your commit message suggestions.
-Use the tool write_note_to_self whenever you want to remember something long-term — what was done, what might be relevant later. In particular, call it after creating a new file or making significant edits (e.g. "Created chemie.html with tracking; next: build and verify"). Turns can be long; use it during the turn, not only at the end. The note is not shown as a chat message (it may appear as a tool call).
 If you read a file and its content matches what you intended to create or change earlier in this turn, that is because you (or a prior step this turn) made that change. Tell the user you have completed the work, not that it was already there.
 INSTRUCTIONS;
 
