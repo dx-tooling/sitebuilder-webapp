@@ -260,7 +260,7 @@ final class LlmContentEditorFacade implements LlmContentEditorFacadeInterface
         $lines[] = $systemPrompt;
         $lines[] = '';
 
-        // Format conversation history (includes assistant note-to-self so dump reflects full agent context)
+        // Format conversation history (includes turn activity summaries so dump reflects full agent context)
         if ($previousMessages !== []) {
             $lines[] = '=== CONVERSATION HISTORY ===';
             $lines[] = '';

@@ -8,15 +8,16 @@ use Doctrine\DBAL\Schema\Schema;
 use Doctrine\Migrations\AbstractMigration;
 
 /**
- * Rename conversation_messages.role value from 'assistant_note' to 'turn_activity_summary'.
- * Originally this role was called 'assistant_note' (note-to-self concept), then briefly
- * 'assistant_note_to_self', now 'turn_activity_summary' (automatic turn activity journal).
+ * Add the 'turn_activity_summary' role to conversation_messages.
+ *
+ * Renames any legacy role values ('assistant_note', 'assistant_note_to_self')
+ * that may exist from earlier development iterations to the canonical name.
  */
 final class Version20260209120000 extends AbstractMigration
 {
     public function getDescription(): string
     {
-        return "Rename role 'assistant_note' to 'turn_activity_summary' in conversation_messages";
+        return "Ensure conversation_messages use 'turn_activity_summary' role for turn activity summaries";
     }
 
     public function up(Schema $schema): void
