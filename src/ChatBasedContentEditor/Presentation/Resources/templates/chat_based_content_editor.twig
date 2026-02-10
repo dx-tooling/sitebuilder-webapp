@@ -42,7 +42,8 @@
                 stop: 'js.editor.stop'|trans,
                 stopping: 'js.editor.stopping'|trans,
                 cancelled: 'js.editor.cancelled'|trans
-             }
+             },
+             prefillMessage: prefillMessage|default(''),
          }) }}
             {{ stimulus_action('chat-based-content-editor', 'handleSuggestionInsert', 'prompt-suggestions:insert') }}>
 
@@ -367,7 +368,9 @@
                     <div {{ stimulus_controller('dist-files', {
                              pollUrl: path('chat_based_content_editor.presentation.dist_files', { workspaceId: workspace.id }),
                              pollInterval: 3000,
-                             readOnly: readOnly
+                             readOnly: readOnly,
+                             photoBuilderUrlPattern: (not readOnly and workspace and project) ? (path('photo_builder.presentation.show', { workspaceId: workspace.id }) ~ '?page=__PAGE_PATH__&conversationId=' ~ conversation.id) : '',
+                             photoBuilderLabel: 'photo_builder.generate_matching_images'|trans,
                          }) }}
                          {{ stimulus_target('dist-files', 'container') }}
                          class="border-t border-dark-200 dark:border-dark-700 pt-6 hidden">

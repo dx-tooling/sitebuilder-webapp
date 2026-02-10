@@ -15,6 +15,8 @@ interface MockControllerState {
     pollUrlValue: string;
     pollIntervalValue: number;
     readOnlyValue: boolean;
+    photoBuilderUrlPatternValue: string;
+    photoBuilderLabelValue: string;
     hasListTarget: boolean;
     listTarget: HTMLElement | null;
     hasContainerTarget: boolean;
@@ -35,6 +37,8 @@ const createController = (
     state.pollUrlValue = "/workspace/test-id/dist-files";
     state.pollIntervalValue = 3000;
     state.readOnlyValue = false;
+    state.photoBuilderUrlPatternValue = "";
+    state.photoBuilderLabelValue = "Generate matching images";
 
     // Default targets (not present)
     state.hasListTarget = false;
@@ -400,6 +404,147 @@ describe("DistFilesController", () => {
             editLink.click();
 
             expect(eventBubbles).toBe(true);
+
+            controller.disconnect();
+        });
+    });
+
+    describe("photoBuilder CTA", () => {
+        it("should show PhotoBuilder link when photoBuilderUrlPattern is set", async () => {
+            const list = document.createElement("ul");
+            const container = document.createElement("div");
+            container.classList.add("hidden");
+            const controllerElement = document.createElement("div");
+
+            const controller = createController(
+                {
+                    hasListTarget: true,
+                    listTarget: list,
+                    hasContainerTarget: true,
+                    containerTarget: container,
+                    photoBuilderUrlPatternValue: "/photo-builder/ws-123?page=__PAGE_PATH__&conversationId=conv-456",
+                },
+                controllerElement,
+            );
+
+            const files: DistFile[] = [{ path: "index.html", url: "/workspaces/ws-123/dist/index.html" }];
+            vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(JSON.stringify({ files }), { status: 200 }));
+
+            controller.connect();
+            await runSinglePollCycle();
+
+            const photoLink = list.querySelector('a[title="Generate matching images"]');
+            expect(photoLink).not.toBeNull();
+            expect(photoLink?.getAttribute("href")).toBe(
+                "/photo-builder/ws-123?page=" + encodeURIComponent("index.html") + "&conversationId=conv-456",
+            );
+
+            controller.disconnect();
+        });
+
+        it("should not show PhotoBuilder link when photoBuilderUrlPattern is empty", async () => {
+            const { controller, elements } = createFullController();
+
+            const files: DistFile[] = [{ path: "index.html", url: "/workspaces/ws-123/dist/index.html" }];
+            vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(JSON.stringify({ files }), { status: 200 }));
+
+            controller.connect();
+            await runSinglePollCycle();
+
+            const photoLink = elements.list.querySelector('a[title="Generate matching images"]');
+            expect(photoLink).toBeNull();
+
+            controller.disconnect();
+        });
+
+        it("should not show PhotoBuilder link in readOnly mode", async () => {
+            const list = document.createElement("ul");
+            const container = document.createElement("div");
+            container.classList.add("hidden");
+            const controllerElement = document.createElement("div");
+
+            const controller = createController(
+                {
+                    hasListTarget: true,
+                    listTarget: list,
+                    hasContainerTarget: true,
+                    containerTarget: container,
+                    readOnlyValue: true,
+                    photoBuilderUrlPatternValue: "/photo-builder/ws-123?page=__PAGE_PATH__",
+                },
+                controllerElement,
+            );
+
+            const files: DistFile[] = [{ path: "index.html", url: "/workspaces/ws-123/dist/index.html" }];
+            vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(JSON.stringify({ files }), { status: 200 }));
+
+            controller.connect();
+            await runSinglePollCycle();
+
+            const photoLink = list.querySelector('a[title="Generate matching images"]');
+            expect(photoLink).toBeNull();
+
+            controller.disconnect();
+        });
+
+        it("should use custom label for PhotoBuilder link", async () => {
+            const list = document.createElement("ul");
+            const container = document.createElement("div");
+            container.classList.add("hidden");
+            const controllerElement = document.createElement("div");
+
+            const controller = createController(
+                {
+                    hasListTarget: true,
+                    listTarget: list,
+                    hasContainerTarget: true,
+                    containerTarget: container,
+                    photoBuilderUrlPatternValue: "/photo-builder/ws-123?page=__PAGE_PATH__",
+                    photoBuilderLabelValue: "Custom label",
+                },
+                controllerElement,
+            );
+
+            const files: DistFile[] = [{ path: "index.html", url: "/workspaces/ws-123/dist/index.html" }];
+            vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(JSON.stringify({ files }), { status: 200 }));
+
+            controller.connect();
+            await runSinglePollCycle();
+
+            const photoLink = list.querySelector('a[title="Custom label"]');
+            expect(photoLink).not.toBeNull();
+
+            controller.disconnect();
+        });
+
+        it("should encode page path in PhotoBuilder URL", async () => {
+            const list = document.createElement("ul");
+            const container = document.createElement("div");
+            container.classList.add("hidden");
+            const controllerElement = document.createElement("div");
+
+            const controller = createController(
+                {
+                    hasListTarget: true,
+                    listTarget: list,
+                    hasContainerTarget: true,
+                    containerTarget: container,
+                    photoBuilderUrlPatternValue: "/photo-builder/ws-1?page=__PAGE_PATH__",
+                },
+                controllerElement,
+            );
+
+            const files: DistFile[] = [
+                { path: "pages/about us.html", url: "/workspaces/ws-1/dist/pages/about us.html" },
+            ];
+            vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(JSON.stringify({ files }), { status: 200 }));
+
+            controller.connect();
+            await runSinglePollCycle();
+
+            const photoLink = list.querySelector('a[title="Generate matching images"]') as HTMLAnchorElement;
+            expect(photoLink).not.toBeNull();
+            expect(photoLink.href).toContain(encodeURIComponent("pages/about us.html"));
 
             controller.disconnect();
         });

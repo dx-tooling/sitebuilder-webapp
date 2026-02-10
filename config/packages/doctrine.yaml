@@ -51,6 +51,12 @@ doctrine:
                 dir: "%kernel.project_dir%/src/WorkspaceMgmt/Domain/Entity"
                 prefix: 'App\WorkspaceMgmt\Domain\Entity'
 
+            App\PhotoBuilder\Domain\Entity:
+                type: attribute
+                is_bundle: false
+                dir: "%kernel.project_dir%/src/PhotoBuilder/Domain/Entity"
+                prefix: 'App\PhotoBuilder\Domain\Entity'
+
         controller_resolver:
             auto_mapping: false
 
