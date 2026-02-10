@@ -260,41 +260,139 @@
                         </form>
 
                         {# Prompt suggestions from .sitebuilder/prompt-suggestions.md #}
-                        {% if promptSuggestions is not empty %}
-                            <div {{ stimulus_controller('prompt-suggestions', { maxVisible: 3 }) }}
-                                 class="mt-3">
-                                <h4 class="text-xs font-medium text-dark-500 dark:text-dark-400 mb-2">{{ 'editor.prompt_suggestions_headline'|trans }}</h4>
-                                <div class="flex flex-col gap-2">
-                                    {% for suggestion in promptSuggestions %}
+                        <div {{ stimulus_controller('prompt-suggestions', {
+                                 maxVisible: 3,
+                                 createUrl: path('chat_based_content_editor.presentation.prompt_suggestions.create', { conversationId: conversation.id }),
+                                 updateUrlTemplate: path('chat_based_content_editor.presentation.prompt_suggestions.update', { conversationId: conversation.id, index: '99999' }),
+                                 deleteUrlTemplate: path('chat_based_content_editor.presentation.prompt_suggestions.delete', { conversationId: conversation.id, index: '99999' }),
+                                 csrfToken: csrf_token('prompt-suggestions'),
+                                 addTitle: 'editor.prompt_suggestion_add_title'|trans,
+                                 editTitle: 'editor.prompt_suggestion_edit_title'|trans,
+                                 placeholder: 'editor.prompt_suggestion_add_placeholder'|trans,
+                                 saveLabel: 'editor.prompt_suggestion_save'|trans,
+                                 cancelLabel: 'editor.prompt_suggestion_cancel'|trans,
+                                 deleteConfirmText: 'editor.prompt_suggestion_delete_confirm'|trans,
+                                 deleteLabel: 'editor.prompt_suggestion_delete'|trans,
+                             }) }}
+                             class="mt-3">
+                            {# Headline with add button #}
+                            <div class="flex items-center gap-2 mb-2">
+                                <h4 class="text-xs font-medium text-dark-500 dark:text-dark-400">{{ 'editor.prompt_suggestions_headline'|trans }}</h4>
+                                <button type="button"
+                                        {{ stimulus_action('prompt-suggestions', 'showAddModal', 'click') }}
+                                        class="inline-flex items-center justify-center w-5 h-5 rounded-full text-primary-600 dark:text-primary-400 hover:bg-primary-100 dark:hover:bg-primary-900/30 transition-colors"
+                                        title="{{ 'editor.prompt_suggestion_add'|trans }}">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-3.5 h-3.5">
+                                        <path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z" />
+                                    </svg>
+                                </button>
+                            </div>
+
+                            {# Suggestions list #}
+                            <div {{ stimulus_target('prompt-suggestions', 'suggestionList') }}
+                                 class="flex flex-col gap-2">
+                                {% for suggestion in promptSuggestions %}
+                                    <div class="group flex items-start gap-1" data-index="{{ loop.index0 }}">
                                         <button type="button"
                                                 {{ stimulus_target('prompt-suggestions', 'suggestion') }}
                                                 {{ stimulus_action('prompt-suggestions', 'insert', 'click') }}
                                                 {{ stimulus_action('prompt-suggestions', 'hoverStart', 'mouseenter') }}
                                                 {{ stimulus_action('prompt-suggestions', 'hoverEnd', 'mouseleave') }}
                                                 data-text="{{ suggestion }}"
-                                                class="prompt-suggestion px-3 py-1.5 text-xs border border-dark-300 dark:border-dark-600 text-dark-600 dark:text-dark-400 hover:bg-dark-100 dark:hover:bg-dark-700 hover:text-dark-900 dark:hover:text-dark-100 cursor-pointer {{ loop.index > 3 ? 'hidden' : '' }}">
+                                                class="prompt-suggestion flex-1 px-3 py-1.5 text-xs border border-dark-300 dark:border-dark-600 text-dark-600 dark:text-dark-400 hover:bg-dark-100 dark:hover:bg-dark-700 hover:text-dark-900 dark:hover:text-dark-100 cursor-pointer {{ loop.index > 3 ? 'hidden' : '' }}">
                                             {{ suggestion }}
                                         </button>
-                                    {% endfor %}
+                                        <div class="flex-shrink-0 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity {{ loop.index > 3 ? 'hidden' : '' }}">
+                                            <button type="button"
+                                                    {{ stimulus_action('prompt-suggestions', 'showEditModal', 'click') }}
+                                                    data-index="{{ loop.index0 }}"
+                                                    data-text="{{ suggestion }}"
+                                                    class="p-1 text-dark-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
+                                                    title="{{ 'editor.prompt_suggestion_edit'|trans }}">
+                                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-3.5 h-3.5">
+                                                    <path d="m5.433 13.917 1.262-3.155A4 4 0 0 1 7.58 9.42l6.92-6.918a2.121 2.121 0 0 1 3 3l-6.92 6.918c-.383.383-.84.685-1.343.886l-3.154 1.262a.5.5 0 0 1-.65-.65Z" />
+                                                    <path d="M3.5 5.75c0-.69.56-1.25 1.25-1.25H10A.75.75 0 0 0 10 3H4.75A2.75 2.75 0 0 0 2 5.75v9.5A2.75 2.75 0 0 0 4.75 18h9.5A2.75 2.75 0 0 0 17 15.25V10a.75.75 0 0 0-1.5 0v5.25c0 .69-.56 1.25-1.25 1.25h-9.5c-.69 0-1.25-.56-1.25-1.25v-9.5Z" />
+                                                </svg>
+                                            </button>
+                                            <button type="button"
+                                                    {{ stimulus_action('prompt-suggestions', 'confirmDelete', 'click') }}
+                                                    data-index="{{ loop.index0 }}"
+                                                    class="p-1 text-dark-400 hover:text-red-600 dark:hover:text-red-400 transition-colors"
+                                                    title="{{ 'editor.prompt_suggestion_delete'|trans }}">
+                                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-3.5 h-3.5">
+                                                    <path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" />
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+
+                            {% if promptSuggestions|length > 3 %}
+                                <div class="mt-2">
+                                    <button type="button"
+                                            {{ stimulus_target('prompt-suggestions', 'expandButton') }}
+                                            {{ stimulus_action('prompt-suggestions', 'expand', 'click') }}
+                                            class="text-xs text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 hover:underline">
+                                        {{ 'editor.show_more_suggestions'|trans({'%count%': promptSuggestions|length - 3}) }}
+                                    </button>
+                                    <button type="button"
+                                            {{ stimulus_target('prompt-suggestions', 'collapseButton') }}
+                                            {{ stimulus_action('prompt-suggestions', 'collapse', 'click') }}
+                                            class="hidden text-xs text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 hover:underline">
+                                        {{ 'editor.hide_suggestions'|trans }}
+                                    </button>
                                 </div>
-                                {% if promptSuggestions|length > 3 %}
-                                    <div class="mt-2">
+                            {% endif %}
+
+                            {# Shared modal for Add / Edit #}
+                            <div {{ stimulus_target('prompt-suggestions', 'formModal') }}
+                                 class="hidden fixed inset-0 z-50 flex items-center justify-center">
+                                <div class="absolute inset-0 bg-black/50"
+                                     {{ stimulus_action('prompt-suggestions', 'hideFormModal', 'click') }}></div>
+                                <div class="relative bg-white dark:bg-dark-800 rounded-lg shadow-xl w-full max-w-md mx-4 p-6">
+                                    <h3 {{ stimulus_target('prompt-suggestions', 'formTitle') }}
+                                        class="text-sm font-semibold text-dark-900 dark:text-dark-100 mb-4"></h3>
+                                    <textarea {{ stimulus_target('prompt-suggestions', 'formInput') }}
+                                              rows="3"
+                                              class="w-full px-3 py-2 text-sm border border-dark-300 dark:border-dark-600 rounded-md bg-white dark:bg-dark-700 text-dark-900 dark:text-dark-100 placeholder-dark-400 dark:placeholder-dark-500 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"></textarea>
+                                    <div class="flex justify-end gap-2 mt-4">
                                         <button type="button"
-                                                {{ stimulus_target('prompt-suggestions', 'expandButton') }}
-                                                {{ stimulus_action('prompt-suggestions', 'expand', 'click') }}
-                                                class="text-xs text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 hover:underline">
-                                            {{ 'editor.show_more_suggestions'|trans({'%count%': promptSuggestions|length - 3}) }}
+                                                {{ stimulus_action('prompt-suggestions', 'hideFormModal', 'click') }}
+                                                class="px-3 py-1.5 text-sm border border-dark-300 dark:border-dark-600 text-dark-700 dark:text-dark-300 rounded-md hover:bg-dark-50 dark:hover:bg-dark-700 transition-colors">
+                                            {{ 'editor.prompt_suggestion_cancel'|trans }}
                                         </button>
                                         <button type="button"
-                                                {{ stimulus_target('prompt-suggestions', 'collapseButton') }}
-                                                {{ stimulus_action('prompt-suggestions', 'collapse', 'click') }}
-                                                class="hidden text-xs text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 hover:underline">
-                                            {{ 'editor.hide_suggestions'|trans }}
+                                                {{ stimulus_action('prompt-suggestions', 'submitForm', 'click') }}
+                                                class="px-3 py-1.5 text-sm bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors">
+                                            {{ 'editor.prompt_suggestion_save'|trans }}
                                         </button>
                                     </div>
-                                {% endif %}
+                                </div>
                             </div>
-                        {% endif %}
+
+                            {# Delete confirmation modal #}
+                            <div {{ stimulus_target('prompt-suggestions', 'deleteModal') }}
+                                 class="hidden fixed inset-0 z-50 flex items-center justify-center">
+                                <div class="absolute inset-0 bg-black/50"
+                                     {{ stimulus_action('prompt-suggestions', 'cancelDelete', 'click') }}></div>
+                                <div class="relative bg-white dark:bg-dark-800 rounded-lg shadow-xl w-full max-w-sm mx-4 p-6">
+                                    <p class="text-sm text-dark-700 dark:text-dark-300 mb-4">{{ 'editor.prompt_suggestion_delete_confirm'|trans }}</p>
+                                    <div class="flex justify-end gap-2">
+                                        <button type="button"
+                                                {{ stimulus_action('prompt-suggestions', 'cancelDelete', 'click') }}
+                                                class="px-3 py-1.5 text-sm border border-dark-300 dark:border-dark-600 text-dark-700 dark:text-dark-300 rounded-md hover:bg-dark-50 dark:hover:bg-dark-700 transition-colors">
+                                            {{ 'editor.prompt_suggestion_cancel'|trans }}
+                                        </button>
+                                        <button type="button"
+                                                {{ stimulus_action('prompt-suggestions', 'executeDelete', 'click') }}
+                                                class="px-3 py-1.5 text-sm bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors">
+                                            {{ 'editor.prompt_suggestion_delete'|trans }}
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     {% else %}
                             <div class="rounded-md bg-dark-100 dark:bg-dark-700/50 p-4">
                                 <p class="text-sm text-dark-600 dark:text-dark-400">
