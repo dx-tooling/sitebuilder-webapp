@@ -449,6 +449,7 @@ photo_builder:
     back_to_editor: "Back to editor"
     loading: "Loading..."
     generating_prompts: "Generating image prompts..."
+    regenerating_prompts: "Regenerating image prompts..."
     generating_image: "Generating..."
     user_prompt_label: "Image style instructions"
     regenerate_prompts: "Regenerate image prompts"

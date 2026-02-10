@@ -135,6 +135,16 @@ export default class extends Controller {
     }
 
     /**
+     * Called by parent when "Regenerate image prompts" is clicked.
+     * Clears the prompt textarea if "Keep prompt" is not checked.
+     */
+    clearPromptIfNotKept(): void {
+        if (!this.keepCheckboxTarget.checked) {
+            this.promptTextareaTarget.value = "";
+        }
+    }
+
+    /**
      * Handle prompt textarea input — auto-check "Keep prompt" and dispatch event.
      */
     onPromptInput(): void {

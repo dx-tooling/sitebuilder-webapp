@@ -69,7 +69,15 @@
                 </div>
 
                 {# Main content (hidden until prompts ready) #}
-                <div {{ stimulus_target('photo-builder', 'mainContent') }} class="hidden space-y-6">
+                <div {{ stimulus_target('photo-builder', 'mainContent') }} class="hidden space-y-6 relative">
+                    {# Regenerating prompts overlay: spinner + message while prompts are being regenerated #}
+                    <div {{ stimulus_target('photo-builder', 'regeneratingPromptsOverlay') }}
+                         class="hidden absolute inset-0 z-10 flex flex-col items-center justify-center rounded-lg bg-white/90 dark:bg-dark-900/90 backdrop-blur-sm">
+                        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+                        <p class="mt-4 etfswui-text-small">
+                            {{ 'photo_builder.regenerating_prompts'|trans }}
+                        </p>
+                    </div>
 
                     {# User prompt section #}
                     <div class="etfswui-card">
@@ -101,9 +109,10 @@
                             <div {{ stimulus_controller('photo-image', {
                                      position: i,
                                      hasMediaStore: hasRemoteAssets,
-                                 }) }}
+                                 })
+                                 |stimulus_action('photo-image', 'updateFromState', 'photo-builder:stateChanged')
+                                 |stimulus_action('photo-image', 'clearPromptIfNotKept', 'photo-builder:clearPromptIfNotKept') }}
                                  {{ stimulus_target('photo-builder', 'imageCard') }}
-                                 {{ stimulus_action('photo-image', 'updateFromState', 'photo-builder:stateChanged') }}
                                  class="etfswui-card">
 
                                 {# Image preview area #}

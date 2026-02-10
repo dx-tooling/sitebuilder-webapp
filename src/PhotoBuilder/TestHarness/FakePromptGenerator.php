@@ -48,7 +48,7 @@ final readonly class FakePromptGenerator implements PromptGeneratorInterface
                     $i + 1,
                     $count,
                 ),
-                sprintf('placeholder-image-%d.jpg', $i + 1),
+                sprintf('placeholder-image-%d.png', $i + 1),
             );
         }
 

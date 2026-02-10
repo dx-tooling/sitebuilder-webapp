@@ -71,9 +71,9 @@ class ImagePromptAgent extends Agent
             . "\n\n"
             . 'For each image, call the deliver_image_prompt tool with:'
             . "\n- A detailed, descriptive prompt suitable for an AI image generation model"
-            . "\n- A descriptive, kebab-case filename (with .jpg extension) that clearly describes "
-            . 'what the image shows (e.g. "modern-office-team-collaborating.jpg", not "office.jpg" '
-            . 'or "image1.jpg")',
+            . "\n- A descriptive, kebab-case filename (with .png extension) that clearly describes "
+            . 'what the image shows (e.g. "modern-office-team-collaborating.png", not "office.png" '
+            . 'or "image1.png")',
             $this->imageCount,
             $this->pageHtml,
             $this->imageCount,
@@ -103,7 +103,7 @@ class ImagePromptAgent extends Agent
                     new ToolProperty(
                         'file_name',
                         PropertyType::STRING,
-                        'A descriptive, kebab-case filename with .jpg extension (e.g. "cozy-cafe-winter-scene.jpg").',
+                        'A descriptive, kebab-case filename with .png extension (e.g. "cozy-cafe-winter-scene.png").',
                         true
                     )
                 )

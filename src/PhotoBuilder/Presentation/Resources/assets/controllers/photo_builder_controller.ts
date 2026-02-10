@@ -70,6 +70,7 @@ export default class extends Controller {
         "embedButton",
         "imageCard",
         "uploadFinishedBanner",
+        "regeneratingPromptsOverlay",
     ];
 
     declare readonly createSessionUrlValue: string;
@@ -96,8 +97,11 @@ export default class extends Controller {
     declare readonly imageCardTargets: HTMLElement[];
     declare readonly hasUploadFinishedBannerTarget: boolean;
     declare readonly uploadFinishedBannerTarget: HTMLElement;
+    declare readonly hasRegeneratingPromptsOverlayTarget: boolean;
+    declare readonly regeneratingPromptsOverlayTarget: HTMLElement;
 
     private sessionId: string | null = null;
+    private isRegeneratingPrompts = false;
     private pollingTimeoutId: ReturnType<typeof setTimeout> | null = null;
     private isActive = false;
     private anyGenerating = false;
@@ -179,6 +183,16 @@ export default class extends Controller {
         const images = data.images || [];
         this.lastImages = images;
 
+        // Hide regenerating-prompts overlay once backend has accepted and we see generating state
+        if (
+            this.isRegeneratingPrompts &&
+            (status === "generating_prompts" ||
+                status === "generating_images" ||
+                images.some((img) => img.status === "generating" || img.status === "pending"))
+        ) {
+            this.hideRegeneratingPromptsOverlay();
+        }
+
         // Check if any image is currently generating
         this.anyGenerating =
             status === "generating_prompts" ||
@@ -237,6 +251,17 @@ export default class extends Controller {
     async regeneratePrompts(): Promise<void> {
         if (!this.sessionId || this.anyGenerating) return;
 
+        // Tell child cards to clear prompt textarea if not kept (native event so children can listen)
+        this.element.dispatchEvent(
+            new CustomEvent("photo-builder:clearPromptIfNotKept", { bubbles: true }),
+        );
+
+        // Show regenerating overlay and spinner
+        this.isRegeneratingPrompts = true;
+        if (this.hasRegeneratingPromptsOverlayTarget) {
+            this.regeneratingPromptsOverlayTarget.classList.remove("hidden");
+        }
+
         // Collect kept image IDs from child controllers
         const keptImageIds: string[] = [];
         for (const card of this.imageCardTargets) {
@@ -264,9 +289,16 @@ export default class extends Controller {
                 }),
             });
 
-            // Polling will pick up the new state
+            // Polling will pick up the new state; overlay is hidden in handlePollResponse
         } catch {
-            // Silently ignore
+            this.hideRegeneratingPromptsOverlay();
+        }
+    }
+
+    private hideRegeneratingPromptsOverlay(): void {
+        this.isRegeneratingPrompts = false;
+        if (this.hasRegeneratingPromptsOverlayTarget) {
+            this.regeneratingPromptsOverlayTarget.classList.add("hidden");
         }
     }
 

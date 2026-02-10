@@ -449,6 +449,7 @@ photo_builder:
     back_to_editor: "Zurück zum Editor"
     loading: "Wird geladen..."
     generating_prompts: "Bildprompts werden generiert..."
+    regenerating_prompts: "Bildprompts werden neu generiert..."
     generating_image: "Wird generiert..."
     user_prompt_label: "Stil-Anweisungen für Bilder"
     regenerate_prompts: "Bildprompts neu generieren"
