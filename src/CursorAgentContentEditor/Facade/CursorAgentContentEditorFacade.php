@@ -10,6 +10,7 @@ use App\LlmContentEditor\Facade\Dto\AgentConfigDto;
 use App\LlmContentEditor\Facade\Dto\AgentEventDto;
 use App\LlmContentEditor\Facade\Dto\ConversationMessageDto;
 use App\LlmContentEditor\Facade\Dto\EditStreamChunkDto;
+use App\LlmContentEditor\Facade\Enum\EditStreamChunkType;
 use App\WorkspaceTooling\Facade\AgentExecutionContextInterface;
 use App\WorkspaceTooling\Facade\WorkspaceToolingServiceInterface;
 use Generator;
@@ -42,7 +43,8 @@ final class CursorAgentContentEditorFacade implements CursorAgentContentEditorFa
         array           $previousMessages,
         string          $apiKey,
         ?AgentConfigDto $agentConfig = null,
-        ?string         $cursorAgentSessionId = null
+        ?string         $cursorAgentSessionId = null,
+        string          $locale = 'en',
     ): Generator {
         $this->lastSessionId = null;
         $collector           = new CursorAgentStreamCollector();
@@ -57,7 +59,7 @@ final class CursorAgentContentEditorFacade implements CursorAgentContentEditorFa
                 $agentConfig
             );
 
-            yield new EditStreamChunkDto('event', null, new AgentEventDto('inference_start'));
+            yield new EditStreamChunkDto(EditStreamChunkType::Event, null, new AgentEventDto('inference_start'));
 
             $agent   = new ContentEditorAgent($this->workspaceTooling);
             $process = $agent->startAsync('/workspace', $prompt, $apiKey, $cursorAgentSessionId);
@@ -85,27 +87,27 @@ final class CursorAgentContentEditorFacade implements CursorAgentContentEditorFa
 
             // Always run the build after the agent completes. The Cursor CLI cannot run shell
             // commands in headless mode, so we run the build ourselves regardless of agent success.
-            yield new EditStreamChunkDto('event', null, new AgentEventDto('build_start'));
+            yield new EditStreamChunkDto(EditStreamChunkType::Event, null, new AgentEventDto('build_start'));
             $agentImage = $this->executionContext->getAgentImage() ?? 'node:22-slim';
             try {
                 $buildOutput = $this->workspaceTooling->runBuildInWorkspace($workspacePath, $agentImage);
-                yield new EditStreamChunkDto('event', null, new AgentEventDto('build_complete', null, null, $buildOutput));
+                yield new EditStreamChunkDto(EditStreamChunkType::Event, null, new AgentEventDto('build_complete', null, null, $buildOutput));
             } catch (RuntimeException $e) {
-                yield new EditStreamChunkDto('event', null, new AgentEventDto('build_error', null, null, null, $e->getMessage()));
+                yield new EditStreamChunkDto(EditStreamChunkType::Event, null, new AgentEventDto('build_error', null, null, null, $e->getMessage()));
             }
 
-            yield new EditStreamChunkDto('event', null, new AgentEventDto('inference_stop'));
+            yield new EditStreamChunkDto(EditStreamChunkType::Event, null, new AgentEventDto('inference_stop'));
 
             yield new EditStreamChunkDto(
-                'done',
+                EditStreamChunkType::Done,
                 null,
                 null,
                 $collector->isSuccess(),
                 $collector->getErrorMessage()
             );
         } catch (Throwable $e) {
-            yield new EditStreamChunkDto('event', null, new AgentEventDto('inference_stop'));
-            yield new EditStreamChunkDto('done', null, null, false, $e->getMessage());
+            yield new EditStreamChunkDto(EditStreamChunkType::Event, null, new AgentEventDto('inference_stop'));
+            yield new EditStreamChunkDto(EditStreamChunkType::Done, null, null, false, $e->getMessage());
         } finally {
             $this->executionContext->setOutputCallback(null);
         }

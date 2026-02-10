@@ -35,7 +35,8 @@ final class ContentEditorFacade implements ContentEditorFacadeInterface
         array                $previousMessages,
         string               $apiKey,
         ?AgentConfigDto      $agentConfig = null,
-        ?string              $cursorAgentSessionId = null
+        ?string              $cursorAgentSessionId = null,
+        string               $locale = 'en',
     ): Generator {
         $adapter = $this->resolveAdapter($backend);
 

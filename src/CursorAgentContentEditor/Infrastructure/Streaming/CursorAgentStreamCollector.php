@@ -7,6 +7,7 @@ namespace App\CursorAgentContentEditor\Infrastructure\Streaming;
 use App\LlmContentEditor\Facade\Dto\AgentEventDto;
 use App\LlmContentEditor\Facade\Dto\EditStreamChunkDto;
 use App\LlmContentEditor\Facade\Dto\ToolInputEntryDto;
+use App\LlmContentEditor\Facade\Enum\EditStreamChunkType;
 use JsonException;
 use SplQueue;
 
@@ -255,11 +256,11 @@ final class CursorAgentStreamCollector
                 if ($trimmedAccumulated !== '' && $this->isCompleteMessage($trimmedIncoming, $trimmedAccumulated)) {
                     // Add paragraph break if we already have content
                     if ($this->hasEmittedText) {
-                        $this->chunks->enqueue(new EditStreamChunkDto('text', "\n\n"));
+                        $this->chunks->enqueue(new EditStreamChunkDto(EditStreamChunkType::Text, "\n\n"));
                     }
 
                     // Emit the complete message (use the trimmed incoming text as it has proper spacing)
-                    $this->chunks->enqueue(new EditStreamChunkDto('text', $trimmedIncoming));
+                    $this->chunks->enqueue(new EditStreamChunkDto(EditStreamChunkType::Text, $trimmedIncoming));
                     $this->hasEmittedText   = true;
                     $this->accumulatedParts = '';
 
@@ -337,7 +338,7 @@ final class CursorAgentStreamCollector
             // The result is a complete summary that duplicates the streamed content.
             $result = $event['result'] ?? null;
             if (!$this->hasEmittedText && is_string($result) && $result !== '') {
-                $this->chunks->enqueue(new EditStreamChunkDto('text', $result));
+                $this->chunks->enqueue(new EditStreamChunkDto(EditStreamChunkType::Text, $result));
             }
 
             return;
@@ -374,7 +375,7 @@ final class CursorAgentStreamCollector
 
     private function enqueueEvent(AgentEventDto $event): void
     {
-        $this->chunks->enqueue(new EditStreamChunkDto('event', null, $event));
+        $this->chunks->enqueue(new EditStreamChunkDto(EditStreamChunkType::Event, null, $event));
     }
 
     /**

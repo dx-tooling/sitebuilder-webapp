@@ -24,7 +24,8 @@ interface ContentEditorFacadeInterface
         array                $previousMessages,
         string               $apiKey,
         ?AgentConfigDto      $agentConfig = null,
-        ?string              $cursorAgentSessionId = null
+        ?string              $cursorAgentSessionId = null,
+        string               $locale = 'en',
     ): Generator;
 
     public function getLastCursorAgentSessionId(): ?string;
