@@ -10,6 +10,7 @@ use App\PhotoBuilder\Domain\Service\PhotoBuilderService;
 use App\PhotoBuilder\Infrastructure\Adapter\PromptGeneratorInterface;
 use App\PhotoBuilder\Infrastructure\Message\GenerateImageMessage;
 use App\PhotoBuilder\Infrastructure\Message\GenerateImagePromptsMessage;
+use App\PhotoBuilder\TestHarness\FakePromptGenerator;
 use App\ProjectMgmt\Facade\ProjectMgmtFacadeInterface;
 use App\WorkspaceMgmt\Facade\WorkspaceMgmtFacadeInterface;
 use Doctrine\ORM\EntityManagerInterface;
@@ -63,8 +64,13 @@ final readonly class GenerateImagePromptsHandler
             $pagePath = 'dist/' . $session->getPagePath();
             $pageHtml = $this->workspaceMgmtFacade->readWorkspaceFile($session->getWorkspaceId(), $pagePath);
 
-            // Generate prompts via LLM
-            $promptResults = $this->promptGenerator->generatePrompts(
+            // Generate prompts via LLM (or fake if simulation is enabled)
+            $generator = $_ENV['PHOTO_BUILDER_SIMULATE_IMAGE_PROMPT_GENERATION'] ?? '0';
+            $promptGenerator = $generator === '1'
+                ? new FakePromptGenerator($this->logger)
+                : $this->promptGenerator;
+
+            $promptResults = $promptGenerator->generatePrompts(
                 $pageHtml,
                 $session->getUserPrompt(),
                 $project->llmApiKey,

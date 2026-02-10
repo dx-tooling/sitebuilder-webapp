@@ -69,6 +69,7 @@ export default class extends Controller {
         "regeneratePromptsButton",
         "embedButton",
         "imageCard",
+        "uploadFinishedBanner",
     ];
 
     declare readonly createSessionUrlValue: string;
@@ -93,6 +94,8 @@ export default class extends Controller {
     declare readonly hasEmbedButtonTarget: boolean;
     declare readonly embedButtonTarget: HTMLButtonElement;
     declare readonly imageCardTargets: HTMLElement[];
+    declare readonly hasUploadFinishedBannerTarget: boolean;
+    declare readonly uploadFinishedBannerTarget: HTMLElement;
 
     private sessionId: string | null = null;
     private pollingTimeoutId: ReturnType<typeof setTimeout> | null = null;
@@ -344,9 +347,18 @@ export default class extends Controller {
 
     /**
      * Handle remote-asset-browser:uploadComplete event.
+     * Shows a short-lived "Upload has been finished" banner when present.
      */
     handleMediaStoreUploadComplete(): void {
-        // Asset browser handles its own refresh
+        if (!this.hasUploadFinishedBannerTarget) {
+            return;
+        }
+        const banner = this.uploadFinishedBannerTarget;
+        banner.classList.remove("hidden");
+        const hideAfterMs = 5000;
+        setTimeout(() => {
+            banner.classList.add("hidden");
+        }, hideAfterMs);
     }
 
     /**

@@ -91,6 +91,23 @@ Bind **actions** to DOM events (e.g. `submit`, `click`):
 
 `stimulus_action(controllerName, methodName, event)`. Omit the third argument to use the default event for the element (e.g. `submit` for forms, `click` for buttons).
 
+#### Multiple actions on the same element
+
+**IMPORTANT**: Each `{{ stimulus_action(...) }}` call renders its own `data-action` HTML attribute. If you place multiple calls on the same element, only the first takes effect — HTML silently discards duplicate attributes.
+
+To bind **multiple actions** on an element that also has `stimulus_controller`, chain the `|stimulus_action` **filter** off the controller call:
+
+```twig
+<div {{ stimulus_controller('photo-builder', { ... })
+     |stimulus_action('photo-builder', 'handlePromptEdited', 'photo-image:promptEdited')
+     |stimulus_action('photo-builder', 'handleRegenerate', 'photo-image:regenerateRequested')
+     |stimulus_action('photo-builder', 'handleUpload', 'photo-image:uploadRequested') }}>
+```
+
+This pipes the `StimulusAttributes` object through each filter, accumulating all action descriptors into a single `data-action` attribute.
+
+The same principle applies to `|stimulus_target` — use the filter form when combining with other Stimulus helpers on the same element.
+
 ---
 
 ## 3. Controller Structure (TypeScript)
@@ -229,7 +246,8 @@ Handle non‑OK responses and parse JSON or streamed bodies as needed.
 5. **Twig**  
    - `{{ stimulus_controller('kebab-name', { … }) }}` for the element that owns the behavior.  
    - `{{ stimulus_target('kebab-name', 'targetName') }}` on elements the controller needs.  
-   - `{{ stimulus_action('kebab-name', 'methodName', 'event') }}` to wire events.
+   - `{{ stimulus_action('kebab-name', 'methodName', 'event') }}` to wire events.  
+   - **Multiple actions on one element**: use `|stimulus_action` filter chaining, never multiple `{{ stimulus_action() }}` calls (see section 2.4).
 
 6. **Build and quality**  
    - `mise run frontend`  

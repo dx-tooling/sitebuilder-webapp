@@ -455,6 +455,7 @@ photo_builder:
     keep_prompt: "Prompt beibehalten"
     regenerate_image: "Neu generieren"
     upload_to_media_store: "Hochladen"
+    upload_to_media_store_finished: "Upload abgeschlossen."
     embed_into_page: "Generierte Bilder in Inhaltsseite einbetten"
     default_user_prompt: "Die generierten Bilder sollen Professionalität und Kompetenz vermitteln."
     prompt_placeholder: "Bildgenerierungs-Prompt..."

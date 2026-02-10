@@ -17,7 +17,7 @@ class PhotoBuilderService
      * The number of images generated per photo session.
      * Single source of truth — referenced by prompt generator, handlers, and frontend.
      */
-    public const int IMAGE_COUNT = 5;
+    public const int IMAGE_COUNT = 2;
 
     public function __construct(
         private readonly EntityManagerInterface $entityManager,

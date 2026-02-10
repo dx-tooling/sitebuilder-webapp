@@ -11,6 +11,7 @@ use App\PhotoBuilder\Domain\Service\PhotoBuilderService;
 use App\PhotoBuilder\Infrastructure\Adapter\ImageGeneratorInterface;
 use App\PhotoBuilder\Infrastructure\Message\GenerateImageMessage;
 use App\PhotoBuilder\Infrastructure\Storage\GeneratedImageStorage;
+use App\PhotoBuilder\TestHarness\FakeImageGenerator;
 use App\ProjectMgmt\Facade\ProjectMgmtFacadeInterface;
 use App\WorkspaceMgmt\Facade\WorkspaceMgmtFacadeInterface;
 use Doctrine\ORM\EntityManagerInterface;
@@ -62,8 +63,13 @@ final readonly class GenerateImageHandler
                 return;
             }
 
-            // Generate image
-            $imageData = $this->imageGenerator->generateImage(
+            // Generate image (or fake if simulation is enabled)
+            $simulate = $_ENV['PHOTO_BUILDER_SIMULATE_IMAGE_GENERATION'] ?? '0';
+            $generator = $simulate === '1'
+                ? new FakeImageGenerator($this->logger)
+                : $this->imageGenerator;
+
+            $imageData = $generator->generateImage(
                 $image->getPrompt() ?? '',
                 $project->llmApiKey,
             );
