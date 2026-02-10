@@ -10,8 +10,9 @@ namespace App\ChatBasedContentEditor\Domain\Enum;
  */
 enum ConversationMessageRole: string
 {
-    case User           = 'user';
-    case Assistant      = 'assistant';
-    case ToolCall       = 'tool_call';
-    case ToolCallResult = 'tool_call_result';
+    case User                = 'user';
+    case Assistant           = 'assistant';
+    case TurnActivitySummary = 'turn_activity_summary';
+    case ToolCall            = 'tool_call';
+    case ToolCallResult      = 'tool_call_result';
 }

@@ -16,6 +16,9 @@ use App\ChatBasedContentEditor\Infrastructure\Adapter\DistFileScannerInterface;
 use App\ChatBasedContentEditor\Infrastructure\Message\RunEditSessionMessage;
 use App\ChatBasedContentEditor\Presentation\Service\ConversationContextUsageService;
 use App\ChatBasedContentEditor\Presentation\Service\PromptSuggestionsService;
+use App\LlmContentEditor\Facade\Dto\AgentConfigDto;
+use App\LlmContentEditor\Facade\Dto\ConversationMessageDto;
+use App\LlmContentEditor\Facade\LlmContentEditorFacadeInterface;
 use App\ProjectMgmt\Facade\ProjectMgmtFacadeInterface;
 use App\RemoteContentAssets\Facade\RemoteContentAssetsFacadeInterface;
 use App\WorkspaceMgmt\Facade\Enum\WorkspaceStatus;
@@ -56,6 +59,7 @@ final class ChatBasedContentEditorController extends AbstractController
         private readonly ConversationContextUsageService $contextUsageService,
         private readonly TranslatorInterface             $translator,
         private readonly PromptSuggestionsService        $promptSuggestionsService,
+        private readonly LlmContentEditorFacadeInterface $llmContentEditorFacade,
     ) {
     }
 
@@ -271,8 +275,12 @@ final class ChatBasedContentEditorController extends AbstractController
         foreach ($conversation->getEditSessions() as $session) {
             $sessionStatus = $session->getStatus();
 
-            // Check if this is an active (Pending or Running) session
-            if ($sessionStatus === EditSessionStatus::Pending || $sessionStatus === EditSessionStatus::Running) {
+            // Check if this is an active (Pending, Running, or Cancelling) session
+            if (
+                $sessionStatus    === EditSessionStatus::Pending
+                || $sessionStatus === EditSessionStatus::Running
+                || $sessionStatus === EditSessionStatus::Cancelling
+            ) {
                 $activeSession = $session;
                 // Collect existing chunks for this active session
                 foreach ($session->getChunks() as $chunk) {
@@ -310,7 +318,8 @@ final class ChatBasedContentEditorController extends AbstractController
             ];
         }
 
-        $contextUsage = $this->contextUsageService->getContextUsage($conversation);
+        $activeSessionIdForContext = $activeSession !== null ? $activeSession->getId() : null;
+        $contextUsage              = $this->contextUsageService->getContextUsage($conversation, $activeSessionIdForContext);
 
         // Load prompt suggestions only for editable sessions
         $promptSuggestions = [];
@@ -319,15 +328,16 @@ final class ChatBasedContentEditorController extends AbstractController
         }
 
         return $this->render('@chat_based_content_editor.presentation/chat_based_content_editor.twig', [
-            'conversation'    => $conversation,
-            'workspace'       => $workspace,
-            'project'         => $projectInfo,
-            'turns'           => $turns,
-            'readOnly'        => $readOnly,
-            'canEdit'         => $canEdit,
-            'runUrl'          => $readOnly ? '' : $this->generateUrl('chat_based_content_editor.presentation.run'),
-            'pollUrlTemplate' => $readOnly ? '' : $this->generateUrl('chat_based_content_editor.presentation.poll', ['sessionId' => '__SESSION_ID__']),
-            'contextUsage'    => [
+            'conversation'      => $conversation,
+            'workspace'         => $workspace,
+            'project'           => $projectInfo,
+            'turns'             => $turns,
+            'readOnly'          => $readOnly,
+            'canEdit'           => $canEdit,
+            'runUrl'            => $readOnly ? '' : $this->generateUrl('chat_based_content_editor.presentation.run'),
+            'pollUrlTemplate'   => $readOnly ? '' : $this->generateUrl('chat_based_content_editor.presentation.poll', ['sessionId' => '__SESSION_ID__']),
+            'cancelUrlTemplate' => $readOnly ? '' : $this->generateUrl('chat_based_content_editor.presentation.cancel', ['sessionId' => '__SESSION_ID__']),
+            'contextUsage'      => [
                 'usedTokens'   => $contextUsage->usedTokens,
                 'maxTokens'    => $contextUsage->maxTokens,
                 'modelName'    => $contextUsage->modelName,
@@ -356,14 +366,23 @@ final class ChatBasedContentEditorController extends AbstractController
         methods: [Request::METHOD_GET],
         requirements: ['conversationId' => '[a-f0-9-]{36}']
     )]
-    public function contextUsage(string $conversationId): Response
+    public function contextUsage(string $conversationId, Request $request): Response
     {
         $conversation = $this->entityManager->find(Conversation::class, $conversationId);
         if ($conversation === null) {
             return $this->json(['error' => 'Conversation not found.'], Response::HTTP_NOT_FOUND);
         }
 
-        $dto = $this->contextUsageService->getContextUsage($conversation);
+        $sessionId       = $request->query->get('sessionId');
+        $activeSessionId = null;
+        if ($sessionId !== null && $sessionId !== '') {
+            $session = $this->entityManager->find(EditSession::class, $sessionId);
+            if ($session instanceof EditSession && $session->getConversation()->getId() === $conversation->getId()) {
+                $activeSessionId = $sessionId;
+            }
+        }
+
+        $dto = $this->contextUsageService->getContextUsage($conversation, $activeSessionId);
 
         return $this->json([
             'usedTokens'   => $dto->usedTokens,
@@ -374,6 +393,79 @@ final class ChatBasedContentEditorController extends AbstractController
             'inputCost'    => $dto->inputCost,
             'outputCost'   => $dto->outputCost,
             'totalCost'    => $dto->totalCost,
+        ]);
+    }
+
+    /**
+     * Dump the full agent context (system prompt + conversation history + last instruction)
+     * as it would be sent to the LLM API. Returns plain text for troubleshooting.
+     */
+    #[Route(
+        path: '/conversation/{conversationId}/dump-agent-context',
+        name: 'chat_based_content_editor.presentation.dump_agent_context',
+        methods: [Request::METHOD_GET],
+        requirements: ['conversationId' => '[a-f0-9-]{36}']
+    )]
+    public function dumpAgentContext(
+        string        $conversationId,
+        #[CurrentUser] UserInterface $user
+    ): Response {
+        $conversation = $this->entityManager->find(Conversation::class, $conversationId);
+        if ($conversation === null) {
+            throw $this->createNotFoundException('Conversation not found.');
+        }
+
+        $accountInfo = $this->getAccountInfo($user);
+
+        // Only the conversation owner can dump context
+        if ($conversation->getUserId() !== $accountInfo->id) {
+            throw $this->createAccessDeniedException('Only the conversation owner can view the agent context.');
+        }
+
+        // Load project info for agent config
+        $workspace   = $this->workspaceMgmtFacade->getWorkspaceById($conversation->getWorkspaceId());
+        $projectInfo = $workspace !== null ? $this->projectMgmtFacade->getProjectInfo($workspace->projectId) : null;
+
+        if ($projectInfo === null) {
+            return new Response('Project not found — cannot reconstruct agent context.', Response::HTTP_OK, [
+                'Content-Type' => 'text/plain; charset=UTF-8',
+            ]);
+        }
+
+        // Build agent config from project settings (same as RunEditSessionHandler)
+        $agentConfig = new AgentConfigDto(
+            $projectInfo->agentBackgroundInstructions,
+            $projectInfo->agentStepInstructions,
+            $projectInfo->agentOutputInstructions,
+            '/workspace',
+        );
+
+        // Collect conversation messages as DTOs
+        /** @var list<ConversationMessageDto> $previousMessages */
+        $previousMessages = [];
+        foreach ($conversation->getMessages() as $message) {
+            $previousMessages[] = new ConversationMessageDto(
+                $message->getRole()->value,
+                $message->getContentJson()
+            );
+        }
+
+        // Find the last instruction from the most recent edit session
+        $lastInstruction = '(no instruction yet)';
+        $editSessions    = $conversation->getEditSessions();
+        $lastSession     = $editSessions->last();
+        if ($lastSession !== false) {
+            $lastInstruction = $lastSession->getInstruction();
+        }
+
+        $dump = $this->llmContentEditorFacade->buildAgentContextDump(
+            $lastInstruction,
+            $previousMessages,
+            $agentConfig
+        );
+
+        return new Response($dump, Response::HTTP_OK, [
+            'Content-Type' => 'text/plain; charset=UTF-8',
         ]);
     }
 
@@ -512,11 +604,57 @@ final class ChatBasedContentEditorController extends AbstractController
             return $this->json(['error' => 'Failed to create session.'], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
 
-        $this->messageBus->dispatch(new RunEditSessionMessage($sessionId));
+        $this->messageBus->dispatch(new RunEditSessionMessage($sessionId, $request->getLocale()));
 
         return $this->json([
             'sessionId' => $sessionId,
         ]);
+    }
+
+    #[Route(
+        path: '/chat-based-content-editor/cancel/{sessionId}',
+        name: 'chat_based_content_editor.presentation.cancel',
+        methods: [Request::METHOD_POST]
+    )]
+    public function cancel(
+        string        $sessionId,
+        Request       $request,
+        #[CurrentUser] UserInterface $user
+    ): Response {
+        if (!$this->isCsrfTokenValid('chat_based_content_editor_run', $request->request->getString('_csrf_token'))) {
+            return $this->json(['error' => $this->translator->trans('api.error.invalid_csrf')], Response::HTTP_FORBIDDEN);
+        }
+
+        $session = $this->entityManager->find(EditSession::class, $sessionId);
+
+        if ($session === null) {
+            return $this->json(['error' => $this->translator->trans('api.error.session_not_found')], Response::HTTP_NOT_FOUND);
+        }
+
+        // Verify user owns this conversation
+        $accountInfo  = $this->getAccountInfo($user);
+        $conversation = $session->getConversation();
+
+        if ($conversation->getUserId() !== $accountInfo->id) {
+            return $this->json(['error' => $this->translator->trans('api.error.not_authorized')], Response::HTTP_FORBIDDEN);
+        }
+
+        $status = $session->getStatus();
+
+        // If already in a terminal state, nothing to cancel
+        if (
+            $status    === EditSessionStatus::Completed
+            || $status === EditSessionStatus::Failed
+            || $status === EditSessionStatus::Cancelled
+        ) {
+            return $this->json(['success' => true, 'alreadyFinished' => true]);
+        }
+
+        // Set to Cancelling so the handler can detect it cooperatively
+        $session->setStatus(EditSessionStatus::Cancelling);
+        $this->entityManager->flush();
+
+        return $this->json(['success' => true]);
     }
 
     #[Route(
@@ -565,7 +703,7 @@ final class ChatBasedContentEditorController extends AbstractController
         }
 
         $conversation = $session->getConversation();
-        $contextUsage = $this->contextUsageService->getContextUsage($conversation);
+        $contextUsage = $this->contextUsageService->getContextUsage($conversation, $session->getId());
 
         return $this->json([
             'chunks'       => $chunkData,

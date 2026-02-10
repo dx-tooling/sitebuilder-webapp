@@ -19,6 +19,8 @@ use App\LlmContentEditor\Facade\Dto\AgentConfigDto;
 use App\LlmContentEditor\Facade\Dto\AgentEventDto;
 use App\LlmContentEditor\Facade\Dto\ConversationMessageDto;
 use App\LlmContentEditor\Facade\Dto\ToolInputEntryDto;
+use App\LlmContentEditor\Facade\Enum\EditStreamChunkType;
+use App\LlmContentEditor\Facade\LlmContentEditorFacadeInterface;
 use App\ProjectMgmt\Facade\ProjectMgmtFacadeInterface;
 use App\WorkspaceMgmt\Facade\WorkspaceMgmtFacadeInterface;
 use App\WorkspaceTooling\Facade\AgentExecutionContextInterface;
@@ -53,6 +55,15 @@ final readonly class RunEditSessionHandler
 
         if ($session === null) {
             $this->logger->error('EditSession not found', ['sessionId' => $message->sessionId]);
+
+            return;
+        }
+
+        // Pre-start cancellation check: if cancel arrived before the worker picked this up
+        if ($session->getStatus() === EditSessionStatus::Cancelling) {
+            EditSessionChunk::createDoneChunk($session, false, 'Cancelled before execution started.');
+            $session->setStatus(EditSessionStatus::Cancelled);
+            $this->entityManager->flush();
 
             return;
         }
@@ -100,11 +111,12 @@ final readonly class RunEditSessionHandler
                 $project->remoteContentAssetsManifestUrls
             );
 
-            // Build agent configuration from project settings
+            // Build agent configuration from project settings (#79).
             $agentConfig = new AgentConfigDto(
                 $project->agentBackgroundInstructions,
                 $project->agentStepInstructions,
                 $project->agentOutputInstructions,
+                '/workspace',
             );
 
             $generator = $this->facade->streamEditWithHistory(
@@ -114,19 +126,49 @@ final readonly class RunEditSessionHandler
                 $previousMessages,
                 $project->llmApiKey,
                 $agentConfig,
-                $conversation->getCursorAgentSessionId()
+                $conversation->getCursorAgentSessionId(),
+                $message->locale,
             );
 
             foreach ($generator as $chunk) {
-                if ($chunk->chunkType === 'text' && $chunk->content !== null) {
+                // Cooperative cancellation: check status directly via DBAL to avoid
+                // entityManager->refresh() which fails on readonly entity properties.
+                $currentStatus = $this->entityManager->getConnection()->fetchOne(
+                    'SELECT status FROM edit_sessions WHERE id = ?',
+                    [$session->getId()]
+                );
+
+                if ($currentStatus === EditSessionStatus::Cancelling->value) {
+                    // Persist a synthetic assistant message so the LLM on the next turn
+                    // understands this turn was interrupted and won't try to answer it.
+                    new ConversationMessage(
+                        $conversation,
+                        ConversationMessageRole::Assistant,
+                        json_encode(
+                            ['content' => '[Cancelled by the user — disregard this turn.]'],
+                            JSON_THROW_ON_ERROR
+                        )
+                    );
+
+                    EditSessionChunk::createDoneChunk($session, false, 'Cancelled by user.');
+                    $session->setStatus(EditSessionStatus::Cancelled);
+                    $this->entityManager->flush();
+
+                    return;
+                }
+
+                if ($chunk->chunkType === EditStreamChunkType::Text && $chunk->content !== null) {
                     EditSessionChunk::createTextChunk($session, $chunk->content);
-                } elseif ($chunk->chunkType === 'event' && $chunk->event !== null) {
-                    $eventJson = $this->serializeEvent($chunk->event);
-                    EditSessionChunk::createEventChunk($session, $eventJson);
-                } elseif ($chunk->chunkType === 'message' && $chunk->message !== null) {
+                } elseif ($chunk->chunkType === EditStreamChunkType::Event && $chunk->event !== null) {
+                    $eventJson    = $this->serializeEvent($chunk->event);
+                    $contextBytes = ($chunk->event->inputBytes ?? 0) + ($chunk->event->resultBytes ?? 0);
+                    EditSessionChunk::createEventChunk($session, $eventJson, $contextBytes > 0 ? $contextBytes : null);
+                } elseif ($chunk->chunkType === EditStreamChunkType::Progress && $chunk->content !== null) {
+                    EditSessionChunk::createProgressChunk($session, $chunk->content);
+                } elseif ($chunk->chunkType === EditStreamChunkType::Message && $chunk->message !== null) {
                     // Persist new conversation messages
                     $this->persistConversationMessage($conversation, $chunk->message);
-                } elseif ($chunk->chunkType === 'done') {
+                } elseif ($chunk->chunkType === EditStreamChunkType::Done) {
                     EditSessionChunk::createDoneChunk(
                         $session,
                         $chunk->success ?? false,

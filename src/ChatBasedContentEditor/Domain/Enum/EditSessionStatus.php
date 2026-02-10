@@ -6,8 +6,10 @@ namespace App\ChatBasedContentEditor\Domain\Enum;
 
 enum EditSessionStatus: string
 {
-    case Pending   = 'pending';
-    case Running   = 'running';
-    case Completed = 'completed';
-    case Failed    = 'failed';
+    case Pending    = 'pending';
+    case Running    = 'running';
+    case Cancelling = 'cancelling';
+    case Completed  = 'completed';
+    case Failed     = 'failed';
+    case Cancelled  = 'cancelled';
 }

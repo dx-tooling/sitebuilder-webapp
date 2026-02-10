@@ -125,6 +125,7 @@ project:
         placeholder_custom_image: "myregistry/myimage:tag"
         custom_image_help: "Geben Sie einen Docker-Image-Namen mit Tag ein (z.B. node:latest, myregistry.io/myimage:v1)."
         agent_config_advanced: "Agentenkonfiguration (Erweitert)"
+        reset_agent_config_to_defaults: "Auf Standard zurücksetzen"
         agent_config_description: "Passen Sie an, wie sich der KI-Agent beim Bearbeiten dieses Projekts verhält. Diese Einstellungen steuern die Anweisungen und den Workflow des Agenten."
         background_instructions: "Hintergrundanweisungen"
         background_instructions_placeholder: "Systemkontext und Workspace-Konventionen..."
@@ -195,6 +196,7 @@ editor:
     input_label: "Was sollen wir ändern?"
     input_placeholder: "z.B. Füge einen Kontaktbereich zur Startseite hinzu"
     make_changes: "Änderungen vornehmen"
+    stop: "Stopp"
     submit_on_enter: "Enter drücken zum Senden"
     session_finished: "Diese Sitzung ist beendet. Sie können den Verlauf oben einsehen."
     cannot_edit: "Sie können diese Sitzung nicht bearbeiten."
@@ -209,6 +211,8 @@ editor:
     review_link: "Review-Link:"
     project_link: "Projektlink:"
     open_on_github: "Auf GitHub öffnen"
+    dump_agent_context_label: "Agent-Kontext:"
+    dump_agent_context: "Agent-Kontext ausgeben"
     problem:
         title: "Es gab ein Problem"
         description: "Beim Vorbereiten Ihres Arbeitsbereichs ist etwas schiefgelaufen. Sie können ihn zurücksetzen und es erneut versuchen."
@@ -401,6 +405,7 @@ api:
         failed_to_create_session: "Sitzung konnte nicht erstellt werden."
         not_authorized_to_run: "Nicht berechtigt, Änderungen in dieser Unterhaltung auszuführen."
         conversation_not_active: "Die Unterhaltung ist nicht mehr aktiv."
+        session_not_cancellable: "Diese Sitzung kann nicht abgebrochen werden."
         s3_required_fields: "Bucket-Name, Region, Zugriffsschlüssel-ID und geheimer Zugriffsschlüssel sind erforderlich."
 
 # Frontend JavaScript translations (passed via data attributes)
@@ -422,6 +427,9 @@ js:
         unknown_error: "Unbekannter Fehler"
         all_set: "Fertig"
         in_progress: "In Bearbeitung"
+        stop: "Stopp"
+        stopping: "Wird gestoppt..."
+        cancelled: "Abgebrochen"
     workspace:
         taking_longer: "Das dauert länger als erwartet. Bitte versuchen Sie es erneut."
         setup_failed: "Die Einrichtung konnte nicht abgeschlossen werden. Bitte setzen Sie den Arbeitsbereich zurück."

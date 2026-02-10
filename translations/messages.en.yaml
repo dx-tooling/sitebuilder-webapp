@@ -130,6 +130,7 @@ project:
         placeholder_custom_image: "myregistry/myimage:tag"
         custom_image_help: "Enter a Docker image name with tag (e.g., node:latest, myregistry.io/myimage:v1)."
         agent_config_advanced: "Agent Configuration (Advanced)"
+        reset_agent_config_to_defaults: "Reset to defaults"
         agent_config_description: "Customize how the AI agent behaves when editing this project. These settings control the agent's instructions and workflow."
         background_instructions: "Background Instructions"
         background_instructions_placeholder: "System context and workspace conventions..."
@@ -200,6 +201,7 @@ editor:
     input_label: "What should we change?"
     input_placeholder: "e.g. Add a contact section to the homepage"
     make_changes: "Make changes"
+    stop: "Stop"
     submit_on_enter: "Press Enter to send"
     session_finished: "This session is finished. You can review the history above."
     cannot_edit: "You cannot edit this session."
@@ -214,6 +216,8 @@ editor:
     review_link: "Review link:"
     project_link: "Project link:"
     open_on_github: "Open on GitHub"
+    dump_agent_context_label: "Agent context:"
+    dump_agent_context: "Dump agent context"
     problem:
         title: "We hit a snag"
         description: "Something went wrong while preparing your work area. You can reset it and try again."
@@ -406,6 +410,7 @@ api:
         failed_to_create_session: "Failed to create session."
         not_authorized_to_run: "Not authorized to run edits in this conversation."
         conversation_not_active: "Conversation is no longer active."
+        session_not_cancellable: "This session cannot be cancelled."
         s3_required_fields: "Bucket name, region, access key ID, and secret access key are required."
 
 # Frontend JavaScript translations (passed via data attributes)
@@ -427,6 +432,9 @@ js:
         unknown_error: "Unknown error"
         all_set: "All set"
         in_progress: "In progress"
+        stop: "Stop"
+        stopping: "Stopping..."
+        cancelled: "Cancelled"
     workspace:
         taking_longer: "This is taking longer than expected. Please try again."
         setup_failed: "We couldn't finish setup. Please try resetting the work area."

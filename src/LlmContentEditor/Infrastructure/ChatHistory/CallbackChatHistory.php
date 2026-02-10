@@ -4,21 +4,26 @@ declare(strict_types=1);
 
 namespace App\LlmContentEditor\Infrastructure\ChatHistory;
 
+use App\LlmContentEditor\Domain\TurnActivityProviderInterface;
 use Closure;
 use NeuronAI\Chat\History\AbstractChatHistory;
 use NeuronAI\Chat\History\ChatHistoryInterface;
 use NeuronAI\Chat\Messages\Message;
+use NeuronAI\Chat\Messages\ToolCallResultMessage;
+use NeuronAI\Chat\Messages\UserMessage;
 use Override;
 
 /**
  * A ChatHistory implementation that:
  * 1. Can be pre-loaded with messages from a previous conversation
  * 2. Notifies via callback when new messages are added (for persistence)
+ * 3. Automatically tracks all tool calls via TurnActivityJournal and exposes a summary for the system prompt
  *
- * This allows the facade to manage conversation history without directly
- * depending on database entities.
+ * The journal records every tool call/result automatically (no LLM cooperation needed)
+ * and its summary is appended to the system prompt on each LLM API request,
+ * so the model always knows what it already did — even after context-window trimming.
  */
-class CallbackChatHistory extends AbstractChatHistory
+class CallbackChatHistory extends AbstractChatHistory implements TurnActivityProviderInterface
 {
     /**
      * @var Closure(Message): void|null
@@ -26,8 +31,30 @@ class CallbackChatHistory extends AbstractChatHistory
     private ?Closure $onNewMessage = null;
 
     /**
+     * Automatically tracks all tool calls and results within the current chat turn.
+     */
+    private readonly TurnActivityJournal $journal;
+
+    /**
+     * Tracks the most recent UserMessage added to history.
+     *
+     * Used as a safety net: when aggressive context-window trimming in the
+     * parent class removes ALL messages (including the UserMessage), we
+     * restore this message so the LLM always sees at least the user's
+     * instruction. Without this, the agent enters an infinite tool-call
+     * loop because it receives only the system prompt and believes it is
+     * starting a new session.
+     *
+     * Note: ToolCallResultMessage extends UserMessage in NeuronAI, so we
+     * explicitly exclude it — only genuine user instructions are tracked.
+     *
+     * @see https://github.com/dx-tooling/sitebuilder-webapp/issues/75
+     */
+    private ?UserMessage $latestUserMessage = null;
+
+    /**
      * @param list<Message> $initialMessages Messages from previous conversation turns
-     * @param int           $contextWindow   Maximum token count for context window
+     * @param int           $contextWindow   Maximum token count for context window (should match LlmModelName::maxContextTokens())
      */
     public function __construct(
         array $initialMessages = [],
@@ -35,6 +62,7 @@ class CallbackChatHistory extends AbstractChatHistory
     ) {
         parent::__construct($contextWindow);
         $this->history = $initialMessages;
+        $this->journal = new TurnActivityJournal();
     }
 
     /**
@@ -52,13 +80,56 @@ class CallbackChatHistory extends AbstractChatHistory
 
     /**
      * Called when a new message is added to the history.
-     * We use this hook to notify the callback.
+     * We use this hook to:
+     * 1. Track the latest genuine UserMessage for trim recovery
+     * 2. Record completed tool calls in the journal (from ToolCallResultMessage)
+     * 3. Notify the persistence callback.
      */
     protected function onNewMessage(Message $message): void
     {
+        if ($message instanceof UserMessage && !$message instanceof ToolCallResultMessage) {
+            $this->latestUserMessage = $message;
+        }
+
+        if ($message instanceof ToolCallResultMessage) {
+            $this->journal->recordToolResults($message);
+        }
+
         if ($this->onNewMessage !== null) {
             ($this->onNewMessage)($message);
         }
+    }
+
+    public function getTurnActivitySummary(): string
+    {
+        return $this->journal->getSummary();
+    }
+
+    /**
+     * Override context-window trimming to prevent complete history loss.
+     *
+     * The parent's trimHistory() removes messages from the front of the
+     * history to fit under the token limit, then runs sequence validation
+     * (ensureValidMessageSequence). When all UserMessages are trimmed away,
+     * the validation clears the entire history to []. This causes the LLM
+     * to receive only the system prompt, leading to an infinite tool-call
+     * loop (see issue #75).
+     *
+     * After the parent trims, if the history is empty but we have a tracked
+     * UserMessage, we restore it. A single UserMessage is always a valid
+     * message sequence (starts with USER role), so no further validation
+     * is needed.
+     */
+    #[Override]
+    protected function trimHistory(): int
+    {
+        $skipIndex = parent::trimHistory();
+
+        if ($this->history === [] && $this->latestUserMessage !== null) {
+            $this->history = [$this->latestUserMessage];
+        }
+
+        return $skipIndex;
     }
 
     /**
