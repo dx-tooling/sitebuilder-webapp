@@ -1,30 +1,60 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import PromptSuggestionsController from "../../../../src/ChatBasedContentEditor/Presentation/Resources/assets/controllers/prompt_suggestions_controller.ts";
 
 describe("PromptSuggestionsController", () => {
-    const createController = (): {
+    interface ControllerFixture {
         controller: PromptSuggestionsController;
         suggestionButtons: HTMLButtonElement[];
         expandButton: HTMLButtonElement;
         collapseButton: HTMLButtonElement;
-    } => {
+        suggestionList: HTMLElement;
+        formModal: HTMLElement;
+        formInput: HTMLTextAreaElement;
+        formTitle: HTMLElement;
+        deleteModal: HTMLElement;
+    }
+
+    const createController = (): ControllerFixture => {
         const controller = Object.create(PromptSuggestionsController.prototype) as PromptSuggestionsController;
 
-        // Create suggestion buttons
+        // Create suggestion buttons wrapped in row divs
+        const suggestionList = document.createElement("div");
         const suggestionButtons: HTMLButtonElement[] = [];
         for (let i = 0; i < 5; i++) {
+            const row = document.createElement("div");
+            row.dataset.index = String(i);
+            row.className = "group flex items-start gap-1";
+
             const btn = document.createElement("button");
             btn.dataset.text = `Suggestion ${i + 1}`;
             if (i >= 3) {
                 btn.classList.add("hidden");
             }
             suggestionButtons.push(btn);
+
+            const actions = document.createElement("div");
+            actions.className = "flex-shrink-0";
+            if (i >= 3) {
+                actions.classList.add("hidden");
+            }
+
+            row.appendChild(btn);
+            row.appendChild(actions);
+            suggestionList.appendChild(row);
         }
 
         // Create expand/collapse buttons
         const expandButton = document.createElement("button");
         const collapseButton = document.createElement("button");
         collapseButton.classList.add("hidden");
+
+        // Create modal elements
+        const formModal = document.createElement("div");
+        formModal.classList.add("hidden");
+        const formInput = document.createElement("textarea");
+        const formTitle = document.createElement("h3");
+        const deleteModal = document.createElement("div");
+        deleteModal.classList.add("hidden");
 
         // Set up controller state
         const state = controller as unknown as {
@@ -35,6 +65,23 @@ describe("PromptSuggestionsController", () => {
             collapseButtonTarget: HTMLButtonElement;
             maxVisibleValue: number;
             dispatch: (name: string, options: unknown) => void;
+            hasSuggestionListTarget: boolean;
+            suggestionListTarget: HTMLElement;
+            hasFormModalTarget: boolean;
+            formModalTarget: HTMLElement;
+            hasFormInputTarget: boolean;
+            formInputTarget: HTMLTextAreaElement;
+            hasFormTitleTarget: boolean;
+            formTitleTarget: HTMLElement;
+            hasDeleteModalTarget: boolean;
+            deleteModalTarget: HTMLElement;
+            createUrlValue: string;
+            updateUrlTemplateValue: string;
+            deleteUrlTemplateValue: string;
+            csrfTokenValue: string;
+            addTitleValue: string;
+            editTitleValue: string;
+            placeholderValue: string;
         };
 
         state.suggestionTargets = suggestionButtons;
@@ -44,8 +91,35 @@ describe("PromptSuggestionsController", () => {
         state.collapseButtonTarget = collapseButton;
         state.maxVisibleValue = 3;
         state.dispatch = vi.fn();
+        state.hasSuggestionListTarget = true;
+        state.suggestionListTarget = suggestionList;
+        state.hasFormModalTarget = true;
+        state.formModalTarget = formModal;
+        state.hasFormInputTarget = true;
+        state.formInputTarget = formInput;
+        state.hasFormTitleTarget = true;
+        state.formTitleTarget = formTitle;
+        state.hasDeleteModalTarget = true;
+        state.deleteModalTarget = deleteModal;
+        state.createUrlValue = "/conversation/123/prompt-suggestions";
+        state.updateUrlTemplateValue = "/conversation/123/prompt-suggestions/99999";
+        state.deleteUrlTemplateValue = "/conversation/123/prompt-suggestions/99999";
+        state.csrfTokenValue = "test-csrf-token";
+        state.addTitleValue = "Add new suggestion";
+        state.editTitleValue = "Edit suggestion";
+        state.placeholderValue = "Enter suggestion...";
 
-        return { controller, suggestionButtons, expandButton, collapseButton };
+        return {
+            controller,
+            suggestionButtons,
+            expandButton,
+            collapseButton,
+            suggestionList,
+            formModal,
+            formInput,
+            formTitle,
+            deleteModal,
+        };
     };
 
     describe("insert", () => {
@@ -176,6 +250,341 @@ describe("PromptSuggestionsController", () => {
             controller.hoverEnd(event);
 
             expect(button.classList.contains("suggestion-expanded")).toBe(false);
+        });
+    });
+
+    describe("showAddModal", () => {
+        it("opens form modal with empty input and add title", () => {
+            const { controller, formModal, formInput, formTitle } = createController();
+
+            controller.showAddModal();
+
+            expect(formModal.classList.contains("hidden")).toBe(false);
+            expect(formInput.value).toBe("");
+            expect(formTitle.textContent).toBe("Add new suggestion");
+        });
+
+        it("sets placeholder on textarea", () => {
+            const { controller, formInput } = createController();
+
+            controller.showAddModal();
+
+            expect(formInput.placeholder).toBe("Enter suggestion...");
+        });
+    });
+
+    describe("showEditModal", () => {
+        it("opens form modal prefilled with suggestion text and edit title", () => {
+            const { controller, formModal, formInput, formTitle } = createController();
+
+            const button = document.createElement("button");
+            button.dataset.index = "1";
+            button.dataset.text = "Existing suggestion";
+            const event = { currentTarget: button } as unknown as Event;
+
+            controller.showEditModal(event);
+
+            expect(formModal.classList.contains("hidden")).toBe(false);
+            expect(formInput.value).toBe("Existing suggestion");
+            expect(formTitle.textContent).toBe("Edit suggestion");
+        });
+    });
+
+    describe("hideFormModal", () => {
+        it("hides the form modal", () => {
+            const { controller, formModal } = createController();
+
+            // Open the modal first
+            controller.showAddModal();
+            expect(formModal.classList.contains("hidden")).toBe(false);
+
+            controller.hideFormModal();
+
+            expect(formModal.classList.contains("hidden")).toBe(true);
+        });
+    });
+
+    describe("confirmDelete", () => {
+        it("opens delete confirmation modal", () => {
+            const { controller, deleteModal } = createController();
+
+            const button = document.createElement("button");
+            button.dataset.index = "2";
+            const event = { currentTarget: button } as unknown as Event;
+
+            controller.confirmDelete(event);
+
+            expect(deleteModal.classList.contains("hidden")).toBe(false);
+        });
+    });
+
+    describe("cancelDelete", () => {
+        it("hides delete confirmation modal", () => {
+            const { controller, deleteModal } = createController();
+
+            // Open first
+            const button = document.createElement("button");
+            button.dataset.index = "0";
+            controller.confirmDelete({
+                currentTarget: button,
+            } as unknown as Event);
+            expect(deleteModal.classList.contains("hidden")).toBe(false);
+
+            controller.cancelDelete();
+
+            expect(deleteModal.classList.contains("hidden")).toBe(true);
+        });
+    });
+
+    describe("submitForm", () => {
+        let fetchSpy: ReturnType<typeof vi.fn>;
+
+        beforeEach(() => {
+            fetchSpy = vi.fn();
+            vi.stubGlobal("fetch", fetchSpy);
+        });
+
+        afterEach(() => {
+            vi.restoreAllMocks();
+        });
+
+        it("sends POST request in add mode", async () => {
+            const { controller, formInput } = createController();
+
+            fetchSpy.mockResolvedValueOnce({
+                ok: true,
+                json: () =>
+                    Promise.resolve({
+                        suggestions: ["Existing", "New suggestion"],
+                    }),
+            });
+
+            controller.showAddModal();
+            formInput.value = "New suggestion";
+
+            await controller.submitForm();
+
+            expect(fetchSpy).toHaveBeenCalledWith(
+                "/conversation/123/prompt-suggestions",
+                expect.objectContaining({
+                    method: "POST",
+                    body: JSON.stringify({ text: "New suggestion" }),
+                }),
+            );
+        });
+
+        it("sends PUT request in edit mode", async () => {
+            const { controller, formInput } = createController();
+
+            fetchSpy.mockResolvedValueOnce({
+                ok: true,
+                json: () =>
+                    Promise.resolve({
+                        suggestions: ["Updated suggestion", "Second"],
+                    }),
+            });
+
+            const button = document.createElement("button");
+            button.dataset.index = "0";
+            button.dataset.text = "Original";
+            controller.showEditModal({
+                currentTarget: button,
+            } as unknown as Event);
+            formInput.value = "Updated suggestion";
+
+            await controller.submitForm();
+
+            expect(fetchSpy).toHaveBeenCalledWith(
+                "/conversation/123/prompt-suggestions/0",
+                expect.objectContaining({
+                    method: "PUT",
+                    body: JSON.stringify({ text: "Updated suggestion" }),
+                }),
+            );
+        });
+
+        it("does not send request when input is empty", async () => {
+            const { controller, formInput } = createController();
+
+            controller.showAddModal();
+            formInput.value = "   ";
+
+            await controller.submitForm();
+
+            expect(fetchSpy).not.toHaveBeenCalled();
+        });
+
+        it("includes CSRF token in headers", async () => {
+            const { controller, formInput } = createController();
+
+            fetchSpy.mockResolvedValueOnce({
+                ok: true,
+                json: () => Promise.resolve({ suggestions: ["New suggestion"] }),
+            });
+
+            controller.showAddModal();
+            formInput.value = "New suggestion";
+
+            await controller.submitForm();
+
+            expect(fetchSpy).toHaveBeenCalledWith(
+                expect.any(String),
+                expect.objectContaining({
+                    headers: expect.objectContaining({
+                        "X-CSRF-Token": "test-csrf-token",
+                    }),
+                }),
+            );
+        });
+
+        it("hides modal after successful submit", async () => {
+            const { controller, formModal, formInput } = createController();
+
+            fetchSpy.mockResolvedValueOnce({
+                ok: true,
+                json: () => Promise.resolve({ suggestions: ["New suggestion"] }),
+            });
+
+            controller.showAddModal();
+            formInput.value = "New suggestion";
+
+            await controller.submitForm();
+
+            expect(formModal.classList.contains("hidden")).toBe(true);
+        });
+    });
+
+    describe("executeDelete", () => {
+        let fetchSpy: ReturnType<typeof vi.fn>;
+
+        beforeEach(() => {
+            fetchSpy = vi.fn();
+            vi.stubGlobal("fetch", fetchSpy);
+        });
+
+        afterEach(() => {
+            vi.restoreAllMocks();
+        });
+
+        it("sends DELETE request with correct index", async () => {
+            const { controller } = createController();
+
+            fetchSpy.mockResolvedValueOnce({
+                ok: true,
+                json: () => Promise.resolve({ suggestions: ["Remaining suggestion"] }),
+            });
+
+            const button = document.createElement("button");
+            button.dataset.index = "1";
+            controller.confirmDelete({
+                currentTarget: button,
+            } as unknown as Event);
+
+            await controller.executeDelete();
+
+            expect(fetchSpy).toHaveBeenCalledWith(
+                "/conversation/123/prompt-suggestions/1",
+                expect.objectContaining({ method: "DELETE" }),
+            );
+        });
+
+        it("does not send request when deleteIndex is null", async () => {
+            const { controller } = createController();
+
+            await controller.executeDelete();
+
+            expect(fetchSpy).not.toHaveBeenCalled();
+        });
+
+        it("hides delete modal after execution", async () => {
+            const { controller, deleteModal } = createController();
+
+            fetchSpy.mockResolvedValueOnce({
+                ok: true,
+                json: () => Promise.resolve({ suggestions: [] }),
+            });
+
+            const button = document.createElement("button");
+            button.dataset.index = "0";
+            controller.confirmDelete({
+                currentTarget: button,
+            } as unknown as Event);
+
+            await controller.executeDelete();
+
+            expect(deleteModal.classList.contains("hidden")).toBe(true);
+        });
+    });
+
+    describe("refreshSuggestionsList", () => {
+        it("rebuilds the suggestion list from new data", () => {
+            const { controller, suggestionList } = createController();
+
+            controller.refreshSuggestionsList(["Alpha", "Beta", "Gamma"]);
+
+            // Use direct children to avoid matching nested elements with data-index
+            const rows = Array.from(suggestionList.children);
+            expect(rows.length).toBe(3);
+
+            const buttons = suggestionList.querySelectorAll('[data-prompt-suggestions-target="suggestion"]');
+            expect(buttons.length).toBe(3);
+            expect(buttons[0].textContent).toBe("Alpha");
+            expect(buttons[1].textContent).toBe("Beta");
+            expect(buttons[2].textContent).toBe("Gamma");
+        });
+
+        it("hides suggestions beyond maxVisible", () => {
+            const { controller, suggestionList } = createController();
+
+            controller.refreshSuggestionsList(["A", "B", "C", "D", "E"]);
+
+            const buttons = suggestionList.querySelectorAll('[data-prompt-suggestions-target="suggestion"]');
+            expect(buttons[0].classList.contains("hidden")).toBe(false);
+            expect(buttons[2].classList.contains("hidden")).toBe(false);
+            expect(buttons[3].classList.contains("hidden")).toBe(true);
+            expect(buttons[4].classList.contains("hidden")).toBe(true);
+        });
+
+        it("clears existing content before rebuilding", () => {
+            const { controller, suggestionList } = createController();
+
+            // Initial state has 5 suggestions
+            expect(suggestionList.children.length).toBe(5);
+
+            controller.refreshSuggestionsList(["Only one"]);
+
+            expect(suggestionList.children.length).toBe(1);
+        });
+
+        it("handles empty suggestions list", () => {
+            const { controller, suggestionList } = createController();
+
+            controller.refreshSuggestionsList([]);
+
+            expect(suggestionList.children.length).toBe(0);
+        });
+
+        it("sets correct data-index on each row", () => {
+            const { controller, suggestionList } = createController();
+
+            controller.refreshSuggestionsList(["First", "Second"]);
+
+            // Use direct children to avoid matching nested elements with data-index
+            const rows = Array.from(suggestionList.children) as HTMLElement[];
+            expect(rows[0].dataset.index).toBe("0");
+            expect(rows[1].dataset.index).toBe("1");
+        });
+
+        it("includes edit and delete action buttons per suggestion", () => {
+            const { controller, suggestionList } = createController();
+
+            controller.refreshSuggestionsList(["Test"]);
+
+            const editBtn = suggestionList.querySelector('[data-action*="showEditModal"]');
+            const deleteBtn = suggestionList.querySelector('[data-action*="confirmDelete"]');
+
+            expect(editBtn).not.toBeNull();
+            expect(deleteBtn).not.toBeNull();
         });
     });
 });
