@@ -9,7 +9,8 @@ import { Controller } from "@hotwired/stimulus";
  * - Image preview for image URLs
  * - Click to open asset in new tab
  * - Add to chat button dispatches custom event for insertion
- * - Drag-and-drop upload to S3 (when configured)
+ * - Drag-and-drop upload to S3 (when configured, supports multiple files)
+ * - Clickable dropzone to open file dialog (supports multiple files)
  */
 export default class extends Controller {
     static values = {
@@ -30,7 +31,9 @@ export default class extends Controller {
         "empty",
         "search",
         "dropzone",
+        "fileInput",
         "uploadProgress",
+        "uploadProgressText",
         "uploadError",
         "uploadSuccess",
     ];
@@ -55,8 +58,12 @@ export default class extends Controller {
     declare readonly searchTarget: HTMLInputElement;
     declare readonly hasDropzoneTarget: boolean;
     declare readonly dropzoneTarget: HTMLElement;
+    declare readonly hasFileInputTarget: boolean;
+    declare readonly fileInputTarget: HTMLInputElement;
     declare readonly hasUploadProgressTarget: boolean;
     declare readonly uploadProgressTarget: HTMLElement;
+    declare readonly hasUploadProgressTextTarget: boolean;
+    declare readonly uploadProgressTextTarget: HTMLElement;
     declare readonly hasUploadErrorTarget: boolean;
     declare readonly uploadErrorTarget: HTMLElement;
     declare readonly hasUploadSuccessTarget: boolean;
@@ -120,7 +127,7 @@ export default class extends Controller {
     }
 
     /**
-     * Handle drop event - upload the file.
+     * Handle drop event - upload all dropped files.
      */
     private async handleDrop(e: DragEvent): Promise<void> {
         e.preventDefault();
@@ -136,52 +143,122 @@ export default class extends Controller {
             return;
         }
 
-        // Only upload the first file
-        await this.uploadFile(files[0]);
+        await this.uploadFiles(files);
     }
 
     /**
-     * Upload a file to S3.
+     * Open the native file dialog by clicking the hidden file input.
      */
-    private async uploadFile(file: File): Promise<void> {
+    openFileDialog(): void {
+        if (!this.isUploadEnabled() || !this.hasFileInputTarget || this.isUploading) {
+            return;
+        }
+
+        // Reset value so the same file(s) can be re-selected
+        this.fileInputTarget.value = "";
+        this.fileInputTarget.click();
+    }
+
+    /**
+     * Handle file selection from the native file dialog.
+     */
+    handleFileSelect(e: Event): void {
+        const input = e.target as HTMLInputElement;
+        const files = input.files;
+        if (!files || files.length === 0) {
+            return;
+        }
+
+        void this.uploadFiles(files);
+    }
+
+    /**
+     * Upload multiple files sequentially to S3.
+     */
+    private async uploadFiles(files: FileList): Promise<void> {
         if (!this.isUploadEnabled() || this.isUploading) {
             return;
         }
 
         this.isUploading = true;
-        this.showUploadStatus("progress");
+        const total = files.length;
+        let successCount = 0;
+        let errorCount = 0;
 
-        try {
-            const formData = new FormData();
-            formData.append("file", file);
-            formData.append("workspace_id", this.workspaceIdValue);
-            formData.append("_csrf_token", this.uploadCsrfTokenValue);
+        for (let i = 0; i < total; i++) {
+            this.updateUploadProgressText(i + 1, total);
+            this.showUploadStatus("progress");
 
-            const response = await fetch(this.uploadUrlValue, {
-                method: "POST",
-                headers: {
-                    "X-Requested-With": "XMLHttpRequest",
-                },
-                body: formData,
-            });
-
-            const data = (await response.json()) as { success?: boolean; url?: string; error?: string };
-
-            if (data.success && data.url) {
-                this.showUploadStatus("success");
-                // Notify chat controller about the upload
-                this.dispatch("uploadComplete", { detail: { url: data.url } });
-                // Re-fetch the asset list to show updated manifests
-                await this.fetchAssets();
-                // Auto-hide success message after 3 seconds
-                setTimeout(() => this.showUploadStatus("none"), 3000);
-            } else {
-                this.showUploadError(data.error || "Upload failed");
+            try {
+                const uploaded = await this.uploadSingleFile(files[i]);
+                if (uploaded) {
+                    successCount++;
+                } else {
+                    errorCount++;
+                }
+            } catch {
+                errorCount++;
             }
-        } catch {
+        }
+
+        // Re-fetch the asset list once after all uploads
+        if (successCount > 0) {
+            await this.fetchAssets();
+        }
+
+        // Show final status
+        if (errorCount > 0 && successCount === 0) {
             this.showUploadError("Upload failed. Please try again.");
-        } finally {
-            this.isUploading = false;
+        } else if (errorCount > 0) {
+            this.showUploadError(`${errorCount} of ${total} uploads failed.`);
+        } else {
+            this.showUploadStatus("success");
+            setTimeout(() => this.showUploadStatus("none"), 3000);
+        }
+
+        this.isUploading = false;
+    }
+
+    /**
+     * Upload a single file to S3. Returns true on success.
+     */
+    private async uploadSingleFile(file: File): Promise<boolean> {
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("workspace_id", this.workspaceIdValue);
+        formData.append("_csrf_token", this.uploadCsrfTokenValue);
+
+        const response = await fetch(this.uploadUrlValue, {
+            method: "POST",
+            headers: {
+                "X-Requested-With": "XMLHttpRequest",
+            },
+            body: formData,
+        });
+
+        const data = (await response.json()) as { success?: boolean; url?: string; error?: string };
+
+        if (data.success && data.url) {
+            this.dispatch("uploadComplete", { detail: { url: data.url } });
+
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Update the upload progress text for multi-file uploads.
+     */
+    private updateUploadProgressText(current: number, total: number): void {
+        if (!this.hasUploadProgressTextTarget) {
+            return;
+        }
+
+        if (total === 1) {
+            this.uploadProgressTextTarget.textContent = "";
+        } else {
+            this.uploadProgressTextTarget.textContent = `(${current}/${total})`;
         }
     }
 
