@@ -526,5 +526,173 @@ describe("RemoteAssetBrowserController", () => {
 
             expect(eventListener).not.toHaveBeenCalled();
         });
+
+        it("uploads multiple files sequentially and dispatches events for each", async () => {
+            const mockFetch = vi
+                .fn()
+                // Initial asset list fetch
+                .mockResolvedValueOnce({
+                    ok: true,
+                    json: () => Promise.resolve({ urls: [] }),
+                })
+                // Upload file 1
+                .mockResolvedValueOnce({
+                    ok: true,
+                    json: () => Promise.resolve({ success: true, url: "https://example.com/a.jpg" }),
+                })
+                // Upload file 2
+                .mockResolvedValueOnce({
+                    ok: true,
+                    json: () => Promise.resolve({ success: true, url: "https://example.com/b.png" }),
+                })
+                // Upload file 3
+                .mockResolvedValueOnce({
+                    ok: true,
+                    json: () => Promise.resolve({ success: true, url: "https://example.com/c.gif" }),
+                })
+                // Re-fetch after all uploads
+                .mockResolvedValueOnce({
+                    ok: true,
+                    json: () =>
+                        Promise.resolve({
+                            urls: [
+                                "https://example.com/a.jpg",
+                                "https://example.com/b.png",
+                                "https://example.com/c.gif",
+                            ],
+                        }),
+                });
+            vi.stubGlobal("fetch", mockFetch);
+
+            const controller = await createControllerElementWithUpload();
+            await new Promise((resolve) => setTimeout(resolve, 100));
+
+            const eventListener = vi.fn();
+            controller.addEventListener("remote-asset-browser:uploadComplete", eventListener);
+
+            const dropzone = document.querySelector('[data-remote-asset-browser-target="dropzone"]') as HTMLElement;
+            const files = [
+                new File(["a"], "a.jpg", { type: "image/jpeg" }),
+                new File(["b"], "b.png", { type: "image/png" }),
+                new File(["c"], "c.gif", { type: "image/gif" }),
+            ];
+            const dropEvent = createMockDropEvent(files);
+            dropzone.dispatchEvent(dropEvent);
+
+            await new Promise((resolve) => setTimeout(resolve, 400));
+
+            // One uploadComplete event per successful file
+            expect(eventListener).toHaveBeenCalledTimes(3);
+            expect((eventListener.mock.calls[0][0] as CustomEvent).detail.url).toBe("https://example.com/a.jpg");
+            expect((eventListener.mock.calls[1][0] as CustomEvent).detail.url).toBe("https://example.com/b.png");
+            expect((eventListener.mock.calls[2][0] as CustomEvent).detail.url).toBe("https://example.com/c.gif");
+
+            // 5 fetch calls: initial list + 3 uploads + re-fetch
+            expect(mockFetch).toHaveBeenCalledTimes(5);
+        });
+
+        it("shows partial failure message when some uploads fail", async () => {
+            const mockFetch = vi
+                .fn()
+                // Initial asset list fetch
+                .mockResolvedValueOnce({
+                    ok: true,
+                    json: () => Promise.resolve({ urls: [] }),
+                })
+                // Upload file 1 - success
+                .mockResolvedValueOnce({
+                    ok: true,
+                    json: () => Promise.resolve({ success: true, url: "https://example.com/a.jpg" }),
+                })
+                // Upload file 2 - failure
+                .mockResolvedValueOnce({
+                    ok: true,
+                    json: () => Promise.resolve({ success: false, error: "S3 error" }),
+                })
+                // Upload file 3 - success
+                .mockResolvedValueOnce({
+                    ok: true,
+                    json: () => Promise.resolve({ success: true, url: "https://example.com/c.gif" }),
+                })
+                // Re-fetch after uploads (called because at least one succeeded)
+                .mockResolvedValueOnce({
+                    ok: true,
+                    json: () =>
+                        Promise.resolve({
+                            urls: ["https://example.com/a.jpg", "https://example.com/c.gif"],
+                        }),
+                });
+            vi.stubGlobal("fetch", mockFetch);
+
+            await createControllerElementWithUpload();
+            await new Promise((resolve) => setTimeout(resolve, 100));
+
+            const dropzone = document.querySelector('[data-remote-asset-browser-target="dropzone"]') as HTMLElement;
+            const files = [
+                new File(["a"], "a.jpg", { type: "image/jpeg" }),
+                new File(["b"], "b.png", { type: "image/png" }),
+                new File(["c"], "c.gif", { type: "image/gif" }),
+            ];
+            const dropEvent = createMockDropEvent(files);
+            dropzone.dispatchEvent(dropEvent);
+
+            await new Promise((resolve) => setTimeout(resolve, 400));
+
+            // Error message should be shown with partial failure count
+            const errorEl = document.querySelector('[data-remote-asset-browser-target="uploadError"]') as HTMLElement;
+            expect(errorEl.classList.contains("hidden")).toBe(false);
+
+            const errorText = errorEl.querySelector("[data-error-text]") as HTMLElement;
+            expect(errorText.textContent).toBe("1 of 3 uploads failed.");
+        });
+
+        it("opens file dialog when openFileDialog is called", async () => {
+            const html = `
+                <div data-controller="remote-asset-browser"
+                     data-remote-asset-browser-fetch-url-value="/api/projects/test-id/remote-assets"
+                     data-remote-asset-browser-upload-url-value="/api/projects/test-id/remote-assets/upload"
+                     data-remote-asset-browser-upload-csrf-token-value="csrf-token-123"
+                     data-remote-asset-browser-workspace-id-value="workspace-123"
+                     data-remote-asset-browser-window-size-value="50">
+                    <div data-remote-asset-browser-target="dropzone"
+                         data-action="click->remote-asset-browser#openFileDialog"
+                         class="dropzone">Click to upload</div>
+                    <input type="file" multiple
+                           accept="image/jpeg,image/png,image/gif,image/webp,image/svg+xml,image/avif"
+                           data-remote-asset-browser-target="fileInput"
+                           data-action="change->remote-asset-browser#handleFileSelect"
+                           class="hidden">
+                    <div data-remote-asset-browser-target="uploadProgress" class="hidden">Uploading...</div>
+                    <div data-remote-asset-browser-target="uploadSuccess" class="hidden">Success!</div>
+                    <div data-remote-asset-browser-target="uploadError" class="hidden"><span data-error-text></span></div>
+                    <div data-remote-asset-browser-target="loading">Loading...</div>
+                    <div data-remote-asset-browser-target="empty" class="hidden">No assets</div>
+                    <span data-remote-asset-browser-target="count"></span>
+                    <div data-remote-asset-browser-target="list"></div>
+                </div>
+            `;
+
+            const mockFetch = vi.fn().mockResolvedValue({
+                ok: true,
+                json: () => Promise.resolve({ urls: [] }),
+            });
+            vi.stubGlobal("fetch", mockFetch);
+
+            document.body.innerHTML = html;
+            await new Promise((resolve) => setTimeout(resolve, 100));
+
+            const fileInput = document.querySelector(
+                '[data-remote-asset-browser-target="fileInput"]',
+            ) as HTMLInputElement;
+            const clickSpy = vi.spyOn(fileInput, "click");
+
+            // Click the dropzone (which triggers openFileDialog action)
+            const dropzone = document.querySelector('[data-remote-asset-browser-target="dropzone"]') as HTMLElement;
+            dropzone.click();
+
+            await new Promise((resolve) => setTimeout(resolve, 50));
+
+            expect(clickSpy).toHaveBeenCalled();
+        });
     });
 });
