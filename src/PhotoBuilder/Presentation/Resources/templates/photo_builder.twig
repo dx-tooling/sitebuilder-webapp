@@ -6,11 +6,11 @@
     <div class="max-w-7xl mx-auto"
          {{ stimulus_controller('photo-builder', {
              createSessionUrl: path('photo_builder.presentation.create_session'),
-             pollUrlPattern: path('photo_builder.presentation.poll_session', { sessionId: '___SESSION_ID___' }),
-             regeneratePromptsUrlPattern: path('photo_builder.presentation.regenerate_prompts', { sessionId: '___SESSION_ID___' }),
-             regenerateImageUrlPattern: path('photo_builder.presentation.regenerate_image', { imageId: '___IMAGE_ID___' }),
-             updatePromptUrlPattern: path('photo_builder.presentation.update_prompt', { imageId: '___IMAGE_ID___' }),
-             uploadToMediaStoreUrlPattern: path('photo_builder.presentation.upload_to_media_store', { imageId: '___IMAGE_ID___' }),
+             pollUrlPattern: path('photo_builder.presentation.poll_session', { sessionId: '00000000-0000-0000-0000-000000000000' }),
+             regeneratePromptsUrlPattern: path('photo_builder.presentation.regenerate_prompts', { sessionId: '00000000-0000-0000-0000-000000000000' }),
+             regenerateImageUrlPattern: path('photo_builder.presentation.regenerate_image', { imageId: '00000000-0000-0000-0000-111111111111' }),
+             updatePromptUrlPattern: path('photo_builder.presentation.update_prompt', { imageId: '00000000-0000-0000-0000-111111111111' }),
+             uploadToMediaStoreUrlPattern: path('photo_builder.presentation.upload_to_media_store', { imageId: '00000000-0000-0000-0000-111111111111' }),
              csrfToken: csrf_token('photo_builder'),
              workspaceId: workspace.id,
              pagePath: pagePath,

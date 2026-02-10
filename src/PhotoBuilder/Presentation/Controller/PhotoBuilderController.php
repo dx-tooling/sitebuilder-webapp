@@ -193,14 +193,16 @@ final class PhotoBuilderController extends AbstractController
         }
 
         $images = array_map(
-            static fn (PhotoImage $image): array => [
+            fn (PhotoImage $image): array => [
                 'id'                => $image->getId(),
                 'position'          => $image->getPosition(),
                 'prompt'            => $image->getPrompt(),
                 'suggestedFileName' => $image->getSuggestedFileName(),
                 'status'            => $image->getStatus()->value,
                 'imageUrl'          => $image->getStoragePath() !== null
-                    ? '/api/photo-builder/images/' . $image->getId() . '/file'
+                    ? $this->generateUrl('photo_builder.presentation.serve_image', [
+                        'imageId' => $image->getId(),
+                    ])
                     : null,
                 'errorMessage' => $image->getErrorMessage(),
             ],

@@ -35,11 +35,11 @@ class OpenAiImageGenerator implements ImageGeneratorInterface
                 'Content-Type'  => 'application/json',
             ],
             'json' => [
-                'model'           => self::MODEL,
-                'prompt'          => $prompt,
-                'n'               => 1,
-                'size'            => self::IMAGE_SIZE,
-                'response_format' => 'b64_json',
+                'model'         => self::MODEL,
+                'prompt'        => $prompt,
+                'n'             => 1,
+                'size'          => self::IMAGE_SIZE,
+                'output_format' => 'png',
             ],
         ]);
 

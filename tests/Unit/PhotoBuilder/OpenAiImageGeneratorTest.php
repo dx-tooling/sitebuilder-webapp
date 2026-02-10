@@ -38,9 +38,9 @@ final class OpenAiImageGeneratorTest extends TestCase
                     /** @var array<string, mixed> $headers */
                     $headers = $options['headers'];
 
-                    return $json['model']           === 'gpt-image-1'
-                        && $json['response_format'] === 'b64_json'
-                        && $json['prompt']          === 'A beautiful sunset'
+                    return $json['model']         === 'gpt-image-1'
+                        && $json['output_format'] === 'png'
+                        && $json['prompt']        === 'A beautiful sunset'
                         && is_string($headers['Authorization'])
                         && str_contains($headers['Authorization'], 'Bearer test-key');
                 })

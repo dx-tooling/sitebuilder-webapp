@@ -35,6 +35,9 @@ interface UploadRequestedDetail {
     suggestedFileName: string;
 }
 
+const SESSION_ID_PLACEHOLDER = "00000000-0000-0000-0000-000000000000";
+const IMAGE_ID_PLACEHOLDER = "00000000-0000-0000-0000-111111111111";
+
 /**
  * Orchestrator controller for the PhotoBuilder page.
  *
@@ -152,7 +155,7 @@ export default class extends Controller {
         if (!this.sessionId) return;
 
         try {
-            const url = this.pollUrlPatternValue.replace("___SESSION_ID___", this.sessionId);
+            const url = this.pollUrlPatternValue.replace(SESSION_ID_PLACEHOLDER, this.sessionId);
             const response = await fetch(url, {
                 headers: { "X-Requested-With": "XMLHttpRequest" },
             });
@@ -244,7 +247,7 @@ export default class extends Controller {
         }
 
         try {
-            const url = this.regeneratePromptsUrlPatternValue.replace("___SESSION_ID___", this.sessionId);
+            const url = this.regeneratePromptsUrlPatternValue.replace(SESSION_ID_PLACEHOLDER, this.sessionId);
             await fetch(url, {
                 method: "POST",
                 headers: {
@@ -275,7 +278,7 @@ export default class extends Controller {
         if (!imageId) return;
 
         // Persist prompt update to backend
-        const url = this.updatePromptUrlPatternValue.replace("___IMAGE_ID___", imageId);
+        const url = this.updatePromptUrlPatternValue.replace(IMAGE_ID_PLACEHOLDER, imageId);
         fetch(url, {
             method: "POST",
             headers: {
@@ -299,7 +302,7 @@ export default class extends Controller {
         if (!imageId || this.anyGenerating) return;
 
         try {
-            const url = this.regenerateImageUrlPatternValue.replace("___IMAGE_ID___", imageId);
+            const url = this.regenerateImageUrlPatternValue.replace(IMAGE_ID_PLACEHOLDER, imageId);
             await fetch(url, {
                 method: "POST",
                 headers: {
@@ -321,7 +324,7 @@ export default class extends Controller {
         if (!imageId) return;
 
         try {
-            const url = this.uploadToMediaStoreUrlPatternValue.replace("___IMAGE_ID___", imageId);
+            const url = this.uploadToMediaStoreUrlPatternValue.replace(IMAGE_ID_PLACEHOLDER, imageId);
             const response = await fetch(url, {
                 method: "POST",
                 headers: {

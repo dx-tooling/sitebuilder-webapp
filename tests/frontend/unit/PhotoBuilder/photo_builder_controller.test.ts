@@ -93,11 +93,11 @@ const createController = (
     const state = controller as unknown as MockControllerState;
 
     state.createSessionUrlValue = "/api/photo-builder/sessions";
-    state.pollUrlPatternValue = "/api/photo-builder/sessions/___SESSION_ID___";
-    state.regeneratePromptsUrlPatternValue = "/api/photo-builder/sessions/___SESSION_ID___/regenerate-prompts";
-    state.regenerateImageUrlPatternValue = "/api/photo-builder/images/___IMAGE_ID___/regenerate";
-    state.updatePromptUrlPatternValue = "/api/photo-builder/images/___IMAGE_ID___/update-prompt";
-    state.uploadToMediaStoreUrlPatternValue = "/api/photo-builder/images/___IMAGE_ID___/upload-to-media-store";
+    state.pollUrlPatternValue = "/api/photo-builder/sessions/00000000-0000-0000-0000-000000000000";
+    state.regeneratePromptsUrlPatternValue = "/api/photo-builder/sessions/00000000-0000-0000-0000-000000000000/regenerate-prompts";
+    state.regenerateImageUrlPatternValue = "/api/photo-builder/images/00000000-0000-0000-0000-111111111111/regenerate";
+    state.updatePromptUrlPatternValue = "/api/photo-builder/images/00000000-0000-0000-0000-111111111111/update-prompt";
+    state.uploadToMediaStoreUrlPatternValue = "/api/photo-builder/images/00000000-0000-0000-0000-111111111111/upload-to-media-store";
     state.csrfTokenValue = "test-csrf-token";
     state.workspaceIdValue = "ws-123";
     state.pagePathValue = "index.html";
