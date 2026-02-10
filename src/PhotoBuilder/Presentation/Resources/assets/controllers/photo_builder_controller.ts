@@ -338,7 +338,7 @@ export default class extends Controller {
             });
 
             if (response.ok) {
-                // Successfully uploaded — could trigger a refresh of the asset browser
+                this.showUploadFinishedBanner();
             }
         } catch {
             // Silently ignore
@@ -346,10 +346,16 @@ export default class extends Controller {
     }
 
     /**
-     * Handle remote-asset-browser:uploadComplete event.
-     * Shows a short-lived "Upload has been finished" banner when present.
+     * Handle remote-asset-browser:uploadComplete event (e.g. upload via sidebar dropzone).
      */
     handleMediaStoreUploadComplete(): void {
+        this.showUploadFinishedBanner();
+    }
+
+    /**
+     * Show the "Upload has been finished" banner and auto-hide after 5s.
+     */
+    private showUploadFinishedBanner(): void {
         if (!this.hasUploadFinishedBannerTarget) {
             return;
         }
