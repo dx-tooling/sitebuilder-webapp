@@ -168,6 +168,17 @@ services:
     # Conversation log formatter - human-readable plain-text output
     App\LlmContentEditor\Infrastructure\ConversationLog\ConversationLogFormatter: ~
 
+    # PhotoBuilder infrastructure bindings
+    App\PhotoBuilder\Infrastructure\Storage\GeneratedImageStorage:
+        arguments:
+            - "%kernel.project_dir%/var/photo-builder"
+
+    App\PhotoBuilder\Infrastructure\Adapter\PromptGeneratorInterface:
+        class: App\PhotoBuilder\Infrastructure\Adapter\OpenAiPromptGenerator
+
+    App\PhotoBuilder\Infrastructure\Adapter\ImageGeneratorInterface:
+        class: App\PhotoBuilder\Infrastructure\Adapter\OpenAiImageGenerator
+
     # LLM content editor facade - inject loggers + enable flag
     App\LlmContentEditor\Facade\LlmContentEditorFacade:
         arguments:

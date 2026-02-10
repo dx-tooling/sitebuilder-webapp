@@ -443,6 +443,23 @@ remote_content_assets:
     browser_upload_success: "Upload abgeschlossen. Asset-Liste wird aktualisiert..."
     browser_upload_error: "Upload fehlgeschlagen. Bitte erneut versuchen."
 
+# PhotoBuilder vertical
+photo_builder:
+    title: "PhotoBuilder"
+    back_to_editor: "Zurück zum Editor"
+    loading: "Wird geladen..."
+    generating_prompts: "Bildprompts werden generiert..."
+    generating_image: "Wird generiert..."
+    user_prompt_label: "Stil-Anweisungen für Bilder"
+    regenerate_prompts: "Bildprompts neu generieren"
+    keep_prompt: "Prompt beibehalten"
+    regenerate_image: "Neu generieren"
+    upload_to_media_store: "Hochladen"
+    embed_into_page: "Generierte Bilder in Inhaltsseite einbetten"
+    default_user_prompt: "Die generierten Bilder sollen Professionalität und Kompetenz vermitteln."
+    prompt_placeholder: "Bildgenerierungs-Prompt..."
+    generate_matching_images: "Passende Bilder generieren"
+
 # Language switcher
 language:
     en: "EN"

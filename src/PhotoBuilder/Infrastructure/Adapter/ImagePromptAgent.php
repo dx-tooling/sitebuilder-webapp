@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\PhotoBuilder\Infrastructure\Adapter;
 
+use App\PhotoBuilder\Domain\Dto\ImagePromptResultDto;
 use GuzzleHttp\HandlerStack;
 use NeuronAI\Agent;
 use NeuronAI\Providers\AIProviderInterface;
@@ -24,14 +25,14 @@ use function sprintf;
  */
 class ImagePromptAgent extends Agent
 {
-    /** @var list<array{prompt: string, fileName: string}> */
+    /** @var list<ImagePromptResultDto> */
     private array $collectedPrompts = [];
 
     public function __construct(
-        private readonly string $apiKey,
-        private readonly string $pageHtml,
-        private readonly int $imageCount,
-        private readonly string $model = 'gpt-5.2',
+        private readonly string        $apiKey,
+        private readonly string        $pageHtml,
+        private readonly int           $imageCount,
+        private readonly string        $model = 'gpt-5.2',
         private readonly ?HandlerStack $guzzleHandlerStack = null,
     ) {
     }
@@ -107,10 +108,7 @@ class ImagePromptAgent extends Agent
                     )
                 )
                 ->setCallable(function (string $prompt, string $file_name): string {
-                    $this->collectedPrompts[] = [
-                        'prompt'   => $prompt,
-                        'fileName' => $file_name,
-                    ];
+                    $this->collectedPrompts[] = new ImagePromptResultDto($prompt, $file_name);
 
                     return 'Prompt delivered successfully.';
                 }),
@@ -120,7 +118,7 @@ class ImagePromptAgent extends Agent
     /**
      * Get all prompts collected via tool calls.
      *
-     * @return list<array{prompt: string, fileName: string}>
+     * @return list<ImagePromptResultDto>
      */
     public function getCollectedPrompts(): array
     {

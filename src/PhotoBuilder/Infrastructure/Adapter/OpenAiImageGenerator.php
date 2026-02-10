@@ -18,8 +18,8 @@ use const JSON_THROW_ON_ERROR;
  */
 class OpenAiImageGenerator implements ImageGeneratorInterface
 {
-    private const string API_URL   = 'https://api.openai.com/v1/images/generations';
-    private const string MODEL     = 'gpt-image-1';
+    private const string API_URL    = 'https://api.openai.com/v1/images/generations';
+    private const string MODEL      = 'gpt-image-1';
     private const string IMAGE_SIZE = '1024x1024';
 
     public function __construct(
@@ -56,7 +56,7 @@ class OpenAiImageGenerator implements ImageGeneratorInterface
         /** @var array{data: list<array{b64_json: string}>} $result */
         $result = json_decode($response->getContent(), true, 512, JSON_THROW_ON_ERROR);
 
-        if (!isset($result['data'][0]['b64_json'])) {
+        if (!array_key_exists(0, $result['data'])) {
             throw new RuntimeException('OpenAI image generation API returned unexpected response structure.');
         }
 

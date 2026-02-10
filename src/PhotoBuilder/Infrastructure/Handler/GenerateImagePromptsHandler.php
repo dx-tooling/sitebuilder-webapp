@@ -82,8 +82,10 @@ final readonly class GenerateImagePromptsHandler
             $this->entityManager->flush();
 
             foreach ($session->getImages() as $image) {
-                if ($image->getPrompt() !== null && $image->getPrompt() !== '') {
-                    $this->messageBus->dispatch(new GenerateImageMessage($image->getId()));
+                $imageId = $image->getId();
+
+                if ($imageId !== null && $image->getPrompt() !== null && $image->getPrompt() !== '') {
+                    $this->messageBus->dispatch(new GenerateImageMessage($imageId));
                 }
             }
         } catch (Throwable $e) {

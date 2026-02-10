@@ -2,198 +2,204 @@
 
 declare(strict_types=1);
 
+namespace Tests\Unit\PhotoBuilder;
+
+use App\PhotoBuilder\Domain\Dto\ImagePromptResultDto;
 use App\PhotoBuilder\Domain\Entity\PhotoImage;
 use App\PhotoBuilder\Domain\Entity\PhotoSession;
 use App\PhotoBuilder\Domain\Enum\PhotoImageStatus;
 use App\PhotoBuilder\Domain\Enum\PhotoSessionStatus;
 use App\PhotoBuilder\Domain\Service\PhotoBuilderService;
 use Doctrine\ORM\EntityManagerInterface;
+use PHPUnit\Framework\TestCase;
+use ReflectionClass;
 
-describe('PhotoBuilderService', function (): void {
-    describe('IMAGE_COUNT', function (): void {
-        it('is defined as 5', function (): void {
-            expect(PhotoBuilderService::IMAGE_COUNT)->toBe(5);
-        });
-    });
+final class PhotoBuilderServiceTest extends TestCase
+{
+    public function testImageCountIsPositiveInteger(): void
+    {
+        self::assertGreaterThan(0, PhotoBuilderService::IMAGE_COUNT);
+    }
 
-    describe('createSession', function (): void {
-        it('creates a session with IMAGE_COUNT images', function (): void {
-            $em = $this->createMock(EntityManagerInterface::class);
-            $em->expects($this->once())->method('persist');
-            $em->expects($this->once())->method('flush');
+    public function testCreateSessionCreatesSessionWithImageCountImages(): void
+    {
+        $em = $this->createMock(EntityManagerInterface::class);
+        $em->expects(self::once())->method('persist');
+        $em->expects(self::once())->method('flush');
 
-            $service = new PhotoBuilderService($em);
-            $session = $service->createSession('ws-123', 'conv-456', 'index.html', 'Generate images');
+        $service = new PhotoBuilderService($em);
+        $session = $service->createSession('ws-123', 'conv-456', 'index.html', 'Generate images');
 
-            expect($session->getWorkspaceId())->toBe('ws-123')
-                ->and($session->getConversationId())->toBe('conv-456')
-                ->and($session->getPagePath())->toBe('index.html')
-                ->and($session->getUserPrompt())->toBe('Generate images')
-                ->and($session->getStatus())->toBe(PhotoSessionStatus::GeneratingPrompts)
-                ->and($session->getImages())->toHaveCount(PhotoBuilderService::IMAGE_COUNT);
+        self::assertSame('ws-123', $session->getWorkspaceId());
+        self::assertSame('conv-456', $session->getConversationId());
+        self::assertSame('index.html', $session->getPagePath());
+        self::assertSame('Generate images', $session->getUserPrompt());
+        self::assertSame(PhotoSessionStatus::GeneratingPrompts, $session->getStatus());
+        self::assertCount(PhotoBuilderService::IMAGE_COUNT, $session->getImages());
 
-            // Verify positions are 0 through IMAGE_COUNT-1
-            $positions = [];
-            foreach ($session->getImages() as $image) {
-                $positions[] = $image->getPosition();
-                expect($image->getStatus())->toBe(PhotoImageStatus::Pending);
-            }
+        // Verify positions are 0 through IMAGE_COUNT-1
+        $positions = [];
+        foreach ($session->getImages() as $image) {
+            $positions[] = $image->getPosition();
+            self::assertSame(PhotoImageStatus::Pending, $image->getStatus());
+        }
 
-            expect($positions)->toBe(range(0, PhotoBuilderService::IMAGE_COUNT - 1));
-        });
-    });
+        self::assertSame(range(0, PhotoBuilderService::IMAGE_COUNT - 1), $positions);
+    }
 
-    describe('updateImagePrompts', function (): void {
-        it('updates prompts for all images when no keep list provided', function (): void {
-            $em      = $this->createMock(EntityManagerInterface::class);
-            $service = new PhotoBuilderService($em);
+    public function testUpdateImagePromptsUpdatesAllImagesWhenNoKeepList(): void
+    {
+        $em      = $this->createMock(EntityManagerInterface::class);
+        $service = new PhotoBuilderService($em);
 
-            $session = new PhotoSession('ws-123', 'conv-456', 'index.html', 'prompt');
+        $session = new PhotoSession('ws-123', 'conv-456', 'index.html', 'prompt');
 
-            for ($i = 0; $i < 3; $i++) {
-                new PhotoImage($session, $i);
-            }
+        for ($i = 0; $i < 3; ++$i) {
+            new PhotoImage($session, $i);
+        }
 
-            $promptResults = [
-                ['prompt' => 'Prompt A', 'fileName' => 'a.jpg'],
-                ['prompt' => 'Prompt B', 'fileName' => 'b.jpg'],
-                ['prompt' => 'Prompt C', 'fileName' => 'c.jpg'],
-            ];
+        $promptResults = [
+            new ImagePromptResultDto('Prompt A', 'a.jpg'),
+            new ImagePromptResultDto('Prompt B', 'b.jpg'),
+            new ImagePromptResultDto('Prompt C', 'c.jpg'),
+        ];
 
-            $changed = $service->updateImagePrompts($session, $promptResults);
+        $changed = $service->updateImagePrompts($session, $promptResults);
 
-            expect($changed)->toHaveCount(3);
+        self::assertCount(3, $changed);
 
-            $images = $session->getImages()->toArray();
-            usort($images, static fn (PhotoImage $a, PhotoImage $b) => $a->getPosition() <=> $b->getPosition());
+        $images = $session->getImages()->toArray();
+        usort($images, static fn (PhotoImage $a, PhotoImage $b) => $a->getPosition() <=> $b->getPosition());
 
-            expect($images[0]->getPrompt())->toBe('Prompt A')
-                ->and($images[0]->getSuggestedFileName())->toBe('a.jpg')
-                ->and($images[1]->getPrompt())->toBe('Prompt B')
-                ->and($images[1]->getSuggestedFileName())->toBe('b.jpg')
-                ->and($images[2]->getPrompt())->toBe('Prompt C')
-                ->and($images[2]->getSuggestedFileName())->toBe('c.jpg');
-        });
+        self::assertSame('Prompt A', $images[0]->getPrompt());
+        self::assertSame('a.jpg', $images[0]->getSuggestedFileName());
+        self::assertSame('Prompt B', $images[1]->getPrompt());
+        self::assertSame('b.jpg', $images[1]->getSuggestedFileName());
+        self::assertSame('Prompt C', $images[2]->getPrompt());
+        self::assertSame('c.jpg', $images[2]->getSuggestedFileName());
+    }
 
-        it('skips images in the keep list', function (): void {
-            $em      = $this->createMock(EntityManagerInterface::class);
-            $service = new PhotoBuilderService($em);
+    public function testUpdateImagePromptsSkipsImagesInKeepList(): void
+    {
+        $em      = $this->createMock(EntityManagerInterface::class);
+        $service = new PhotoBuilderService($em);
 
-            $session = new PhotoSession('ws-123', 'conv-456', 'index.html', 'prompt');
+        $session = new PhotoSession('ws-123', 'conv-456', 'index.html', 'prompt');
 
-            $images = [];
-            for ($i = 0; $i < 3; $i++) {
-                $images[] = new PhotoImage($session, $i);
-            }
+        $images = [];
+        for ($i = 0; $i < 3; ++$i) {
+            $images[] = new PhotoImage($session, $i);
+        }
 
-            // Pre-set image 1 with existing prompt
-            $images[1]->setPrompt('Original prompt');
-            $images[1]->setSuggestedFileName('original.jpg');
+        // Pre-set image 1 with existing prompt
+        $images[1]->setPrompt('Original prompt');
+        $images[1]->setSuggestedFileName('original.jpg');
 
-            // Use reflection to set IDs for the keep list
-            $ref = new ReflectionClass(PhotoImage::class);
-            $idProp = $ref->getProperty('id');
-            $idProp->setValue($images[0], 'id-0');
-            $idProp->setValue($images[1], 'id-1');
-            $idProp->setValue($images[2], 'id-2');
+        // Use reflection to set IDs for the keep list
+        $ref    = new ReflectionClass(PhotoImage::class);
+        $idProp = $ref->getProperty('id');
+        $idProp->setValue($images[0], 'id-0');
+        $idProp->setValue($images[1], 'id-1');
+        $idProp->setValue($images[2], 'id-2');
 
-            $promptResults = [
-                ['prompt' => 'New A', 'fileName' => 'new-a.jpg'],
-                ['prompt' => 'New B', 'fileName' => 'new-b.jpg'],
-                ['prompt' => 'New C', 'fileName' => 'new-c.jpg'],
-            ];
+        $promptResults = [
+            new ImagePromptResultDto('New A', 'new-a.jpg'),
+            new ImagePromptResultDto('New B', 'new-b.jpg'),
+            new ImagePromptResultDto('New C', 'new-c.jpg'),
+        ];
 
-            $changed = $service->updateImagePrompts($session, $promptResults, ['id-1']);
+        $changed = $service->updateImagePrompts($session, $promptResults, ['id-1']);
 
-            expect($changed)->toHaveCount(2);
+        self::assertCount(2, $changed);
 
-            // Image 1 should keep its original prompt
-            expect($images[1]->getPrompt())->toBe('Original prompt')
-                ->and($images[1]->getSuggestedFileName())->toBe('original.jpg');
+        // Image 1 should keep its original prompt
+        self::assertSame('Original prompt', $images[1]->getPrompt());
+        self::assertSame('original.jpg', $images[1]->getSuggestedFileName());
 
-            // Images 0 and 2 should be updated
-            expect($images[0]->getPrompt())->toBe('New A')
-                ->and($images[2]->getPrompt())->toBe('New C');
-        });
+        // Images 0 and 2 should be updated
+        self::assertSame('New A', $images[0]->getPrompt());
+        self::assertSame('New C', $images[2]->getPrompt());
+    }
 
-        it('resets image state when updating prompts', function (): void {
-            $em      = $this->createMock(EntityManagerInterface::class);
-            $service = new PhotoBuilderService($em);
+    public function testUpdateImagePromptsResetsImageState(): void
+    {
+        $em      = $this->createMock(EntityManagerInterface::class);
+        $service = new PhotoBuilderService($em);
 
-            $session = new PhotoSession('ws-123', 'conv-456', 'index.html', 'prompt');
-            $image   = new PhotoImage($session, 0);
+        $session = new PhotoSession('ws-123', 'conv-456', 'index.html', 'prompt');
+        $image   = new PhotoImage($session, 0);
 
-            // Simulate a previously completed image
-            $image->setStatus(PhotoImageStatus::Completed);
-            $image->setStoragePath('old/path.png');
-            $image->setErrorMessage('old error');
+        // Simulate a previously completed image
+        $image->setStatus(PhotoImageStatus::Completed);
+        $image->setStoragePath('old/path.png');
+        $image->setErrorMessage('old error');
 
-            $promptResults = [
-                ['prompt' => 'New prompt', 'fileName' => 'new.jpg'],
-            ];
+        $promptResults = [
+            new ImagePromptResultDto('New prompt', 'new.jpg'),
+        ];
 
-            $service->updateImagePrompts($session, $promptResults);
+        $service->updateImagePrompts($session, $promptResults);
 
-            expect($image->getStatus())->toBe(PhotoImageStatus::Pending)
-                ->and($image->getStoragePath())->toBeNull()
-                ->and($image->getErrorMessage())->toBeNull()
-                ->and($image->getPrompt())->toBe('New prompt');
-        });
-    });
+        self::assertSame(PhotoImageStatus::Pending, $image->getStatus());
+        self::assertNull($image->getStoragePath());
+        self::assertNull($image->getErrorMessage());
+        self::assertSame('New prompt', $image->getPrompt());
+    }
 
-    describe('updateSessionStatusFromImages', function (): void {
-        it('does nothing when not all images are terminal', function (): void {
-            $em = $this->createMock(EntityManagerInterface::class);
-            $em->expects($this->never())->method('flush');
+    public function testUpdateSessionStatusDoesNothingWhenNotAllImagesTerminal(): void
+    {
+        $em = $this->createMock(EntityManagerInterface::class);
+        $em->expects(self::never())->method('flush');
 
-            $service = new PhotoBuilderService($em);
-            $session = new PhotoSession('ws-123', 'conv-456', 'index.html', 'prompt');
-            $image0  = new PhotoImage($session, 0);
-            $image1  = new PhotoImage($session, 1);
+        $service = new PhotoBuilderService($em);
+        $session = new PhotoSession('ws-123', 'conv-456', 'index.html', 'prompt');
+        $image0  = new PhotoImage($session, 0);
+        $image1  = new PhotoImage($session, 1);
 
-            $image0->setStatus(PhotoImageStatus::Completed);
-            // image1 remains Pending
+        $image0->setStatus(PhotoImageStatus::Completed);
+        // image1 remains Pending
 
-            $session->setStatus(PhotoSessionStatus::GeneratingImages);
-            $service->updateSessionStatusFromImages($session);
+        $session->setStatus(PhotoSessionStatus::GeneratingImages);
+        $service->updateSessionStatusFromImages($session);
 
-            expect($session->getStatus())->toBe(PhotoSessionStatus::GeneratingImages);
-        });
+        self::assertSame(PhotoSessionStatus::GeneratingImages, $session->getStatus());
+    }
 
-        it('sets ImagesReady when all images completed', function (): void {
-            $em = $this->createMock(EntityManagerInterface::class);
-            $em->expects($this->once())->method('flush');
+    public function testUpdateSessionStatusSetsImagesReadyWhenAllCompleted(): void
+    {
+        $em = $this->createMock(EntityManagerInterface::class);
+        $em->expects(self::once())->method('flush');
 
-            $service = new PhotoBuilderService($em);
-            $session = new PhotoSession('ws-123', 'conv-456', 'index.html', 'prompt');
-            $image0  = new PhotoImage($session, 0);
-            $image1  = new PhotoImage($session, 1);
+        $service = new PhotoBuilderService($em);
+        $session = new PhotoSession('ws-123', 'conv-456', 'index.html', 'prompt');
+        $image0  = new PhotoImage($session, 0);
+        $image1  = new PhotoImage($session, 1);
 
-            $image0->setStatus(PhotoImageStatus::Completed);
-            $image1->setStatus(PhotoImageStatus::Completed);
+        $image0->setStatus(PhotoImageStatus::Completed);
+        $image1->setStatus(PhotoImageStatus::Completed);
 
-            $session->setStatus(PhotoSessionStatus::GeneratingImages);
-            $service->updateSessionStatusFromImages($session);
+        $session->setStatus(PhotoSessionStatus::GeneratingImages);
+        $service->updateSessionStatusFromImages($session);
 
-            expect($session->getStatus())->toBe(PhotoSessionStatus::ImagesReady);
-        });
+        self::assertSame(PhotoSessionStatus::ImagesReady, $session->getStatus());
+    }
 
-        it('sets ImagesReady even when some images failed', function (): void {
-            $em = $this->createMock(EntityManagerInterface::class);
-            $em->expects($this->once())->method('flush');
+    public function testUpdateSessionStatusSetsImagesReadyEvenWhenSomeFailed(): void
+    {
+        $em = $this->createMock(EntityManagerInterface::class);
+        $em->expects(self::once())->method('flush');
 
-            $service = new PhotoBuilderService($em);
-            $session = new PhotoSession('ws-123', 'conv-456', 'index.html', 'prompt');
-            $image0  = new PhotoImage($session, 0);
-            $image1  = new PhotoImage($session, 1);
+        $service = new PhotoBuilderService($em);
+        $session = new PhotoSession('ws-123', 'conv-456', 'index.html', 'prompt');
+        $image0  = new PhotoImage($session, 0);
+        $image1  = new PhotoImage($session, 1);
 
-            $image0->setStatus(PhotoImageStatus::Completed);
-            $image1->setStatus(PhotoImageStatus::Failed);
+        $image0->setStatus(PhotoImageStatus::Completed);
+        $image1->setStatus(PhotoImageStatus::Failed);
 
-            $session->setStatus(PhotoSessionStatus::GeneratingImages);
-            $service->updateSessionStatusFromImages($session);
+        $session->setStatus(PhotoSessionStatus::GeneratingImages);
+        $service->updateSessionStatusFromImages($session);
 
-            expect($session->getStatus())->toBe(PhotoSessionStatus::ImagesReady);
-        });
-    });
-});
+        self::assertSame(PhotoSessionStatus::ImagesReady, $session->getStatus());
+    }
+}

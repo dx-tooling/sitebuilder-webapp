@@ -4,91 +4,145 @@ declare(strict_types=1);
 
 use App\PhotoBuilder\Infrastructure\Storage\GeneratedImageStorage;
 
-describe('GeneratedImageStorage', function (): void {
-    beforeEach(function (): void {
-        $this->baseDir = sys_get_temp_dir() . '/photo-builder-test-' . uniqid();
-        $this->storage = new GeneratedImageStorage($this->baseDir);
-    });
+function cleanupTestDir(string $dir): void
+{
+    if (!is_dir($dir)) {
+        return;
+    }
 
-    afterEach(function (): void {
-        // Clean up temp directory
-        if (is_dir($this->baseDir)) {
-            $iterator = new RecursiveIteratorIterator(
-                new RecursiveDirectoryIterator($this->baseDir, RecursiveDirectoryIterator::SKIP_DOTS),
-                RecursiveIteratorIterator::CHILD_FIRST
-            );
-
-            foreach ($iterator as $file) {
-                if ($file->isDir()) {
-                    rmdir($file->getPathname());
-                } else {
-                    unlink($file->getPathname());
-                }
-            }
-
-            rmdir($this->baseDir);
+    /** @var SplFileInfo $file */
+    foreach (new RecursiveIteratorIterator(
+        new RecursiveDirectoryIterator($dir, RecursiveDirectoryIterator::SKIP_DOTS),
+        RecursiveIteratorIterator::CHILD_FIRST
+    ) as $file) {
+        if ($file->isDir()) {
+            rmdir($file->getPathname());
+        } else {
+            unlink($file->getPathname());
         }
-    });
+    }
 
+    rmdir($dir);
+}
+
+/**
+ * @return array{string, GeneratedImageStorage}
+ */
+function createStorageFixture(): array
+{
+    $baseDir = sys_get_temp_dir() . '/photo-builder-test-' . uniqid();
+
+    return [$baseDir, new GeneratedImageStorage($baseDir)];
+}
+
+describe('GeneratedImageStorage', function (): void {
     describe('save', function (): void {
         it('saves image data and returns relative path', function (): void {
-            $imageData   = 'fake-png-data';
-            $storagePath = $this->storage->save('session-123', 0, $imageData);
+            [$baseDir, $storage] = createStorageFixture();
 
-            expect($storagePath)->toBe('session-123/0.png');
+            try {
+                $imageData   = 'fake-png-data';
+                $storagePath = $storage->save('session-123', 0, $imageData);
 
-            $absolutePath = $this->baseDir . '/' . $storagePath;
-            expect(file_exists($absolutePath))->toBeTrue()
-                ->and(file_get_contents($absolutePath))->toBe('fake-png-data');
+                expect($storagePath)->toBe('session-123/0.png');
+
+                $absolutePath = $baseDir . '/' . $storagePath;
+                expect(file_exists($absolutePath))->toBeTrue()
+                    ->and(file_get_contents($absolutePath))->toBe('fake-png-data');
+            } finally {
+                cleanupTestDir($baseDir);
+            }
         });
 
         it('creates directory structure if not exists', function (): void {
-            $this->storage->save('new-session', 3, 'data');
+            [$baseDir, $storage] = createStorageFixture();
 
-            $dir = $this->baseDir . '/new-session';
-            expect(is_dir($dir))->toBeTrue();
+            try {
+                $storage->save('new-session', 3, 'data');
+
+                $dir = $baseDir . '/new-session';
+                expect(is_dir($dir))->toBeTrue();
+            } finally {
+                cleanupTestDir($baseDir);
+            }
         });
 
         it('handles multiple positions in same session', function (): void {
-            $this->storage->save('session-abc', 0, 'image-0');
-            $this->storage->save('session-abc', 1, 'image-1');
-            $this->storage->save('session-abc', 4, 'image-4');
+            [$baseDir, $storage] = createStorageFixture();
 
-            expect(file_get_contents($this->baseDir . '/session-abc/0.png'))->toBe('image-0')
-                ->and(file_get_contents($this->baseDir . '/session-abc/1.png'))->toBe('image-1')
-                ->and(file_get_contents($this->baseDir . '/session-abc/4.png'))->toBe('image-4');
+            try {
+                $storage->save('session-abc', 0, 'image-0');
+                $storage->save('session-abc', 1, 'image-1');
+                $storage->save('session-abc', 4, 'image-4');
+
+                expect(file_get_contents($baseDir . '/session-abc/0.png'))->toBe('image-0')
+                    ->and(file_get_contents($baseDir . '/session-abc/1.png'))->toBe('image-1')
+                    ->and(file_get_contents($baseDir . '/session-abc/4.png'))->toBe('image-4');
+            } finally {
+                cleanupTestDir($baseDir);
+            }
         });
     });
 
     describe('read', function (): void {
         it('reads saved image data', function (): void {
-            $this->storage->save('session-123', 0, 'my-image-data');
+            [$baseDir, $storage] = createStorageFixture();
 
-            $data = $this->storage->read('session-123/0.png');
-            expect($data)->toBe('my-image-data');
+            try {
+                $storage->save('session-123', 0, 'my-image-data');
+
+                $data = $storage->read('session-123/0.png');
+                expect($data)->toBe('my-image-data');
+            } finally {
+                cleanupTestDir($baseDir);
+            }
         });
 
         it('throws exception for non-existent file', function (): void {
-            expect(fn () => $this->storage->read('nonexistent/0.png'))
-                ->toThrow(RuntimeException::class);
+            [$baseDir, $storage] = createStorageFixture();
+
+            try {
+                expect(fn () => $storage->read('nonexistent/0.png'))
+                    ->toThrow(RuntimeException::class);
+            } finally {
+                cleanupTestDir($baseDir);
+            }
         });
     });
 
     describe('getAbsolutePath', function (): void {
         it('returns absolute path for a relative storage path', function (): void {
-            $absolute = $this->storage->getAbsolutePath('session-123/0.png');
-            expect($absolute)->toBe($this->baseDir . '/session-123/0.png');
+            [$baseDir, $storage] = createStorageFixture();
+
+            try {
+                $absolute = $storage->getAbsolutePath('session-123/0.png');
+                expect($absolute)->toBe($baseDir . '/session-123/0.png');
+            } finally {
+                cleanupTestDir($baseDir);
+            }
         });
     });
 
     describe('exists', function (): void {
         it('returns true for existing file', function (): void {
-            $this->storage->save('session-123', 0, 'data');
-            expect($this->storage->exists('session-123/0.png'))->toBeTrue();
+            [$baseDir, $storage] = createStorageFixture();
+
+            try {
+                $storage->save('session-123', 0, 'data');
+                expect($storage->exists('session-123/0.png'))->toBeTrue();
+            } finally {
+                cleanupTestDir($baseDir);
+            }
         });
 
         it('returns false for non-existing file', function (): void {
-            expect($this->storage->exists('nonexistent/0.png'))->toBeFalse();
+            [$baseDir, $storage] = createStorageFixture();
+
+            try {
+                expect($storage->exists('nonexistent/0.png'))->toBeFalse();
+            } finally {
+                cleanupTestDir($baseDir);
+            }
         });
     });
 });

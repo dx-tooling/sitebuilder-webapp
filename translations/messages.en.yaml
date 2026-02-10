@@ -443,6 +443,23 @@ remote_content_assets:
     browser_upload_success: "Upload complete. Refreshing asset list..."
     browser_upload_error: "Upload failed. Please try again."
 
+# PhotoBuilder vertical
+photo_builder:
+    title: "PhotoBuilder"
+    back_to_editor: "Back to editor"
+    loading: "Loading..."
+    generating_prompts: "Generating image prompts..."
+    generating_image: "Generating..."
+    user_prompt_label: "Image style instructions"
+    regenerate_prompts: "Regenerate image prompts"
+    keep_prompt: "Keep prompt"
+    regenerate_image: "Regenerate"
+    upload_to_media_store: "Upload"
+    embed_into_page: "Embed generated images into content page"
+    default_user_prompt: "The generated images should convey professionalism and competence."
+    prompt_placeholder: "Image generation prompt..."
+    generate_matching_images: "Generate matching images"
+
 # Language switcher
 language:
     en: "EN"

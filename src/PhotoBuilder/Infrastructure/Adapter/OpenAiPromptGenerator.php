@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\PhotoBuilder\Infrastructure\Adapter;
 
+use App\PhotoBuilder\Domain\Dto\ImagePromptResultDto;
 use GuzzleHttp\HandlerStack;
 use NeuronAI\Chat\Messages\UserMessage;
 use RuntimeException;
@@ -22,13 +23,13 @@ class OpenAiPromptGenerator implements PromptGeneratorInterface
     }
 
     /**
-     * @return list<array{prompt: string, fileName: string}>
+     * @return list<ImagePromptResultDto>
      */
     public function generatePrompts(
         string $pageHtml,
         string $userPrompt,
         string $apiKey,
-        int $count,
+        int    $count,
     ): array {
         $agent = new ImagePromptAgent(
             $apiKey,

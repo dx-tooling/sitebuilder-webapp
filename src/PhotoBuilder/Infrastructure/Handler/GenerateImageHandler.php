@@ -15,6 +15,7 @@ use App\ProjectMgmt\Facade\ProjectMgmtFacadeInterface;
 use App\WorkspaceMgmt\Facade\WorkspaceMgmtFacadeInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
+use RuntimeException;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Throwable;
 
@@ -68,8 +69,14 @@ final readonly class GenerateImageHandler
             );
 
             // Store on disk
+            $sessionId = $session->getId();
+
+            if ($sessionId === null) {
+                throw new RuntimeException('PhotoSession has no ID.');
+            }
+
             $storagePath = $this->imageStorage->save(
-                $session->getId() ?? '',
+                $sessionId,
                 $image->getPosition(),
                 $imageData,
             );

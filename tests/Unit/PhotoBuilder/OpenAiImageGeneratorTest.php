@@ -2,68 +2,86 @@
 
 declare(strict_types=1);
 
+namespace Tests\Unit\PhotoBuilder;
+
 use App\PhotoBuilder\Infrastructure\Adapter\OpenAiImageGenerator;
+use PHPUnit\Framework\TestCase;
+use RuntimeException;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 
-describe('OpenAiImageGenerator', function (): void {
-    describe('generateImage', function (): void {
-        it('returns decoded image data on success', function (): void {
-            $fakeImageData   = 'fake-png-image-bytes';
-            $fakeB64         = base64_encode($fakeImageData);
-            $responsePayload = json_encode(['data' => [['b64_json' => $fakeB64]]]);
+final class OpenAiImageGeneratorTest extends TestCase
+{
+    public function testReturnsDecodedImageDataOnSuccess(): void
+    {
+        $fakeImageData   = 'fake-png-image-bytes';
+        $fakeB64         = base64_encode($fakeImageData);
+        $responsePayload = json_encode(['data' => [['b64_json' => $fakeB64]]]);
 
-            $response = $this->createMock(ResponseInterface::class);
-            $response->method('getStatusCode')->willReturn(200);
-            $response->method('getContent')->willReturn($responsePayload);
+        $response = $this->createMock(ResponseInterface::class);
+        $response->method('getStatusCode')->willReturn(200);
+        $response->method('getContent')->willReturn($responsePayload);
 
-            $httpClient = $this->createMock(HttpClientInterface::class);
-            $httpClient->expects($this->once())
-                ->method('request')
-                ->with(
-                    'POST',
-                    'https://api.openai.com/v1/images/generations',
-                    $this->callback(function (array $options) {
-                        return $options['json']['model'] === 'gpt-image-1'
-                            && $options['json']['response_format'] === 'b64_json'
-                            && $options['json']['prompt'] === 'A beautiful sunset'
-                            && str_contains($options['headers']['Authorization'], 'Bearer test-key');
-                    })
-                )
-                ->willReturn($response);
+        $httpClient = $this->createMock(HttpClientInterface::class);
+        $httpClient->expects(self::once())
+            ->method('request')
+            ->with(
+                'POST',
+                'https://api.openai.com/v1/images/generations',
+                self::callback(static function (mixed $options): bool {
+                    if (!is_array($options)) {
+                        return false;
+                    }
 
-            $generator = new OpenAiImageGenerator($httpClient);
-            $result    = $generator->generateImage('A beautiful sunset', 'test-key');
+                    /** @var array<string, mixed> $json */
+                    $json = $options['json'];
+                    /** @var array<string, mixed> $headers */
+                    $headers = $options['headers'];
 
-            expect($result)->toBe($fakeImageData);
-        });
+                    return $json['model']           === 'gpt-image-1'
+                        && $json['response_format'] === 'b64_json'
+                        && $json['prompt']          === 'A beautiful sunset'
+                        && is_string($headers['Authorization'])
+                        && str_contains($headers['Authorization'], 'Bearer test-key');
+                })
+            )
+            ->willReturn($response);
 
-        it('throws exception on non-200 status', function (): void {
-            $response = $this->createMock(ResponseInterface::class);
-            $response->method('getStatusCode')->willReturn(429);
-            $response->method('getContent')->willReturn('Rate limit exceeded');
+        $generator = new OpenAiImageGenerator($httpClient);
+        $result    = $generator->generateImage('A beautiful sunset', 'test-key');
 
-            $httpClient = $this->createMock(HttpClientInterface::class);
-            $httpClient->method('request')->willReturn($response);
+        self::assertSame($fakeImageData, $result);
+    }
 
-            $generator = new OpenAiImageGenerator($httpClient);
+    public function testThrowsExceptionOnNon200Status(): void
+    {
+        $response = $this->createMock(ResponseInterface::class);
+        $response->method('getStatusCode')->willReturn(429);
+        $response->method('getContent')->willReturn('Rate limit exceeded');
 
-            expect(fn () => $generator->generateImage('prompt', 'key'))
-                ->toThrow(RuntimeException::class, 'status 429');
-        });
+        $httpClient = $this->createMock(HttpClientInterface::class);
+        $httpClient->method('request')->willReturn($response);
 
-        it('throws exception on missing data in response', function (): void {
-            $response = $this->createMock(ResponseInterface::class);
-            $response->method('getStatusCode')->willReturn(200);
-            $response->method('getContent')->willReturn(json_encode(['data' => []]));
+        $generator = new OpenAiImageGenerator($httpClient);
 
-            $httpClient = $this->createMock(HttpClientInterface::class);
-            $httpClient->method('request')->willReturn($response);
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('status 429');
+        $generator->generateImage('prompt', 'key');
+    }
 
-            $generator = new OpenAiImageGenerator($httpClient);
+    public function testThrowsExceptionOnMissingDataInResponse(): void
+    {
+        $response = $this->createMock(ResponseInterface::class);
+        $response->method('getStatusCode')->willReturn(200);
+        $response->method('getContent')->willReturn(json_encode(['data' => []]));
 
-            expect(fn () => $generator->generateImage('prompt', 'key'))
-                ->toThrow(RuntimeException::class, 'unexpected response structure');
-        });
-    });
-});
+        $httpClient = $this->createMock(HttpClientInterface::class);
+        $httpClient->method('request')->willReturn($response);
+
+        $generator = new OpenAiImageGenerator($httpClient);
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('unexpected response structure');
+        $generator->generateImage('prompt', 'key');
+    }
+}

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\PhotoBuilder\Domain\Service;
 
+use App\PhotoBuilder\Domain\Dto\ImagePromptResultDto;
 use App\PhotoBuilder\Domain\Entity\PhotoImage;
 use App\PhotoBuilder\Domain\Entity\PhotoSession;
 use App\PhotoBuilder\Domain\Enum\PhotoImageStatus;
@@ -39,7 +40,7 @@ class PhotoBuilderService
             $userPrompt,
         );
 
-        for ($i = 0; $i < self::IMAGE_COUNT; $i++) {
+        for ($i = 0; $i < self::IMAGE_COUNT; ++$i) {
             new PhotoImage($session, $i);
         }
 
@@ -52,15 +53,15 @@ class PhotoBuilderService
     /**
      * Update image prompts from LLM-generated results.
      *
-     * @param list<array{prompt: string, fileName: string}> $promptResults
-     * @param list<string> $keepImageIds Image IDs whose prompts should not be updated
+     * @param list<ImagePromptResultDto> $promptResults
+     * @param list<string>               $keepImageIds  Image IDs whose prompts should not be updated
      *
      * @return list<PhotoImage> Images whose prompts were actually changed
      */
     public function updateImagePrompts(
         PhotoSession $session,
-        array $promptResults,
-        array $keepImageIds = [],
+        array        $promptResults,
+        array        $keepImageIds = [],
     ): array {
         $changedImages = [];
         $images        = $session->getImages()->toArray();
@@ -72,12 +73,12 @@ class PhotoBuilderService
                 continue;
             }
 
-            if (!isset($promptResults[$index])) {
+            if (!array_key_exists($index, $promptResults)) {
                 continue;
             }
 
-            $image->setPrompt($promptResults[$index]['prompt']);
-            $image->setSuggestedFileName($promptResults[$index]['fileName']);
+            $image->setPrompt($promptResults[$index]->prompt);
+            $image->setSuggestedFileName($promptResults[$index]->fileName);
             $image->setStatus(PhotoImageStatus::Pending);
             $image->setStoragePath(null);
             $image->setErrorMessage(null);

@@ -1,0 +1,202 @@
+{% extends '@common.presentation/base_appshell.html.twig' %}
+
+{% block title %}{{ 'photo_builder.title'|trans }} — {{ pagePath }}{% endblock %}
+
+{% block body %}
+    <div class="max-w-7xl mx-auto"
+         {{ stimulus_controller('photo-builder', {
+             createSessionUrl: path('photo_builder.presentation.create_session'),
+             pollUrlPattern: path('photo_builder.presentation.poll_session', { sessionId: '___SESSION_ID___' }),
+             regeneratePromptsUrlPattern: path('photo_builder.presentation.regenerate_prompts', { sessionId: '___SESSION_ID___' }),
+             regenerateImageUrlPattern: path('photo_builder.presentation.regenerate_image', { imageId: '___IMAGE_ID___' }),
+             updatePromptUrlPattern: path('photo_builder.presentation.update_prompt', { imageId: '___IMAGE_ID___' }),
+             uploadToMediaStoreUrlPattern: path('photo_builder.presentation.upload_to_media_store', { imageId: '___IMAGE_ID___' }),
+             csrfToken: csrf_token('photo_builder'),
+             workspaceId: workspace.id,
+             pagePath: pagePath,
+             conversationId: conversationId,
+             imageCount: imageCount,
+             defaultUserPrompt: 'photo_builder.default_user_prompt'|trans,
+             editorUrl: path('chat_based_content_editor.presentation.show', { conversationId: conversationId }),
+             hasRemoteAssets: hasRemoteAssets,
+         }) }}
+         {{ stimulus_action('photo-builder', 'handlePromptEdited', 'photo-image:promptEdited') }}
+         {{ stimulus_action('photo-builder', 'handleRegenerateImage', 'photo-image:regenerateRequested') }}
+         {{ stimulus_action('photo-builder', 'handleUploadToMediaStore', 'photo-image:uploadRequested') }}>
+
+        {# Header #}
+        <div class="mb-6 flex items-center justify-between">
+            <div>
+                <h1 class="text-2xl font-bold text-dark-900 dark:text-dark-100">
+                    {{ 'photo_builder.title'|trans }}
+                </h1>
+                <p class="mt-1 text-sm text-dark-500 dark:text-dark-400">
+                    {{ pagePath }}
+                </p>
+            </div>
+            <a href="{{ path('chat_based_content_editor.presentation.show', { conversationId: conversationId }) }}"
+               class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-dark-700 dark:text-dark-200 bg-white dark:bg-dark-700 border border-dark-300 dark:border-dark-600 rounded-md shadow-sm hover:bg-dark-50 dark:hover:bg-dark-600">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18"/>
+                </svg>
+                {{ 'photo_builder.back_to_editor'|trans }}
+            </a>
+        </div>
+
+        <div class="flex flex-col 2xl:flex-row gap-6">
+            {# Main content area #}
+            <div class="flex-1 min-w-0 space-y-6 {{ hasRemoteAssets ? '2xl:max-w-[65%]' : '' }}">
+
+                {# Loading overlay #}
+                <div {{ stimulus_target('photo-builder', 'loadingOverlay') }}
+                     class="flex flex-col items-center justify-center py-20 space-y-4">
+                    <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+                    <p class="text-dark-500 dark:text-dark-400 text-sm">
+                        {{ 'photo_builder.generating_prompts'|trans }}
+                    </p>
+                </div>
+
+                {# Main content (hidden until prompts ready) #}
+                <div {{ stimulus_target('photo-builder', 'mainContent') }} class="hidden space-y-6">
+
+                    {# User prompt section #}
+                    <div class="bg-white dark:bg-dark-800 rounded-lg border border-dark-200 dark:border-dark-700 p-4">
+                        <label class="block text-sm font-medium text-dark-700 dark:text-dark-300 mb-2">
+                            {{ 'photo_builder.user_prompt_label'|trans }}
+                        </label>
+                        <textarea {{ stimulus_target('photo-builder', 'userPrompt') }}
+                                  rows="3"
+                                  class="w-full rounded-md border-dark-300 dark:border-dark-600 bg-white dark:bg-dark-700 text-dark-900 dark:text-dark-100 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm"
+                                  placeholder="{{ 'photo_builder.default_user_prompt'|trans }}"></textarea>
+                        <div class="mt-3 flex justify-end">
+                            <button {{ stimulus_target('photo-builder', 'regeneratePromptsButton') }}
+                                    {{ stimulus_action('photo-builder', 'regeneratePrompts') }}
+                                    type="button"
+                                    class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-md shadow-sm hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182"/>
+                                </svg>
+                                {{ 'photo_builder.regenerate_prompts'|trans }}
+                            </button>
+                        </div>
+                    </div>
+
+                    {# Image grid #}
+                    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                        {% for i in range(0, imageCount - 1) %}
+                            <div {{ stimulus_controller('photo-image', {
+                                     position: i,
+                                     hasMediaStore: hasRemoteAssets,
+                                 }) }}
+                                 {{ stimulus_target('photo-builder', 'imageCard') }}
+                                 {{ stimulus_action('photo-image', 'updateFromState', 'photo-builder:stateChanged') }}
+                                 class="bg-white dark:bg-dark-800 rounded-lg border border-dark-200 dark:border-dark-700 overflow-hidden">
+
+                                {# Image preview area #}
+                                <div class="aspect-square bg-dark-100 dark:bg-dark-700 relative">
+                                    {# Generating placeholder #}
+                                    <div {{ stimulus_target('photo-image', 'placeholder') }}
+                                         class="absolute inset-0 flex flex-col items-center justify-center space-y-2">
+                                        <div class="animate-pulse rounded-full h-8 w-8 bg-dark-300 dark:bg-dark-600"></div>
+                                        <span class="text-xs text-dark-400 dark:text-dark-500">
+                                            {{ 'photo_builder.generating_image'|trans }}
+                                        </span>
+                                    </div>
+                                    {# Actual image #}
+                                    <img {{ stimulus_target('photo-image', 'image') }}
+                                         class="hidden w-full h-full object-cover"
+                                         alt=""
+                                         loading="lazy"/>
+                                    {# Status badge #}
+                                    <div {{ stimulus_target('photo-image', 'statusBadge') }}
+                                         class="absolute top-2 right-2 hidden">
+                                    </div>
+                                </div>
+
+                                {# Controls #}
+                                <div class="p-3 space-y-3">
+                                    {# Prompt textarea #}
+                                    <textarea {{ stimulus_target('photo-image', 'promptTextarea') }}
+                                              {{ stimulus_action('photo-image', 'onPromptInput', 'input') }}
+                                              rows="3"
+                                              class="w-full rounded-md border-dark-300 dark:border-dark-600 bg-white dark:bg-dark-700 text-dark-900 dark:text-dark-100 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-xs"
+                                              placeholder="{{ 'photo_builder.prompt_placeholder'|trans }}"></textarea>
+
+                                    {# Keep prompt checkbox #}
+                                    <label class="flex items-center gap-2 text-xs text-dark-600 dark:text-dark-400">
+                                        <input {{ stimulus_target('photo-image', 'keepCheckbox') }}
+                                               type="checkbox"
+                                               class="rounded border-dark-300 dark:border-dark-600 text-primary-600 focus:ring-primary-500">
+                                        {{ 'photo_builder.keep_prompt'|trans }}
+                                    </label>
+
+                                    {# Action buttons #}
+                                    <div class="flex gap-2">
+                                        <button {{ stimulus_target('photo-image', 'regenerateButton') }}
+                                                {{ stimulus_action('photo-image', 'requestRegenerate') }}
+                                                type="button"
+                                                class="flex-1 inline-flex items-center justify-center gap-1 px-3 py-1.5 text-xs font-medium text-dark-700 dark:text-dark-200 bg-white dark:bg-dark-700 border border-dark-300 dark:border-dark-600 rounded-md shadow-sm hover:bg-dark-50 dark:hover:bg-dark-600 disabled:opacity-50 disabled:cursor-not-allowed">
+                                            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182"/>
+                                            </svg>
+                                            {{ 'photo_builder.regenerate_image'|trans }}
+                                        </button>
+                                        {% if hasRemoteAssets %}
+                                            <button {{ stimulus_target('photo-image', 'uploadButton') }}
+                                                    {{ stimulus_action('photo-image', 'requestUpload') }}
+                                                    type="button"
+                                                    class="flex-1 inline-flex items-center justify-center gap-1 px-3 py-1.5 text-xs font-medium text-white bg-primary-600 rounded-md shadow-sm hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                                                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"/>
+                                                </svg>
+                                                {{ 'photo_builder.upload_to_media_store'|trans }}
+                                            </button>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+
+                    {# Embed CTA #}
+                    {% if hasRemoteAssets %}
+                        <div class="flex justify-center pt-4">
+                            <button {{ stimulus_target('photo-builder', 'embedButton') }}
+                                    {{ stimulus_action('photo-builder', 'embedIntoPage') }}
+                                    type="button"
+                                    class="inline-flex items-center gap-2 px-6 py-3 text-sm font-medium text-white bg-primary-600 rounded-md shadow-sm hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3.75 21h16.5a2.25 2.25 0 002.25-2.25V6a2.25 2.25 0 00-2.25-2.25H3.75A2.25 2.25 0 001.5 6v12.75A2.25 2.25 0 003.75 21z"/>
+                                </svg>
+                                {{ 'photo_builder.embed_into_page'|trans }}
+                            </button>
+                        </div>
+                    {% endif %}
+
+                </div>
+            </div>
+
+            {# Media store sidebar (conditional) #}
+            {% if hasRemoteAssets %}
+                <div class="mt-6 2xl:mt-0 2xl:w-[35%] 2xl:max-w-md 2xl:sticky 2xl:top-4 flex-shrink-0"
+                     {{ stimulus_controller('remote-asset-browser', {
+                         fetchUrl: path('remote_content_assets.presentation.list', { projectId: project.id }),
+                         windowSize: 20,
+                         addToChatLabel: 'remote_content_assets.browser_add_to_chat'|trans,
+                         openInNewTabLabel: 'remote_content_assets.browser_open_in_new_tab'|trans,
+                         uploadUrl: project.hasS3UploadConfigured() ? path('remote_content_assets.presentation.upload', { projectId: project.id }) : '',
+                         uploadCsrfToken: project.hasS3UploadConfigured() ? csrf_token('remote_asset_upload') : '',
+                         workspaceId: workspace.id
+                     }) }}
+                     {{ stimulus_action('photo-builder', 'handleMediaStoreUploadComplete', 'remote-asset-browser:uploadComplete') }}>
+                    <h2 class="text-lg font-medium text-dark-900 dark:text-dark-100 mb-3">
+                        {{ 'remote_content_assets.browser_title'|trans }}
+                    </h2>
+                    <div {{ stimulus_target('remote-asset-browser', 'container') }}>
+                        {# Content loaded dynamically by remote-asset-browser controller #}
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}
