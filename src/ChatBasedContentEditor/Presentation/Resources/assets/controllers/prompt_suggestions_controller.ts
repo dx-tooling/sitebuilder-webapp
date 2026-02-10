@@ -9,6 +9,7 @@ export default class extends Controller {
         "suggestion",
         "expandButton",
         "collapseButton",
+        "expandCollapseWrapper",
         "suggestionList",
         "formModal",
         "formInput",
@@ -32,6 +33,8 @@ export default class extends Controller {
             default: "Really delete this suggestion?",
         },
         deleteLabel: { type: String, default: "Delete" },
+        showMoreTemplate: { type: String, default: "+{count} more" },
+        showLessLabel: { type: String, default: "Show less" },
     };
 
     declare readonly suggestionTargets: HTMLButtonElement[];
@@ -39,6 +42,8 @@ export default class extends Controller {
     declare readonly expandButtonTarget: HTMLButtonElement;
     declare readonly hasCollapseButtonTarget: boolean;
     declare readonly collapseButtonTarget: HTMLButtonElement;
+    declare readonly hasExpandCollapseWrapperTarget: boolean;
+    declare readonly expandCollapseWrapperTarget: HTMLElement;
     declare readonly maxVisibleValue: number;
 
     declare readonly hasSuggestionListTarget: boolean;
@@ -59,6 +64,8 @@ export default class extends Controller {
     declare readonly addTitleValue: string;
     declare readonly editTitleValue: string;
     declare readonly placeholderValue: string;
+    declare readonly showMoreTemplateValue: string;
+    declare readonly showLessLabelValue: string;
 
     /** null = add mode, number = edit mode (index of suggestion being edited) */
     editIndex: number | null = null;
@@ -377,5 +384,39 @@ export default class extends Controller {
 
             container.appendChild(row);
         });
+
+        // Update expand/collapse buttons based on the new suggestion count
+        this.updateExpandCollapseState(suggestions.length);
+    }
+
+    /**
+     * Show/hide and update the expand/collapse buttons based on the current suggestion count.
+     * Resets to collapsed state so new items beyond maxVisible are hidden by default.
+     */
+    updateExpandCollapseState(totalCount: number): void {
+        if (!this.hasExpandCollapseWrapperTarget) {
+            return;
+        }
+
+        const hiddenCount = totalCount - this.maxVisibleValue;
+
+        if (hiddenCount > 0) {
+            this.expandCollapseWrapperTarget.classList.remove("hidden");
+
+            // Reset to collapsed state
+            if (this.hasExpandButtonTarget) {
+                this.expandButtonTarget.classList.remove("hidden");
+                this.expandButtonTarget.textContent = this.showMoreTemplateValue.replace(
+                    "{count}",
+                    String(hiddenCount),
+                );
+            }
+            if (this.hasCollapseButtonTarget) {
+                this.collapseButtonTarget.classList.add("hidden");
+                this.collapseButtonTarget.textContent = this.showLessLabelValue;
+            }
+        } else {
+            this.expandCollapseWrapperTarget.classList.add("hidden");
+        }
     }
 }

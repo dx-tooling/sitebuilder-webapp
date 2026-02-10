@@ -199,6 +199,7 @@ editor:
     preview_pages: "Preview pages"
     prompt_suggestions_headline: "Prompt suggestions"
     show_more_suggestions: "+%count% more"
+    show_more_suggestions_template: "+{count} more"
     hide_suggestions: "Show less"
     prompt_suggestion_add: "Add"
     prompt_suggestion_edit: "Edit"
