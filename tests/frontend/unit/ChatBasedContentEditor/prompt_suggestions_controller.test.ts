@@ -7,6 +7,7 @@ describe("PromptSuggestionsController", () => {
         suggestionButtons: HTMLButtonElement[];
         expandButton: HTMLButtonElement;
         collapseButton: HTMLButtonElement;
+        expandCollapseWrapper: HTMLElement;
         suggestionList: HTMLElement;
         formModal: HTMLElement;
         formInput: HTMLTextAreaElement;
@@ -43,10 +44,13 @@ describe("PromptSuggestionsController", () => {
             suggestionList.appendChild(row);
         }
 
-        // Create expand/collapse buttons
+        // Create expand/collapse buttons wrapped in a container
+        const expandCollapseWrapper = document.createElement("div");
         const expandButton = document.createElement("button");
         const collapseButton = document.createElement("button");
         collapseButton.classList.add("hidden");
+        expandCollapseWrapper.appendChild(expandButton);
+        expandCollapseWrapper.appendChild(collapseButton);
 
         // Create modal elements
         const formModal = document.createElement("div");
@@ -63,6 +67,8 @@ describe("PromptSuggestionsController", () => {
             expandButtonTarget: HTMLButtonElement;
             hasCollapseButtonTarget: boolean;
             collapseButtonTarget: HTMLButtonElement;
+            hasExpandCollapseWrapperTarget: boolean;
+            expandCollapseWrapperTarget: HTMLElement;
             maxVisibleValue: number;
             dispatch: (name: string, options: unknown) => void;
             hasSuggestionListTarget: boolean;
@@ -82,6 +88,8 @@ describe("PromptSuggestionsController", () => {
             addTitleValue: string;
             editTitleValue: string;
             placeholderValue: string;
+            showMoreTemplateValue: string;
+            showLessLabelValue: string;
         };
 
         state.suggestionTargets = suggestionButtons;
@@ -89,6 +97,8 @@ describe("PromptSuggestionsController", () => {
         state.expandButtonTarget = expandButton;
         state.hasCollapseButtonTarget = true;
         state.collapseButtonTarget = collapseButton;
+        state.hasExpandCollapseWrapperTarget = true;
+        state.expandCollapseWrapperTarget = expandCollapseWrapper;
         state.maxVisibleValue = 3;
         state.dispatch = vi.fn();
         state.hasSuggestionListTarget = true;
@@ -108,12 +118,15 @@ describe("PromptSuggestionsController", () => {
         state.addTitleValue = "Add new suggestion";
         state.editTitleValue = "Edit suggestion";
         state.placeholderValue = "Enter suggestion...";
+        state.showMoreTemplateValue = "+{count} more";
+        state.showLessLabelValue = "Show less";
 
         return {
             controller,
             suggestionButtons,
             expandButton,
             collapseButton,
+            expandCollapseWrapper,
             suggestionList,
             formModal,
             formInput,
@@ -585,6 +598,77 @@ describe("PromptSuggestionsController", () => {
 
             expect(editBtn).not.toBeNull();
             expect(deleteBtn).not.toBeNull();
+        });
+
+        it("shows expand/collapse wrapper when suggestions exceed maxVisible", () => {
+            const { controller, expandCollapseWrapper } = createController();
+
+            // Start hidden
+            expandCollapseWrapper.classList.add("hidden");
+
+            controller.refreshSuggestionsList(["A", "B", "C", "D"]);
+
+            expect(expandCollapseWrapper.classList.contains("hidden")).toBe(false);
+        });
+
+        it("hides expand/collapse wrapper when suggestions are within maxVisible", () => {
+            const { controller, expandCollapseWrapper } = createController();
+
+            // Start visible (simulating previous > 3 state)
+            expandCollapseWrapper.classList.remove("hidden");
+
+            controller.refreshSuggestionsList(["A", "B"]);
+
+            expect(expandCollapseWrapper.classList.contains("hidden")).toBe(true);
+        });
+
+        it("hides expand/collapse wrapper when suggestions equal maxVisible", () => {
+            const { controller, expandCollapseWrapper } = createController();
+
+            expandCollapseWrapper.classList.remove("hidden");
+
+            controller.refreshSuggestionsList(["A", "B", "C"]);
+
+            expect(expandCollapseWrapper.classList.contains("hidden")).toBe(true);
+        });
+
+        it("updates expand button text with correct hidden count", () => {
+            const { controller, expandButton } = createController();
+
+            controller.refreshSuggestionsList(["A", "B", "C", "D", "E"]);
+
+            expect(expandButton.textContent).toBe("+2 more");
+        });
+
+        it("resets to collapsed state after refresh", () => {
+            const { controller, expandButton, collapseButton } = createController();
+
+            // Simulate expanded state
+            expandButton.classList.add("hidden");
+            collapseButton.classList.remove("hidden");
+
+            controller.refreshSuggestionsList(["A", "B", "C", "D"]);
+
+            expect(expandButton.classList.contains("hidden")).toBe(false);
+            expect(collapseButton.classList.contains("hidden")).toBe(true);
+        });
+
+        it("sets collapse button text from showLessLabel value", () => {
+            const { controller, collapseButton } = createController();
+
+            controller.refreshSuggestionsList(["A", "B", "C", "D"]);
+
+            expect(collapseButton.textContent).toBe("Show less");
+        });
+
+        it("hides wrapper when list is emptied", () => {
+            const { controller, expandCollapseWrapper } = createController();
+
+            expandCollapseWrapper.classList.remove("hidden");
+
+            controller.refreshSuggestionsList([]);
+
+            expect(expandCollapseWrapper.classList.contains("hidden")).toBe(true);
         });
     });
 });
