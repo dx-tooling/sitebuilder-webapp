@@ -7,6 +7,7 @@ namespace App\ChatBasedContentEditor\Presentation\Controller;
 use App\Account\Facade\AccountFacadeInterface;
 use App\ChatBasedContentEditor\Domain\Entity\Conversation;
 use App\ChatBasedContentEditor\Domain\Enum\ConversationStatus;
+use App\ChatBasedContentEditor\Presentation\Dto\EditableWorkspaceContextDto;
 use App\ChatBasedContentEditor\Presentation\Service\PromptSuggestionsService;
 use App\WorkspaceMgmt\Facade\WorkspaceMgmtFacadeInterface;
 use Doctrine\ORM\EntityManagerInterface;
@@ -21,6 +22,7 @@ use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Core\User\UserInterface;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
+use Throwable;
 
 use function array_key_exists;
 use function is_array;
@@ -52,7 +54,7 @@ final class PromptSuggestionsController extends AbstractController
         Request       $request,
         #[CurrentUser] UserInterface $user,
     ): JsonResponse {
-        $workspace = $this->resolveEditableWorkspace($conversationId, $request, $user);
+        $context = $this->resolveEditableWorkspace($conversationId, $request, $user);
 
         $text = $this->getRequestText($request);
         if ($text === null) {
@@ -60,9 +62,12 @@ final class PromptSuggestionsController extends AbstractController
         }
 
         try {
-            $suggestions = $this->promptSuggestionsService->addSuggestion($workspace->workspacePath, $text);
+            $suggestions = $this->promptSuggestionsService->addSuggestion($context->workspacePath, $text);
+            $this->commitChanges($context, $conversationId, 'Add prompt suggestion');
         } catch (InvalidArgumentException $e) {
             return $this->json(['error' => $e->getMessage()], Response::HTTP_BAD_REQUEST);
+        } catch (Throwable $e) {
+            return $this->json(['error' => 'Failed to save changes: ' . $e->getMessage()], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
 
         return $this->json(['suggestions' => $suggestions]);
@@ -80,7 +85,7 @@ final class PromptSuggestionsController extends AbstractController
         Request       $request,
         #[CurrentUser] UserInterface $user,
     ): JsonResponse {
-        $workspace = $this->resolveEditableWorkspace($conversationId, $request, $user);
+        $context = $this->resolveEditableWorkspace($conversationId, $request, $user);
 
         $text = $this->getRequestText($request);
         if ($text === null) {
@@ -88,11 +93,14 @@ final class PromptSuggestionsController extends AbstractController
         }
 
         try {
-            $suggestions = $this->promptSuggestionsService->updateSuggestion($workspace->workspacePath, $index, $text);
+            $suggestions = $this->promptSuggestionsService->updateSuggestion($context->workspacePath, $index, $text);
+            $this->commitChanges($context, $conversationId, 'Update prompt suggestion');
         } catch (InvalidArgumentException $e) {
             return $this->json(['error' => $e->getMessage()], Response::HTTP_BAD_REQUEST);
         } catch (OutOfRangeException $e) {
             return $this->json(['error' => $e->getMessage()], Response::HTTP_NOT_FOUND);
+        } catch (Throwable $e) {
+            return $this->json(['error' => 'Failed to save changes: ' . $e->getMessage()], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
 
         return $this->json(['suggestions' => $suggestions]);
@@ -110,12 +118,15 @@ final class PromptSuggestionsController extends AbstractController
         Request       $request,
         #[CurrentUser] UserInterface $user,
     ): JsonResponse {
-        $workspace = $this->resolveEditableWorkspace($conversationId, $request, $user);
+        $context = $this->resolveEditableWorkspace($conversationId, $request, $user);
 
         try {
-            $suggestions = $this->promptSuggestionsService->deleteSuggestion($workspace->workspacePath, $index);
+            $suggestions = $this->promptSuggestionsService->deleteSuggestion($context->workspacePath, $index);
+            $this->commitChanges($context, $conversationId, 'Remove prompt suggestion');
         } catch (OutOfRangeException $e) {
             return $this->json(['error' => $e->getMessage()], Response::HTTP_NOT_FOUND);
+        } catch (Throwable $e) {
+            return $this->json(['error' => 'Failed to save changes: ' . $e->getMessage()], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
 
         return $this->json(['suggestions' => $suggestions]);
@@ -123,6 +134,7 @@ final class PromptSuggestionsController extends AbstractController
 
     /**
      * Resolve conversation → workspace and enforce authorization + CSRF.
+     * Returns a context DTO with workspace path, workspace ID, and author email.
      *
      * @throws \Symfony\Component\HttpKernel\Exception\NotFoundHttpException
      * @throws \Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException
@@ -131,7 +143,7 @@ final class PromptSuggestionsController extends AbstractController
         string        $conversationId,
         Request       $request,
         UserInterface $user,
-    ): \App\WorkspaceMgmt\Facade\Dto\WorkspaceInfoDto {
+    ): EditableWorkspaceContextDto {
         if (!$this->isCsrfTokenValid('prompt-suggestions', $request->headers->get('X-CSRF-Token', ''))) {
             throw $this->createAccessDeniedException('Invalid CSRF token.');
         }
@@ -159,7 +171,27 @@ final class PromptSuggestionsController extends AbstractController
             throw $this->createNotFoundException('Workspace not found.');
         }
 
-        return $workspace;
+        return new EditableWorkspaceContextDto(
+            $workspace->workspacePath,
+            $workspace->id,
+            $accountInfo->email,
+        );
+    }
+
+    /**
+     * Commit and push the prompt suggestions file changes to the remote repository.
+     */
+    private function commitChanges(
+        EditableWorkspaceContextDto $context,
+        string                      $conversationId,
+        string                      $message,
+    ): void {
+        $this->workspaceMgmtFacade->commitAndPush(
+            $context->workspaceId,
+            $message,
+            $context->authorEmail,
+            $conversationId,
+        );
     }
 
     private function getRequestText(Request $request): ?string
