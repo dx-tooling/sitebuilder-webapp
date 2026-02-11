@@ -6,6 +6,7 @@ namespace App\PhotoBuilder\Presentation\Controller;
 
 use App\Account\Facade\AccountFacadeInterface;
 use App\Account\Facade\Dto\AccountInfoDto;
+use App\LlmContentEditor\Facade\Enum\LlmModelProvider;
 use App\PhotoBuilder\Domain\Entity\PhotoImage;
 use App\PhotoBuilder\Domain\Entity\PhotoSession;
 use App\PhotoBuilder\Domain\Enum\PhotoImageStatus;
@@ -122,6 +123,7 @@ final class PhotoBuilderController extends AbstractController
             'effectivePhotoBuilderProvider' => $effectiveProvider->displayName(),
             'imagePromptModel'              => $effectiveProvider->imagePromptGenerationModel()->value,
             'imageGenerationModel'          => $effectiveProvider->imageGenerationModel()->value,
+            'supportsResolutionToggle'      => $effectiveProvider === LlmModelProvider::Google,
         ]);
     }
 
@@ -366,6 +368,9 @@ final class PhotoBuilderController extends AbstractController
             return $this->json(['error' => 'Image has no ID.'], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
 
+        $data      = json_decode($request->getContent(), true);
+        $imageSize = is_array($data) && is_string($data['imageSize'] ?? null) ? $data['imageSize'] : null;
+
         $image->setStatus(PhotoImageStatus::Pending);
         $image->setStoragePath(null);
         $image->setErrorMessage(null);
@@ -376,7 +381,67 @@ final class PhotoBuilderController extends AbstractController
         $session->setStatus(PhotoSessionStatus::GeneratingImages);
         $this->entityManager->flush();
 
-        $this->messageBus->dispatch(new GenerateImageMessage($imageId));
+        $this->messageBus->dispatch(new GenerateImageMessage($imageId, $imageSize));
+
+        return $this->json(['status' => 'ok']);
+    }
+
+    /**
+     * Regenerate all images in a session (e.g. after resolution change).
+     */
+    #[Route(
+        path: '/api/photo-builder/sessions/{sessionId}/regenerate-all-images',
+        name: 'photo_builder.presentation.regenerate_all_images',
+        methods: [Request::METHOD_POST],
+        requirements: ['sessionId' => '[a-f0-9-]{36}']
+    )]
+    public function regenerateAllImages(
+        string        $sessionId,
+        Request       $request,
+        #[CurrentUser] UserInterface $user,
+    ): JsonResponse {
+        if (!$this->isCsrfTokenValid('photo_builder', $request->headers->get('X-CSRF-Token', ''))) {
+            return $this->json(['error' => 'Invalid CSRF token.'], Response::HTTP_FORBIDDEN);
+        }
+
+        $this->getAccountInfo($user);
+
+        $session = $this->entityManager->find(PhotoSession::class, $sessionId);
+
+        if ($session === null) {
+            return $this->json(['error' => 'Session not found.'], Response::HTTP_NOT_FOUND);
+        }
+
+        $data      = json_decode($request->getContent(), true);
+        $imageSize = is_array($data) && is_string($data['imageSize'] ?? null) ? $data['imageSize'] : null;
+
+        $session->setStatus(PhotoSessionStatus::GeneratingImages);
+
+        foreach ($session->getImages() as $image) {
+            $imgId = $image->getId();
+
+            if ($imgId === null || $image->getPrompt() === null || $image->getPrompt() === '') {
+                continue;
+            }
+
+            $image->setStatus(PhotoImageStatus::Pending);
+            $image->setStoragePath(null);
+            $image->setErrorMessage(null);
+            $image->setUploadedToMediaStoreAt(null);
+            $image->setUploadedFileName(null);
+        }
+
+        $this->entityManager->flush();
+
+        foreach ($session->getImages() as $image) {
+            $imgId = $image->getId();
+
+            if ($imgId === null || $image->getPrompt() === null || $image->getPrompt() === '') {
+                continue;
+            }
+
+            $this->messageBus->dispatch(new GenerateImageMessage($imgId, $imageSize));
+        }
 
         return $this->json(['status' => 'ok']);
     }

@@ -52,6 +52,7 @@ export default class extends Controller {
         pollUrlPattern: String,
         regeneratePromptsUrlPattern: String,
         regenerateImageUrlPattern: String,
+        regenerateAllImagesUrlPattern: String,
         updatePromptUrlPattern: String,
         uploadToMediaStoreUrlPattern: String,
         csrfToken: String,
@@ -62,6 +63,7 @@ export default class extends Controller {
         defaultUserPrompt: String,
         editorUrl: String,
         hasRemoteAssets: Boolean,
+        supportsResolutionToggle: Boolean,
     };
 
     static targets = [
@@ -74,12 +76,16 @@ export default class extends Controller {
         "uploadFinishedBanner",
         "regeneratingPromptsOverlay",
         "uploadingImagesOverlay",
+        "resolutionToggle",
+        "loresButton",
+        "hiresButton",
     ];
 
     declare readonly createSessionUrlValue: string;
     declare readonly pollUrlPatternValue: string;
     declare readonly regeneratePromptsUrlPatternValue: string;
     declare readonly regenerateImageUrlPatternValue: string;
+    declare readonly regenerateAllImagesUrlPatternValue: string;
     declare readonly updatePromptUrlPatternValue: string;
     declare readonly uploadToMediaStoreUrlPatternValue: string;
     declare readonly csrfTokenValue: string;
@@ -90,6 +96,7 @@ export default class extends Controller {
     declare readonly defaultUserPromptValue: string;
     declare readonly editorUrlValue: string;
     declare readonly hasRemoteAssetsValue: boolean;
+    declare readonly supportsResolutionToggleValue: boolean;
 
     declare readonly loadingOverlayTarget: HTMLElement;
     declare readonly mainContentTarget: HTMLElement;
@@ -104,6 +111,12 @@ export default class extends Controller {
     declare readonly regeneratingPromptsOverlayTarget: HTMLElement;
     declare readonly hasUploadingImagesOverlayTarget: boolean;
     declare readonly uploadingImagesOverlayTarget: HTMLElement;
+    declare readonly hasResolutionToggleTarget: boolean;
+    declare readonly resolutionToggleTarget: HTMLElement;
+    declare readonly hasLoresButtonTarget: boolean;
+    declare readonly loresButtonTarget: HTMLButtonElement;
+    declare readonly hasHiresButtonTarget: boolean;
+    declare readonly hiresButtonTarget: HTMLButtonElement;
 
     private sessionId: string | null = null;
     private isRegeneratingPrompts = false;
@@ -111,6 +124,8 @@ export default class extends Controller {
     private isActive = false;
     private anyGenerating = false;
     private lastImages: ImageData[] = [];
+    /** Current image size: "1K" = lo-res (default), "2K" = hi-res. */
+    private currentImageSize: string = "1K";
 
     connect(): void {
         this.isActive = true;
@@ -349,9 +364,66 @@ export default class extends Controller {
                     "X-CSRF-Token": this.csrfTokenValue,
                     "X-Requested-With": "XMLHttpRequest",
                 },
+                body: JSON.stringify({ imageSize: this.currentImageSize }),
             });
         } catch {
             // Silently ignore
+        }
+    }
+
+    /**
+     * Handle resolution toggle (lo-res / hi-res) button click.
+     * Re-generates all images at the new resolution without reloading the page.
+     */
+    async switchResolution(event: Event): Promise<void> {
+        if (!this.sessionId || this.anyGenerating) return;
+
+        const target = event.currentTarget as HTMLElement;
+        const newSize = target.dataset.imageSize ?? this.currentImageSize;
+        if (newSize === this.currentImageSize) return;
+
+        this.currentImageSize = newSize;
+        this.updateResolutionToggleUi();
+
+        try {
+            const url = this.regenerateAllImagesUrlPatternValue.replace(SESSION_ID_PLACEHOLDER, this.sessionId);
+            await fetch(url, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRF-Token": this.csrfTokenValue,
+                    "X-Requested-With": "XMLHttpRequest",
+                },
+                body: JSON.stringify({ imageSize: this.currentImageSize }),
+            });
+            // Polling will pick up the regeneration
+        } catch {
+            // Silently ignore
+        }
+    }
+
+    private updateResolutionToggleUi(): void {
+        if (!this.hasLoresButtonTarget || !this.hasHiresButtonTarget) return;
+
+        const activeClasses = ["bg-primary-600", "text-white", "shadow-sm"];
+        const inactiveClasses = [
+            "text-dark-600",
+            "dark:text-dark-400",
+            "hover:text-dark-900",
+            "dark:hover:text-dark-200",
+        ];
+
+        const isLores = this.currentImageSize === "1K";
+        if (isLores) {
+            this.loresButtonTarget.classList.add(...activeClasses);
+            this.loresButtonTarget.classList.remove(...inactiveClasses);
+            this.hiresButtonTarget.classList.remove(...activeClasses);
+            this.hiresButtonTarget.classList.add(...inactiveClasses);
+        } else {
+            this.hiresButtonTarget.classList.add(...activeClasses);
+            this.hiresButtonTarget.classList.remove(...inactiveClasses);
+            this.loresButtonTarget.classList.remove(...activeClasses);
+            this.loresButtonTarget.classList.add(...inactiveClasses);
         }
     }
 

@@ -31,6 +31,7 @@ interface MockControllerState {
     pollUrlPatternValue: string;
     regeneratePromptsUrlPatternValue: string;
     regenerateImageUrlPatternValue: string;
+    regenerateAllImagesUrlPatternValue: string;
     updatePromptUrlPatternValue: string;
     uploadToMediaStoreUrlPatternValue: string;
     csrfTokenValue: string;
@@ -41,6 +42,7 @@ interface MockControllerState {
     defaultUserPromptValue: string;
     editorUrlValue: string;
     hasRemoteAssetsValue: boolean;
+    supportsResolutionToggleValue: boolean;
     loadingOverlayTarget: HTMLElement;
     mainContentTarget: HTMLElement;
     userPromptTarget: HTMLTextAreaElement;
@@ -50,11 +52,18 @@ interface MockControllerState {
     imageCardTargets: HTMLElement[];
     hasUploadingImagesOverlayTarget: boolean;
     uploadingImagesOverlayTarget: HTMLElement;
+    hasResolutionToggleTarget: boolean;
+    resolutionToggleTarget: HTMLElement;
+    hasLoresButtonTarget: boolean;
+    loresButtonTarget: HTMLButtonElement;
+    hasHiresButtonTarget: boolean;
+    hiresButtonTarget: HTMLButtonElement;
     sessionId: string | null;
     pollingTimeoutId: ReturnType<typeof setTimeout> | null;
     isActive: boolean;
     anyGenerating: boolean;
     lastImages: ImageData[];
+    currentImageSize: string;
 }
 
 const createController = (
@@ -101,6 +110,8 @@ const createController = (
     state.regeneratePromptsUrlPatternValue =
         "/api/photo-builder/sessions/00000000-0000-0000-0000-000000000000/regenerate-prompts";
     state.regenerateImageUrlPatternValue = "/api/photo-builder/images/00000000-0000-0000-0000-111111111111/regenerate";
+    state.regenerateAllImagesUrlPatternValue =
+        "/api/photo-builder/sessions/00000000-0000-0000-0000-000000000000/regenerate-all-images";
     state.updatePromptUrlPatternValue = "/api/photo-builder/images/00000000-0000-0000-0000-111111111111/update-prompt";
     state.uploadToMediaStoreUrlPatternValue =
         "/api/photo-builder/images/00000000-0000-0000-0000-111111111111/upload-to-media-store";
@@ -112,6 +123,7 @@ const createController = (
     state.defaultUserPromptValue = "The generated images should convey professionalism.";
     state.editorUrlValue = "/conversation/conv-456";
     state.hasRemoteAssetsValue = false;
+    state.supportsResolutionToggleValue = false;
 
     state.loadingOverlayTarget = loadingOverlay;
     state.mainContentTarget = mainContent;
@@ -122,12 +134,19 @@ const createController = (
     state.imageCardTargets = imageCards;
     state.hasUploadingImagesOverlayTarget = false;
     state.uploadingImagesOverlayTarget = document.createElement("div");
+    state.hasResolutionToggleTarget = false;
+    state.resolutionToggleTarget = document.createElement("div");
+    state.hasLoresButtonTarget = false;
+    state.loresButtonTarget = document.createElement("button");
+    state.hasHiresButtonTarget = false;
+    state.hiresButtonTarget = document.createElement("button");
 
     state.sessionId = null;
     state.pollingTimeoutId = null;
     state.isActive = false;
     state.anyGenerating = false;
     state.lastImages = [];
+    state.currentImageSize = "1K";
 
     Object.assign(state, overrides);
 
@@ -767,6 +786,143 @@ describe("PhotoBuilderController", () => {
             await controller.handleUploadToMediaStore(event);
 
             expect(globalThis.fetch).not.toHaveBeenCalled();
+        });
+    });
+
+    describe("switchResolution", () => {
+        it("should send regenerate-all-images request with imageSize=2K when switching to hi-res", async () => {
+            const loresButton = document.createElement("button");
+            loresButton.dataset.imageSize = "1K";
+            const hiresButton = document.createElement("button");
+            hiresButton.dataset.imageSize = "2K";
+
+            const { controller } = createController({
+                sessionId: "sess-1",
+                supportsResolutionToggleValue: true,
+                hasLoresButtonTarget: true,
+                loresButtonTarget: loresButton,
+                hasHiresButtonTarget: true,
+                hiresButtonTarget: hiresButton,
+                currentImageSize: "1K",
+            });
+
+            let capturedUrl = "";
+            let capturedBody = "";
+            vi.spyOn(globalThis, "fetch").mockImplementation(async (url, options) => {
+                capturedUrl = url as string;
+                if (options && typeof options === "object" && "body" in options) {
+                    capturedBody = options.body as string;
+                }
+                return new Response(JSON.stringify({ status: "ok" }));
+            });
+
+            const event = { currentTarget: hiresButton } as unknown as Event;
+            await controller.switchResolution(event);
+
+            expect(capturedUrl).toBe("/api/photo-builder/sessions/sess-1/regenerate-all-images");
+            const body = JSON.parse(capturedBody) as Record<string, string>;
+            expect(body.imageSize).toBe("2K");
+        });
+
+        it("should send regenerate-all-images request with imageSize=1K when switching to lo-res", async () => {
+            const loresButton = document.createElement("button");
+            loresButton.dataset.imageSize = "1K";
+            const hiresButton = document.createElement("button");
+            hiresButton.dataset.imageSize = "2K";
+
+            const { controller } = createController({
+                sessionId: "sess-1",
+                supportsResolutionToggleValue: true,
+                hasLoresButtonTarget: true,
+                loresButtonTarget: loresButton,
+                hasHiresButtonTarget: true,
+                hiresButtonTarget: hiresButton,
+                currentImageSize: "2K", // currently hi-res
+            });
+
+            let capturedBody = "";
+            vi.spyOn(globalThis, "fetch").mockImplementation(async (_url, options) => {
+                if (options && typeof options === "object" && "body" in options) {
+                    capturedBody = options.body as string;
+                }
+                return new Response(JSON.stringify({ status: "ok" }));
+            });
+
+            const event = { currentTarget: loresButton } as unknown as Event;
+            await controller.switchResolution(event);
+
+            const body = JSON.parse(capturedBody) as Record<string, string>;
+            expect(body.imageSize).toBe("1K");
+        });
+
+        it("should not send request when already at the selected resolution", async () => {
+            const loresButton = document.createElement("button");
+            loresButton.dataset.imageSize = "1K";
+
+            const { controller } = createController({
+                sessionId: "sess-1",
+                supportsResolutionToggleValue: true,
+                hasLoresButtonTarget: true,
+                loresButtonTarget: loresButton,
+                hasHiresButtonTarget: true,
+                hiresButtonTarget: document.createElement("button"),
+                currentImageSize: "1K",
+            });
+
+            const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response("ok"));
+
+            const event = { currentTarget: loresButton } as unknown as Event;
+            await controller.switchResolution(event);
+
+            expect(fetchSpy).not.toHaveBeenCalled();
+        });
+
+        it("should not send request when anyGenerating is true", async () => {
+            const hiresButton = document.createElement("button");
+            hiresButton.dataset.imageSize = "2K";
+
+            const { controller } = createController({
+                sessionId: "sess-1",
+                anyGenerating: true,
+                supportsResolutionToggleValue: true,
+                hasLoresButtonTarget: true,
+                loresButtonTarget: document.createElement("button"),
+                hasHiresButtonTarget: true,
+                hiresButtonTarget: hiresButton,
+                currentImageSize: "1K",
+            });
+
+            const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response("ok"));
+
+            const event = { currentTarget: hiresButton } as unknown as Event;
+            await controller.switchResolution(event);
+
+            expect(fetchSpy).not.toHaveBeenCalled();
+        });
+
+        it("should include current imageSize in single image regenerate request", async () => {
+            const { controller } = createController({
+                currentImageSize: "1K",
+            });
+            const state = controller as unknown as MockControllerState;
+            state.anyGenerating = false;
+
+            let capturedBody = "";
+            vi.spyOn(globalThis, "fetch").mockImplementation(async (_url, options) => {
+                if (options && typeof options === "object" && "body" in options) {
+                    capturedBody = options.body as string;
+                }
+                return new Response("ok");
+            });
+
+            const event = new CustomEvent("photo-image:regenerateRequested", {
+                detail: { position: 2, imageId: "img-3", prompt: "An office scene" },
+            });
+
+            await controller.handleRegenerateImage(event);
+
+            const body = JSON.parse(capturedBody) as Record<string, string>;
+            expect(body.imageSize).toBe("1K");
         });
     });
 

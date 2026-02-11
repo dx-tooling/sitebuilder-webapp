@@ -12,7 +12,8 @@ use EnterpriseToolingForSymfony\SharedBundle\WorkerSystem\SymfonyMessage\Immedia
 final readonly class GenerateImageMessage implements ImmediateSymfonyMessageInterface
 {
     public function __construct(
-        public string $imageId,
+        public string  $imageId,
+        public ?string $imageSize = null,
     ) {
     }
 }

@@ -9,6 +9,7 @@
              pollUrlPattern: path('photo_builder.presentation.poll_session', { sessionId: '00000000-0000-0000-0000-000000000000' }),
              regeneratePromptsUrlPattern: path('photo_builder.presentation.regenerate_prompts', { sessionId: '00000000-0000-0000-0000-000000000000' }),
              regenerateImageUrlPattern: path('photo_builder.presentation.regenerate_image', { imageId: '00000000-0000-0000-0000-111111111111' }),
+             regenerateAllImagesUrlPattern: path('photo_builder.presentation.regenerate_all_images', { sessionId: '00000000-0000-0000-0000-000000000000' }),
              updatePromptUrlPattern: path('photo_builder.presentation.update_prompt', { imageId: '00000000-0000-0000-0000-111111111111' }),
              uploadToMediaStoreUrlPattern: path('photo_builder.presentation.upload_to_media_store', { imageId: '00000000-0000-0000-0000-111111111111' }),
              csrfToken: csrf_token('photo_builder'),
@@ -19,6 +20,7 @@
              defaultUserPrompt: 'photo_builder.default_user_prompt'|trans,
              editorUrl: path('chat_based_content_editor.presentation.show', { conversationId: conversationId }),
              hasRemoteAssets: hasRemoteAssets,
+             supportsResolutionToggle: supportsResolutionToggle,
          })
          |stimulus_action('photo-builder', 'handlePromptEdited', 'photo-image:promptEdited')
          |stimulus_action('photo-builder', 'handleRegenerateImage', 'photo-image:regenerateRequested')
@@ -38,6 +40,28 @@
                         {{ 'photo_builder.active_model'|trans({'%provider%': effectivePhotoBuilderProvider, '%promptModel%': imagePromptModel, '%imageModel%': imageGenerationModel}) }}
                     </span>
                 </p>
+                {% if supportsResolutionToggle %}
+                    <div {{ stimulus_target('photo-builder', 'resolutionToggle') }}
+                         class="mt-2 inline-flex items-center gap-2">
+                        <span class="text-xs font-medium text-dark-500 dark:text-dark-400">{{ 'photo_builder.resolution_label'|trans }}</span>
+                        <div class="inline-flex rounded-md bg-dark-100 dark:bg-dark-800 p-0.5">
+                            <button {{ stimulus_target('photo-builder', 'loresButton') }}
+                                    {{ stimulus_action('photo-builder', 'switchResolution') }}
+                                    data-image-size="1K"
+                                    type="button"
+                                    class="px-2.5 py-1 text-xs font-medium rounded transition-colors bg-primary-600 text-white shadow-sm">
+                                {{ 'photo_builder.resolution_lores'|trans }}
+                            </button>
+                            <button {{ stimulus_target('photo-builder', 'hiresButton') }}
+                                    {{ stimulus_action('photo-builder', 'switchResolution') }}
+                                    data-image-size="2K"
+                                    type="button"
+                                    class="px-2.5 py-1 text-xs font-medium rounded transition-colors text-dark-600 dark:text-dark-400 hover:text-dark-900 dark:hover:text-dark-200">
+                                {{ 'photo_builder.resolution_hires'|trans }}
+                            </button>
+                        </div>
+                    </div>
+                {% endif %}
             </div>
             <a href="{{ path('chat_based_content_editor.presentation.show', { conversationId: conversationId }) }}"
                class="etfswui-link-as-button-secondary gap-2">

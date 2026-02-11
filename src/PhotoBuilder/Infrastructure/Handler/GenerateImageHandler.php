@@ -73,6 +73,7 @@ final readonly class GenerateImageHandler
             $imageData = $generator->generateImage(
                 $image->getPrompt() ?? '',
                 $project->getEffectivePhotoBuilderApiKey(),
+                $message->imageSize,
             );
 
             // Store on disk

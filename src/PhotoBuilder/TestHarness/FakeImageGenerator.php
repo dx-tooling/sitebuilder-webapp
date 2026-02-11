@@ -28,7 +28,7 @@ final readonly class FakeImageGenerator implements ImageGeneratorInterface
     /**
      * @throws Exception
      */
-    public function generateImage(string $prompt, string $apiKey): string
+    public function generateImage(string $prompt, string $apiKey, ?string $imageSize = null): string
     {
         $this->logger->info('PhotoBuilder TestHarness: Generating fake placeholder image (skipping OpenAI call)');
 

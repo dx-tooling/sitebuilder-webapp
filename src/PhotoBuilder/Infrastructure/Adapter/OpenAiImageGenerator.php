@@ -27,7 +27,7 @@ class OpenAiImageGenerator implements ImageGeneratorInterface
     ) {
     }
 
-    public function generateImage(string $prompt, string $apiKey): string
+    public function generateImage(string $prompt, string $apiKey, ?string $imageSize = null): string
     {
         $response = $this->httpClient->request('POST', self::API_URL, [
             'headers' => [

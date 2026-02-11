@@ -26,7 +26,7 @@ class GeminiImageGenerator implements ImageGeneratorInterface
     ) {
     }
 
-    public function generateImage(string $prompt, string $apiKey): string
+    public function generateImage(string $prompt, string $apiKey, ?string $imageSize = null): string
     {
         $url = sprintf(self::API_URL_TEMPLATE, self::MODEL);
 
@@ -37,19 +37,7 @@ class GeminiImageGenerator implements ImageGeneratorInterface
             'query' => [
                 'key' => $apiKey,
             ],
-            'json' => [
-                'contents' => [
-                    [
-                        'parts' => [
-                            ['text' => $prompt],
-                        ],
-                    ],
-                ],
-                'generationConfig' => [
-                    'responseModalities' => ['IMAGE', 'TEXT'],
-                    'responseMimeType'   => 'application/json',
-                ],
-            ],
+            'json' => $this->buildRequestBody($prompt, $imageSize),
         ]);
 
         $statusCode = $response->getStatusCode();
@@ -108,5 +96,33 @@ class GeminiImageGenerator implements ImageGeneratorInterface
         }
 
         throw new RuntimeException('Gemini image generation API returned no image data in response.');
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function buildRequestBody(string $prompt, ?string $imageSize): array
+    {
+        $generationConfig = [
+            'responseModalities' => ['IMAGE', 'TEXT'],
+            'responseMimeType'   => 'application/json',
+        ];
+
+        if ($imageSize !== null) {
+            $generationConfig['imageConfig'] = [
+                'imageSize' => $imageSize,
+            ];
+        }
+
+        return [
+            'contents' => [
+                [
+                    'parts' => [
+                        ['text' => $prompt],
+                    ],
+                ],
+            ],
+            'generationConfig' => $generationConfig,
+        ];
     }
 }
