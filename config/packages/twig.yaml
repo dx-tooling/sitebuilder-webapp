@@ -7,6 +7,7 @@ twig:
         "src/Account/Presentation/Resources/templates": "account.presentation"
         "src/ChatBasedContentEditor/Presentation/Resources/templates": "chat_based_content_editor.presentation"
         "src/ProjectMgmt/Presentation/Resources/templates": "project_mgmt.presentation"
+        "src/RemoteContentAssets/Presentation/Resources/templates": "remote_content_assets.presentation"
         "src/WorkspaceMgmt/Presentation/Resources/templates": "workspace_mgmt.presentation"
         "src/Organization/Presentation/Resources/templates": "organization.presentation"
         "src/PhotoBuilder/Presentation/Resources/templates": "photo_builder.presentation"

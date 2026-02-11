@@ -283,18 +283,6 @@ For each image, call the deliver_image_prompt tool with:
 
                 </div>
             </div>
-
-            {# Remote assets sidebar - only show if project has manifest URLs configured #}
-            {% if hasRemoteAssets %}
-                {% include '@common.presentation/_remote_asset_browser_sidebar.html.twig' with {
-                    project: project,
-                    workspaceId: workspace.id,
-                    windowSize: 20,
-                    parentStimulusActions: [
-                        { controller: 'photo-builder', action: 'handleMediaStoreUploadComplete', event: 'remote-asset-browser:uploadComplete' }
-                    ]
-                } %}
-            {% endif %}
         </div>
     </div>
 {% endblock %}

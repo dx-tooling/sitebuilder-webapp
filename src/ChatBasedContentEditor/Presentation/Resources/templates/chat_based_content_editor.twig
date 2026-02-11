@@ -382,7 +382,7 @@
 
             {# Remote assets sidebar - only show if project has manifest URLs configured #}
             {% if hasRemoteAssets %}
-                {% include '@common.presentation/_remote_asset_browser_sidebar.html.twig' with {
+                {% include '@remote_content_assets.presentation/_remote_asset_browser_sidebar.html.twig' with {
                     project: project,
                     workspaceId: workspace.id,
                     windowSize: remoteAssetBrowserWindowSize,
