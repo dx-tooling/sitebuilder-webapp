@@ -464,9 +464,33 @@ export default class extends Controller {
         const { imageId } = event.detail;
         if (!imageId) return;
 
+        const cardFromEvent =
+            event.target instanceof HTMLElement
+                ? (event.target.closest("[data-photo-builder-target='imageCard']") as HTMLElement | null)
+                : null;
         const uploadedFileName = await this.uploadImageToMediaStore(imageId);
+        const card =
+            cardFromEvent ??
+            this.imageCardTargets.find((el) => el.getAttribute("data-photo-image-image-id") === imageId);
         if (uploadedFileName !== null) {
             this.showUploadFinishedBanner();
+            if (card) {
+                card.dispatchEvent(
+                    new CustomEvent("photo-builder:uploadComplete", {
+                        detail: { imageId },
+                        bubbles: true,
+                    }),
+                );
+            }
+        } else {
+            if (card) {
+                card.dispatchEvent(
+                    new CustomEvent("photo-builder:uploadFailed", {
+                        detail: { imageId },
+                        bubbles: true,
+                    }),
+                );
+            }
         }
     }
 

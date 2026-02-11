@@ -8,6 +8,7 @@ interface ImageStateDetail {
     status: string;
     imageUrl: string | null;
     errorMessage: string | null;
+    uploadedToMediaStore?: boolean;
 }
 
 /**
@@ -30,6 +31,9 @@ export default class extends Controller {
         "keepCheckbox",
         "regenerateButton",
         "uploadButton",
+        "uploadButtonDefault",
+        "uploadButtonUploading",
+        "uploadButtonSuccess",
         "statusBadge",
     ];
 
@@ -44,12 +48,21 @@ export default class extends Controller {
     declare readonly regenerateButtonTarget: HTMLButtonElement;
     declare readonly hasUploadButtonTarget: boolean;
     declare readonly uploadButtonTarget: HTMLButtonElement;
+    declare readonly hasUploadButtonDefaultTarget: boolean;
+    declare readonly uploadButtonDefaultTarget: HTMLElement;
+    declare readonly hasUploadButtonUploadingTarget: boolean;
+    declare readonly uploadButtonUploadingTarget: HTMLElement;
+    declare readonly hasUploadButtonSuccessTarget: boolean;
+    declare readonly uploadButtonSuccessTarget: HTMLElement;
     declare readonly statusBadgeTarget: HTMLElement;
 
     private imageId: string | null = null;
     private currentStatus = "pending";
     private suggestedFileName: string | null = null;
     private promptAwaitingRegenerate = false;
+    private uploadInProgress = false;
+    private uploadJustSucceeded = false;
+    private uploadedToMediaStore = false;
 
     /**
      * Called by parent photo-builder controller via event dispatch.
@@ -60,6 +73,7 @@ export default class extends Controller {
         this.imageId = data.id;
         this.currentStatus = data.status;
         this.suggestedFileName = data.suggestedFileName;
+        this.uploadedToMediaStore = data.uploadedToMediaStore ?? false;
 
         // Store imageId on the element for parent to read
         this.element.setAttribute("data-photo-image-image-id", data.id);
@@ -90,6 +104,10 @@ export default class extends Controller {
 
         // Update button states based on parent's generating state
         this.updateButtonStates();
+
+        if (this.hasUploadButtonDefaultTarget) {
+            this.updateUploadButtonState();
+        }
     }
 
     private updateImageDisplay(data: ImageStateDetail): void {
@@ -146,8 +164,60 @@ export default class extends Controller {
         this.regenerateButtonTarget.disabled = parentGenerating || this.currentStatus === "generating";
 
         if (this.hasUploadButtonTarget) {
-            this.uploadButtonTarget.disabled = parentGenerating || this.currentStatus !== "completed";
+            this.uploadButtonTarget.disabled =
+                parentGenerating ||
+                this.currentStatus !== "completed" ||
+                this.uploadInProgress ||
+                this.uploadedToMediaStore;
         }
+    }
+
+    private updateUploadButtonState(): void {
+        if (
+            !this.hasUploadButtonDefaultTarget ||
+            !this.hasUploadButtonUploadingTarget ||
+            !this.hasUploadButtonSuccessTarget
+        ) {
+            return;
+        }
+        const showDefault = !this.uploadInProgress && !this.uploadJustSucceeded && !this.uploadedToMediaStore;
+        const showUploading = this.uploadInProgress;
+        const showSuccess = this.uploadJustSucceeded || this.uploadedToMediaStore;
+
+        this.uploadButtonDefaultTarget.classList.toggle("hidden", !showDefault);
+        this.uploadButtonUploadingTarget.classList.toggle("hidden", !showUploading);
+        this.uploadButtonSuccessTarget.classList.toggle("hidden", !showSuccess);
+    }
+
+    /**
+     * Handle photo-builder:uploadComplete event from parent.
+     */
+    onUploadComplete(event: CustomEvent<{ imageId: string }>): void {
+        if (event.detail.imageId !== this.imageId) {
+            return;
+        }
+        this.uploadInProgress = false;
+        this.uploadJustSucceeded = true;
+        this.updateButtonStates();
+        this.updateUploadButtonState();
+        const hideSuccessAfterMs = 3000;
+        setTimeout(() => {
+            this.uploadJustSucceeded = false;
+            this.updateUploadButtonState();
+        }, hideSuccessAfterMs);
+    }
+
+    /**
+     * Handle photo-builder:uploadFailed event from parent.
+     */
+    onUploadFailed(event: CustomEvent<{ imageId: string }>): void {
+        if (event.detail.imageId !== this.imageId) {
+            return;
+        }
+        this.uploadInProgress = false;
+        this.uploadJustSucceeded = false;
+        this.updateButtonStates();
+        this.updateUploadButtonState();
     }
 
     /**
@@ -197,6 +267,10 @@ export default class extends Controller {
      */
     requestUpload(): void {
         if (!this.imageId) return;
+
+        this.uploadInProgress = true;
+        this.updateButtonStates();
+        this.updateUploadButtonState();
 
         this.dispatch("uploadRequested", {
             detail: {
