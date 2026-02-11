@@ -68,8 +68,8 @@ final readonly class PromptSuggestionsService
             throw new InvalidArgumentException('Suggestion text must not be empty.');
         }
 
-        $suggestions   = $this->getSuggestions($workspacePath);
-        $suggestions[] = $text;
+        $suggestions = $this->getSuggestions($workspacePath);
+        array_unshift($suggestions, $text);
 
         $this->saveSuggestions($workspacePath, $suggestions);
 
