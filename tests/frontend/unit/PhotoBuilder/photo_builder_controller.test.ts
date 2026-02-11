@@ -22,6 +22,7 @@ interface ImageData {
     status: string;
     imageUrl: string | null;
     errorMessage: string | null;
+    uploadedToMediaStore?: boolean;
 }
 
 interface MockControllerState {
@@ -46,6 +47,8 @@ interface MockControllerState {
     hasEmbedButtonTarget: boolean;
     embedButtonTarget: HTMLButtonElement;
     imageCardTargets: HTMLElement[];
+    hasUploadingImagesOverlayTarget: boolean;
+    uploadingImagesOverlayTarget: HTMLElement;
     sessionId: string | null;
     pollingTimeoutId: ReturnType<typeof setTimeout> | null;
     isActive: boolean;
@@ -94,10 +97,12 @@ const createController = (
 
     state.createSessionUrlValue = "/api/photo-builder/sessions";
     state.pollUrlPatternValue = "/api/photo-builder/sessions/00000000-0000-0000-0000-000000000000";
-    state.regeneratePromptsUrlPatternValue = "/api/photo-builder/sessions/00000000-0000-0000-0000-000000000000/regenerate-prompts";
+    state.regeneratePromptsUrlPatternValue =
+        "/api/photo-builder/sessions/00000000-0000-0000-0000-000000000000/regenerate-prompts";
     state.regenerateImageUrlPatternValue = "/api/photo-builder/images/00000000-0000-0000-0000-111111111111/regenerate";
     state.updatePromptUrlPatternValue = "/api/photo-builder/images/00000000-0000-0000-0000-111111111111/update-prompt";
-    state.uploadToMediaStoreUrlPatternValue = "/api/photo-builder/images/00000000-0000-0000-0000-111111111111/upload-to-media-store";
+    state.uploadToMediaStoreUrlPatternValue =
+        "/api/photo-builder/images/00000000-0000-0000-0000-111111111111/upload-to-media-store";
     state.csrfTokenValue = "test-csrf-token";
     state.workspaceIdValue = "ws-123";
     state.pagePathValue = "index.html";
@@ -114,6 +119,8 @@ const createController = (
     state.hasEmbedButtonTarget = true;
     state.embedButtonTarget = embedButton;
     state.imageCardTargets = imageCards;
+    state.hasUploadingImagesOverlayTarget = false;
+    state.uploadingImagesOverlayTarget = document.createElement("div");
 
     state.sessionId = null;
     state.pollingTimeoutId = null;
@@ -763,7 +770,7 @@ describe("PhotoBuilderController", () => {
     });
 
     describe("embedIntoPage", () => {
-        it("should navigate to editor with prefilled message containing completed image filenames", () => {
+        it("should navigate to editor with prefilled message when all images already uploaded", async () => {
             const { controller } = createController();
             const state = controller as unknown as MockControllerState;
             state.lastImages = [
@@ -775,6 +782,7 @@ describe("PhotoBuilderController", () => {
                     status: "completed",
                     imageUrl: "/file",
                     errorMessage: null,
+                    uploadedToMediaStore: true,
                 },
                 {
                     id: "img-2",
@@ -784,6 +792,7 @@ describe("PhotoBuilderController", () => {
                     status: "completed",
                     imageUrl: "/file",
                     errorMessage: null,
+                    uploadedToMediaStore: true,
                 },
                 {
                     id: "img-3",
@@ -807,7 +816,7 @@ describe("PhotoBuilderController", () => {
                 get: () => "",
             });
 
-            controller.embedIntoPage();
+            await controller.embedIntoPage();
 
             expect(hrefSetter).toHaveBeenCalled();
             const url = hrefSetter.mock.calls[0][0] as string;
@@ -815,6 +824,104 @@ describe("PhotoBuilderController", () => {
             expect(url).toContain(encodeURIComponent("office-scene.jpg"));
             expect(url).toContain(encodeURIComponent("team-photo.jpg"));
             expect(url).toContain(encodeURIComponent("index.html"));
+        });
+
+        it("should upload non-uploaded images then navigate when embed is clicked", async () => {
+            const uploadingOverlay = document.createElement("div");
+            uploadingOverlay.classList.add("hidden");
+
+            const { controller } = createController({
+                hasRemoteAssetsValue: true,
+                hasUploadingImagesOverlayTarget: true,
+                uploadingImagesOverlayTarget: uploadingOverlay,
+                lastImages: [
+                    {
+                        id: "img-1",
+                        position: 0,
+                        prompt: "test",
+                        suggestedFileName: "office.jpg",
+                        status: "completed",
+                        imageUrl: "/file",
+                        errorMessage: null,
+                        uploadedToMediaStore: false,
+                    },
+                    {
+                        id: "img-2",
+                        position: 1,
+                        prompt: "test",
+                        suggestedFileName: "team.jpg",
+                        status: "completed",
+                        imageUrl: "/file",
+                        errorMessage: null,
+                        uploadedToMediaStore: true,
+                    },
+                ],
+            });
+
+            vi.spyOn(globalThis, "fetch").mockResolvedValue(
+                new Response(JSON.stringify({ url: "https://s3.example/office.jpg", fileName: "office.jpg" })),
+            );
+
+            const hrefSetter = vi.fn();
+            Object.defineProperty(window, "location", {
+                value: { href: "" },
+                writable: true,
+            });
+            Object.defineProperty(window.location, "href", {
+                set: hrefSetter,
+                get: () => "",
+            });
+
+            await controller.embedIntoPage();
+
+            expect(globalThis.fetch).toHaveBeenCalledWith(
+                "/api/photo-builder/images/img-1/upload-to-media-store",
+                expect.objectContaining({ method: "POST" }),
+            );
+            expect(hrefSetter).toHaveBeenCalled();
+            const url = hrefSetter.mock.calls[0][0] as string;
+            expect(url).toContain("/conversation/conv-456?prefill=");
+            expect(url).toContain(encodeURIComponent("office.jpg"));
+            expect(url).toContain(encodeURIComponent("team.jpg"));
+        });
+
+        it("should not navigate when upload fails", async () => {
+            const uploadingOverlay = document.createElement("div");
+            uploadingOverlay.classList.add("hidden");
+
+            const { controller } = createController({
+                hasRemoteAssetsValue: true,
+                hasUploadingImagesOverlayTarget: true,
+                uploadingImagesOverlayTarget: uploadingOverlay,
+                lastImages: [
+                    {
+                        id: "img-1",
+                        position: 0,
+                        prompt: "test",
+                        suggestedFileName: "office.jpg",
+                        status: "completed",
+                        imageUrl: "/file",
+                        errorMessage: null,
+                        uploadedToMediaStore: false,
+                    },
+                ],
+            });
+
+            vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response("error", { status: 500 }));
+
+            const hrefSetter = vi.fn();
+            Object.defineProperty(window, "location", {
+                value: { href: "" },
+                writable: true,
+            });
+            Object.defineProperty(window.location, "href", {
+                set: hrefSetter,
+                get: () => "",
+            });
+
+            await controller.embedIntoPage();
+
+            expect(hrefSetter).not.toHaveBeenCalled();
         });
     });
 });

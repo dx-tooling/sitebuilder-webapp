@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\PhotoBuilder\Domain\Entity\PhotoImage;
 use App\PhotoBuilder\Domain\Entity\PhotoSession;
 use App\PhotoBuilder\Domain\Enum\PhotoImageStatus;
+use EnterpriseToolingForSymfony\SharedBundle\DateAndTime\Service\DateAndTimeService;
 
 describe('PhotoImage', function (): void {
     describe('creation', function (): void {
@@ -34,6 +35,12 @@ describe('PhotoImage', function (): void {
             $session = new PhotoSession('ws-123', 'conv-456', 'index.html', 'prompt');
             $image   = new PhotoImage($session, 0);
             expect($image->getId())->toBeNull();
+        });
+
+        it('has null uploadedToMediaStoreAt initially', function (): void {
+            $session = new PhotoSession('ws-123', 'conv-456', 'index.html', 'prompt');
+            $image   = new PhotoImage($session, 0);
+            expect($image->getUploadedToMediaStoreAt())->toBeNull();
         });
     });
 
@@ -128,6 +135,26 @@ describe('PhotoImage', function (): void {
 
             $image->setStoragePath('abc-123/0.png');
             expect($image->getStoragePath())->toBe('abc-123/0.png');
+        });
+    });
+
+    describe('uploadedToMediaStoreAt', function (): void {
+        it('can set and get uploadedToMediaStoreAt', function (): void {
+            $session = new PhotoSession('ws-123', 'conv-456', 'index.html', 'prompt');
+            $image   = new PhotoImage($session, 0);
+
+            $now = DateAndTimeService::getDateTimeImmutable();
+            $image->setUploadedToMediaStoreAt($now);
+            expect($image->getUploadedToMediaStoreAt())->toBe($now);
+        });
+
+        it('can clear by setting null', function (): void {
+            $session = new PhotoSession('ws-123', 'conv-456', 'index.html', 'prompt');
+            $image   = new PhotoImage($session, 0);
+
+            $image->setUploadedToMediaStoreAt(DateAndTimeService::getDateTimeImmutable());
+            $image->setUploadedToMediaStoreAt(null);
+            expect($image->getUploadedToMediaStoreAt())->toBeNull();
         });
     });
 });

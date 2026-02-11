@@ -52,12 +52,12 @@ final readonly class FakeImageGenerator implements ImageGeneratorInterface
 
         imagefilledrectangle($image, 0, 0, $width - 1, $height - 1, $bgColor);
 
-        $text     = 'PLACEHOLDER ' . DateAndTimeService::getDateTimeImmutable()->format('H:i:s');
-        $fontSize = 5;
+        $text       = 'PLACEHOLDER ' . DateAndTimeService::getDateTimeImmutable()->format('H:i:s');
+        $fontSize   = 5;
         $textWidth  = imagefontwidth($fontSize) * mb_strlen($text);
         $textHeight = imagefontheight($fontSize);
-        $x = (int) (($width - $textWidth) / 2);
-        $y = (int) (($height - $textHeight) / 2);
+        $x          = (int) (($width - $textWidth) / 2);
+        $y          = (int) (($height - $textHeight) / 2);
 
         imagestring($image, $fontSize, $x, $y, $text, $textColor);
 

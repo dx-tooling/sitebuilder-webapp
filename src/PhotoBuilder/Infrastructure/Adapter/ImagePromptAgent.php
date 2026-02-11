@@ -69,7 +69,7 @@ class ImagePromptAgent extends Agent
             . 'Think about what each of the %d images should show in order to optimally fit '
             . 'the narrative of the web page content.'
             . "\n\n"
-            . "Important: The language used for the prompts must match the language of the user interface of the web page!"
+            . 'Important: The language used for the prompts must match the language of the user interface of the web page!'
             . "\n\n"
             . 'For each image, call the deliver_image_prompt tool with:'
             . "\n- A detailed, descriptive prompt suitable for an AI image generation model"

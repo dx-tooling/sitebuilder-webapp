@@ -65,7 +65,7 @@ final readonly class GenerateImagePromptsHandler
             $pageHtml = $this->workspaceMgmtFacade->readWorkspaceFile($session->getWorkspaceId(), $pagePath);
 
             // Generate prompts via LLM (or fake if simulation is enabled)
-            $generator = $_ENV['PHOTO_BUILDER_SIMULATE_IMAGE_PROMPT_GENERATION'] ?? '0';
+            $generator       = $_ENV['PHOTO_BUILDER_SIMULATE_IMAGE_PROMPT_GENERATION'] ?? '0';
             $promptGenerator = $generator === '1'
                 ? new FakePromptGenerator($this->logger)
                 : $this->promptGenerator;

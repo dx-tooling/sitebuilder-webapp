@@ -157,6 +157,22 @@ class PhotoImage
 
     #[ORM\Column(
         type: Types::DATETIME_IMMUTABLE,
+        nullable: true
+    )]
+    private ?DateTimeImmutable $uploadedToMediaStoreAt = null;
+
+    public function getUploadedToMediaStoreAt(): ?DateTimeImmutable
+    {
+        return $this->uploadedToMediaStoreAt;
+    }
+
+    public function setUploadedToMediaStoreAt(?DateTimeImmutable $uploadedToMediaStoreAt): void
+    {
+        $this->uploadedToMediaStoreAt = $uploadedToMediaStoreAt;
+    }
+
+    #[ORM\Column(
+        type: Types::DATETIME_IMMUTABLE,
         nullable: false
     )]
     private readonly DateTimeImmutable $createdAt;

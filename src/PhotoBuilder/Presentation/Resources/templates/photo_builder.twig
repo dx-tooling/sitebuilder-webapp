@@ -79,6 +79,17 @@
                         </p>
                     </div>
 
+                    {# Uploading images overlay: shown when embed CTA uploads remaining images #}
+                    {% if hasRemoteAssets %}
+                        <div {{ stimulus_target('photo-builder', 'uploadingImagesOverlay') }}
+                             class="hidden absolute inset-0 z-10 flex flex-col items-center justify-center rounded-lg bg-white/90 dark:bg-dark-900/90 backdrop-blur-sm">
+                            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+                            <p class="mt-4 etfswui-text-small">
+                                {{ 'photo_builder.uploading_images'|trans }}
+                            </p>
+                        </div>
+                    {% endif %}
+
                     {# User prompt section #}
                     <div class="etfswui-card">
                         <div class="etfswui-card-content">

@@ -16,6 +16,7 @@ interface ImageData {
     status: string;
     imageUrl: string | null;
     errorMessage: string | null;
+    uploadedToMediaStore?: boolean;
 }
 
 interface PromptEditedDetail {
@@ -71,6 +72,7 @@ export default class extends Controller {
         "imageCard",
         "uploadFinishedBanner",
         "regeneratingPromptsOverlay",
+        "uploadingImagesOverlay",
     ];
 
     declare readonly createSessionUrlValue: string;
@@ -99,6 +101,8 @@ export default class extends Controller {
     declare readonly uploadFinishedBannerTarget: HTMLElement;
     declare readonly hasRegeneratingPromptsOverlayTarget: boolean;
     declare readonly regeneratingPromptsOverlayTarget: HTMLElement;
+    declare readonly hasUploadingImagesOverlayTarget: boolean;
+    declare readonly uploadingImagesOverlayTarget: HTMLElement;
 
     private sessionId: string | null = null;
     private isRegeneratingPrompts = false;
@@ -252,9 +256,7 @@ export default class extends Controller {
         if (!this.sessionId || this.anyGenerating) return;
 
         // Tell child cards to clear prompt textarea if not kept (native event so children can listen)
-        this.element.dispatchEvent(
-            new CustomEvent("photo-builder:clearPromptIfNotKept", { bubbles: true }),
-        );
+        this.element.dispatchEvent(new CustomEvent("photo-builder:clearPromptIfNotKept", { bubbles: true }));
 
         // Show regenerating overlay and spinner
         this.isRegeneratingPrompts = true;
@@ -352,12 +354,9 @@ export default class extends Controller {
     }
 
     /**
-     * Handle photo-image:uploadRequested event from child.
+     * Upload a single image to the media store. Returns true on success.
      */
-    async handleUploadToMediaStore(event: CustomEvent<UploadRequestedDetail>): Promise<void> {
-        const { imageId } = event.detail;
-        if (!imageId) return;
-
+    private async uploadImageToMediaStore(imageId: string): Promise<boolean> {
         try {
             const url = this.uploadToMediaStoreUrlPatternValue.replace(IMAGE_ID_PLACEHOLDER, imageId);
             const response = await fetch(url, {
@@ -368,12 +367,21 @@ export default class extends Controller {
                     "X-Requested-With": "XMLHttpRequest",
                 },
             });
-
-            if (response.ok) {
-                this.showUploadFinishedBanner();
-            }
+            return response.ok;
         } catch {
-            // Silently ignore
+            return false;
+        }
+    }
+
+    /**
+     * Handle photo-image:uploadRequested event from child.
+     */
+    async handleUploadToMediaStore(event: CustomEvent<UploadRequestedDetail>): Promise<void> {
+        const { imageId } = event.detail;
+        if (!imageId) return;
+
+        if (await this.uploadImageToMediaStore(imageId)) {
+            this.showUploadFinishedBanner();
         }
     }
 
@@ -401,13 +409,41 @@ export default class extends Controller {
 
     /**
      * Navigate back to editor with pre-filled embed message.
+     * Uploads any completed images that are not yet on the media store first.
      */
-    embedIntoPage(): void {
-        const fileNames = this.lastImages
-            .filter((img) => img.suggestedFileName && img.status === "completed")
-            .map((img) => img.suggestedFileName)
-            .join(", ");
+    async embedIntoPage(): Promise<void> {
+        const completedImages = this.lastImages.filter((img) => img.suggestedFileName && img.status === "completed");
 
+        if (completedImages.length === 0) {
+            return;
+        }
+
+        const imagesToUpload = completedImages.filter((img) => img.uploadedToMediaStore !== true);
+
+        if (imagesToUpload.length > 0) {
+            if (this.hasUploadingImagesOverlayTarget) {
+                this.uploadingImagesOverlayTarget.classList.remove("hidden");
+            }
+            if (this.hasEmbedButtonTarget) {
+                this.embedButtonTarget.disabled = true;
+            }
+
+            const results = await Promise.all(imagesToUpload.map((img) => this.uploadImageToMediaStore(img.id)));
+
+            if (this.hasUploadingImagesOverlayTarget) {
+                this.uploadingImagesOverlayTarget.classList.add("hidden");
+            }
+            if (this.hasEmbedButtonTarget) {
+                this.embedButtonTarget.disabled = this.anyGenerating;
+            }
+
+            const allSucceeded = results.every(Boolean);
+            if (!allSucceeded) {
+                return;
+            }
+        }
+
+        const fileNames = completedImages.map((img) => img.suggestedFileName).join(", ");
         const message = `Embed images ${fileNames} into page ${this.pagePathValue}`;
         const url = `${this.editorUrlValue}?prefill=${encodeURIComponent(message)}`;
         window.location.href = url;

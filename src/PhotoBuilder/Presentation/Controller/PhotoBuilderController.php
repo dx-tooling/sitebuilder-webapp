@@ -20,6 +20,7 @@ use App\RemoteContentAssets\Facade\RemoteContentAssetsFacadeInterface;
 use App\WorkspaceMgmt\Facade\Dto\WorkspaceInfoDto;
 use App\WorkspaceMgmt\Facade\WorkspaceMgmtFacadeInterface;
 use Doctrine\ORM\EntityManagerInterface;
+use EnterpriseToolingForSymfony\SharedBundle\DateAndTime\Service\DateAndTimeService;
 use RuntimeException;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
@@ -204,7 +205,8 @@ final class PhotoBuilderController extends AbstractController
                         'imageId' => $image->getId(),
                     ])
                     : null,
-                'errorMessage' => $image->getErrorMessage(),
+                'errorMessage'         => $image->getErrorMessage(),
+                'uploadedToMediaStore' => $image->getUploadedToMediaStoreAt() !== null,
             ],
             $session->getImages()->toArray()
         );
@@ -346,6 +348,7 @@ final class PhotoBuilderController extends AbstractController
         $image->setStatus(PhotoImageStatus::Pending);
         $image->setStoragePath(null);
         $image->setErrorMessage(null);
+        $image->setUploadedToMediaStoreAt(null);
 
         $session = $image->getSession();
         $session->setStatus(PhotoSessionStatus::GeneratingImages);
@@ -428,9 +431,16 @@ final class PhotoBuilderController extends AbstractController
             return $this->json(['error' => 'S3 upload not configured for this project.'], Response::HTTP_BAD_REQUEST);
         }
 
-        $imageData = $this->imageStorage->read($image->getStoragePath());
-        $fileName  = $image->getSuggestedFileName() ?? 'generated-image-' . $image->getPosition() . '.png';
+        $fileName = $image->getSuggestedFileName() ?? 'generated-image-' . $image->getPosition() . '.png';
 
+        if ($image->getUploadedToMediaStoreAt() !== null) {
+            return $this->json([
+                'url'      => '',
+                'fileName' => $fileName,
+            ]);
+        }
+
+        $imageData   = $this->imageStorage->read($image->getStoragePath());
         $uploadedUrl = $this->remoteContentAssetsFacade->uploadAsset(
             $project->s3BucketName,
             $project->s3Region,
@@ -442,6 +452,9 @@ final class PhotoBuilderController extends AbstractController
             $imageData,
             'image/png',
         );
+
+        $image->setUploadedToMediaStoreAt(DateAndTimeService::getDateTimeImmutable());
+        $this->entityManager->flush();
 
         return $this->json([
             'url'      => $uploadedUrl,

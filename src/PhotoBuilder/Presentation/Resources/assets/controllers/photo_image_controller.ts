@@ -78,7 +78,7 @@ export default class extends Controller {
 
     private updateImageDisplay(data: ImageStateDetail): void {
         if (data.status === "completed" && data.imageUrl) {
-            this.imageTarget.src = data.imageUrl + '?' + Math.random();
+            this.imageTarget.src = data.imageUrl + "?" + Math.random();
             this.imageTarget.classList.remove("hidden");
             this.placeholderTarget.classList.add("hidden");
         } else if (data.status === "generating" || data.status === "pending") {

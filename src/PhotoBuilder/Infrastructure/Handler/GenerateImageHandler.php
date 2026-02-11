@@ -64,7 +64,7 @@ final readonly class GenerateImageHandler
             }
 
             // Generate image (or fake if simulation is enabled)
-            $simulate = $_ENV['PHOTO_BUILDER_SIMULATE_IMAGE_GENERATION'] ?? '0';
+            $simulate  = $_ENV['PHOTO_BUILDER_SIMULATE_IMAGE_GENERATION'] ?? '0';
             $generator = $simulate === '1'
                 ? new FakeImageGenerator($this->logger)
                 : $this->imageGenerator;
