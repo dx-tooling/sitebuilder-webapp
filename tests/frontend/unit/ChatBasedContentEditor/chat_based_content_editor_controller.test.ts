@@ -425,3 +425,86 @@ describe("ChatBasedContentEditorController handleChunk progress chunks", () => {
         expect(lines[1].textContent).toBe("Editing dist/landing-1.html");
     });
 });
+
+describe("ChatBasedContentEditorController prefillMessage", () => {
+    const createControllerWithPrefill = (
+        prefillMessage: string,
+    ): {
+        controller: ChatBasedContentEditorController;
+        textarea: HTMLTextAreaElement;
+    } => {
+        const textarea = document.createElement("textarea");
+        textarea.id = "instruction";
+        document.body.appendChild(textarea);
+
+        const controller = Object.create(
+            ChatBasedContentEditorController.prototype,
+        ) as ChatBasedContentEditorController;
+        const state = controller as unknown as {
+            hasInstructionTarget: boolean;
+            instructionTarget: HTMLTextAreaElement;
+            prefillMessageValue: string;
+            readOnlyValue: boolean;
+            contextUsageValue: undefined;
+            activeSessionValue: null;
+            turnsValue: [];
+            contextUsageUrlValue: string;
+        };
+        state.hasInstructionTarget = true;
+        state.instructionTarget = textarea;
+        state.prefillMessageValue = prefillMessage;
+        state.readOnlyValue = false;
+        state.contextUsageValue = undefined;
+        state.activeSessionValue = null;
+        state.turnsValue = [];
+        state.contextUsageUrlValue = "";
+
+        // Stub methods that connect() calls
+        (
+            controller as unknown as {
+                renderCompletedTurnsTechnicalContainers: () => void;
+                startContextUsagePolling: () => void;
+            }
+        ).renderCompletedTurnsTechnicalContainers = () => {};
+        (
+            controller as unknown as {
+                startContextUsagePolling: () => void;
+            }
+        ).startContextUsagePolling = () => {};
+
+        return { controller, textarea };
+    };
+
+    beforeEach(() => {
+        document.body.innerHTML = "";
+    });
+
+    it("should pre-fill instruction textarea with prefillMessage on connect", () => {
+        const { controller, textarea } = createControllerWithPrefill(
+            "Embed images sunset.jpg, office.jpg into page index.html",
+        );
+
+        controller.connect();
+
+        expect(textarea.value).toBe("Embed images sunset.jpg, office.jpg into page index.html");
+    });
+
+    it("should not pre-fill when prefillMessage is empty", () => {
+        const { controller, textarea } = createControllerWithPrefill("");
+        textarea.value = "Existing text";
+
+        controller.connect();
+
+        expect(textarea.value).toBe("Existing text");
+    });
+
+    it("should focus the textarea when prefillMessage is set", () => {
+        const { controller, textarea } = createControllerWithPrefill("Embed images into page");
+
+        const focusSpy = vi.spyOn(textarea, "focus");
+
+        controller.connect();
+
+        expect(focusSpy).toHaveBeenCalled();
+    });
+});

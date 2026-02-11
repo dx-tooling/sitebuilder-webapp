@@ -1,0 +1,299 @@
+{% extends '@common.presentation/base_appshell.html.twig' %}
+
+{% block title %}{{ 'photo_builder.title'|trans }} — {{ project.name }} — {{ pagePath }}{% endblock %}
+
+{% block body %}
+    <div class="max-w-7xl mx-auto"
+         {{ stimulus_controller('photo-builder', {
+             createSessionUrl: path('photo_builder.presentation.create_session'),
+             pollUrlPattern: path('photo_builder.presentation.poll_session', { sessionId: '00000000-0000-0000-0000-000000000000' }),
+             regeneratePromptsUrlPattern: path('photo_builder.presentation.regenerate_prompts', { sessionId: '00000000-0000-0000-0000-000000000000' }),
+             regenerateImageUrlPattern: path('photo_builder.presentation.regenerate_image', { imageId: '00000000-0000-0000-0000-111111111111' }),
+             regenerateAllImagesUrlPattern: path('photo_builder.presentation.regenerate_all_images', { sessionId: '00000000-0000-0000-0000-000000000000' }),
+             updatePromptUrlPattern: path('photo_builder.presentation.update_prompt', { imageId: '00000000-0000-0000-0000-111111111111' }),
+             uploadToMediaStoreUrlPattern: path('photo_builder.presentation.upload_to_media_store', { imageId: '00000000-0000-0000-0000-111111111111' }),
+             checkManifestAvailabilityUrlPattern: hasRemoteAssets ? path('photo_builder.presentation.check_manifest_availability', { workspaceId: workspace.id }) : '',
+             csrfToken: csrf_token('photo_builder'),
+             workspaceId: workspace.id,
+             pagePath: pagePath,
+             conversationId: conversationId,
+             imageCount: imageCount,
+             defaultUserPrompt: 'photo_builder.default_user_prompt'|trans,
+             editorUrl: path('chat_based_content_editor.presentation.show', { conversationId: conversationId }),
+             hasRemoteAssets: hasRemoteAssets,
+             supportsResolutionToggle: supportsResolutionToggle,
+             embedPrefillMessage: 'photo_builder.embed_prefill_message'|trans,
+         })
+         |stimulus_action('photo-builder', 'handlePromptEdited', 'photo-image:promptEdited')
+         |stimulus_action('photo-builder', 'handleRegenerateImage', 'photo-image:regenerateRequested')
+         |stimulus_action('photo-builder', 'handleUploadToMediaStore', 'photo-image:uploadRequested') }}>
+
+        {# Header #}
+        <div class="mb-6 flex items-center justify-between">
+            <div>
+                <h1 class="etfswui-section-title">
+                    {{ 'photo_builder.title'|trans }}
+                </h1>
+                <p class="etfswui-text-small">
+                    {{ project.name }} — {{ pagePath }}
+                </p>
+                {% if supportsResolutionToggle %}
+                    <div {{ stimulus_target('photo-builder', 'resolutionToggle') }}
+                         class="mt-2 inline-flex items-center gap-2">
+                        <span class="text-xs font-medium text-dark-500 dark:text-dark-400">{{ 'photo_builder.resolution_label'|trans }}</span>
+                        <div class="inline-flex rounded-md bg-dark-100 dark:bg-dark-800 p-0.5">
+                            <button {{ stimulus_target('photo-builder', 'loresButton') }}
+                                    {{ stimulus_action('photo-builder', 'switchResolution') }}
+                                    data-image-size="1K"
+                                    type="button"
+                                    class="px-2.5 py-1 text-xs font-medium rounded transition-colors bg-primary-600 text-white shadow-sm">
+                                {{ 'photo_builder.resolution_lores'|trans }}
+                            </button>
+                            <button {{ stimulus_target('photo-builder', 'hiresButton') }}
+                                    {{ stimulus_action('photo-builder', 'switchResolution') }}
+                                    data-image-size="2K"
+                                    type="button"
+                                    class="px-2.5 py-1 text-xs font-medium rounded transition-colors text-dark-600 dark:text-dark-400 hover:text-dark-900 dark:hover:text-dark-200">
+                                {{ 'photo_builder.resolution_hires'|trans }}
+                            </button>
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+            <a href="{{ path('chat_based_content_editor.presentation.show', { conversationId: conversationId }) }}"
+               class="etfswui-card-back-link">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18"/>
+                </svg>
+                {{ 'photo_builder.back_to_editor'|trans }}
+            </a>
+        </div>
+
+        <div class="space-y-6">
+
+                {# Loading overlay #}
+                <div {{ stimulus_target('photo-builder', 'loadingOverlay') }}
+                     class="flex flex-col items-center justify-center py-20 space-y-4">
+                    <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+                    <p class="etfswui-text-small">
+                        {{ 'photo_builder.generating_prompts'|trans }}
+                    </p>
+                </div>
+
+                {# Main content (hidden until prompts ready) #}
+                <div {{ stimulus_target('photo-builder', 'mainContent') }} class="hidden space-y-6 relative">
+                    {# Regenerating prompts overlay: spinner + message while prompts are being regenerated #}
+                    <div {{ stimulus_target('photo-builder', 'regeneratingPromptsOverlay') }}
+                         class="hidden absolute inset-0 z-10 flex flex-col items-center justify-center rounded-lg bg-white/90 dark:bg-dark-900/90 backdrop-blur-sm">
+                        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+                        <p class="mt-4 etfswui-text-small">
+                            {{ 'photo_builder.regenerating_prompts'|trans }}
+                        </p>
+                    </div>
+
+                    {# Uploading images overlay: shown when embed CTA uploads remaining images #}
+                    {% if hasRemoteAssets %}
+                        <div {{ stimulus_target('photo-builder', 'uploadingImagesOverlay') }}
+                             class="hidden absolute inset-0 z-10 flex flex-col items-center justify-center rounded-lg bg-white/90 dark:bg-dark-900/90 backdrop-blur-sm">
+                            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+                            <p class="mt-4 etfswui-text-small">
+                                {{ 'photo_builder.uploading_images'|trans }}
+                            </p>
+                        </div>
+                    {% endif %}
+
+                    {# Waiting for manifest overlay: shown after upload while waiting for CDN availability #}
+                    {% if hasRemoteAssets %}
+                        <div {{ stimulus_target('photo-builder', 'waitingForManifestOverlay') }}
+                             class="hidden absolute inset-0 z-10 flex flex-col items-center justify-center rounded-lg bg-white/90 dark:bg-dark-900/90 backdrop-blur-sm">
+                            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+                            <p class="mt-4 etfswui-text-small">
+                                {{ 'photo_builder.waiting_for_manifest'|trans }}
+                            </p>
+                            <p class="mt-1 text-xs text-dark-400 dark:text-dark-500">
+                                {{ 'photo_builder.waiting_for_manifest_note'|trans }}
+                            </p>
+                        </div>
+                    {% endif %}
+
+                    {# System prompt (read-only) — shows what the AI receives behind the scenes #}
+                    <details class="etfswui-card group">
+                        <summary class="etfswui-card-content cursor-pointer select-none list-none">
+                            <div class="flex items-center gap-2">
+                                <svg class="w-4 h-4 text-dark-400 transition-transform group-open:rotate-90" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"/>
+                                </svg>
+                                <span class="etfswui-form-label mb-0">
+                                    {{ 'photo_builder.system_prompt_label'|trans }}
+                                </span>
+                            </div>
+                        </summary>
+                        <div class="etfswui-card-content pt-0 space-y-3">
+                            <p class="etfswui-text-small">
+                                <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium bg-primary-100 text-primary-800 dark:bg-primary-900/30 dark:text-primary-300">
+                                    {{ 'photo_builder.active_model'|trans({'%provider%': effectivePhotoBuilderProvider, '%promptModel%': imagePromptModel, '%imageModel%': imageGenerationModel}) }}
+                                </span>
+                            </p>
+                            <div class="rounded-md bg-dark-50 dark:bg-dark-800 border border-dark-200 dark:border-dark-700 p-3 text-xs text-dark-600 dark:text-dark-400 font-mono whitespace-pre-wrap leading-relaxed">You are a friendly AI assistant that helps the user to generate {{ imageCount }} prompts that each will be fed into an LLM-backed AI image generation agent, in order to generate images that shall be used on a web page with the following contents:
+
+[Content of your page at {{ pagePath }}]
+
+Think about what each of the {{ imageCount }} images should show in order to optimally fit the narrative of the web page content.
+
+Important: The language used for the prompts must match the language of the user interface of the web page!
+
+For each image, call the deliver_image_prompt tool with:
+- A detailed, descriptive prompt suitable for an AI image generation model
+- A descriptive, kebab-case filename (with .png extension) that clearly describes what the image shows (e.g. "modern-office-team-collaborating.png", not "office.png" or "image1.png")</div>
+                        </div>
+                    </details>
+
+                    {# User prompt section #}
+                    <div class="etfswui-card">
+                        <div class="etfswui-card-content">
+                            <label class="etfswui-form-label">
+                                {{ 'photo_builder.user_prompt_label'|trans }}
+                            </label>
+                            <textarea {{ stimulus_target('photo-builder', 'userPrompt') }}
+                                      rows="3"
+                                      class="etfswui-form-textarea"
+                                      placeholder="{{ 'photo_builder.default_user_prompt'|trans }}"></textarea>
+                            <div class="etfswui-card-actions">
+                                <button {{ stimulus_target('photo-builder', 'regeneratePromptsButton') }}
+                                        {{ stimulus_action('photo-builder', 'regeneratePrompts') }}
+                                        type="button"
+                                        class="etfswui-button-default gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182"/>
+                                    </svg>
+                                    {{ 'photo_builder.regenerate_prompts'|trans }}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    {# Image grid #}
+                    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                        {% for i in range(0, imageCount - 1) %}
+                            <div {{ stimulus_controller('photo-image', {
+                                     position: i,
+                                     hasMediaStore: hasRemoteAssets,
+                                     generatingPromptText: 'photo_builder.generating_image'|trans,
+                                 })
+                                 |stimulus_action('photo-image', 'updateFromState', 'photo-builder:stateChanged')
+                                 |stimulus_action('photo-image', 'clearPromptIfNotKept', 'photo-builder:clearPromptIfNotKept')
+                                 |stimulus_action('photo-image', 'onUploadComplete', 'photo-builder:uploadComplete')
+                                 |stimulus_action('photo-image', 'onUploadFailed', 'photo-builder:uploadFailed') }}
+                                 {{ stimulus_target('photo-builder', 'imageCard') }}
+                                 class="etfswui-card">
+
+                                {# Image preview area #}
+                                <div class="aspect-square bg-dark-100 dark:bg-dark-700 relative">
+                                    {# Generating placeholder #}
+                                    <div {{ stimulus_target('photo-image', 'placeholder') }}
+                                         class="absolute inset-0 flex flex-col items-center justify-center space-y-2">
+                                        <div class="animate-pulse rounded-full h-8 w-8 bg-dark-300 dark:bg-dark-600"></div>
+                                        <span class="text-xs text-dark-400 dark:text-dark-500">
+                                            {{ 'photo_builder.generating_image'|trans }}
+                                        </span>
+                                    </div>
+                                    {# Actual image #}
+                                    <img {{ stimulus_target('photo-image', 'image') }}
+                                         class="hidden w-full h-full object-cover"
+                                         alt=""
+                                         loading="lazy"/>
+                                    {# Status badge #}
+                                    <div {{ stimulus_target('photo-image', 'statusBadge') }}
+                                         class="absolute top-2 right-2 hidden">
+                                    </div>
+                                </div>
+
+                                {# Controls #}
+                                <div class="p-3 space-y-3">
+                                    {# Prompt textarea #}
+                                    <textarea {{ stimulus_target('photo-image', 'promptTextarea') }}
+                                              {{ stimulus_action('photo-image', 'onPromptInput', 'input') }}
+                                              rows="10"
+                                              class="etfswui-form-textarea text-xs"
+                                              placeholder="{{ 'photo_builder.prompt_placeholder'|trans }}"></textarea>
+
+                                    {# Keep prompt checkbox #}
+                                    <label class="etfswui-form-checkbox-wrapper">
+                                        <input {{ stimulus_target('photo-image', 'keepCheckbox') }}
+                                               type="checkbox"
+                                               class="etfswui-form-checkbox">
+                                        <span class="etfswui-form-checkbox-label text-xs">
+                                            {{ 'photo_builder.keep_prompt'|trans }}
+                                        </span>
+                                    </label>
+
+                                    {# Action buttons #}
+                                    <div class="flex flex-col gap-2">
+                                        <button {{ stimulus_target('photo-image', 'regenerateButton') }}
+                                                {{ stimulus_action('photo-image', 'requestRegenerate') }}
+                                                type="button"
+                                                class="etfswui-button-secondary justify-center gap-1 text-xs disabled:opacity-50 disabled:cursor-not-allowed">
+                                            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182"/>
+                                            </svg>
+                                            {{ 'photo_builder.regenerate_image'|trans }}
+                                        </button>
+                                        {% if hasRemoteAssets %}
+                                            <button {{ stimulus_target('photo-image', 'uploadButton') }}
+                                                    {{ stimulus_action('photo-image', 'requestUpload') }}
+                                                    type="button"
+                                                    class="etfswui-button-default justify-center gap-1 text-xs disabled:opacity-50 disabled:cursor-not-allowed">
+                                                <span {{ stimulus_target('photo-image', 'uploadButtonDefault') }}>
+                                                    <span class="inline-flex items-center justify-center gap-1">
+                                                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"/>
+                                                        </svg>
+                                                        {{ 'photo_builder.upload_to_media_store'|trans }}
+                                                    </span>
+                                                </span>
+                                                <span {{ stimulus_target('photo-image', 'uploadButtonUploading') }}
+                                                      class="hidden">
+                                                    <span class="inline-flex items-center justify-center gap-1">
+                                                        <svg class="animate-spin w-3.5 h-3.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                        </svg>
+                                                        {{ 'photo_builder.uploading_to_media_store'|trans }}
+                                                    </span>
+                                                </span>
+                                                <span {{ stimulus_target('photo-image', 'uploadButtonSuccess') }}
+                                                      class="hidden">
+                                                    <span class="inline-flex items-center justify-center gap-1">
+                                                        <svg class="w-3.5 h-3.5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clip-rule="evenodd" />
+                                                        </svg>
+                                                        {{ 'photo_builder.uploaded_to_media_store'|trans }}
+                                                    </span>
+                                                </span>
+                                            </button>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+
+                    {# Embed CTA #}
+                    {% if hasRemoteAssets %}
+                        <div class="flex justify-center pt-4">
+                            <button {{ stimulus_target('photo-builder', 'embedButton') }}
+                                    {{ stimulus_action('photo-builder', 'embedIntoPage') }}
+                                    type="button"
+                                    class="etfswui-button-default gap-2 px-6 py-3 disabled:opacity-50 disabled:cursor-not-allowed">
+                                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3.75 21h16.5a2.25 2.25 0 002.25-2.25V6a2.25 2.25 0 00-2.25-2.25H3.75A2.25 2.25 0 001.5 6v12.75A2.25 2.25 0 003.75 21z"/>
+                                </svg>
+                                {{ 'photo_builder.embed_into_page'|trans }}
+                            </button>
+                        </div>
+                    {% endif %}
+
+                </div>
+        </div>
+    </div>
+{% endblock %}
