@@ -159,6 +159,16 @@ export default class extends Controller {
     // ─── Add / Edit modal ───────────────────────────────────────
 
     /**
+     * Prevent Enter from inserting a newline in the form textarea.
+     * Newlines are forbidden because prompts are stored one-per-line.
+     */
+    handleFormKeydown(event: KeyboardEvent): void {
+        if (event.key === "Enter") {
+            event.preventDefault();
+        }
+    }
+
+    /**
      * Open the form modal in "add" mode (empty input).
      */
     showAddModal(): void {
