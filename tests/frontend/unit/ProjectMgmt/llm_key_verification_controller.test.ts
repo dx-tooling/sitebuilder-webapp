@@ -22,27 +22,29 @@ describe("LlmKeyVerificationController", () => {
 
     const createControllerElement = async (apiKey: string = ""): Promise<HTMLDivElement> => {
         const html = `
-            <div data-controller="llm-key-verification"
-                 data-llm-key-verification-verify-url-value="/projects/verify-llm-key"
-                 data-llm-key-verification-csrf-token-value="test-csrf-token">
+            <form>
                 <input type="radio" name="content_editing_llm_model_provider" value="openai" checked>
-                <input type="password"
-                       data-llm-key-verification-target="input"
-                       data-action="blur->llm-key-verification#verify"
-                       value="${apiKey}">
-                <div data-llm-key-verification-target="status">
-                    <div class="hidden flex items-center gap-2" data-llm-key-verification-target="spinner">Verifying...</div>
-                    <div class="hidden flex items-center gap-2" data-llm-key-verification-target="success">Success!</div>
-                    <div class="hidden flex items-center gap-2" data-llm-key-verification-target="error">Error!</div>
+                <div data-controller="llm-key-verification"
+                     data-llm-key-verification-verify-url-value="/projects/verify-llm-key"
+                     data-llm-key-verification-csrf-token-value="test-csrf-token">
+                    <input type="password"
+                           data-llm-key-verification-target="input"
+                           data-action="blur->llm-key-verification#verify"
+                           value="${apiKey}">
+                    <div data-llm-key-verification-target="status">
+                        <div class="hidden flex items-center gap-2" data-llm-key-verification-target="spinner">Verifying...</div>
+                        <div class="hidden flex items-center gap-2" data-llm-key-verification-target="success">Success!</div>
+                        <div class="hidden flex items-center gap-2" data-llm-key-verification-target="error">Error!</div>
+                    </div>
                 </div>
-            </div>
+            </form>
         `;
         document.body.innerHTML = html;
 
         // Wait for Stimulus to connect the controller
         await new Promise((resolve) => setTimeout(resolve, 50));
 
-        return document.body.firstElementChild as HTMLDivElement;
+        return document.body.querySelector('[data-controller="llm-key-verification"]') as HTMLDivElement;
     };
 
     it("should not verify when input is empty", async () => {
