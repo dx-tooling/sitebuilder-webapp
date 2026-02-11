@@ -116,7 +116,7 @@ export default class extends Controller {
         if (data.status === "completed" && data.imageUrl) {
             const baseUrl = data.imageUrl.split("?")[0];
             if (this.lastSetImageUrl !== baseUrl) {
-                this.imageTarget.src = data.imageUrl;
+                this.imageTarget.src = baseUrl + "?v=" + Date.now();
                 this.lastSetImageUrl = baseUrl;
             }
             this.imageTarget.classList.remove("hidden");
