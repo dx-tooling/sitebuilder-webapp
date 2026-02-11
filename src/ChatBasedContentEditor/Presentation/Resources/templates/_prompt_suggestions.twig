@@ -36,9 +36,7 @@
             <div class="group flex items-start gap-1" data-index="{{ loop.index0 }}">
                 <button type="button"
                         {{ stimulus_target('prompt-suggestions', 'suggestion') }}
-                        {{ stimulus_action('prompt-suggestions', 'insert', 'click') }}
-                        {{ stimulus_action('prompt-suggestions', 'hoverStart', 'mouseenter') }}
-                        {{ stimulus_action('prompt-suggestions', 'hoverEnd', 'mouseleave') }}
+                        data-action="click->prompt-suggestions#insert mouseenter->prompt-suggestions#hoverStart mouseleave->prompt-suggestions#hoverEnd"
                         data-text="{{ suggestion }}"
                         class="prompt-suggestion flex-1 px-3 py-1.5 text-xs border border-dark-300 dark:border-dark-600 text-dark-600 dark:text-dark-400 hover:bg-dark-100 dark:hover:bg-dark-700 hover:text-dark-900 dark:hover:text-dark-100 cursor-pointer {{ loop.index > 3 ? 'hidden' : '' }}">
                     {{ suggestion }}
