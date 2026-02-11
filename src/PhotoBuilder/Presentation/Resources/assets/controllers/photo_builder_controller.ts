@@ -257,6 +257,7 @@ export default class extends Controller {
         }
 
         // Check if any image is currently generating
+        const prevAnyGenerating = this.anyGenerating;
         this.anyGenerating =
             status === "generating_prompts" ||
             status === "generating_images" ||
@@ -284,12 +285,15 @@ export default class extends Controller {
         // Update button states
         this.updateButtonStates();
 
-        // Dispatch state changes only to cards whose image data actually changed
+        // Dispatch state changes only to cards whose image data actually changed,
+        // but force-dispatch to all cards when the generating state transitions
+        // (children read data-photo-builder-generating to enable/disable buttons).
+        const generatingChanged = prevAnyGenerating !== this.anyGenerating;
         for (const image of images) {
             const card = this.imageCardTargets[image.position];
             if (!card) continue;
             const prev = prevImages[image.position];
-            if (prev && imageDataEqual(prev, image)) continue;
+            if (prev && imageDataEqual(prev, image) && !generatingChanged) continue;
             card.dispatchEvent(
                 new CustomEvent("photo-builder:stateChanged", {
                     detail: image,

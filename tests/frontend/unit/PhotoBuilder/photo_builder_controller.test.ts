@@ -739,6 +739,71 @@ describe("PhotoBuilderController", () => {
             controller.disconnect();
         });
 
+        it("should dispatch stateChanged to all cards when anyGenerating transitions even if image data unchanged", async () => {
+            vi.useFakeTimers();
+            const { controller, elements } = createController();
+
+            const images: ImageData[] = [
+                {
+                    id: "img-1",
+                    position: 0,
+                    prompt: "Prompt A",
+                    suggestedFileName: "a.jpg",
+                    status: "completed",
+                    imageUrl: "/a",
+                    errorMessage: null,
+                },
+                {
+                    id: "img-2",
+                    position: 1,
+                    prompt: "Prompt B",
+                    suggestedFileName: "b.jpg",
+                    status: "completed",
+                    imageUrl: "/b",
+                    errorMessage: null,
+                },
+            ];
+
+            const createResponse: SessionResponse = { sessionId: "sess-1", status: "generating_prompts" };
+            // First poll: session still generating_images, but images already completed
+            const pollResponse1: SessionResponse = { status: "generating_images", images };
+            // Second poll: session transitions to images_ready, same image data
+            const pollResponse2: SessionResponse = { status: "images_ready", images };
+
+            let fetchCallCount = 0;
+            vi.spyOn(globalThis, "fetch").mockImplementation(async () => {
+                fetchCallCount++;
+                if (fetchCallCount === 1) {
+                    return new Response(JSON.stringify(createResponse), { status: 200 });
+                }
+                if (fetchCallCount === 2) {
+                    return new Response(JSON.stringify(pollResponse1), { status: 200 });
+                }
+                return new Response(JSON.stringify(pollResponse2), { status: 200 });
+            });
+
+            const card0Handler = vi.fn();
+            const card1Handler = vi.fn();
+            elements.imageCards[0].addEventListener("photo-builder:stateChanged", card0Handler);
+            elements.imageCards[1].addEventListener("photo-builder:stateChanged", card1Handler);
+
+            // First poll (generating_images): dispatches because data is new
+            controller.connect();
+            await flushPromises();
+            await flushPromises();
+            expect(card0Handler).toHaveBeenCalledTimes(1);
+            expect(card1Handler).toHaveBeenCalledTimes(1);
+
+            // Second poll (images_ready): image data unchanged but anyGenerating transitions false
+            await vi.advanceTimersByTimeAsync(1000);
+            await flushPromises();
+            expect(card0Handler).toHaveBeenCalledTimes(2);
+            expect(card1Handler).toHaveBeenCalledTimes(2);
+
+            vi.useRealTimers();
+            controller.disconnect();
+        });
+
         it("should set data-photo-builder-generating attribute on element", async () => {
             const { controller, elements } = createController();
 
