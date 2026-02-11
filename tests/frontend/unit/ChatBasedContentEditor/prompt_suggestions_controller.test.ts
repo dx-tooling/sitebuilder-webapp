@@ -317,6 +317,41 @@ describe("PromptSuggestionsController", () => {
         });
     });
 
+    describe("handleFormKeydown", () => {
+        it("prevents default when Enter is pressed", () => {
+            const { controller } = createController();
+            const event = new KeyboardEvent("keydown", { key: "Enter" });
+            const spy = vi.spyOn(event, "preventDefault");
+
+            controller.handleFormKeydown(event);
+
+            expect(spy).toHaveBeenCalled();
+        });
+
+        it("prevents default when Shift+Enter is pressed", () => {
+            const { controller } = createController();
+            const event = new KeyboardEvent("keydown", {
+                key: "Enter",
+                shiftKey: true,
+            });
+            const spy = vi.spyOn(event, "preventDefault");
+
+            controller.handleFormKeydown(event);
+
+            expect(spy).toHaveBeenCalled();
+        });
+
+        it("does not prevent default for other keys", () => {
+            const { controller } = createController();
+            const event = new KeyboardEvent("keydown", { key: "a" });
+            const spy = vi.spyOn(event, "preventDefault");
+
+            controller.handleFormKeydown(event);
+
+            expect(spy).not.toHaveBeenCalled();
+        });
+    });
+
     describe("confirmDelete", () => {
         it("opens delete confirmation modal", () => {
             const { controller, deleteModal } = createController();
