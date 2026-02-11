@@ -24,11 +24,6 @@ use Symfony\Component\Security\Http\Attribute\CurrentUser;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Throwable;
 
-use function array_key_exists;
-use function is_array;
-use function is_string;
-use function trim;
-
 /**
  * JSON API controller for CRUD operations on prompt suggestions.
  */
@@ -56,14 +51,19 @@ final class PromptSuggestionsController extends AbstractController
     ): JsonResponse {
         $context = $this->resolveEditableWorkspace($conversationId, $request, $user);
 
-        $text = $this->getRequestText($request);
+        $text = $this->promptSuggestionsService->getRequestText($request);
         if ($text === null) {
             return $this->json(['error' => 'Missing or empty "text" field.'], Response::HTTP_BAD_REQUEST);
         }
 
         try {
             $suggestions = $this->promptSuggestionsService->addSuggestion($context->workspacePath, $text);
-            $this->commitChanges($context, $conversationId, 'Add prompt suggestion');
+            $this->workspaceMgmtFacade->commitAndPush(
+                $context->workspaceId,
+                'Add prompt suggestion',
+                $context->authorEmail,
+                $conversationId,
+            );
         } catch (InvalidArgumentException $e) {
             return $this->json(['error' => $e->getMessage()], Response::HTTP_BAD_REQUEST);
         } catch (Throwable $e) {
@@ -87,14 +87,20 @@ final class PromptSuggestionsController extends AbstractController
     ): JsonResponse {
         $context = $this->resolveEditableWorkspace($conversationId, $request, $user);
 
-        $text = $this->getRequestText($request);
+        $text = $this->promptSuggestionsService->getRequestText($request);
         if ($text === null) {
             return $this->json(['error' => 'Missing or empty "text" field.'], Response::HTTP_BAD_REQUEST);
         }
 
         try {
             $suggestions = $this->promptSuggestionsService->updateSuggestion($context->workspacePath, $index, $text);
-            $this->commitChanges($context, $conversationId, 'Update prompt suggestion');
+
+            $this->workspaceMgmtFacade->commitAndPush(
+                $context->workspaceId,
+                'Update prompt suggestion',
+                $context->authorEmail,
+                $conversationId,
+            );
         } catch (InvalidArgumentException $e) {
             return $this->json(['error' => $e->getMessage()], Response::HTTP_BAD_REQUEST);
         } catch (OutOfRangeException $e) {
@@ -122,7 +128,13 @@ final class PromptSuggestionsController extends AbstractController
 
         try {
             $suggestions = $this->promptSuggestionsService->deleteSuggestion($context->workspacePath, $index);
-            $this->commitChanges($context, $conversationId, 'Remove prompt suggestion');
+
+            $this->workspaceMgmtFacade->commitAndPush(
+                $context->workspaceId,
+                'Remove prompt suggestion',
+                $context->authorEmail,
+                $conversationId,
+            );
         } catch (OutOfRangeException $e) {
             return $this->json(['error' => $e->getMessage()], Response::HTTP_NOT_FOUND);
         } catch (Throwable $e) {
@@ -176,41 +188,5 @@ final class PromptSuggestionsController extends AbstractController
             $workspace->id,
             $accountInfo->email,
         );
-    }
-
-    /**
-     * Commit and push the prompt suggestions file changes to the remote repository.
-     */
-    private function commitChanges(
-        EditableWorkspaceContextDto $context,
-        string                      $conversationId,
-        string                      $message,
-    ): void {
-        $this->workspaceMgmtFacade->commitAndPush(
-            $context->workspaceId,
-            $message,
-            $context->authorEmail,
-            $conversationId,
-        );
-    }
-
-    private function getRequestText(Request $request): ?string
-    {
-        $content = $request->getContent();
-        if ($content === '') {
-            return null;
-        }
-
-        $data = json_decode($content, true);
-        if (
-            !is_array($data)
-            || !array_key_exists('text', $data)
-            || !is_string($data['text'])
-            || trim($data['text']) === ''
-        ) {
-            return null;
-        }
-
-        return $data['text'];
     }
 }
