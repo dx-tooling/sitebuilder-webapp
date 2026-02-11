@@ -7,8 +7,9 @@ namespace App\LlmContentEditor\Domain\Enum;
 enum LlmModelName: string
 {
     // Text generation models
-    case Gpt52             = 'gpt-5.2';
-    case Gemini3ProPreview = 'gemini-3-pro-preview';
+    case Gpt52               = 'gpt-5.2';
+    case Gemini3ProPreview   = 'gemini-3-pro-preview';
+    case Gemini3FlashPreview = 'gemini-3-flash-preview';
 
     // Image generation models
     case GptImage1              = 'gpt-image-1';
@@ -17,8 +18,8 @@ enum LlmModelName: string
     public function maxContextTokens(): int
     {
         return match ($this) {
-            self::Gpt52             => 128_000,
-            self::Gemini3ProPreview => 1_048_576,
+            self::Gpt52 => 128_000,
+            self::Gemini3ProPreview, self::Gemini3FlashPreview => 1_048_576,
             self::GptImage1, self::Gemini3ProImagePreview => 0,
         };
     }
@@ -31,6 +32,7 @@ enum LlmModelName: string
         return match ($this) {
             self::Gpt52                  => 1.75,
             self::Gemini3ProPreview      => 1.25,
+            self::Gemini3FlashPreview    => 0.15,
             self::GptImage1              => 0.0, // image models have per-image pricing
             self::Gemini3ProImagePreview => 0.0,
         };
@@ -44,6 +46,7 @@ enum LlmModelName: string
         return match ($this) {
             self::Gpt52                  => 14.00,
             self::Gemini3ProPreview      => 10.00,
+            self::Gemini3FlashPreview    => 0.60,
             self::GptImage1              => 0.0,
             self::Gemini3ProImagePreview => 0.0,
         };
