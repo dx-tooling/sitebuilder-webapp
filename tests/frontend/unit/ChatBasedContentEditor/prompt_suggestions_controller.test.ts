@@ -26,18 +26,16 @@ describe("PromptSuggestionsController", () => {
             row.dataset.index = String(i);
             row.className = "group flex items-start gap-1";
 
+            if (i >= 3) {
+                row.classList.add("hidden");
+            }
+
             const btn = document.createElement("button");
             btn.dataset.text = `Suggestion ${i + 1}`;
-            if (i >= 3) {
-                btn.classList.add("hidden");
-            }
             suggestionButtons.push(btn);
 
             const actions = document.createElement("div");
             actions.className = "flex-shrink-0";
-            if (i >= 3) {
-                actions.classList.add("hidden");
-            }
 
             row.appendChild(btn);
             row.appendChild(actions);
@@ -188,15 +186,18 @@ describe("PromptSuggestionsController", () => {
         it("shows all hidden suggestions", () => {
             const { controller, suggestionButtons } = createController();
 
-            // Initially buttons 3,4 are hidden
-            expect(suggestionButtons[3].classList.contains("hidden")).toBe(true);
-            expect(suggestionButtons[4].classList.contains("hidden")).toBe(true);
+            // Initially rows 3,4 are hidden
+            const row3 = suggestionButtons[3].closest("[data-index]") as HTMLElement;
+            const row4 = suggestionButtons[4].closest("[data-index]") as HTMLElement;
+            expect(row3.classList.contains("hidden")).toBe(true);
+            expect(row4.classList.contains("hidden")).toBe(true);
 
             controller.expand();
 
-            // After expand, all should be visible
+            // After expand, all rows should be visible
             suggestionButtons.forEach((btn) => {
-                expect(btn.classList.contains("hidden")).toBe(false);
+                const row = btn.closest("[data-index]") as HTMLElement;
+                expect(row.classList.contains("hidden")).toBe(false);
             });
         });
 
@@ -216,17 +217,21 @@ describe("PromptSuggestionsController", () => {
         it("hides suggestions beyond maxVisible", () => {
             const { controller, suggestionButtons } = createController();
 
-            // First expand to show all
-            suggestionButtons.forEach((btn) => btn.classList.remove("hidden"));
+            // First expand to show all rows
+            suggestionButtons.forEach((btn) => {
+                const row = btn.closest("[data-index]") as HTMLElement;
+                row.classList.remove("hidden");
+            });
 
             controller.collapse();
 
-            // First 3 should be visible, rest hidden
-            expect(suggestionButtons[0].classList.contains("hidden")).toBe(false);
-            expect(suggestionButtons[1].classList.contains("hidden")).toBe(false);
-            expect(suggestionButtons[2].classList.contains("hidden")).toBe(false);
-            expect(suggestionButtons[3].classList.contains("hidden")).toBe(true);
-            expect(suggestionButtons[4].classList.contains("hidden")).toBe(true);
+            // First 3 rows should be visible, rest hidden
+            const rows = suggestionButtons.map((btn) => btn.closest("[data-index]") as HTMLElement);
+            expect(rows[0].classList.contains("hidden")).toBe(false);
+            expect(rows[1].classList.contains("hidden")).toBe(false);
+            expect(rows[2].classList.contains("hidden")).toBe(false);
+            expect(rows[3].classList.contains("hidden")).toBe(true);
+            expect(rows[4].classList.contains("hidden")).toBe(true);
         });
 
         it("shows expand button and hides collapse button", () => {
@@ -581,16 +586,16 @@ describe("PromptSuggestionsController", () => {
             expect(buttons[2].textContent).toBe("Gamma");
         });
 
-        it("hides suggestions beyond maxVisible", () => {
+        it("hides rows beyond maxVisible", () => {
             const { controller, suggestionList } = createController();
 
             controller.refreshSuggestionsList(["A", "B", "C", "D", "E"]);
 
-            const buttons = suggestionList.querySelectorAll('[data-prompt-suggestions-target="suggestion"]');
-            expect(buttons[0].classList.contains("hidden")).toBe(false);
-            expect(buttons[2].classList.contains("hidden")).toBe(false);
-            expect(buttons[3].classList.contains("hidden")).toBe(true);
-            expect(buttons[4].classList.contains("hidden")).toBe(true);
+            const rows = Array.from(suggestionList.children) as HTMLElement[];
+            expect(rows[0].classList.contains("hidden")).toBe(false);
+            expect(rows[2].classList.contains("hidden")).toBe(false);
+            expect(rows[3].classList.contains("hidden")).toBe(true);
+            expect(rows[4].classList.contains("hidden")).toBe(true);
         });
 
         it("clears existing content before rebuilding", () => {

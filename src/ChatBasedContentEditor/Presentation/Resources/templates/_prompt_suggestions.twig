@@ -33,15 +33,15 @@
     <div {{ stimulus_target('prompt-suggestions', 'suggestionList') }}
          class="flex flex-col gap-2">
         {% for suggestion in promptSuggestions %}
-            <div class="group flex items-start gap-1" data-index="{{ loop.index0 }}">
+            <div class="group flex items-start gap-1 {{ loop.index > 3 ? 'hidden' : '' }}" data-index="{{ loop.index0 }}">
                 <button type="button"
                         {{ stimulus_target('prompt-suggestions', 'suggestion') }}
                         data-action="click->prompt-suggestions#insert mouseenter->prompt-suggestions#hoverStart mouseleave->prompt-suggestions#hoverEnd"
                         data-text="{{ suggestion }}"
-                        class="prompt-suggestion flex-1 px-3 py-1.5 text-xs border border-dark-300 dark:border-dark-600 text-dark-600 dark:text-dark-400 hover:bg-dark-100 dark:hover:bg-dark-700 hover:text-dark-900 dark:hover:text-dark-100 cursor-pointer {{ loop.index > 3 ? 'hidden' : '' }}">
+                        class="prompt-suggestion flex-1 px-3 py-1.5 text-xs border border-dark-300 dark:border-dark-600 text-dark-600 dark:text-dark-400 hover:bg-dark-100 dark:hover:bg-dark-700 hover:text-dark-900 dark:hover:text-dark-100 cursor-pointer">
                     {{ suggestion }}
                 </button>
-                <div class="flex-shrink-0 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity {{ loop.index > 3 ? 'hidden' : '' }}">
+                <div class="flex-shrink-0 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button type="button"
                             {{ stimulus_action('prompt-suggestions', 'showEditModal', 'click') }}
                             data-index="{{ loop.index0 }}"
