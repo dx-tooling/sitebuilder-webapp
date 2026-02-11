@@ -1,6 +1,6 @@
 {% extends '@common.presentation/base_appshell.html.twig' %}
 
-{% block title %}{{ 'photo_builder.title'|trans }} — {{ pagePath }}{% endblock %}
+{% block title %}{{ 'photo_builder.title'|trans }} — {{ project.name }} — {{ pagePath }}{% endblock %}
 
 {% block body %}
     <div class="max-w-7xl mx-auto"
@@ -31,7 +31,7 @@
                     {{ 'photo_builder.title'|trans }}
                 </h1>
                 <p class="etfswui-text-small">
-                    {{ pagePath }}
+                    {{ project.name }} — {{ pagePath }}
                 </p>
             </div>
             <a href="{{ path('chat_based_content_editor.presentation.show', { conversationId: conversationId }) }}"
@@ -89,6 +89,33 @@
                             </p>
                         </div>
                     {% endif %}
+
+                    {# System prompt (read-only) — shows what the AI receives behind the scenes #}
+                    <details class="etfswui-card group">
+                        <summary class="etfswui-card-content cursor-pointer select-none list-none">
+                            <div class="flex items-center gap-2">
+                                <svg class="w-4 h-4 text-dark-400 transition-transform group-open:rotate-90" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"/>
+                                </svg>
+                                <span class="etfswui-form-label mb-0">
+                                    {{ 'photo_builder.system_prompt_label'|trans }}
+                                </span>
+                            </div>
+                        </summary>
+                        <div class="etfswui-card-content pt-0">
+                            <div class="rounded-md bg-dark-50 dark:bg-dark-800 border border-dark-200 dark:border-dark-700 p-3 text-xs text-dark-600 dark:text-dark-400 font-mono whitespace-pre-wrap leading-relaxed">You are a friendly AI assistant that helps the user to generate {{ imageCount }} prompts that each will be fed into an LLM-backed AI image generation agent, in order to generate images that shall be used on a web page with the following contents:
+
+[Content of your page at {{ pagePath }}]
+
+Think about what each of the {{ imageCount }} images should show in order to optimally fit the narrative of the web page content.
+
+Important: The language used for the prompts must match the language of the user interface of the web page!
+
+For each image, call the deliver_image_prompt tool with:
+- A detailed, descriptive prompt suitable for an AI image generation model
+- A descriptive, kebab-case filename (with .png extension) that clearly describes what the image shows (e.g. "modern-office-team-collaborating.png", not "office.png" or "image1.png")</div>
+                        </div>
+                    </details>
 
                     {# User prompt section #}
                     <div class="etfswui-card">
