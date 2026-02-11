@@ -113,13 +113,9 @@ export default class extends Controller {
     expand(): void {
         // Show all hidden suggestion rows (the parent wrapper divs)
         this.suggestionTargets.forEach((button) => {
-            button.classList.remove("hidden");
-            const row = button.closest("[data-index]");
+            const row = button.closest("[data-index]") as HTMLElement | null;
             if (row) {
-                const actions = row.querySelector(".flex-shrink-0") as HTMLElement | null;
-                if (actions) {
-                    actions.classList.remove("hidden");
-                }
+                row.classList.remove("hidden");
             }
         });
 
@@ -137,13 +133,9 @@ export default class extends Controller {
     collapse(): void {
         this.suggestionTargets.forEach((button, index) => {
             if (index >= this.maxVisibleValue) {
-                button.classList.add("hidden");
-                const row = button.closest("[data-index]");
+                const row = button.closest("[data-index]") as HTMLElement | null;
                 if (row) {
-                    const actions = row.querySelector(".flex-shrink-0") as HTMLElement | null;
-                    if (actions) {
-                        actions.classList.add("hidden");
-                    }
+                    row.classList.add("hidden");
                 }
             }
         });
@@ -354,16 +346,14 @@ export default class extends Controller {
             ].join(" ");
             button.className =
                 "prompt-suggestion flex-1 px-3 py-1.5 text-xs border border-dark-300 dark:border-dark-600 text-dark-600 dark:text-dark-400 hover:bg-dark-100 dark:hover:bg-dark-700 hover:text-dark-900 dark:hover:text-dark-100 cursor-pointer";
-            if (index >= this.maxVisibleValue) {
-                button.classList.add("hidden");
-            }
             button.textContent = text;
 
             const actions = document.createElement("div");
             actions.className =
                 "flex-shrink-0 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity";
+
             if (index >= this.maxVisibleValue) {
-                actions.classList.add("hidden");
+                row.classList.add("hidden");
             }
 
             // Edit button
