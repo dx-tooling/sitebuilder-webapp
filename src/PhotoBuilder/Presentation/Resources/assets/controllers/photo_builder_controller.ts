@@ -131,6 +131,8 @@ export default class extends Controller {
     private lastImages: ImageData[] = [];
     /** Current image size: "1K" = lo-res (default), "2K" = hi-res. */
     private currentImageSize: string = "1K";
+    /** Last userPrompt we applied from the server; used to avoid overwriting local edits on poll. */
+    private lastAppliedUserPrompt: string | null = null;
 
     connect(): void {
         this.isActive = true;
@@ -233,9 +235,14 @@ export default class extends Controller {
             this.mainContentTarget.classList.remove("hidden");
         }
 
-        // Update user prompt if not focused
-        if (data.userPrompt && document.activeElement !== this.userPromptTarget) {
+        // Update user prompt from server only when not focused and not overwriting user edits
+        if (
+            data.userPrompt &&
+            document.activeElement !== this.userPromptTarget &&
+            (this.lastAppliedUserPrompt === null || this.userPromptTarget.value === this.lastAppliedUserPrompt)
+        ) {
             this.userPromptTarget.value = data.userPrompt;
+            this.lastAppliedUserPrompt = data.userPrompt;
         }
 
         // Update button states

@@ -67,6 +67,7 @@ interface MockControllerState {
     anyGenerating: boolean;
     lastImages: ImageData[];
     currentImageSize: string;
+    lastAppliedUserPrompt: string | null;
 }
 
 const createController = (
@@ -153,6 +154,7 @@ const createController = (
     state.anyGenerating = false;
     state.lastImages = [];
     state.currentImageSize = "1K";
+    state.lastAppliedUserPrompt = null;
 
     Object.assign(state, overrides);
 
@@ -372,6 +374,53 @@ describe("PhotoBuilderController", () => {
 
             expect(elements.loadingOverlay.classList.contains("hidden")).toBe(true);
             expect(elements.mainContent.classList.contains("hidden")).toBe(false);
+
+            controller.disconnect();
+        });
+
+        it("should not overwrite user prompt textarea when user has edited it and poll runs unfocused", async () => {
+            const { controller, elements } = createController();
+
+            const createResponse: SessionResponse = { sessionId: "sess-1", status: "generating_prompts" };
+            const pollResponse: SessionResponse = {
+                status: "prompts_ready",
+                userPrompt: "Server value",
+                images: [
+                    {
+                        id: "img-1",
+                        position: 0,
+                        prompt: "A sunset photo",
+                        suggestedFileName: "sunset.jpg",
+                        status: "pending",
+                        imageUrl: null,
+                        errorMessage: null,
+                    },
+                ],
+            };
+
+            let fetchCallCount = 0;
+            vi.spyOn(globalThis, "fetch").mockImplementation(async () => {
+                fetchCallCount++;
+                if (fetchCallCount === 1) {
+                    return new Response(JSON.stringify(createResponse), { status: 200 });
+                }
+                return new Response(JSON.stringify(pollResponse), { status: 200 });
+            });
+
+            controller.connect();
+            await flushPromises(); // session creation
+            await flushPromises(); // first poll
+
+            const state = controller as unknown as MockControllerState;
+            elements.userPrompt.value = "Server value";
+            state.lastAppliedUserPrompt = "Server value";
+
+            elements.userPrompt.value = "User edit";
+
+            await vi.advanceTimersByTimeAsync(1000); // trigger next poll
+            await flushPromises();
+
+            expect(elements.userPrompt.value).toBe("User edit");
 
             controller.disconnect();
         });
