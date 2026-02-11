@@ -34,9 +34,13 @@ use Symfony\Component\Security\Http\Attribute\CurrentUser;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 use function array_map;
+use function basename;
 use function is_array;
 use function is_string;
 use function json_decode;
+use function parse_url;
+
+use const PHP_URL_PATH;
 
 #[IsGranted('ROLE_USER')]
 final class PhotoBuilderController extends AbstractController
@@ -207,6 +211,7 @@ final class PhotoBuilderController extends AbstractController
                     : null,
                 'errorMessage'         => $image->getErrorMessage(),
                 'uploadedToMediaStore' => $image->getUploadedToMediaStoreAt() !== null,
+                'uploadedFileName'     => $image->getUploadedFileName(),
             ],
             $session->getImages()->toArray()
         );
@@ -244,13 +249,23 @@ final class PhotoBuilderController extends AbstractController
             return $this->json(['error' => 'Session not found.'], Response::HTTP_NOT_FOUND);
         }
 
-        $data = json_decode($request->getContent(), true);
+        $data    = json_decode($request->getContent(), true);
+        $keepIds = [];
 
         if (is_array($data)) {
             $userPrompt = is_string($data['userPrompt'] ?? null) ? $data['userPrompt'] : '';
 
             if ($userPrompt !== '') {
                 $session->setUserPrompt($userPrompt);
+            }
+
+            $keepImageIds = $data['keepImageIds'] ?? null;
+            if (is_array($keepImageIds)) {
+                foreach ($keepImageIds as $id) {
+                    if (is_string($id) && $id !== '') {
+                        $keepIds[] = $id;
+                    }
+                }
             }
         }
 
@@ -266,6 +281,7 @@ final class PhotoBuilderController extends AbstractController
         $this->messageBus->dispatch(new GenerateImagePromptsMessage(
             $sessionId,
             $request->getLocale(),
+            $keepIds,
         ));
 
         return $this->json([
@@ -349,6 +365,7 @@ final class PhotoBuilderController extends AbstractController
         $image->setStoragePath(null);
         $image->setErrorMessage(null);
         $image->setUploadedToMediaStoreAt(null);
+        $image->setUploadedFileName(null);
 
         $session = $image->getSession();
         $session->setStatus(PhotoSessionStatus::GeneratingImages);
@@ -435,8 +452,9 @@ final class PhotoBuilderController extends AbstractController
 
         if ($image->getUploadedToMediaStoreAt() !== null) {
             return $this->json([
-                'url'      => '',
-                'fileName' => $fileName,
+                'url'              => '',
+                'fileName'         => $fileName,
+                'uploadedFileName' => $image->getUploadedFileName(),
             ]);
         }
 
@@ -453,12 +471,22 @@ final class PhotoBuilderController extends AbstractController
             'image/png',
         );
 
+        $uploadedFileName = $this->extractFilenameFromUrl($uploadedUrl);
         $image->setUploadedToMediaStoreAt(DateAndTimeService::getDateTimeImmutable());
+        $image->setUploadedFileName($uploadedFileName);
         $this->entityManager->flush();
 
         return $this->json([
-            'url'      => $uploadedUrl,
-            'fileName' => $fileName,
+            'url'              => $uploadedUrl,
+            'fileName'         => $fileName,
+            'uploadedFileName' => $uploadedFileName,
         ]);
+    }
+
+    private function extractFilenameFromUrl(string $url): string
+    {
+        $path = parse_url($url, PHP_URL_PATH);
+
+        return $path !== null && $path !== false ? basename($path) : '';
     }
 }

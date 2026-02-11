@@ -82,6 +82,8 @@ class PhotoBuilderService
             $image->setStatus(PhotoImageStatus::Pending);
             $image->setStoragePath(null);
             $image->setErrorMessage(null);
+            $image->setUploadedToMediaStoreAt(null);
+            $image->setUploadedFileName(null);
 
             $changedImages[] = $image;
         }

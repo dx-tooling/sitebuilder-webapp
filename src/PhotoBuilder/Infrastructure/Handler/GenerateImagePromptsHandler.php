@@ -77,17 +77,21 @@ final readonly class GenerateImagePromptsHandler
                 PhotoBuilderService::IMAGE_COUNT,
             );
 
-            // Update image entities with generated prompts
-            $this->photoBuilderService->updateImagePrompts($session, $promptResults);
+            // Update image entities with generated prompts (skips images in keepImageIds)
+            $changedImages = $this->photoBuilderService->updateImagePrompts(
+                $session,
+                $promptResults,
+                $message->keepImageIds,
+            );
 
             $session->setStatus(PhotoSessionStatus::PromptsReady);
             $this->entityManager->flush();
 
-            // Dispatch image generation for each image
+            // Dispatch image generation only for images whose prompts were changed
             $session->setStatus(PhotoSessionStatus::GeneratingImages);
             $this->entityManager->flush();
 
-            foreach ($session->getImages() as $image) {
+            foreach ($changedImages as $image) {
                 $imageId = $image->getId();
 
                 if ($imageId !== null && $image->getPrompt() !== null && $image->getPrompt() !== '') {

@@ -17,6 +17,7 @@ interface ImageData {
     imageUrl: string | null;
     errorMessage: string | null;
     uploadedToMediaStore?: boolean;
+    uploadedFileName?: string | null;
 }
 
 interface PromptEditedDetail {
@@ -354,9 +355,10 @@ export default class extends Controller {
     }
 
     /**
-     * Upload a single image to the media store. Returns true on success.
+     * Upload a single image to the media store.
+     * Returns the actual S3 filename (hash-prefixed) on success, null on failure.
      */
-    private async uploadImageToMediaStore(imageId: string): Promise<boolean> {
+    private async uploadImageToMediaStore(imageId: string): Promise<string | null> {
         try {
             const url = this.uploadToMediaStoreUrlPatternValue.replace(IMAGE_ID_PLACEHOLDER, imageId);
             const response = await fetch(url, {
@@ -367,9 +369,13 @@ export default class extends Controller {
                     "X-Requested-With": "XMLHttpRequest",
                 },
             });
-            return response.ok;
+            if (!response.ok) {
+                return null;
+            }
+            const data = (await response.json()) as { uploadedFileName?: string };
+            return data.uploadedFileName ?? null;
         } catch {
-            return false;
+            return null;
         }
     }
 
@@ -380,7 +386,8 @@ export default class extends Controller {
         const { imageId } = event.detail;
         if (!imageId) return;
 
-        if (await this.uploadImageToMediaStore(imageId)) {
+        const uploadedFileName = await this.uploadImageToMediaStore(imageId);
+        if (uploadedFileName !== null) {
             this.showUploadFinishedBanner();
         }
     }
@@ -420,6 +427,8 @@ export default class extends Controller {
 
         const imagesToUpload = completedImages.filter((img) => img.uploadedToMediaStore !== true);
 
+        const uploadedFileNamesByImageId: Record<string, string> = {};
+
         if (imagesToUpload.length > 0) {
             if (this.hasUploadingImagesOverlayTarget) {
                 this.uploadingImagesOverlayTarget.classList.remove("hidden");
@@ -428,7 +437,15 @@ export default class extends Controller {
                 this.embedButtonTarget.disabled = true;
             }
 
-            const results = await Promise.all(imagesToUpload.map((img) => this.uploadImageToMediaStore(img.id)));
+            const results = await Promise.all(
+                imagesToUpload.map(async (img) => {
+                    const fn = await this.uploadImageToMediaStore(img.id);
+                    if (fn !== null) {
+                        uploadedFileNamesByImageId[img.id] = fn;
+                    }
+                    return fn !== null;
+                }),
+            );
 
             if (this.hasUploadingImagesOverlayTarget) {
                 this.uploadingImagesOverlayTarget.classList.add("hidden");
@@ -443,7 +460,10 @@ export default class extends Controller {
             }
         }
 
-        const fileNames = completedImages.map((img) => img.suggestedFileName).join(", ");
+        const fileNames = completedImages
+            .map((img) => uploadedFileNamesByImageId[img.id] ?? img.uploadedFileName ?? img.suggestedFileName ?? "")
+            .filter(Boolean)
+            .join(", ");
         const message = `Embed images ${fileNames} into page ${this.pagePathValue}`;
         const url = `${this.editorUrlValue}?prefill=${encodeURIComponent(message)}`;
         window.location.href = url;

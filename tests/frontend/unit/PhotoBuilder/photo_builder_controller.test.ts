@@ -23,6 +23,7 @@ interface ImageData {
     imageUrl: string | null;
     errorMessage: string | null;
     uploadedToMediaStore?: boolean;
+    uploadedFileName?: string | null;
 }
 
 interface MockControllerState {
@@ -783,6 +784,7 @@ describe("PhotoBuilderController", () => {
                     imageUrl: "/file",
                     errorMessage: null,
                     uploadedToMediaStore: true,
+                    uploadedFileName: "00fa0883ee6db2e2_office-scene.jpg",
                 },
                 {
                     id: "img-2",
@@ -793,6 +795,7 @@ describe("PhotoBuilderController", () => {
                     imageUrl: "/file",
                     errorMessage: null,
                     uploadedToMediaStore: true,
+                    uploadedFileName: "abc123_team-photo.jpg",
                 },
                 {
                     id: "img-3",
@@ -821,12 +824,12 @@ describe("PhotoBuilderController", () => {
             expect(hrefSetter).toHaveBeenCalled();
             const url = hrefSetter.mock.calls[0][0] as string;
             expect(url).toContain("/conversation/conv-456?prefill=");
-            expect(url).toContain(encodeURIComponent("office-scene.jpg"));
-            expect(url).toContain(encodeURIComponent("team-photo.jpg"));
+            expect(url).toContain(encodeURIComponent("00fa0883ee6db2e2_office-scene.jpg"));
+            expect(url).toContain(encodeURIComponent("abc123_team-photo.jpg"));
             expect(url).toContain(encodeURIComponent("index.html"));
         });
 
-        it("should upload non-uploaded images then navigate when embed is clicked", async () => {
+        it("should upload non-uploaded images then navigate with actual S3 filenames", async () => {
             const uploadingOverlay = document.createElement("div");
             uploadingOverlay.classList.add("hidden");
 
@@ -854,12 +857,19 @@ describe("PhotoBuilderController", () => {
                         imageUrl: "/file",
                         errorMessage: null,
                         uploadedToMediaStore: true,
+                        uploadedFileName: "abc123_team.jpg",
                     },
                 ],
             });
 
             vi.spyOn(globalThis, "fetch").mockResolvedValue(
-                new Response(JSON.stringify({ url: "https://s3.example/office.jpg", fileName: "office.jpg" })),
+                new Response(
+                    JSON.stringify({
+                        url: "https://s3.example/uploads/20260211/00fa0883ee6db2e2_office.jpg",
+                        fileName: "office.jpg",
+                        uploadedFileName: "00fa0883ee6db2e2_office.jpg",
+                    }),
+                ),
             );
 
             const hrefSetter = vi.fn();
@@ -881,8 +891,8 @@ describe("PhotoBuilderController", () => {
             expect(hrefSetter).toHaveBeenCalled();
             const url = hrefSetter.mock.calls[0][0] as string;
             expect(url).toContain("/conversation/conv-456?prefill=");
-            expect(url).toContain(encodeURIComponent("office.jpg"));
-            expect(url).toContain(encodeURIComponent("team.jpg"));
+            expect(url).toContain(encodeURIComponent("00fa0883ee6db2e2_office.jpg"));
+            expect(url).toContain(encodeURIComponent("abc123_team.jpg"));
         });
 
         it("should not navigate when upload fails", async () => {

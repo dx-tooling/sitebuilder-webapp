@@ -157,4 +157,23 @@ describe('PhotoImage', function (): void {
             expect($image->getUploadedToMediaStoreAt())->toBeNull();
         });
     });
+
+    describe('uploadedFileName', function (): void {
+        it('can set and get uploadedFileName', function (): void {
+            $session = new PhotoSession('ws-123', 'conv-456', 'index.html', 'prompt');
+            $image   = new PhotoImage($session, 0);
+
+            $image->setUploadedFileName('00fa0883ee6db2e2_placeholder-image-1.png');
+            expect($image->getUploadedFileName())->toBe('00fa0883ee6db2e2_placeholder-image-1.png');
+        });
+
+        it('can clear by setting null', function (): void {
+            $session = new PhotoSession('ws-123', 'conv-456', 'index.html', 'prompt');
+            $image   = new PhotoImage($session, 0);
+
+            $image->setUploadedFileName('00fa0883ee6db2e2_image.png');
+            $image->setUploadedFileName(null);
+            expect($image->getUploadedFileName())->toBeNull();
+        });
+    });
 });

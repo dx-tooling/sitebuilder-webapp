@@ -172,6 +172,27 @@ class PhotoImage
     }
 
     #[ORM\Column(
+        type: Types::STRING,
+        length: 512,
+        nullable: true
+    )]
+    private ?string $uploadedFileName = null;
+
+    /**
+     * The actual filename on S3 (hash-prefixed, e.g. 00fa0883ee6db2e2_image.png).
+     * Used when constructing the embed message so the content editor agent can find the asset.
+     */
+    public function getUploadedFileName(): ?string
+    {
+        return $this->uploadedFileName;
+    }
+
+    public function setUploadedFileName(?string $uploadedFileName): void
+    {
+        $this->uploadedFileName = $uploadedFileName;
+    }
+
+    #[ORM\Column(
         type: Types::DATETIME_IMMUTABLE,
         nullable: false
     )]

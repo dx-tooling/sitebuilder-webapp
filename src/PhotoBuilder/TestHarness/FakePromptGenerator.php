@@ -52,7 +52,7 @@ final readonly class FakePromptGenerator implements PromptGeneratorInterface
             );
         }
 
-        sleep(2); // for realism
+        sleep(5); // for realism
 
         return $results;
     }
