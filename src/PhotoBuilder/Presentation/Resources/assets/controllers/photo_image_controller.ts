@@ -60,6 +60,8 @@ export default class extends Controller {
     private currentStatus = "pending";
     private suggestedFileName: string | null = null;
     private promptAwaitingRegenerate = false;
+    /** The prompt value before regeneration was requested; used to detect when a genuinely new prompt arrives. */
+    private promptBeforeRegenerate: string | null = null;
     private uploadInProgress = false;
     private uploadJustSucceeded = false;
     private uploadedToMediaStore = false;
@@ -83,15 +85,13 @@ export default class extends Controller {
         // Update prompt textarea
         if (document.activeElement !== this.promptTextareaTarget) {
             if (this.promptAwaitingRegenerate) {
-                // Only apply new prompt when backend has updated (status indicates regeneration in progress)
-                if (
-                    (data.status === "pending" || data.status === "generating") &&
-                    data.prompt !== null &&
-                    data.prompt !== ""
-                ) {
+                // Apply prompt once it differs from the pre-regeneration value
+                // (regardless of status — the image may already be "completed" if generation was fast).
+                if (data.prompt !== null && data.prompt !== "" && data.prompt !== this.promptBeforeRegenerate) {
                     this.promptTextareaTarget.value = data.prompt;
                     this.promptTextareaTarget.classList.remove("animate-pulse");
                     this.promptAwaitingRegenerate = false;
+                    this.promptBeforeRegenerate = null;
                 }
             } else if (data.prompt !== null) {
                 this.promptTextareaTarget.value = data.prompt;
@@ -234,6 +234,7 @@ export default class extends Controller {
      */
     clearPromptIfNotKept(): void {
         if (!this.keepCheckboxTarget.checked) {
+            this.promptBeforeRegenerate = this.promptTextareaTarget.value;
             this.promptTextareaTarget.value = this.generatingPromptTextValue;
             this.promptTextareaTarget.classList.add("animate-pulse");
             this.promptAwaitingRegenerate = true;

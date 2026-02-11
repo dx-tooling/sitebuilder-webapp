@@ -9,6 +9,7 @@ import PhotoImageController from "../../../../src/PhotoBuilder/Presentation/Reso
 interface MockControllerState {
     positionValue: number;
     hasMediaStoreValue: boolean;
+    generatingPromptTextValue: string;
     imageTarget: HTMLImageElement;
     placeholderTarget: HTMLElement;
     promptTextareaTarget: HTMLTextAreaElement;
@@ -20,6 +21,8 @@ interface MockControllerState {
     imageId: string | null;
     currentStatus: string;
     suggestedFileName: string | null;
+    promptAwaitingRegenerate: boolean;
+    promptBeforeRegenerate: string | null;
 }
 
 interface ImageStateDetail {
@@ -72,6 +75,9 @@ const createController = (
 
     state.positionValue = 0;
     state.hasMediaStoreValue = false;
+    state.generatingPromptTextValue = "Generating...";
+    state.promptAwaitingRegenerate = false;
+    state.promptBeforeRegenerate = null;
     state.imageTarget = image;
     state.placeholderTarget = placeholder;
     state.promptTextareaTarget = promptTextarea;
@@ -520,6 +526,78 @@ describe("PhotoImageController", () => {
             );
 
             expect(elements.uploadButton.disabled).toBe(false);
+        });
+    });
+
+    describe("clearPromptIfNotKept and prompt regeneration", () => {
+        it("should apply new prompt when status is pending after clearPromptIfNotKept", () => {
+            const { controller, elements } = createController();
+            elements.promptTextarea.value = "Old prompt";
+
+            controller.clearPromptIfNotKept();
+            expect(elements.promptTextarea.value).toBe("Generating...");
+
+            controller.updateFromState(
+                makeStateEvent({
+                    id: "img-1",
+                    position: 0,
+                    prompt: "New prompt from AI",
+                    suggestedFileName: null,
+                    status: "pending",
+                    imageUrl: null,
+                    errorMessage: null,
+                }),
+            );
+
+            expect(elements.promptTextarea.value).toBe("New prompt from AI");
+        });
+
+        it("should apply new prompt even when status is already completed (fast generation)", () => {
+            const { controller, elements } = createController();
+            elements.promptTextarea.value = "Old prompt";
+
+            controller.clearPromptIfNotKept();
+            expect(elements.promptTextarea.value).toBe("Generating...");
+
+            controller.updateFromState(
+                makeStateEvent({
+                    id: "img-1",
+                    position: 0,
+                    prompt: "New prompt from AI",
+                    suggestedFileName: "img.jpg",
+                    status: "completed",
+                    imageUrl: "/img-1/file",
+                    errorMessage: null,
+                }),
+            );
+
+            expect(elements.promptTextarea.value).toBe("New prompt from AI");
+            expect(elements.promptTextarea.classList.contains("animate-pulse")).toBe(false);
+        });
+
+        it("should not apply old prompt while awaiting regeneration", () => {
+            const { controller, elements } = createController();
+            elements.promptTextarea.value = "Old prompt";
+
+            controller.clearPromptIfNotKept();
+            expect(elements.promptTextarea.value).toBe("Generating...");
+
+            // Poll returns old data (backend hasn't processed regeneration yet)
+            controller.updateFromState(
+                makeStateEvent({
+                    id: "img-1",
+                    position: 0,
+                    prompt: "Old prompt",
+                    suggestedFileName: null,
+                    status: "completed",
+                    imageUrl: "/img-1/file",
+                    errorMessage: null,
+                }),
+            );
+
+            // Should stay at "Generating..." because prompt hasn't changed
+            expect(elements.promptTextarea.value).toBe("Generating...");
+            expect(elements.promptTextarea.classList.contains("animate-pulse")).toBe(true);
         });
     });
 
