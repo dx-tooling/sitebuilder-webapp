@@ -160,15 +160,15 @@ final class PromptSuggestionsServiceTest extends TestCase
 
     // ─── addSuggestion ─────────────────────────────────────────────
 
-    public function testAddSuggestionAppendsToExistingFile(): void
+    public function testAddSuggestionPrependsToExistingFile(): void
     {
         $this->createSuggestionsFile("First\nSecond\n");
 
         $service = new PromptSuggestionsService();
         $result  = $service->addSuggestion($this->tempDir, 'Third');
 
-        self::assertSame(['First', 'Second', 'Third'], $result);
-        self::assertSame("First\nSecond\nThird\n", $this->readSuggestionsFile());
+        self::assertSame(['Third', 'First', 'Second'], $result);
+        self::assertSame("Third\nFirst\nSecond\n", $this->readSuggestionsFile());
     }
 
     public function testAddSuggestionCreatesFileIfNotExists(): void

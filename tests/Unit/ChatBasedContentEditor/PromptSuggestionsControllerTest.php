@@ -164,7 +164,7 @@ final class PromptSuggestionsControllerTest extends TestCase
         self::assertSame(Response::HTTP_OK, $response->getStatusCode());
 
         $data = $this->decodeResponse($response);
-        self::assertSame(['Existing suggestion', 'New suggestion'], $data['suggestions']);
+        self::assertSame(['New suggestion', 'Existing suggestion'], $data['suggestions']);
     }
 
     public function testUpdateCallsCommitAndPushWithCorrectParameters(): void
