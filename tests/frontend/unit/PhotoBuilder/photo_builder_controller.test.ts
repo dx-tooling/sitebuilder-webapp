@@ -68,6 +68,8 @@ interface MockControllerState {
     lastImages: ImageData[];
     currentImageSize: string;
     lastAppliedUserPrompt: string | null;
+    promptDebounceTimeouts: Record<string, ReturnType<typeof setTimeout>>;
+    lastPollStatus: string | null;
 }
 
 const createController = (
@@ -155,6 +157,8 @@ const createController = (
     state.lastImages = [];
     state.currentImageSize = "1K";
     state.lastAppliedUserPrompt = null;
+    state.promptDebounceTimeouts = {};
+    state.lastPollStatus = null;
 
     Object.assign(state, overrides);
 
@@ -627,6 +631,114 @@ describe("PhotoBuilderController", () => {
             controller.disconnect();
         });
 
+        it("should not dispatch stateChanged again when second poll returns same image data", async () => {
+            vi.useFakeTimers();
+            const { controller, elements } = createController();
+
+            const images: ImageData[] = [
+                {
+                    id: "img-1",
+                    position: 0,
+                    prompt: "Prompt A",
+                    suggestedFileName: "a.jpg",
+                    status: "completed",
+                    imageUrl: "/a",
+                    errorMessage: null,
+                },
+                {
+                    id: "img-2",
+                    position: 1,
+                    prompt: "Prompt B",
+                    suggestedFileName: "b.jpg",
+                    status: "completed",
+                    imageUrl: "/b",
+                    errorMessage: null,
+                },
+            ];
+
+            const createResponse: SessionResponse = { sessionId: "sess-1", status: "generating_prompts" };
+            const pollResponse: SessionResponse = {
+                status: "images_ready",
+                images,
+            };
+
+            let fetchCallCount = 0;
+            vi.spyOn(globalThis, "fetch").mockImplementation(async () => {
+                fetchCallCount++;
+                if (fetchCallCount === 1) {
+                    return new Response(JSON.stringify(createResponse), { status: 200 });
+                }
+                return new Response(JSON.stringify(pollResponse), { status: 200 });
+            });
+
+            const card0Handler = vi.fn();
+            const card1Handler = vi.fn();
+            elements.imageCards[0].addEventListener("photo-builder:stateChanged", card0Handler);
+            elements.imageCards[1].addEventListener("photo-builder:stateChanged", card1Handler);
+
+            controller.connect();
+            await flushPromises();
+            await flushPromises();
+
+            expect(card0Handler).toHaveBeenCalledTimes(1);
+            expect(card1Handler).toHaveBeenCalledTimes(1);
+
+            await vi.advanceTimersByTimeAsync(5000);
+            await flushPromises();
+
+            expect(card0Handler).toHaveBeenCalledTimes(1);
+            expect(card1Handler).toHaveBeenCalledTimes(1);
+
+            vi.useRealTimers();
+            controller.disconnect();
+        });
+
+        it("should use longer poll interval when session is images_ready and nothing generating", async () => {
+            vi.useFakeTimers();
+            const { controller } = createController();
+
+            const createResponse: SessionResponse = { sessionId: "sess-1", status: "generating_prompts" };
+            const pollResponse: SessionResponse = {
+                status: "images_ready",
+                images: [
+                    {
+                        id: "img-1",
+                        position: 0,
+                        prompt: "A",
+                        suggestedFileName: "a.jpg",
+                        status: "completed",
+                        imageUrl: "/a",
+                        errorMessage: null,
+                    },
+                ],
+            };
+
+            let fetchCallCount = 0;
+            vi.spyOn(globalThis, "fetch").mockImplementation(async () => {
+                fetchCallCount++;
+                if (fetchCallCount === 1) {
+                    return new Response(JSON.stringify(createResponse), { status: 200 });
+                }
+                return new Response(JSON.stringify(pollResponse), { status: 200 });
+            });
+
+            controller.connect();
+            await flushPromises();
+            await flushPromises();
+            expect(fetchCallCount).toBe(2);
+
+            await vi.advanceTimersByTimeAsync(1000);
+            await flushPromises();
+            expect(fetchCallCount).toBe(2);
+
+            await vi.advanceTimersByTimeAsync(4000);
+            await flushPromises();
+            expect(fetchCallCount).toBe(3);
+
+            vi.useRealTimers();
+            controller.disconnect();
+        });
+
         it("should set data-photo-builder-generating attribute on element", async () => {
             const { controller, elements } = createController();
 
@@ -723,7 +835,8 @@ describe("PhotoBuilderController", () => {
     });
 
     describe("handlePromptEdited", () => {
-        it("should send prompt update to backend", () => {
+        it("should send prompt update to backend after debounce", async () => {
+            vi.useFakeTimers();
             const { controller } = createController();
 
             vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response("ok"));
@@ -737,6 +850,9 @@ describe("PhotoBuilderController", () => {
             });
 
             controller.handlePromptEdited(event);
+            expect(globalThis.fetch).not.toHaveBeenCalled();
+
+            await vi.advanceTimersByTimeAsync(400);
 
             expect(globalThis.fetch).toHaveBeenCalledWith(
                 "/api/photo-builder/images/img-1/update-prompt",
@@ -745,6 +861,42 @@ describe("PhotoBuilderController", () => {
                     body: JSON.stringify({ prompt: "A beautiful landscape" }),
                 }),
             );
+            vi.useRealTimers();
+        });
+
+        it("should debounce rapid promptEdited events to a single fetch", async () => {
+            vi.useFakeTimers();
+            const { controller } = createController();
+
+            vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response("ok"));
+
+            controller.handlePromptEdited(
+                new CustomEvent("photo-image:promptEdited", {
+                    detail: { position: 0, imageId: "img-1", prompt: "A" },
+                }),
+            );
+            controller.handlePromptEdited(
+                new CustomEvent("photo-image:promptEdited", {
+                    detail: { position: 0, imageId: "img-1", prompt: "AB" },
+                }),
+            );
+            controller.handlePromptEdited(
+                new CustomEvent("photo-image:promptEdited", {
+                    detail: { position: 0, imageId: "img-1", prompt: "ABC" },
+                }),
+            );
+            expect(globalThis.fetch).not.toHaveBeenCalled();
+
+            await vi.advanceTimersByTimeAsync(400);
+
+            expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+            expect(globalThis.fetch).toHaveBeenCalledWith(
+                expect.any(String),
+                expect.objectContaining({
+                    body: JSON.stringify({ prompt: "ABC" }),
+                }),
+            );
+            vi.useRealTimers();
         });
 
         it("should not send request when imageId is missing", () => {

@@ -465,7 +465,6 @@ photo_builder:
     keep_prompt: "Prompt beibehalten"
     regenerate_image: "Neu generieren"
     upload_to_media_store: "Hochladen"
-    upload_to_media_store_finished: "Upload abgeschlossen."
     uploading_to_media_store: "Wird hochgeladen…"
     uploaded_to_media_store: "Hochgeladen"
     embed_into_page: "Generierte Bilder in Inhaltsseite einbetten"

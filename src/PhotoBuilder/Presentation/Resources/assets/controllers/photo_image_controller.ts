@@ -63,6 +63,8 @@ export default class extends Controller {
     private uploadInProgress = false;
     private uploadJustSucceeded = false;
     private uploadedToMediaStore = false;
+    /** Last image URL we set on the img element (without query string), to avoid re-requesting the same image. */
+    private lastSetImageUrl: string | null = null;
 
     /**
      * Called by parent photo-builder controller via event dispatch.
@@ -112,13 +114,19 @@ export default class extends Controller {
 
     private updateImageDisplay(data: ImageStateDetail): void {
         if (data.status === "completed" && data.imageUrl) {
-            this.imageTarget.src = data.imageUrl + "?" + Math.random();
+            const baseUrl = data.imageUrl.split("?")[0];
+            if (this.lastSetImageUrl !== baseUrl) {
+                this.imageTarget.src = data.imageUrl;
+                this.lastSetImageUrl = baseUrl;
+            }
             this.imageTarget.classList.remove("hidden");
             this.placeholderTarget.classList.add("hidden");
         } else if (data.status === "generating" || data.status === "pending") {
+            this.lastSetImageUrl = null;
             this.imageTarget.classList.add("hidden");
             this.placeholderTarget.classList.remove("hidden");
         } else if (data.status === "failed") {
+            this.lastSetImageUrl = null;
             this.imageTarget.classList.add("hidden");
             this.placeholderTarget.classList.remove("hidden");
             // Show error in placeholder

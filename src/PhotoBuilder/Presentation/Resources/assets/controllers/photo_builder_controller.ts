@@ -39,6 +39,22 @@ interface UploadRequestedDetail {
 
 const SESSION_ID_PLACEHOLDER = "00000000-0000-0000-0000-000000000000";
 const IMAGE_ID_PLACEHOLDER = "00000000-0000-0000-0000-111111111111";
+const PROMPT_DEBOUNCE_MS = 400;
+const POLL_INTERVAL_ACTIVE_MS = 1000;
+const POLL_INTERVAL_IDLE_MS = 5000;
+
+function imageDataEqual(a: ImageData, b: ImageData): boolean {
+    return (
+        a.id === b.id &&
+        a.position === b.position &&
+        a.status === b.status &&
+        (a.imageUrl ?? null) === (b.imageUrl ?? null) &&
+        (a.prompt ?? null) === (b.prompt ?? null) &&
+        (a.suggestedFileName ?? null) === (b.suggestedFileName ?? null) &&
+        (a.errorMessage ?? null) === (b.errorMessage ?? null) &&
+        (a.uploadedToMediaStore ?? false) === (b.uploadedToMediaStore ?? false)
+    );
+}
 
 /**
  * Orchestrator controller for the PhotoBuilder page.
@@ -74,7 +90,6 @@ export default class extends Controller {
         "regeneratePromptsButton",
         "embedButton",
         "imageCard",
-        "uploadFinishedBanner",
         "regeneratingPromptsOverlay",
         "uploadingImagesOverlay",
         "waitingForManifestOverlay",
@@ -108,8 +123,6 @@ export default class extends Controller {
     declare readonly hasEmbedButtonTarget: boolean;
     declare readonly embedButtonTarget: HTMLButtonElement;
     declare readonly imageCardTargets: HTMLElement[];
-    declare readonly hasUploadFinishedBannerTarget: boolean;
-    declare readonly uploadFinishedBannerTarget: HTMLElement;
     declare readonly hasRegeneratingPromptsOverlayTarget: boolean;
     declare readonly regeneratingPromptsOverlayTarget: HTMLElement;
     declare readonly hasUploadingImagesOverlayTarget: boolean;
@@ -133,6 +146,10 @@ export default class extends Controller {
     private currentImageSize: string = "1K";
     /** Last userPrompt we applied from the server; used to avoid overwriting local edits on poll. */
     private lastAppliedUserPrompt: string | null = null;
+    /** Debounce timeouts per imageId for prompt update API calls. */
+    private promptDebounceTimeouts: Record<string, ReturnType<typeof setTimeout>> = {};
+    /** Last session status from poll; used to choose active vs idle poll interval. */
+    private lastPollStatus: string | null = null;
 
     connect(): void {
         this.isActive = true;
@@ -142,6 +159,12 @@ export default class extends Controller {
     disconnect(): void {
         this.isActive = false;
         this.stopPolling();
+        if (this.promptDebounceTimeouts) {
+            for (const id of Object.keys(this.promptDebounceTimeouts)) {
+                clearTimeout(this.promptDebounceTimeouts[id]);
+            }
+            this.promptDebounceTimeouts = {};
+        }
     }
 
     private stopPolling(): void {
@@ -151,10 +174,21 @@ export default class extends Controller {
         }
     }
 
-    private scheduleNextPoll(): void {
-        if (this.isActive && this.sessionId) {
-            this.pollingTimeoutId = setTimeout(() => this.poll(), 1000);
-        }
+    /**
+     * Schedule the next poll. Uses active interval (1s) when generating, idle interval (5s) when session is images_ready and nothing is generating.
+     * Pass explicit intervalMs to force a specific interval (e.g. when user triggers an action and we want to poll soon).
+     */
+    private scheduleNextPoll(intervalMs?: number): void {
+        if (!this.isActive || !this.sessionId) return;
+        const idle = (this.lastPollStatus === "images_ready" && !this.anyGenerating) || false;
+        const interval = intervalMs ?? (idle ? POLL_INTERVAL_IDLE_MS : POLL_INTERVAL_ACTIVE_MS);
+        this.pollingTimeoutId = setTimeout(() => this.poll(), interval);
+    }
+
+    /** Switch to active (1s) polling immediately; call when user triggers an action that may change state. */
+    private startActivePolling(): void {
+        this.stopPolling();
+        this.scheduleNextPoll(POLL_INTERVAL_ACTIVE_MS);
     }
 
     private async createSession(): Promise<void> {
@@ -207,7 +241,9 @@ export default class extends Controller {
 
     private handlePollResponse(data: SessionResponse): void {
         const status = data.status;
+        this.lastPollStatus = status;
         const images = data.images || [];
+        const prevImages = this.lastImages;
         this.lastImages = images;
 
         // Hide regenerating-prompts overlay once backend has accepted and we see generating state
@@ -248,17 +284,18 @@ export default class extends Controller {
         // Update button states
         this.updateButtonStates();
 
-        // Dispatch state changes to each image card
+        // Dispatch state changes only to cards whose image data actually changed
         for (const image of images) {
             const card = this.imageCardTargets[image.position];
-            if (card) {
-                card.dispatchEvent(
-                    new CustomEvent("photo-builder:stateChanged", {
-                        detail: image,
-                        bubbles: false,
-                    }),
-                );
-            }
+            if (!card) continue;
+            const prev = prevImages[image.position];
+            if (prev && imageDataEqual(prev, image)) continue;
+            card.dispatchEvent(
+                new CustomEvent("photo-builder:stateChanged", {
+                    detail: image,
+                    bubbles: false,
+                }),
+            );
         }
     }
 
@@ -284,6 +321,8 @@ export default class extends Controller {
      */
     async regeneratePrompts(): Promise<void> {
         if (!this.sessionId || this.anyGenerating) return;
+
+        this.startActivePolling();
 
         // Tell child cards to clear prompt textarea if not kept (shows pulsing immediately)
         for (const card of this.imageCardTargets) {
@@ -335,29 +374,35 @@ export default class extends Controller {
 
     /**
      * Handle photo-image:promptEdited event from child.
+     * Debounces so rapid keystrokes result in a single API call per image after typing stops.
      */
     handlePromptEdited(event: CustomEvent<PromptEditedDetail>): void {
-        const { imageId } = event.detail as unknown as {
+        const { imageId, prompt } = event.detail as unknown as {
             imageId: string;
             prompt: string;
         };
         if (!imageId) return;
 
-        // Persist prompt update to backend
-        const url = this.updatePromptUrlPatternValue.replace(IMAGE_ID_PLACEHOLDER, imageId);
-        fetch(url, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "X-CSRF-Token": this.csrfTokenValue,
-                "X-Requested-With": "XMLHttpRequest",
-            },
-            body: JSON.stringify({
-                prompt: (event.detail as unknown as { prompt: string }).prompt,
-            }),
-        }).catch(() => {
-            // Silently ignore
-        });
+        const timeouts = this.promptDebounceTimeouts ?? {};
+        if (timeouts[imageId]) {
+            clearTimeout(timeouts[imageId]);
+        }
+        this.promptDebounceTimeouts = timeouts;
+        this.promptDebounceTimeouts[imageId] = setTimeout(() => {
+            delete this.promptDebounceTimeouts![imageId];
+            const url = this.updatePromptUrlPatternValue.replace(IMAGE_ID_PLACEHOLDER, imageId);
+            fetch(url, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRF-Token": this.csrfTokenValue,
+                    "X-Requested-With": "XMLHttpRequest",
+                },
+                body: JSON.stringify({ prompt }),
+            }).catch(() => {
+                // Silently ignore
+            });
+        }, PROMPT_DEBOUNCE_MS);
     }
 
     /**
@@ -366,6 +411,8 @@ export default class extends Controller {
     async handleRegenerateImage(event: CustomEvent<RegenerateRequestedDetail>): Promise<void> {
         const { imageId } = event.detail;
         if (!imageId || this.anyGenerating) return;
+
+        this.startActivePolling();
 
         try {
             const url = this.regenerateImageUrlPatternValue.replace(IMAGE_ID_PLACEHOLDER, imageId);
@@ -389,6 +436,8 @@ export default class extends Controller {
      */
     async switchResolution(event: Event): Promise<void> {
         if (!this.sessionId || this.anyGenerating) return;
+
+        this.startActivePolling();
 
         const target = event.currentTarget as HTMLElement;
         const newSize = target.dataset.imageSize ?? this.currentImageSize;
@@ -480,7 +529,6 @@ export default class extends Controller {
             cardFromEvent ??
             this.imageCardTargets.find((el) => el.getAttribute("data-photo-image-image-id") === imageId);
         if (uploadedFileName !== null) {
-            this.showUploadFinishedBanner();
             if (card) {
                 card.dispatchEvent(
                     new CustomEvent("photo-builder:uploadComplete", {
@@ -504,24 +552,7 @@ export default class extends Controller {
     /**
      * Handle remote-asset-browser:uploadComplete event (e.g. upload via sidebar dropzone).
      */
-    handleMediaStoreUploadComplete(): void {
-        this.showUploadFinishedBanner();
-    }
-
-    /**
-     * Show the "Upload has been finished" banner and auto-hide after 5s.
-     */
-    private showUploadFinishedBanner(): void {
-        if (!this.hasUploadFinishedBannerTarget) {
-            return;
-        }
-        const banner = this.uploadFinishedBannerTarget;
-        banner.classList.remove("hidden");
-        const hideAfterMs = 5000;
-        setTimeout(() => {
-            banner.classList.add("hidden");
-        }, hideAfterMs);
-    }
+    handleMediaStoreUploadComplete(): void {}
 
     /**
      * Navigate back to editor with pre-filled embed message.

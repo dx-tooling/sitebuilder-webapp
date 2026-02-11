@@ -251,6 +251,38 @@ describe("PhotoImageController", () => {
             expect(elements.placeholder.classList.contains("hidden")).toBe(true);
         });
 
+        it("should not change img.src when updateFromState is called again with same imageUrl", () => {
+            const { controller, elements } = createController();
+            const imageUrl = "/api/photo-builder/images/img-1/file";
+
+            controller.updateFromState(
+                makeStateEvent({
+                    id: "img-1",
+                    position: 0,
+                    prompt: "test",
+                    suggestedFileName: "test.jpg",
+                    status: "completed",
+                    imageUrl,
+                    errorMessage: null,
+                }),
+            );
+            const srcAfterFirst = elements.image.src;
+
+            controller.updateFromState(
+                makeStateEvent({
+                    id: "img-1",
+                    position: 0,
+                    prompt: "test",
+                    suggestedFileName: "test.jpg",
+                    status: "completed",
+                    imageUrl,
+                    errorMessage: null,
+                }),
+            );
+
+            expect(elements.image.src).toBe(srcAfterFirst);
+        });
+
         it("should hide image and show placeholder when generating", () => {
             const { controller, elements } = createController();
 
