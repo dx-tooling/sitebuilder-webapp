@@ -36,6 +36,7 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 use function array_map;
 use function basename;
+use function count;
 use function is_array;
 use function is_string;
 use function json_decode;
@@ -550,6 +551,62 @@ final class PhotoBuilderController extends AbstractController
             'url'              => $uploadedUrl,
             'fileName'         => $fileName,
             'uploadedFileName' => $uploadedFileName,
+        ]);
+    }
+
+    /**
+     * Check whether uploaded filenames are available in the remote asset manifests.
+     */
+    #[Route(
+        path: '/api/photo-builder/{workspaceId}/check-manifest-availability',
+        name: 'photo_builder.presentation.check_manifest_availability',
+        methods: [Request::METHOD_POST],
+        requirements: ['workspaceId' => '[a-f0-9-]{36}']
+    )]
+    public function checkManifestAvailability(
+        string        $workspaceId,
+        Request       $request,
+        #[CurrentUser] UserInterface $user,
+    ): JsonResponse {
+        $this->getAccountInfo($user);
+
+        [$workspace, $project] = $this->loadWorkspaceAndProject($workspaceId);
+
+        $data = json_decode($request->getContent(), true);
+
+        if (!is_array($data)) {
+            return $this->json(['error' => 'Invalid JSON body.'], Response::HTTP_BAD_REQUEST);
+        }
+
+        $rawFileNames = $data['fileNames'] ?? null;
+
+        if (!is_array($rawFileNames)) {
+            return $this->json(['error' => 'Missing fileNames array.'], Response::HTTP_BAD_REQUEST);
+        }
+
+        /** @var list<string> $fileNames */
+        $fileNames = [];
+        foreach ($rawFileNames as $name) {
+            if (is_string($name) && $name !== '') {
+                $fileNames[] = $name;
+            }
+        }
+
+        if ($fileNames === []) {
+            return $this->json([
+                'available'    => [],
+                'allAvailable' => true,
+            ]);
+        }
+
+        $available = $this->remoteContentAssetsFacade->findAvailableFileNames(
+            $project->remoteContentAssetsManifestUrls,
+            $fileNames
+        );
+
+        return $this->json([
+            'available'    => $available,
+            'allAvailable' => count($available) === count($fileNames),
         ]);
     }
 

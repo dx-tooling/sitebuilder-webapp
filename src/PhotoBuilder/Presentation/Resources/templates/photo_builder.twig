@@ -12,6 +12,7 @@
              regenerateAllImagesUrlPattern: path('photo_builder.presentation.regenerate_all_images', { sessionId: '00000000-0000-0000-0000-000000000000' }),
              updatePromptUrlPattern: path('photo_builder.presentation.update_prompt', { imageId: '00000000-0000-0000-0000-111111111111' }),
              uploadToMediaStoreUrlPattern: path('photo_builder.presentation.upload_to_media_store', { imageId: '00000000-0000-0000-0000-111111111111' }),
+             checkManifestAvailabilityUrlPattern: hasRemoteAssets ? path('photo_builder.presentation.check_manifest_availability', { workspaceId: workspace.id }) : '',
              csrfToken: csrf_token('photo_builder'),
              workspaceId: workspace.id,
              pagePath: pagePath,
@@ -115,6 +116,20 @@
                             <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
                             <p class="mt-4 etfswui-text-small">
                                 {{ 'photo_builder.uploading_images'|trans }}
+                            </p>
+                        </div>
+                    {% endif %}
+
+                    {# Waiting for manifest overlay: shown after upload while waiting for CDN availability #}
+                    {% if hasRemoteAssets %}
+                        <div {{ stimulus_target('photo-builder', 'waitingForManifestOverlay') }}
+                             class="hidden absolute inset-0 z-10 flex flex-col items-center justify-center rounded-lg bg-white/90 dark:bg-dark-900/90 backdrop-blur-sm">
+                            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+                            <p class="mt-4 etfswui-text-small">
+                                {{ 'photo_builder.waiting_for_manifest'|trans }}
+                            </p>
+                            <p class="mt-1 text-xs text-dark-400 dark:text-dark-500">
+                                {{ 'photo_builder.waiting_for_manifest_note'|trans }}
                             </p>
                         </div>
                     {% endif %}

@@ -34,6 +34,7 @@ interface MockControllerState {
     regenerateAllImagesUrlPatternValue: string;
     updatePromptUrlPatternValue: string;
     uploadToMediaStoreUrlPatternValue: string;
+    checkManifestAvailabilityUrlPatternValue: string;
     csrfTokenValue: string;
     workspaceIdValue: string;
     pagePathValue: string;
@@ -52,6 +53,8 @@ interface MockControllerState {
     imageCardTargets: HTMLElement[];
     hasUploadingImagesOverlayTarget: boolean;
     uploadingImagesOverlayTarget: HTMLElement;
+    hasWaitingForManifestOverlayTarget: boolean;
+    waitingForManifestOverlayTarget: HTMLElement;
     hasResolutionToggleTarget: boolean;
     resolutionToggleTarget: HTMLElement;
     hasLoresButtonTarget: boolean;
@@ -115,6 +118,7 @@ const createController = (
     state.updatePromptUrlPatternValue = "/api/photo-builder/images/00000000-0000-0000-0000-111111111111/update-prompt";
     state.uploadToMediaStoreUrlPatternValue =
         "/api/photo-builder/images/00000000-0000-0000-0000-111111111111/upload-to-media-store";
+    state.checkManifestAvailabilityUrlPatternValue = "";
     state.csrfTokenValue = "test-csrf-token";
     state.workspaceIdValue = "ws-123";
     state.pagePathValue = "index.html";
@@ -134,6 +138,8 @@ const createController = (
     state.imageCardTargets = imageCards;
     state.hasUploadingImagesOverlayTarget = false;
     state.uploadingImagesOverlayTarget = document.createElement("div");
+    state.hasWaitingForManifestOverlayTarget = false;
+    state.waitingForManifestOverlayTarget = document.createElement("div");
     state.hasResolutionToggleTarget = false;
     state.resolutionToggleTarget = document.createElement("div");
     state.hasLoresButtonTarget = false;
@@ -1088,6 +1094,231 @@ describe("PhotoBuilderController", () => {
             await controller.embedIntoPage();
 
             expect(hrefSetter).not.toHaveBeenCalled();
+        });
+
+        it("should poll manifest availability after upload before navigating", async () => {
+            const uploadingOverlay = document.createElement("div");
+            uploadingOverlay.classList.add("hidden");
+            const waitingOverlay = document.createElement("div");
+            waitingOverlay.classList.add("hidden");
+
+            const { controller } = createController({
+                hasRemoteAssetsValue: true,
+                hasUploadingImagesOverlayTarget: true,
+                uploadingImagesOverlayTarget: uploadingOverlay,
+                hasWaitingForManifestOverlayTarget: true,
+                waitingForManifestOverlayTarget: waitingOverlay,
+                checkManifestAvailabilityUrlPatternValue: "/api/photo-builder/ws-123/check-manifest-availability",
+                lastImages: [
+                    {
+                        id: "img-1",
+                        position: 0,
+                        prompt: "test",
+                        suggestedFileName: "office.jpg",
+                        status: "completed",
+                        imageUrl: "/file",
+                        errorMessage: null,
+                        uploadedToMediaStore: false,
+                    },
+                ],
+            });
+
+            const fetchCalls: string[] = [];
+            vi.spyOn(globalThis, "fetch").mockImplementation(async (url) => {
+                fetchCalls.push(url as string);
+                // First call: upload to media store
+                if ((url as string).includes("upload-to-media-store")) {
+                    return new Response(
+                        JSON.stringify({
+                            url: "https://s3.example/00fa0883_office.jpg",
+                            fileName: "office.jpg",
+                            uploadedFileName: "00fa0883_office.jpg",
+                        }),
+                    );
+                }
+                // Second call: check manifest availability => all available
+                return new Response(
+                    JSON.stringify({
+                        available: ["00fa0883_office.jpg"],
+                        allAvailable: true,
+                    }),
+                );
+            });
+
+            const hrefSetter = vi.fn();
+            Object.defineProperty(window, "location", {
+                value: { href: "" },
+                writable: true,
+            });
+            Object.defineProperty(window.location, "href", {
+                set: hrefSetter,
+                get: () => "",
+            });
+
+            await controller.embedIntoPage();
+
+            // Should have called upload, then check-manifest-availability
+            expect(fetchCalls.some((u) => u.includes("upload-to-media-store"))).toBe(true);
+            expect(fetchCalls.some((u) => u.includes("check-manifest-availability"))).toBe(true);
+
+            // Should have navigated
+            expect(hrefSetter).toHaveBeenCalled();
+            const navUrl = hrefSetter.mock.calls[0][0] as string;
+            expect(navUrl).toContain(encodeURIComponent("00fa0883_office.jpg"));
+        });
+
+        it("should show and hide waiting overlay during manifest polling", async () => {
+            const waitingOverlay = document.createElement("div");
+            waitingOverlay.classList.add("hidden");
+
+            const { controller } = createController({
+                hasRemoteAssetsValue: true,
+                hasWaitingForManifestOverlayTarget: true,
+                waitingForManifestOverlayTarget: waitingOverlay,
+                checkManifestAvailabilityUrlPatternValue: "/api/photo-builder/ws-123/check-manifest-availability",
+                lastImages: [
+                    {
+                        id: "img-1",
+                        position: 0,
+                        prompt: "test",
+                        suggestedFileName: "office.jpg",
+                        status: "completed",
+                        imageUrl: "/file",
+                        errorMessage: null,
+                        uploadedToMediaStore: true,
+                        uploadedFileName: "00fa0883_office.jpg",
+                    },
+                ],
+            });
+
+            let overlayShown = false;
+            vi.spyOn(globalThis, "fetch").mockImplementation(async () => {
+                // Check that overlay is visible during the fetch
+                if (!waitingOverlay.classList.contains("hidden")) {
+                    overlayShown = true;
+                }
+                return new Response(
+                    JSON.stringify({
+                        available: ["00fa0883_office.jpg"],
+                        allAvailable: true,
+                    }),
+                );
+            });
+
+            const hrefSetter = vi.fn();
+            Object.defineProperty(window, "location", {
+                value: { href: "" },
+                writable: true,
+            });
+            Object.defineProperty(window.location, "href", {
+                set: hrefSetter,
+                get: () => "",
+            });
+
+            await controller.embedIntoPage();
+
+            expect(overlayShown).toBe(true);
+            // After completion, overlay should be hidden
+            expect(waitingOverlay.classList.contains("hidden")).toBe(true);
+        });
+
+        it("should skip manifest polling when checkManifestAvailabilityUrlPattern is empty", async () => {
+            const { controller } = createController({
+                checkManifestAvailabilityUrlPatternValue: "",
+                lastImages: [
+                    {
+                        id: "img-1",
+                        position: 0,
+                        prompt: "test",
+                        suggestedFileName: "office.jpg",
+                        status: "completed",
+                        imageUrl: "/file",
+                        errorMessage: null,
+                        uploadedToMediaStore: true,
+                        uploadedFileName: "00fa0883_office.jpg",
+                    },
+                ],
+            });
+
+            const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response("ok"));
+
+            const hrefSetter = vi.fn();
+            Object.defineProperty(window, "location", {
+                value: { href: "" },
+                writable: true,
+            });
+            Object.defineProperty(window.location, "href", {
+                set: hrefSetter,
+                get: () => "",
+            });
+
+            await controller.embedIntoPage();
+
+            // Should not have called any fetch (no uploads needed, no manifest check needed)
+            expect(fetchSpy).not.toHaveBeenCalled();
+            // Should have navigated directly
+            expect(hrefSetter).toHaveBeenCalled();
+        });
+
+        it("should navigate even if manifest polling times out", async () => {
+            const waitingOverlay = document.createElement("div");
+            waitingOverlay.classList.add("hidden");
+
+            const { controller } = createController({
+                hasRemoteAssetsValue: true,
+                hasWaitingForManifestOverlayTarget: true,
+                waitingForManifestOverlayTarget: waitingOverlay,
+                checkManifestAvailabilityUrlPatternValue: "/api/photo-builder/ws-123/check-manifest-availability",
+                lastImages: [
+                    {
+                        id: "img-1",
+                        position: 0,
+                        prompt: "test",
+                        suggestedFileName: "office.jpg",
+                        status: "completed",
+                        imageUrl: "/file",
+                        errorMessage: null,
+                        uploadedToMediaStore: true,
+                        uploadedFileName: "00fa0883_office.jpg",
+                    },
+                ],
+            });
+
+            // Always return allAvailable: false
+            vi.spyOn(globalThis, "fetch").mockResolvedValue(
+                new Response(
+                    JSON.stringify({
+                        available: [],
+                        allAvailable: false,
+                    }),
+                ),
+            );
+
+            const hrefSetter = vi.fn();
+            Object.defineProperty(window, "location", {
+                value: { href: "" },
+                writable: true,
+            });
+            Object.defineProperty(window.location, "href", {
+                set: hrefSetter,
+                get: () => "",
+            });
+
+            // Run embedIntoPage - this will loop through all 30 poll attempts
+            // Since we're using fake timers, we need to advance through the setTimeout calls
+            const embedPromise = controller.embedIntoPage();
+
+            // Advance through all 30 poll intervals (30 * 3000ms = 90000ms)
+            for (let i = 0; i < 30; i++) {
+                await flushPromises();
+                await vi.advanceTimersByTimeAsync(3000);
+            }
+            await flushPromises();
+
+            await embedPromise;
+
+            // Should still navigate even after timeout
+            expect(hrefSetter).toHaveBeenCalled();
         });
     });
 });

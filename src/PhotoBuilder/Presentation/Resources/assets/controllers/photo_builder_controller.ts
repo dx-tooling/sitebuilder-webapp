@@ -55,6 +55,7 @@ export default class extends Controller {
         regenerateAllImagesUrlPattern: String,
         updatePromptUrlPattern: String,
         uploadToMediaStoreUrlPattern: String,
+        checkManifestAvailabilityUrlPattern: String,
         csrfToken: String,
         workspaceId: String,
         pagePath: String,
@@ -76,6 +77,7 @@ export default class extends Controller {
         "uploadFinishedBanner",
         "regeneratingPromptsOverlay",
         "uploadingImagesOverlay",
+        "waitingForManifestOverlay",
         "resolutionToggle",
         "loresButton",
         "hiresButton",
@@ -88,6 +90,7 @@ export default class extends Controller {
     declare readonly regenerateAllImagesUrlPatternValue: string;
     declare readonly updatePromptUrlPatternValue: string;
     declare readonly uploadToMediaStoreUrlPatternValue: string;
+    declare readonly checkManifestAvailabilityUrlPatternValue: string;
     declare readonly csrfTokenValue: string;
     declare readonly workspaceIdValue: string;
     declare readonly pagePathValue: string;
@@ -111,6 +114,8 @@ export default class extends Controller {
     declare readonly regeneratingPromptsOverlayTarget: HTMLElement;
     declare readonly hasUploadingImagesOverlayTarget: boolean;
     declare readonly uploadingImagesOverlayTarget: HTMLElement;
+    declare readonly hasWaitingForManifestOverlayTarget: boolean;
+    declare readonly waitingForManifestOverlayTarget: HTMLElement;
     declare readonly hasResolutionToggleTarget: boolean;
     declare readonly resolutionToggleTarget: HTMLElement;
     declare readonly hasLoresButtonTarget: boolean;
@@ -489,7 +494,8 @@ export default class extends Controller {
 
     /**
      * Navigate back to editor with pre-filled embed message.
-     * Uploads any completed images that are not yet on the media store first.
+     * Uploads any completed images that are not yet on the media store first,
+     * then waits for them to appear in a remote asset manifest before redirecting.
      */
     async embedIntoPage(): Promise<void> {
         const completedImages = this.lastImages.filter((img) => img.suggestedFileName && img.status === "completed");
@@ -533,6 +539,15 @@ export default class extends Controller {
             }
         }
 
+        const allUploadedFileNames = completedImages
+            .map((img) => uploadedFileNamesByImageId[img.id] ?? img.uploadedFileName ?? "")
+            .filter(Boolean);
+
+        // Wait for all uploaded files to appear in the remote manifest
+        if (allUploadedFileNames.length > 0 && this.checkManifestAvailabilityUrlPatternValue) {
+            await this.waitForManifestAvailability(allUploadedFileNames);
+        }
+
         const fileNames = completedImages
             .map((img) => uploadedFileNamesByImageId[img.id] ?? img.uploadedFileName ?? img.suggestedFileName ?? "")
             .filter(Boolean)
@@ -540,5 +555,59 @@ export default class extends Controller {
         const message = `Embed images ${fileNames} into page ${this.pagePathValue}`;
         const url = `${this.editorUrlValue}?prefill=${encodeURIComponent(message)}`;
         window.location.href = url;
+    }
+
+    /**
+     * Poll the check-manifest-availability endpoint until all filenames are found
+     * or a timeout (~90 seconds) is reached.
+     */
+    private async waitForManifestAvailability(fileNames: string[]): Promise<boolean> {
+        if (this.hasWaitingForManifestOverlayTarget) {
+            this.waitingForManifestOverlayTarget.classList.remove("hidden");
+        }
+        if (this.hasEmbedButtonTarget) {
+            this.embedButtonTarget.disabled = true;
+        }
+
+        const pollIntervalMs = 3000;
+        const maxAttempts = 30; // ~90 seconds
+        const url = this.checkManifestAvailabilityUrlPatternValue;
+
+        let allAvailable = false;
+
+        for (let attempt = 0; attempt < maxAttempts; attempt++) {
+            try {
+                const response = await fetch(url, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-CSRF-Token": this.csrfTokenValue,
+                        "X-Requested-With": "XMLHttpRequest",
+                    },
+                    body: JSON.stringify({ fileNames }),
+                });
+
+                if (response.ok) {
+                    const data = (await response.json()) as { allAvailable?: boolean };
+                    if (data.allAvailable === true) {
+                        allAvailable = true;
+                        break;
+                    }
+                }
+            } catch {
+                // Ignore individual poll errors, keep trying
+            }
+
+            await new Promise((resolve) => setTimeout(resolve, pollIntervalMs));
+        }
+
+        if (this.hasWaitingForManifestOverlayTarget) {
+            this.waitingForManifestOverlayTarget.classList.add("hidden");
+        }
+        if (this.hasEmbedButtonTarget) {
+            this.embedButtonTarget.disabled = this.anyGenerating;
+        }
+
+        return allAvailable;
     }
 }
