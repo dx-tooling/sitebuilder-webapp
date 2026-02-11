@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\CursorAgentContentEditor\Infrastructure\Streaming;
 
-use App\LlmContentEditor\Facade\Dto\AgentEventDto;
-use App\LlmContentEditor\Facade\Dto\EditStreamChunkDto;
-use App\LlmContentEditor\Facade\Dto\ToolInputEntryDto;
-use App\LlmContentEditor\Facade\Enum\EditStreamChunkType;
+use App\AgenticContentEditor\Facade\Dto\AgentEventDto;
+use App\AgenticContentEditor\Facade\Dto\EditStreamChunkDto;
+use App\AgenticContentEditor\Facade\Dto\ToolInputEntryDto;
+use App\AgenticContentEditor\Facade\Enum\EditStreamChunkType;
 use JsonException;
 use SplQueue;
 

@@ -213,8 +213,8 @@ export interface ProgressAnimationState {
  * Returns whether to intensify animations, return to normal, or do nothing.
  */
 export function getProgressAnimationState(eventKind: string): ProgressAnimationState {
-    const intensifyEvents = ["tool_calling", "inference_start", "build_start"];
-    const normalizeEvents = ["tool_called", "inference_stop", "build_complete", "build_error"];
+    const intensifyEvents = ["tool_calling", "inference_start"];
+    const normalizeEvents = ["tool_called", "inference_stop", "tool_error"];
 
     return {
         intensify: intensifyEvents.includes(eventKind),
@@ -227,14 +227,6 @@ export function getProgressAnimationState(eventKind: string): ProgressAnimationS
  * Note: agent_error events are intentionally not surfaced to avoid alarming users.
  */
 export function shouldShowEventFeedback(eventKind: string): boolean {
-    const feedbackEvents = [
-        "tool_calling",
-        "inference_start",
-        "tool_called",
-        "inference_stop",
-        "build_start",
-        "build_complete",
-        "build_error",
-    ];
+    const feedbackEvents = ["tool_calling", "inference_start", "tool_called", "inference_stop", "tool_error"];
     return feedbackEvents.includes(eventKind);
 }

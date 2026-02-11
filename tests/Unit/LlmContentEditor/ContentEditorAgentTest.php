@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\LlmContentEditor;
 
+use App\AgenticContentEditor\Facade\Dto\AgentConfigDto;
 use App\LlmContentEditor\Domain\Agent\ContentEditorAgent;
 use App\LlmContentEditor\Domain\Enum\LlmModelName;
-use App\LlmContentEditor\Facade\Dto\AgentConfigDto;
 use App\LlmContentEditor\Infrastructure\ChatHistory\CallbackChatHistory;
 use App\ProjectMgmt\Domain\ValueObject\AgentConfigTemplate;
 use App\ProjectMgmt\Facade\Enum\ProjectType;

@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\LlmContentEditor\Domain\Command;
 
+use App\AgenticContentEditor\Facade\Dto\AgentConfigDto;
 use App\LlmContentEditor\Domain\Agent\ContentEditorAgent;
 use App\LlmContentEditor\Domain\Enum\LlmModelName;
-use App\LlmContentEditor\Facade\Dto\AgentConfigDto;
 use App\LlmContentEditor\Infrastructure\Observer\ConsoleObserver;
 use App\ProjectMgmt\Facade\Enum\ProjectType;
 use App\ProjectMgmt\Facade\ProjectMgmtFacadeInterface;

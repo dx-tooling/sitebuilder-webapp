@@ -7,7 +7,6 @@ namespace App\ChatBasedContentEditor\Domain\Service;
 use App\Account\Facade\AccountFacadeInterface;
 use App\ChatBasedContentEditor\Domain\Dto\ConversationInfoDto;
 use App\ChatBasedContentEditor\Domain\Entity\Conversation;
-use App\ChatBasedContentEditor\Domain\Enum\ContentEditorBackend;
 use App\ChatBasedContentEditor\Domain\Enum\ConversationStatus;
 use App\ChatBasedContentEditor\Infrastructure\Service\ConversationUrlServiceInterface;
 use App\ProjectMgmt\Facade\ProjectMgmtFacadeInterface;
@@ -52,7 +51,7 @@ final class ConversationService
         }
 
         $projectInfo          = $this->projectMgmtFacade->getProjectInfo($projectId);
-        $contentEditorBackend = ContentEditorBackend::from($projectInfo->contentEditorBackend->value);
+        $contentEditorBackend = $projectInfo->contentEditorBackend;
 
         // Transition workspace to IN_CONVERSATION
         $this->workspaceMgmtFacade->transitionToInConversation($workspaceInfo->id);

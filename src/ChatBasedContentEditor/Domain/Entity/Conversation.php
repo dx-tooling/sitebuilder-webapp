@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\ChatBasedContentEditor\Domain\Entity;
 
-use App\ChatBasedContentEditor\Domain\Enum\ContentEditorBackend;
+use App\AgenticContentEditor\Facade\Enum\AgenticContentEditorBackend;
 use App\ChatBasedContentEditor\Domain\Enum\ConversationStatus;
 use DateTimeImmutable;
 use Doctrine\Common\Collections\ArrayCollection;
@@ -26,10 +26,10 @@ class Conversation
      * @throws Exception
      */
     public function __construct(
-        string               $workspaceId,
-        string               $userId,
-        string               $workspacePath,
-        ContentEditorBackend $contentEditorBackend = ContentEditorBackend::Llm
+        string                      $workspaceId,
+        string                      $userId,
+        string                      $workspacePath,
+        AgenticContentEditorBackend $contentEditorBackend = AgenticContentEditorBackend::Llm
     ) {
         $this->workspaceId          = $workspaceId;
         $this->userId               = $userId;
@@ -111,17 +111,17 @@ class Conversation
         type: Types::STRING,
         length: 32,
         nullable: false,
-        enumType: ContentEditorBackend::class,
-        options: ['default' => ContentEditorBackend::Llm->value]
+        enumType: AgenticContentEditorBackend::class,
+        options: ['default' => AgenticContentEditorBackend::Llm->value]
     )]
-    private ContentEditorBackend $contentEditorBackend = ContentEditorBackend::Llm;
+    private AgenticContentEditorBackend $contentEditorBackend = AgenticContentEditorBackend::Llm;
 
-    public function getContentEditorBackend(): ContentEditorBackend
+    public function getContentEditorBackend(): AgenticContentEditorBackend
     {
         return $this->contentEditorBackend;
     }
 
-    public function setContentEditorBackend(ContentEditorBackend $contentEditorBackend): void
+    public function setContentEditorBackend(AgenticContentEditorBackend $contentEditorBackend): void
     {
         $this->contentEditorBackend = $contentEditorBackend;
     }
@@ -163,16 +163,16 @@ class Conversation
         length: 64,
         nullable: true
     )]
-    private ?string $cursorAgentSessionId = null;
+    private ?string $backendSessionState = null;
 
-    public function getCursorAgentSessionId(): ?string
+    public function getBackendSessionState(): ?string
     {
-        return $this->cursorAgentSessionId;
+        return $this->backendSessionState;
     }
 
-    public function setCursorAgentSessionId(?string $cursorAgentSessionId): void
+    public function setBackendSessionState(?string $backendSessionState): void
     {
-        $this->cursorAgentSessionId = $cursorAgentSessionId;
+        $this->backendSessionState = $backendSessionState;
     }
 
     /**

@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace App\LlmContentEditor\Facade;
 
+use App\AgenticContentEditor\Facade\Dto\AgentConfigDto;
+use App\AgenticContentEditor\Facade\Dto\ConversationMessageDto;
+use App\AgenticContentEditor\Facade\Dto\EditStreamChunkDto;
+use App\AgenticContentEditor\Facade\Enum\EditStreamChunkType;
 use App\LlmContentEditor\Domain\Agent\ContentEditorAgent;
 use App\LlmContentEditor\Domain\Enum\LlmModelName;
-use App\LlmContentEditor\Facade\Dto\AgentConfigDto;
-use App\LlmContentEditor\Facade\Dto\ConversationMessageDto;
-use App\LlmContentEditor\Facade\Dto\EditStreamChunkDto;
-use App\LlmContentEditor\Facade\Enum\EditStreamChunkType;
 use App\LlmContentEditor\Facade\Enum\LlmModelProvider;
 use App\LlmContentEditor\Infrastructure\AgentEventQueue;
 use App\LlmContentEditor\Infrastructure\ChatHistory\CallbackChatHistory;
@@ -52,18 +52,6 @@ final class LlmContentEditorFacade implements LlmContentEditorFacadeInterface
         private readonly ProgressMessageResolver          $progressMessageResolver,
     ) {
         $this->messageSerializer = new MessageSerializer();
-    }
-
-    /**
-     * @deprecated Use streamEditWithHistory() to support multi-turn conversations
-     *
-     * @return Generator<EditStreamChunkDto>
-     */
-    public function streamEdit(string $workspacePath, string $instruction): Generator
-    {
-        // This method is deprecated and should not be used.
-        // Yield an error chunk since we can't proceed without an API key.
-        yield new EditStreamChunkDto(EditStreamChunkType::Done, null, null, false, 'streamEdit is deprecated. Use streamEditWithHistory with an API key.');
     }
 
     /**

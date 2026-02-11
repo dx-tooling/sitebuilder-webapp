@@ -5,21 +5,20 @@ declare(strict_types=1);
 namespace App\ChatBasedContentEditor\Infrastructure\Handler;
 
 use App\Account\Facade\AccountFacadeInterface;
+use App\AgenticContentEditor\Facade\AgenticContentEditorFacadeInterface;
+use App\AgenticContentEditor\Facade\Dto\AgentConfigDto;
+use App\AgenticContentEditor\Facade\Dto\AgentEventDto;
+use App\AgenticContentEditor\Facade\Dto\ConversationMessageDto;
+use App\AgenticContentEditor\Facade\Dto\ToolInputEntryDto;
+use App\AgenticContentEditor\Facade\Enum\EditStreamChunkType;
 use App\ChatBasedContentEditor\Domain\Entity\Conversation;
 use App\ChatBasedContentEditor\Domain\Entity\ConversationMessage;
 use App\ChatBasedContentEditor\Domain\Entity\EditSession;
 use App\ChatBasedContentEditor\Domain\Entity\EditSessionChunk;
-use App\ChatBasedContentEditor\Domain\Enum\ContentEditorBackend;
 use App\ChatBasedContentEditor\Domain\Enum\ConversationMessageRole;
 use App\ChatBasedContentEditor\Domain\Enum\EditSessionStatus;
-use App\ChatBasedContentEditor\Infrastructure\ContentEditor\ContentEditorFacadeInterface;
 use App\ChatBasedContentEditor\Infrastructure\Message\RunEditSessionMessage;
 use App\ChatBasedContentEditor\Infrastructure\Service\ConversationUrlServiceInterface;
-use App\LlmContentEditor\Facade\Dto\AgentConfigDto;
-use App\LlmContentEditor\Facade\Dto\AgentEventDto;
-use App\LlmContentEditor\Facade\Dto\ConversationMessageDto;
-use App\LlmContentEditor\Facade\Dto\ToolInputEntryDto;
-use App\LlmContentEditor\Facade\Enum\EditStreamChunkType;
 use App\ProjectMgmt\Facade\ProjectMgmtFacadeInterface;
 use App\WorkspaceMgmt\Facade\WorkspaceMgmtFacadeInterface;
 use App\WorkspaceTooling\Facade\AgentExecutionContextInterface;
@@ -37,14 +36,14 @@ use const JSON_THROW_ON_ERROR;
 final readonly class RunEditSessionHandler
 {
     public function __construct(
-        private EntityManagerInterface          $entityManager,
-        private ContentEditorFacadeInterface    $facade,
-        private LoggerInterface                 $logger,
-        private WorkspaceMgmtFacadeInterface    $workspaceMgmtFacade,
-        private ProjectMgmtFacadeInterface      $projectMgmtFacade,
-        private AccountFacadeInterface          $accountFacade,
-        private ConversationUrlServiceInterface $conversationUrlService,
-        private AgentExecutionContextInterface  $executionContext,
+        private EntityManagerInterface              $entityManager,
+        private AgenticContentEditorFacadeInterface $facade,
+        private LoggerInterface                     $logger,
+        private WorkspaceMgmtFacadeInterface        $workspaceMgmtFacade,
+        private ProjectMgmtFacadeInterface          $projectMgmtFacade,
+        private AccountFacadeInterface              $accountFacade,
+        private ConversationUrlServiceInterface     $conversationUrlService,
+        private AgentExecutionContextInterface      $executionContext,
     ) {
     }
 
@@ -93,20 +92,12 @@ final readonly class RunEditSessionHandler
                 return;
             }
 
-            $agentImage = $project->agentImage;
-            if ($conversation->getContentEditorBackend() === ContentEditorBackend::CursorAgent) {
-                $cursorAgentImage = $_ENV['CURSOR_AGENT_IMAGE'] ?? null;
-                if (is_string($cursorAgentImage) && $cursorAgentImage !== '') {
-                    $agentImage = $cursorAgentImage;
-                }
-            }
-
             $this->executionContext->setContext(
                 $conversation->getWorkspaceId(),
                 $session->getWorkspacePath(),
                 $conversation->getId(),
                 $workspace->projectName,
-                $agentImage,
+                $project->agentImage,
                 $project->remoteContentAssetsManifestUrls
             );
 
@@ -125,7 +116,7 @@ final readonly class RunEditSessionHandler
                 $previousMessages,
                 $project->llmApiKey,
                 $agentConfig,
-                $conversation->getCursorAgentSessionId(),
+                $conversation->getBackendSessionState(),
                 $message->locale,
             );
 
@@ -168,6 +159,9 @@ final readonly class RunEditSessionHandler
                     // Persist new conversation messages
                     $this->persistConversationMessage($conversation, $chunk->message);
                 } elseif ($chunk->chunkType === EditStreamChunkType::Done) {
+                    if ($chunk->backendSessionState !== null) {
+                        $conversation->setBackendSessionState($chunk->backendSessionState);
+                    }
                     EditSessionChunk::createDoneChunk(
                         $session,
                         $chunk->success ?? false,
@@ -180,14 +174,6 @@ final readonly class RunEditSessionHandler
 
             $session->setStatus(EditSessionStatus::Completed);
             $this->entityManager->flush();
-
-            if ($conversation->getContentEditorBackend() === ContentEditorBackend::CursorAgent) {
-                $sessionId = $this->facade->getLastCursorAgentSessionId();
-                if ($sessionId !== null && $sessionId !== $conversation->getCursorAgentSessionId()) {
-                    $conversation->setCursorAgentSessionId($sessionId);
-                    $this->entityManager->flush();
-                }
-            }
 
             // Commit and push changes after successful edit session
             $this->commitChangesAfterEdit($conversation, $session);
@@ -246,9 +232,11 @@ final readonly class RunEditSessionHandler
         }
 
         if ($event->toolInputs !== null) {
+            /** @var list<ToolInputEntryDto> $toolInputs */
+            $toolInputs         = $event->toolInputs;
             $data['toolInputs'] = array_map(
                 static fn (ToolInputEntryDto $t) => ['key' => $t->key, 'value' => $t->value],
-                $event->toolInputs
+                $toolInputs
             );
         }
 

@@ -2,29 +2,30 @@
 
 declare(strict_types=1);
 
-namespace App\CursorAgentContentEditor\Facade;
+namespace App\CursorAgentContentEditor\Infrastructure;
 
+use App\AgenticContentEditor\Facade\AgenticContentEditorAdapterInterface;
+use App\AgenticContentEditor\Facade\Dto\AgentConfigDto;
+use App\AgenticContentEditor\Facade\Dto\AgentEventDto;
+use App\AgenticContentEditor\Facade\Dto\BackendModelInfoDto;
+use App\AgenticContentEditor\Facade\Dto\ConversationMessageDto;
+use App\AgenticContentEditor\Facade\Dto\EditStreamChunkDto;
+use App\AgenticContentEditor\Facade\Enum\AgenticContentEditorBackend;
+use App\AgenticContentEditor\Facade\Enum\EditStreamChunkType;
 use App\CursorAgentContentEditor\Domain\Agent\ContentEditorAgent;
 use App\CursorAgentContentEditor\Infrastructure\Streaming\CursorAgentStreamCollector;
-use App\LlmContentEditor\Facade\Dto\AgentConfigDto;
-use App\LlmContentEditor\Facade\Dto\AgentEventDto;
-use App\LlmContentEditor\Facade\Dto\ConversationMessageDto;
-use App\LlmContentEditor\Facade\Dto\EditStreamChunkDto;
-use App\LlmContentEditor\Facade\Enum\EditStreamChunkType;
 use App\WorkspaceTooling\Facade\AgentExecutionContextInterface;
 use App\WorkspaceTooling\Facade\WorkspaceToolingServiceInterface;
 use Generator;
 use RuntimeException;
 use Throwable;
 
-final class CursorAgentContentEditorFacade implements CursorAgentContentEditorFacadeInterface
+final class CursorAgentContentEditorAdapter implements AgenticContentEditorAdapterInterface
 {
     /**
      * Polling interval in microseconds (50ms).
      */
     private const int POLL_INTERVAL_US = 50_000;
-
-    private ?string $lastSessionId = null;
 
     public function __construct(
         private readonly WorkspaceToolingServiceInterface $workspaceTooling,
@@ -32,46 +33,47 @@ final class CursorAgentContentEditorFacade implements CursorAgentContentEditorFa
     ) {
     }
 
+    public function supports(AgenticContentEditorBackend $backend): bool
+    {
+        return $backend === AgenticContentEditorBackend::CursorAgent;
+    }
+
     /**
      * @param list<ConversationMessageDto> $previousMessages
      *
      * @return Generator<EditStreamChunkDto>
      */
-    public function streamEditWithHistory(
-        string          $workspacePath,
-        string          $instruction,
-        array           $previousMessages,
-        string          $apiKey,
-        ?AgentConfigDto $agentConfig = null,
-        ?string         $cursorAgentSessionId = null,
-        string          $locale = 'en',
+    public function streamEdit(
+        string         $workspacePath,
+        string         $instruction,
+        array          $previousMessages,
+        string         $apiKey,
+        AgentConfigDto $agentConfig,
+        ?string        $backendSessionState = null,
+        string         $locale = 'en',
     ): Generator {
-        $this->lastSessionId = null;
-        $collector           = new CursorAgentStreamCollector();
-
+        $collector = new CursorAgentStreamCollector();
         $this->executionContext->setOutputCallback($collector);
 
         try {
             $prompt = $this->buildPrompt(
                 $instruction,
                 $previousMessages,
-                $cursorAgentSessionId === null,
+                $backendSessionState === null,
                 $agentConfig
             );
 
             yield new EditStreamChunkDto(EditStreamChunkType::Event, null, new AgentEventDto('inference_start'));
 
             $agent   = new ContentEditorAgent($this->workspaceTooling);
-            $process = $agent->startAsync('/workspace', $prompt, $apiKey, $cursorAgentSessionId);
+            $process = $agent->startAsync('/workspace', $prompt, $apiKey, $backendSessionState);
 
             // Poll for chunks while the process is running
             while ($process->isRunning()) {
-                // Drain any chunks that have arrived
                 foreach ($collector->drain() as $chunk) {
                     yield $chunk;
                 }
 
-                // Brief sleep to avoid busy-waiting
                 usleep(self::POLL_INTERVAL_US);
             }
 
@@ -83,17 +85,18 @@ final class CursorAgentContentEditorFacade implements CursorAgentContentEditorFa
                 yield $chunk;
             }
 
-            $this->lastSessionId = $collector->getLastSessionId();
+            $lastSessionId = $collector->getLastSessionId();
 
             // Always run the build after the agent completes. The Cursor CLI cannot run shell
             // commands in headless mode, so we run the build ourselves regardless of agent success.
-            yield new EditStreamChunkDto(EditStreamChunkType::Event, null, new AgentEventDto('build_start'));
+            yield new EditStreamChunkDto(EditStreamChunkType::Event, null, new AgentEventDto('tool_calling', 'run_build'));
             $agentImage = $this->executionContext->getAgentImage() ?? 'node:22-slim';
+
             try {
                 $buildOutput = $this->workspaceTooling->runBuildInWorkspace($workspacePath, $agentImage);
-                yield new EditStreamChunkDto(EditStreamChunkType::Event, null, new AgentEventDto('build_complete', null, null, $buildOutput));
+                yield new EditStreamChunkDto(EditStreamChunkType::Event, null, new AgentEventDto('tool_called', 'run_build', null, $buildOutput));
             } catch (RuntimeException $e) {
-                yield new EditStreamChunkDto(EditStreamChunkType::Event, null, new AgentEventDto('build_error', null, null, null, $e->getMessage()));
+                yield new EditStreamChunkDto(EditStreamChunkType::Event, null, new AgentEventDto('tool_error', 'run_build', null, null, $e->getMessage()));
             }
 
             yield new EditStreamChunkDto(EditStreamChunkType::Event, null, new AgentEventDto('inference_stop'));
@@ -103,7 +106,9 @@ final class CursorAgentContentEditorFacade implements CursorAgentContentEditorFa
                 null,
                 null,
                 $collector->isSuccess(),
-                $collector->getErrorMessage()
+                $collector->getErrorMessage(),
+                null,
+                $lastSessionId
             );
         } catch (Throwable $e) {
             yield new EditStreamChunkDto(EditStreamChunkType::Event, null, new AgentEventDto('inference_stop'));
@@ -113,23 +118,60 @@ final class CursorAgentContentEditorFacade implements CursorAgentContentEditorFa
         }
     }
 
-    public function getLastSessionId(): ?string
+    public function getBackendModelInfo(): BackendModelInfoDto
     {
-        return $this->lastSessionId;
+        // The Cursor agent manages its own model and context internally.
+        // We report the effective prompt limit for context-bar purposes.
+        // Cost rates are null because Cursor pricing is opaque (not per-token BYOK).
+        return new BackendModelInfoDto(
+            'cursor-agent',
+            200_000,
+        );
+    }
+
+    /**
+     * @param list<ConversationMessageDto> $previousMessages
+     */
+    public function buildAgentContextDump(
+        string         $instruction,
+        array          $previousMessages,
+        AgentConfigDto $agentConfig
+    ): string {
+        $isFirstMessage = $previousMessages === [];
+
+        $lines   = [];
+        $lines[] = '=== CURSOR AGENT CONTEXT ===';
+        $lines[] = '';
+
+        if ($isFirstMessage) {
+            $lines[] = '--- SYSTEM CONTEXT ---';
+            $lines[] = $this->buildSystemContext($agentConfig);
+            $lines[] = '';
+        }
+
+        if ($previousMessages !== []) {
+            $lines[] = '--- CONVERSATION HISTORY ---';
+            $lines[] = $this->formatHistory($previousMessages);
+            $lines[] = '';
+        }
+
+        $lines[] = '--- CURRENT PROMPT ---';
+        $lines[] = $this->buildPrompt($instruction, $previousMessages, $isFirstMessage, $agentConfig);
+
+        return implode("\n", $lines);
     }
 
     /**
      * @param list<ConversationMessageDto> $previousMessages
      */
     private function buildPrompt(
-        string          $instruction,
-        array           $previousMessages,
-        bool            $isFirstMessage,
-        ?AgentConfigDto $agentConfig
+        string         $instruction,
+        array          $previousMessages,
+        bool           $isFirstMessage,
+        AgentConfigDto $agentConfig
     ): string {
         $parts = [];
 
-        // Include system instructions and workspace rules only on first message of a session
         if ($isFirstMessage) {
             $systemContext = $this->buildSystemContext($agentConfig);
             if ($systemContext !== '') {
@@ -137,7 +179,6 @@ final class CursorAgentContentEditorFacade implements CursorAgentContentEditorFa
             }
         }
 
-        // Add conversation history if any
         if ($previousMessages !== []) {
             $parts[] = $this->formatHistory($previousMessages);
             $parts[] = 'User: ' . $instruction;
@@ -148,38 +189,29 @@ final class CursorAgentContentEditorFacade implements CursorAgentContentEditorFa
         return implode("\n\n", $parts);
     }
 
-    /**
-     * Build system context including agent instructions and workspace rules.
-     */
-    private function buildSystemContext(?AgentConfigDto $agentConfig): string
+    private function buildSystemContext(AgentConfigDto $agentConfig): string
     {
         $sections = [];
 
-        // Add working folder info
         $sections[] = 'The working folder is: /workspace';
 
-        // Add agent background instructions
-        if ($agentConfig !== null && trim($agentConfig->backgroundInstructions) !== '') {
+        if (trim($agentConfig->backgroundInstructions) !== '') {
             $sections[] = "## Background Instructions\n" . $agentConfig->backgroundInstructions;
         }
 
-        // Add agent step instructions
-        if ($agentConfig !== null && trim($agentConfig->stepInstructions) !== '') {
+        if (trim($agentConfig->stepInstructions) !== '') {
             $sections[] = "## Step-by-Step Instructions\n" . $agentConfig->stepInstructions;
         }
 
-        // Add agent output instructions
-        if ($agentConfig !== null && trim($agentConfig->outputInstructions) !== '') {
+        if (trim($agentConfig->outputInstructions) !== '') {
             $sections[] = "## Output Instructions\n" . $agentConfig->outputInstructions;
         }
 
-        // Add workspace rules
         $workspaceRules = $this->getWorkspaceRulesForPrompt();
         if ($workspaceRules !== '') {
             $sections[] = "## Workspace Rules\n" . $workspaceRules;
         }
 
-        // Add critical instruction about running build
         $sections[] = "## Important: Keep Source and Dist in Sync\n" .
             "After making changes to source files in /workspace/src/, you MUST run 'npm run build' " .
             'to compile the changes to the /workspace/dist/ folder. The dist folder is what gets ' .
@@ -188,9 +220,6 @@ final class CursorAgentContentEditorFacade implements CursorAgentContentEditorFa
         return implode("\n\n", $sections);
     }
 
-    /**
-     * Get workspace rules formatted for the prompt.
-     */
     private function getWorkspaceRulesForPrompt(): string
     {
         $rulesJson = $this->workspaceTooling->getWorkspaceRules();

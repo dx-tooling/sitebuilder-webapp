@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\LlmContentEditor\ChatHistory;
 
-use App\LlmContentEditor\Facade\Dto\ConversationMessageDto;
+use App\AgenticContentEditor\Facade\Dto\ConversationMessageDto;
 use App\LlmContentEditor\Infrastructure\ChatHistory\MessageSerializer;
 use NeuronAI\Chat\Messages\AssistantMessage;
 use PHPUnit\Framework\TestCase;

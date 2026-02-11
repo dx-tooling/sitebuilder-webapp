@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\LlmContentEditor\Infrastructure\Observer;
 
-use App\LlmContentEditor\Facade\Dto\AgentEventDto;
-use App\LlmContentEditor\Facade\Dto\ToolInputEntryDto;
+use App\AgenticContentEditor\Facade\Dto\AgentEventDto;
+use App\AgenticContentEditor\Facade\Dto\ToolInputEntryDto;
 use App\LlmContentEditor\Infrastructure\AgentEventQueue;
 use NeuronAI\Observability\Events\AgentError;
 use NeuronAI\Observability\Events\InferenceStart;

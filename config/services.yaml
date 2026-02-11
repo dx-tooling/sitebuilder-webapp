@@ -133,19 +133,16 @@ services:
     App\ChatBasedContentEditor\Facade\ChatBasedContentEditorFacadeInterface:
         class: App\ChatBasedContentEditor\Facade\ChatBasedContentEditorFacade
 
-    App\CursorAgentContentEditor\Facade\CursorAgentContentEditorFacadeInterface:
-        class: App\CursorAgentContentEditor\Facade\CursorAgentContentEditorFacade
+    App\LlmContentEditor\Infrastructure\LlmContentEditorAdapter: ~
 
-    App\ChatBasedContentEditor\Infrastructure\ContentEditor\LlmContentEditorAdapter: ~
+    App\CursorAgentContentEditor\Infrastructure\CursorAgentContentEditorAdapter: ~
 
-    App\ChatBasedContentEditor\Infrastructure\ContentEditor\CursorAgentContentEditorAdapter: ~
-
-    App\ChatBasedContentEditor\Infrastructure\ContentEditor\ContentEditorFacadeInterface:
-        class: App\ChatBasedContentEditor\Infrastructure\ContentEditor\ContentEditorFacade
+    App\AgenticContentEditor\Facade\AgenticContentEditorFacadeInterface:
+        class: App\AgenticContentEditor\Facade\AgenticContentEditorFacade
         arguments:
             - [
-                  '@App\ChatBasedContentEditor\Infrastructure\ContentEditor\LlmContentEditorAdapter',
-                  '@App\ChatBasedContentEditor\Infrastructure\ContentEditor\CursorAgentContentEditorAdapter',
+                  '@App\LlmContentEditor\Infrastructure\LlmContentEditorAdapter',
+                  '@App\CursorAgentContentEditor\Infrastructure\CursorAgentContentEditorAdapter',
               ]
 
     # Domain service bindings

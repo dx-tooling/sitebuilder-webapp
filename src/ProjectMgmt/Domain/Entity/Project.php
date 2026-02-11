@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\ProjectMgmt\Domain\Entity;
 
+use App\AgenticContentEditor\Facade\Enum\AgenticContentEditorBackend;
 use App\LlmContentEditor\Facade\Enum\LlmModelProvider;
 use App\ProjectMgmt\Domain\ValueObject\AgentConfigTemplate;
-use App\ProjectMgmt\Facade\Enum\ContentEditorBackend;
 use App\ProjectMgmt\Facade\Enum\ProjectType;
 use DateTimeImmutable;
 use Doctrine\DBAL\Types\Types;
@@ -28,19 +28,19 @@ class Project
      * @param list<string>|null $remoteContentAssetsManifestUrls
      */
     public function __construct(
-        string               $organizationId,
-        string               $name,
-        string               $gitUrl,
-        string               $githubToken,
-        LlmModelProvider     $llmModelProvider,
-        string               $llmApiKey,
-        ProjectType          $projectType = ProjectType::DEFAULT,
-        ContentEditorBackend $contentEditorBackend = ContentEditorBackend::Llm,
-        string               $agentImage = self::DEFAULT_AGENT_IMAGE,
-        ?string              $agentBackgroundInstructions = null,
-        ?string              $agentStepInstructions = null,
-        ?string              $agentOutputInstructions = null,
-        ?array               $remoteContentAssetsManifestUrls = null
+        string                      $organizationId,
+        string                      $name,
+        string                      $gitUrl,
+        string                      $githubToken,
+        LlmModelProvider            $llmModelProvider,
+        string                      $llmApiKey,
+        ProjectType                 $projectType = ProjectType::DEFAULT,
+        AgenticContentEditorBackend $contentEditorBackend = AgenticContentEditorBackend::Llm,
+        string                      $agentImage = self::DEFAULT_AGENT_IMAGE,
+        ?string                     $agentBackgroundInstructions = null,
+        ?string                     $agentStepInstructions = null,
+        ?string                     $agentOutputInstructions = null,
+        ?array                      $remoteContentAssetsManifestUrls = null
     ) {
         $this->organizationId                  = $organizationId;
         $this->name                            = $name;
@@ -159,17 +159,17 @@ class Project
         type: Types::STRING,
         length: 32,
         nullable: false,
-        enumType: ContentEditorBackend::class,
-        options: ['default' => ContentEditorBackend::Llm->value]
+        enumType: AgenticContentEditorBackend::class,
+        options: ['default' => AgenticContentEditorBackend::Llm->value]
     )]
-    private ContentEditorBackend $contentEditorBackend = ContentEditorBackend::Llm;
+    private AgenticContentEditorBackend $contentEditorBackend = AgenticContentEditorBackend::Llm;
 
-    public function getContentEditorBackend(): ContentEditorBackend
+    public function getContentEditorBackend(): AgenticContentEditorBackend
     {
         return $this->contentEditorBackend;
     }
 
-    public function setContentEditorBackend(ContentEditorBackend $contentEditorBackend): void
+    public function setContentEditorBackend(AgenticContentEditorBackend $contentEditorBackend): void
     {
         $this->contentEditorBackend = $contentEditorBackend;
     }

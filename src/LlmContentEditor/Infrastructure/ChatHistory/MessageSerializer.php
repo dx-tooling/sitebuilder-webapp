@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\LlmContentEditor\Infrastructure\ChatHistory;
 
-use App\LlmContentEditor\Facade\Dto\ConversationMessageDto;
+use App\AgenticContentEditor\Facade\Dto\ConversationMessageDto;
 use JsonException;
 use NeuronAI\Chat\Enums\MessageRole;
 use NeuronAI\Chat\Messages\AssistantMessage;

@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\LlmContentEditor\Facade\Dto;
+namespace App\AgenticContentEditor\Facade\Dto;
 
-use App\LlmContentEditor\Facade\Enum\EditStreamChunkType;
+use App\AgenticContentEditor\Facade\Enum\EditStreamChunkType;
 
 readonly class EditStreamChunkDto
 {
@@ -15,6 +15,8 @@ readonly class EditStreamChunkDto
         public ?bool                   $success = null,
         public ?string                 $errorMessage = null,
         public ?ConversationMessageDto $message = null,
+        /** Opaque session state for the backend (e.g. Cursor session ID). Set on Done chunks; passed back on next turn. */
+        public ?string                 $backendSessionState = null,
     ) {
     }
 }

@@ -4,22 +4,23 @@ declare(strict_types=1);
 
 namespace App\ChatBasedContentEditor\Presentation\Service;
 
+use App\AgenticContentEditor\Facade\AgenticContentEditorFacadeInterface;
 use App\ChatBasedContentEditor\Domain\Entity\Conversation;
 use App\ChatBasedContentEditor\Domain\Entity\EditSession;
 use App\ChatBasedContentEditor\Domain\Enum\EditSessionStatus;
 use App\ChatBasedContentEditor\Presentation\Dto\ContextUsageDto;
-use App\LlmContentEditor\Domain\Enum\LlmModelName;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
 final readonly class ConversationContextUsageService
 {
     public function __construct(
-        private EntityManagerInterface $entityManager,
+        private EntityManagerInterface              $entityManager,
+        private AgenticContentEditorFacadeInterface $agenticContentEditorFacade,
         #[Autowire(param: 'chat_based_content_editor.bytes_per_token_estimate')]
-        private int                    $bytesPerTokenEstimate,
+        private int                                 $bytesPerTokenEstimate,
         #[Autowire(param: 'chat_based_content_editor.system_prompt_bytes_estimate')]
-        private int                    $systemPromptBytesEstimate,
+        private int                                 $systemPromptBytesEstimate,
     ) {
     }
 
@@ -69,19 +70,20 @@ final readonly class ConversationContextUsageService
         $inputTokensCumulative  = (int) round($inputBytesCumulative / $this->bytesPerTokenEstimate);
         $outputTokensCumulative = (int) round($outputBytesCumulative / $this->bytesPerTokenEstimate);
 
-        $model     = LlmModelName::defaultForContentEditor();
-        $maxTokens = $model->maxContextTokens();
+        $modelInfo = $this->agenticContentEditorFacade->getBackendModelInfo(
+            $conversation->getContentEditorBackend()
+        );
 
-        $inputCostPer1M  = $model->inputCostPer1M();
-        $outputCostPer1M = $model->outputCostPer1M();
+        $inputCostPer1M  = $modelInfo->inputCostPer1M  ?? 0.0;
+        $outputCostPer1M = $modelInfo->outputCostPer1M ?? 0.0;
         $inputCost       = ($inputTokensCumulative / 1_000_000)  * $inputCostPer1M;
         $outputCost      = ($outputTokensCumulative / 1_000_000) * $outputCostPer1M;
         $totalCost       = $inputCost + $outputCost;
 
         return new ContextUsageDto(
             $usedTokens,
-            $maxTokens,
-            $model->value,
+            $modelInfo->maxContextTokens,
+            $modelInfo->modelName,
             $inputTokensCumulative,
             $outputTokensCumulative,
             $inputCost,

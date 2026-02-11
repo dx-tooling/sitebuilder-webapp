@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\LlmContentEditor\Facade\Dto;
+namespace App\AgenticContentEditor\Facade\Dto;
 
 readonly class ToolInputEntryDto
 {
