@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\PhotoBuilder\Infrastructure\Adapter;
 
+use App\LlmContentEditor\Facade\Enum\LlmModelProvider;
 use App\PhotoBuilder\Domain\Dto\ImagePromptResultDto;
 
 /**
@@ -17,9 +18,10 @@ interface PromptGeneratorInterface
      * @return list<ImagePromptResultDto>
      */
     public function generatePrompts(
-        string $pageHtml,
-        string $userPrompt,
-        string $apiKey,
-        int    $count,
+        string           $pageHtml,
+        string           $userPrompt,
+        string           $apiKey,
+        int              $count,
+        LlmModelProvider $provider = LlmModelProvider::OpenAI,
     ): array;
 }

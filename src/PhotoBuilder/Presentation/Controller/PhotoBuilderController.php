@@ -110,13 +110,18 @@ final class PhotoBuilderController extends AbstractController
         $hasRemoteAssets = $project->hasS3UploadConfigured()
             && count($project->remoteContentAssetsManifestUrls) > 0;
 
+        $effectiveProvider = $project->getEffectivePhotoBuilderLlmModelProvider();
+
         return $this->render('@photo_builder.presentation/photo_builder.twig', [
-            'workspace'       => $workspace,
-            'project'         => $project,
-            'pagePath'        => $pagePath,
-            'conversationId'  => $conversationId,
-            'imageCount'      => PhotoBuilderService::IMAGE_COUNT,
-            'hasRemoteAssets' => $hasRemoteAssets,
+            'workspace'                     => $workspace,
+            'project'                       => $project,
+            'pagePath'                      => $pagePath,
+            'conversationId'                => $conversationId,
+            'imageCount'                    => PhotoBuilderService::IMAGE_COUNT,
+            'hasRemoteAssets'               => $hasRemoteAssets,
+            'effectivePhotoBuilderProvider' => $effectiveProvider->displayName(),
+            'imagePromptModel'              => $effectiveProvider->imagePromptGenerationModel()->value,
+            'imageGenerationModel'          => $effectiveProvider->imageGenerationModel()->value,
         ]);
     }
 

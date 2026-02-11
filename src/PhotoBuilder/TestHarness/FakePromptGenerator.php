@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\PhotoBuilder\TestHarness;
 
+use App\LlmContentEditor\Facade\Enum\LlmModelProvider;
 use App\PhotoBuilder\Domain\Dto\ImagePromptResultDto;
 use App\PhotoBuilder\Infrastructure\Adapter\PromptGeneratorInterface;
 use EnterpriseToolingForSymfony\SharedBundle\DateAndTime\Service\DateAndTimeService;
@@ -28,10 +29,11 @@ final readonly class FakePromptGenerator implements PromptGeneratorInterface
      * @throws Exception
      */
     public function generatePrompts(
-        string $pageHtml,
-        string $userPrompt,
-        string $apiKey,
-        int    $count,
+        string           $pageHtml,
+        string           $userPrompt,
+        string           $apiKey,
+        int              $count,
+        LlmModelProvider $provider = LlmModelProvider::OpenAI,
     ): array {
         $this->logger->info(sprintf(
             'PhotoBuilder TestHarness: Generating %d fake image prompts (skipping LLM call)',

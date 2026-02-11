@@ -31,8 +31,8 @@ class Project
         string           $name,
         string           $gitUrl,
         string           $githubToken,
-        LlmModelProvider $llmModelProvider,
-        string           $llmApiKey,
+        LlmModelProvider $contentEditingLlmModelProvider,
+        string           $contentEditingLlmModelProviderApiKey,
         ProjectType      $projectType = ProjectType::DEFAULT,
         string           $agentImage = self::DEFAULT_AGENT_IMAGE,
         ?string          $agentBackgroundInstructions = null,
@@ -40,16 +40,16 @@ class Project
         ?string          $agentOutputInstructions = null,
         ?array           $remoteContentAssetsManifestUrls = null
     ) {
-        $this->organizationId                  = $organizationId;
-        $this->name                            = $name;
-        $this->gitUrl                          = $gitUrl;
-        $this->githubToken                     = $githubToken;
-        $this->llmModelProvider                = $llmModelProvider;
-        $this->llmApiKey                       = $llmApiKey;
-        $this->projectType                     = $projectType;
-        $this->agentImage                      = $agentImage;
-        $this->createdAt                       = DateAndTimeService::getDateTimeImmutable();
-        $this->remoteContentAssetsManifestUrls = $remoteContentAssetsManifestUrls !== null && $remoteContentAssetsManifestUrls !== [] ? $remoteContentAssetsManifestUrls : null;
+        $this->organizationId                       = $organizationId;
+        $this->name                                 = $name;
+        $this->gitUrl                               = $gitUrl;
+        $this->githubToken                          = $githubToken;
+        $this->contentEditingLlmModelProvider       = $contentEditingLlmModelProvider;
+        $this->contentEditingLlmModelProviderApiKey = $contentEditingLlmModelProviderApiKey;
+        $this->projectType                          = $projectType;
+        $this->agentImage                           = $agentImage;
+        $this->createdAt                            = DateAndTimeService::getDateTimeImmutable();
+        $this->remoteContentAssetsManifestUrls      = $remoteContentAssetsManifestUrls !== null && $remoteContentAssetsManifestUrls !== [] ? $remoteContentAssetsManifestUrls : null;
 
         // Initialize agent config from template if not provided
         $template                          = AgentConfigTemplate::forProjectType($projectType);
@@ -170,22 +170,24 @@ class Project
         $this->agentImage = $agentImage;
     }
 
+    // Content Editing LLM configuration (mandatory)
+
     #[ORM\Column(
         type: Types::STRING,
         length: 32,
         nullable: false,
         enumType: LlmModelProvider::class
     )]
-    private LlmModelProvider $llmModelProvider;
+    private LlmModelProvider $contentEditingLlmModelProvider;
 
-    public function getLlmModelProvider(): LlmModelProvider
+    public function getContentEditingLlmModelProvider(): LlmModelProvider
     {
-        return $this->llmModelProvider;
+        return $this->contentEditingLlmModelProvider;
     }
 
-    public function setLlmModelProvider(LlmModelProvider $llmModelProvider): void
+    public function setContentEditingLlmModelProvider(LlmModelProvider $contentEditingLlmModelProvider): void
     {
-        $this->llmModelProvider = $llmModelProvider;
+        $this->contentEditingLlmModelProvider = $contentEditingLlmModelProvider;
     }
 
     #[ORM\Column(
@@ -193,16 +195,69 @@ class Project
         length: 1024,
         nullable: false
     )]
-    private string $llmApiKey;
+    private string $contentEditingLlmModelProviderApiKey;
 
-    public function getLlmApiKey(): string
+    public function getContentEditingLlmModelProviderApiKey(): string
     {
-        return $this->llmApiKey;
+        return $this->contentEditingLlmModelProviderApiKey;
     }
 
-    public function setLlmApiKey(string $llmApiKey): void
+    public function setContentEditingLlmModelProviderApiKey(string $contentEditingLlmModelProviderApiKey): void
     {
-        $this->llmApiKey = $llmApiKey;
+        $this->contentEditingLlmModelProviderApiKey = $contentEditingLlmModelProviderApiKey;
+    }
+
+    // PhotoBuilder LLM configuration (nullable = falls back to content editing settings)
+
+    #[ORM\Column(
+        type: Types::STRING,
+        length: 32,
+        nullable: true,
+        enumType: LlmModelProvider::class
+    )]
+    private ?LlmModelProvider $photoBuilderLlmModelProvider = null;
+
+    public function getPhotoBuilderLlmModelProvider(): ?LlmModelProvider
+    {
+        return $this->photoBuilderLlmModelProvider;
+    }
+
+    public function setPhotoBuilderLlmModelProvider(?LlmModelProvider $photoBuilderLlmModelProvider): void
+    {
+        $this->photoBuilderLlmModelProvider = $photoBuilderLlmModelProvider;
+    }
+
+    #[ORM\Column(
+        type: Types::STRING,
+        length: 1024,
+        nullable: true
+    )]
+    private ?string $photoBuilderLlmModelProviderApiKey = null;
+
+    public function getPhotoBuilderLlmModelProviderApiKey(): ?string
+    {
+        return $this->photoBuilderLlmModelProviderApiKey;
+    }
+
+    public function setPhotoBuilderLlmModelProviderApiKey(?string $photoBuilderLlmModelProviderApiKey): void
+    {
+        $this->photoBuilderLlmModelProviderApiKey = $photoBuilderLlmModelProviderApiKey;
+    }
+
+    /**
+     * Returns the effective PhotoBuilder provider (dedicated or content editing fallback).
+     */
+    public function getEffectivePhotoBuilderLlmModelProvider(): LlmModelProvider
+    {
+        return $this->photoBuilderLlmModelProvider ?? $this->contentEditingLlmModelProvider;
+    }
+
+    /**
+     * Returns the effective PhotoBuilder API key (dedicated or content editing fallback).
+     */
+    public function getEffectivePhotoBuilderLlmModelProviderApiKey(): string
+    {
+        return $this->photoBuilderLlmModelProviderApiKey ?? $this->contentEditingLlmModelProviderApiKey;
     }
 
     #[ORM\Column(

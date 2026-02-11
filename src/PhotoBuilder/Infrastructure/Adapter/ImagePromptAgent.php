@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace App\PhotoBuilder\Infrastructure\Adapter;
 
+use App\LlmContentEditor\Facade\Enum\LlmModelProvider;
 use App\PhotoBuilder\Domain\Dto\ImagePromptResultDto;
 use GuzzleHttp\HandlerStack;
 use NeuronAI\Agent;
 use NeuronAI\Providers\AIProviderInterface;
+use NeuronAI\Providers\Gemini\Gemini;
 use NeuronAI\Providers\HttpClientOptions;
 use NeuronAI\Providers\OpenAI\OpenAI;
 use NeuronAI\Tools\PropertyType;
@@ -22,6 +24,8 @@ use function sprintf;
  * The agent receives a page's HTML content in its system prompt and the user's
  * style preferences as the user message. It calls the deliver_image_prompt tool
  * once per image with both the prompt text and a descriptive filename.
+ *
+ * Supports both OpenAI and Google Gemini as the LLM provider.
  */
 class ImagePromptAgent extends Agent
 {
@@ -29,16 +33,17 @@ class ImagePromptAgent extends Agent
     private array $collectedPrompts = [];
 
     public function __construct(
-        private readonly string        $apiKey,
-        private readonly string        $pageHtml,
-        private readonly int           $imageCount,
-        private readonly string        $model = 'gpt-5.2',
-        private readonly ?HandlerStack $guzzleHandlerStack = null,
+        private readonly string           $apiKey,
+        private readonly string           $pageHtml,
+        private readonly int              $imageCount,
+        private readonly LlmModelProvider $llmProvider = LlmModelProvider::OpenAI,
+        private readonly ?HandlerStack    $guzzleHandlerStack = null,
     ) {
     }
 
     protected function provider(): AIProviderInterface
     {
+        $model       = $this->llmProvider->imagePromptGenerationModel()->value;
         $httpOptions = null;
 
         if ($this->guzzleHandlerStack !== null) {
@@ -50,13 +55,21 @@ class ImagePromptAgent extends Agent
             );
         }
 
-        return new OpenAI(
-            $this->apiKey,
-            $this->model,
-            [],
-            false,
-            $httpOptions,
-        );
+        return match ($this->llmProvider) {
+            LlmModelProvider::OpenAI => new OpenAI(
+                $this->apiKey,
+                $model,
+                [],
+                false,
+                $httpOptions,
+            ),
+            LlmModelProvider::Google => new Gemini(
+                $this->apiKey,
+                $model,
+                [],
+                $httpOptions,
+            ),
+        };
     }
 
     public function instructions(): string

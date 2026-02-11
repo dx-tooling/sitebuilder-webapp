@@ -48,8 +48,8 @@ final readonly class GenerateImagePromptsHandler
             $workspace = $this->workspaceMgmtFacade->getWorkspaceById($session->getWorkspaceId());
             $project   = $workspace !== null ? $this->projectMgmtFacade->getProjectInfo($workspace->projectId) : null;
 
-            if ($project === null || $project->llmApiKey === '') {
-                $this->logger->error('No LLM API key configured for project', [
+            if ($project === null || $project->getEffectivePhotoBuilderApiKey() === '') {
+                $this->logger->error('No LLM API key configured for project (PhotoBuilder)', [
                     'sessionId'   => $message->sessionId,
                     'workspaceId' => $session->getWorkspaceId(),
                 ]);
@@ -73,8 +73,9 @@ final readonly class GenerateImagePromptsHandler
             $promptResults = $promptGenerator->generatePrompts(
                 $pageHtml,
                 $session->getUserPrompt(),
-                $project->llmApiKey,
+                $project->getEffectivePhotoBuilderApiKey(),
                 PhotoBuilderService::IMAGE_COUNT,
+                $project->getEffectivePhotoBuilderLlmModelProvider(),
             );
 
             // Update image entities with generated prompts (skips images in keepImageIds)

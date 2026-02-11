@@ -8,7 +8,7 @@ use App\PhotoBuilder\Domain\Entity\PhotoImage;
 use App\PhotoBuilder\Domain\Entity\PhotoSession;
 use App\PhotoBuilder\Domain\Enum\PhotoImageStatus;
 use App\PhotoBuilder\Domain\Service\PhotoBuilderService;
-use App\PhotoBuilder\Infrastructure\Adapter\ImageGeneratorInterface;
+use App\PhotoBuilder\Infrastructure\Adapter\ImageGeneratorFactory;
 use App\PhotoBuilder\Infrastructure\Message\GenerateImageMessage;
 use App\PhotoBuilder\Infrastructure\Storage\GeneratedImageStorage;
 use App\PhotoBuilder\TestHarness\FakeImageGenerator;
@@ -26,7 +26,7 @@ final readonly class GenerateImageHandler
     public function __construct(
         private EntityManagerInterface       $entityManager,
         private PhotoBuilderService          $photoBuilderService,
-        private ImageGeneratorInterface      $imageGenerator,
+        private ImageGeneratorFactory        $imageGeneratorFactory,
         private GeneratedImageStorage        $imageStorage,
         private WorkspaceMgmtFacadeInterface $workspaceMgmtFacade,
         private ProjectMgmtFacadeInterface   $projectMgmtFacade,
@@ -54,7 +54,7 @@ final readonly class GenerateImageHandler
             $workspace = $this->workspaceMgmtFacade->getWorkspaceById($session->getWorkspaceId());
             $project   = $workspace !== null ? $this->projectMgmtFacade->getProjectInfo($workspace->projectId) : null;
 
-            if ($project === null || $project->llmApiKey === '') {
+            if ($project === null || $project->getEffectivePhotoBuilderApiKey() === '') {
                 $image->setStatus(PhotoImageStatus::Failed);
                 $image->setErrorMessage('No LLM API key configured for project.');
                 $this->entityManager->flush();
@@ -65,13 +65,14 @@ final readonly class GenerateImageHandler
 
             // Generate image (or fake if simulation is enabled)
             $simulate  = $_ENV['PHOTO_BUILDER_SIMULATE_IMAGE_GENERATION'] ?? '0';
+            $provider  = $project->getEffectivePhotoBuilderLlmModelProvider();
             $generator = $simulate === '1'
                 ? new FakeImageGenerator($this->logger)
-                : $this->imageGenerator;
+                : $this->imageGeneratorFactory->create($provider);
 
             $imageData = $generator->generateImage(
                 $image->getPrompt() ?? '',
-                $project->llmApiKey,
+                $project->getEffectivePhotoBuilderApiKey(),
             );
 
             // Store on disk

@@ -33,6 +33,11 @@
                 <p class="etfswui-text-small">
                     {{ project.name }} — {{ pagePath }}
                 </p>
+                <p class="etfswui-text-small mt-1">
+                    <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium bg-primary-100 text-primary-800 dark:bg-primary-900/30 dark:text-primary-300">
+                        {{ 'photo_builder.active_model'|trans({'%provider%': effectivePhotoBuilderProvider, '%promptModel%': imagePromptModel, '%imageModel%': imageGenerationModel}) }}
+                    </span>
+                </p>
             </div>
             <a href="{{ path('chat_based_content_editor.presentation.show', { conversationId: conversationId }) }}"
                class="etfswui-link-as-button-secondary gap-2">

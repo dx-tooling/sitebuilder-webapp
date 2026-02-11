@@ -179,6 +179,10 @@ services:
     App\PhotoBuilder\Infrastructure\Adapter\ImageGeneratorInterface:
         class: App\PhotoBuilder\Infrastructure\Adapter\OpenAiImageGenerator
 
+    App\PhotoBuilder\Infrastructure\Adapter\OpenAiImageGenerator: ~
+    App\PhotoBuilder\Infrastructure\Adapter\GeminiImageGenerator: ~
+    App\PhotoBuilder\Infrastructure\Adapter\ImageGeneratorFactory: ~
+
     # LLM content editor facade - inject loggers + enable flag
     App\LlmContentEditor\Facade\LlmContentEditorFacade:
         arguments:

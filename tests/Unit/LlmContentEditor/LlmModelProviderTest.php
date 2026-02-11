@@ -10,12 +10,20 @@ use PHPUnit\Framework\TestCase;
 
 final class LlmModelProviderTest extends TestCase
 {
-    public function testOpenAiProviderSupportedModelsContainsGpt52(): void
+    public function testOpenAiProviderSupportedTextModelsContainsGpt52(): void
     {
-        $models = LlmModelProvider::OpenAI->supportedModels();
+        $models = LlmModelProvider::OpenAI->supportedTextModels();
 
         self::assertNotEmpty($models);
         self::assertContains(LlmModelName::Gpt52, $models);
+    }
+
+    public function testGoogleProviderSupportedTextModelsContainsGemini(): void
+    {
+        $models = LlmModelProvider::Google->supportedTextModels();
+
+        self::assertNotEmpty($models);
+        self::assertContains(LlmModelName::Gemini3ProPreview, $models);
     }
 
     public function testAllProviderCasesHaveDisplayName(): void
@@ -25,10 +33,37 @@ final class LlmModelProviderTest extends TestCase
         }
     }
 
-    public function testAllProviderCasesHaveAtLeastOneSupportedModel(): void
+    public function testAllProviderCasesHaveAtLeastOneSupportedTextModel(): void
     {
         foreach (LlmModelProvider::cases() as $provider) {
-            self::assertNotEmpty($provider->supportedModels());
+            self::assertNotEmpty($provider->supportedTextModels());
+        }
+    }
+
+    public function testAllProviderCasesHaveImageGenerationModel(): void
+    {
+        foreach (LlmModelProvider::cases() as $provider) {
+            self::assertTrue($provider->imageGenerationModel()->isImageGenerationModel());
+        }
+    }
+
+    public function testAllProviderCasesHaveImagePromptGenerationModel(): void
+    {
+        foreach (LlmModelProvider::cases() as $provider) {
+            self::assertFalse($provider->imagePromptGenerationModel()->isImageGenerationModel());
+        }
+    }
+
+    public function testOnlyOpenAiSupportsContentEditing(): void
+    {
+        self::assertTrue(LlmModelProvider::OpenAI->supportsContentEditing());
+        self::assertFalse(LlmModelProvider::Google->supportsContentEditing());
+    }
+
+    public function testAllProvidersSupportPhotoBuilder(): void
+    {
+        foreach (LlmModelProvider::cases() as $provider) {
+            self::assertTrue($provider->supportsPhotoBuilder());
         }
     }
 }

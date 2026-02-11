@@ -72,9 +72,11 @@ export default class extends Controller {
         this.isVerifying = true;
 
         // Get the selected provider
-        const providerInput = document.querySelector(
-            'input[name="llm_model_provider"]:checked',
-        ) as HTMLInputElement | null;
+        // Find the provider radio within this controller's scope (or fall back to content editing)
+        const providerInput = (this.element.querySelector('input[name$="_llm_model_provider"]:checked') ??
+            document.querySelector(
+                'input[name="content_editing_llm_model_provider"]:checked',
+            )) as HTMLInputElement | null;
         const provider = providerInput?.value || "openai";
 
         // Show spinner, hide others

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\PhotoBuilder\Infrastructure\Adapter;
 
+use App\LlmContentEditor\Facade\Enum\LlmModelProvider;
 use App\PhotoBuilder\Domain\Dto\ImagePromptResultDto;
 use GuzzleHttp\HandlerStack;
 use NeuronAI\Chat\Messages\UserMessage;
@@ -14,6 +15,7 @@ use function sprintf;
 
 /**
  * Generates image prompts using a NeuronAI agent with the deliver_image_prompt tool.
+ * Supports both OpenAI and Google Gemini providers.
  */
 class OpenAiPromptGenerator implements PromptGeneratorInterface
 {
@@ -26,16 +28,17 @@ class OpenAiPromptGenerator implements PromptGeneratorInterface
      * @return list<ImagePromptResultDto>
      */
     public function generatePrompts(
-        string $pageHtml,
-        string $userPrompt,
-        string $apiKey,
-        int    $count,
+        string           $pageHtml,
+        string           $userPrompt,
+        string           $apiKey,
+        int              $count,
+        LlmModelProvider $provider = LlmModelProvider::OpenAI,
     ): array {
         $agent = new ImagePromptAgent(
             $apiKey,
             $pageHtml,
             $count,
-            'gpt-5.2',
+            $provider,
             $this->guzzleHandlerStack,
         );
 

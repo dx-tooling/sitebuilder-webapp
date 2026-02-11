@@ -13,26 +13,29 @@ final readonly class ProjectInfoDto
      * @param list<string> $remoteContentAssetsManifestUrls
      */
     public function __construct(
-        public string           $id,
-        public string           $name,
-        public string           $gitUrl,
-        public string           $githubToken,
-        public ProjectType      $projectType,
-        public string           $githubUrl,
-        public string           $agentImage,
-        public LlmModelProvider $llmModelProvider,
-        public string           $llmApiKey,
-        public string           $agentBackgroundInstructions,
-        public string           $agentStepInstructions,
-        public string           $agentOutputInstructions,
-        public array            $remoteContentAssetsManifestUrls = [],
+        public string            $id,
+        public string            $name,
+        public string            $gitUrl,
+        public string            $githubToken,
+        public ProjectType       $projectType,
+        public string            $githubUrl,
+        public string            $agentImage,
+        public LlmModelProvider  $contentEditingLlmModelProvider,
+        public string            $contentEditingApiKey,
+        public string            $agentBackgroundInstructions,
+        public string            $agentStepInstructions,
+        public string            $agentOutputInstructions,
+        public array             $remoteContentAssetsManifestUrls = [],
         // S3 Upload Configuration (all optional)
-        public ?string          $s3BucketName = null,
-        public ?string          $s3Region = null,
-        public ?string          $s3AccessKeyId = null,
-        public ?string          $s3SecretAccessKey = null,
-        public ?string          $s3IamRoleArn = null,
-        public ?string          $s3KeyPrefix = null,
+        public ?string           $s3BucketName = null,
+        public ?string           $s3Region = null,
+        public ?string           $s3AccessKeyId = null,
+        public ?string           $s3SecretAccessKey = null,
+        public ?string           $s3IamRoleArn = null,
+        public ?string           $s3KeyPrefix = null,
+        // PhotoBuilder LLM Configuration (nullable = falls back to content editing)
+        public ?LlmModelProvider $photoBuilderLlmModelProvider = null,
+        public ?string           $photoBuilderApiKey = null,
     ) {
     }
 
@@ -45,5 +48,21 @@ final readonly class ProjectInfoDto
             && $this->s3Region          !== null
             && $this->s3AccessKeyId     !== null
             && $this->s3SecretAccessKey !== null;
+    }
+
+    /**
+     * Returns the effective PhotoBuilder provider (dedicated or content editing fallback).
+     */
+    public function getEffectivePhotoBuilderLlmModelProvider(): LlmModelProvider
+    {
+        return $this->photoBuilderLlmModelProvider ?? $this->contentEditingLlmModelProvider;
+    }
+
+    /**
+     * Returns the effective PhotoBuilder API key (dedicated or content editing fallback).
+     */
+    public function getEffectivePhotoBuilderApiKey(): string
+    {
+        return $this->photoBuilderApiKey ?? $this->contentEditingApiKey;
     }
 }

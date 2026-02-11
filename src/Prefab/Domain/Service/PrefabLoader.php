@@ -114,7 +114,7 @@ final class PrefabLoader
             $githubAccessKey,
             $llmModelProvider->value,
             $llmApiKey,
-            $keysVisible
+            $keysVisible,
         );
     }
 }

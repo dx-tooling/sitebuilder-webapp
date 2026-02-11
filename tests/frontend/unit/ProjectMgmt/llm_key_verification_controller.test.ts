@@ -25,7 +25,7 @@ describe("LlmKeyVerificationController", () => {
             <div data-controller="llm-key-verification"
                  data-llm-key-verification-verify-url-value="/projects/verify-llm-key"
                  data-llm-key-verification-csrf-token-value="test-csrf-token">
-                <input type="radio" name="llm_model_provider" value="openai" checked>
+                <input type="radio" name="content_editing_llm_model_provider" value="openai" checked>
                 <input type="password"
                        data-llm-key-verification-target="input"
                        data-action="blur->llm-key-verification#verify"
