@@ -81,6 +81,7 @@ export default class extends Controller {
         editorUrl: String,
         hasRemoteAssets: Boolean,
         supportsResolutionToggle: Boolean,
+        embedPrefillMessage: { type: String, default: "Embed images %fileNames% into page %pagePath%" },
     };
 
     static targets = [
@@ -115,6 +116,7 @@ export default class extends Controller {
     declare readonly editorUrlValue: string;
     declare readonly hasRemoteAssetsValue: boolean;
     declare readonly supportsResolutionToggleValue: boolean;
+    declare readonly embedPrefillMessageValue: string;
 
     declare readonly loadingOverlayTarget: HTMLElement;
     declare readonly mainContentTarget: HTMLElement;
@@ -618,7 +620,9 @@ export default class extends Controller {
             .map((img) => uploadedFileNamesByImageId[img.id] ?? img.uploadedFileName ?? img.suggestedFileName ?? "")
             .filter(Boolean)
             .join(", ");
-        const message = `Embed images ${fileNames} into page ${this.pagePathValue}`;
+        const message = this.embedPrefillMessageValue
+            .replace("%fileNames%", fileNames)
+            .replace("%pagePath%", this.pagePathValue);
         const url = `${this.editorUrlValue}?prefill=${encodeURIComponent(message)}`;
         window.location.href = url;
     }

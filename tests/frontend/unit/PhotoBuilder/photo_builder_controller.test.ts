@@ -44,6 +44,7 @@ interface MockControllerState {
     editorUrlValue: string;
     hasRemoteAssetsValue: boolean;
     supportsResolutionToggleValue: boolean;
+    embedPrefillMessageValue: string;
     loadingOverlayTarget: HTMLElement;
     mainContentTarget: HTMLElement;
     userPromptTarget: HTMLTextAreaElement;
@@ -131,6 +132,7 @@ const createController = (
     state.editorUrlValue = "/conversation/conv-456";
     state.hasRemoteAssetsValue = false;
     state.supportsResolutionToggleValue = false;
+    state.embedPrefillMessageValue = "Embed images %fileNames% into page %pagePath%";
 
     state.loadingOverlayTarget = loadingOverlay;
     state.mainContentTarget = mainContent;

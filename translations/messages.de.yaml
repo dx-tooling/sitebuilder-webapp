@@ -205,6 +205,11 @@ editor:
     session_finished: "Diese Sitzung ist beendet. Sie können den Verlauf oben einsehen."
     cannot_edit: "Sie können diese Sitzung nicht bearbeiten."
     preview_pages: "Vorschauseiten"
+    preview_pages_description: "Vorschau und Bearbeitung der generierten Seiten"
+    edit_html: "HTML bearbeiten"
+    preview: "Vorschau"
+    photo_builder_heading: "Bilder generieren"
+    photo_builder_description: "KI-gestützte Fotogenerierung, zugeschnitten auf Ihren Seiteninhalt"
     prompt_suggestions_headline: "Prompt-Vorschläge"
     show_more_suggestions: "+%count% weitere"
     hide_suggestions: "Weniger anzeigen"
@@ -453,7 +458,7 @@ remote_content_assets:
 
 # PhotoBuilder vertical
 photo_builder:
-    title: "PhotoBuilder"
+    title: "Bilder passend zur Seite generieren"
     back_to_editor: "Zurück zum Editor"
     loading: "Wird geladen..."
     generating_prompts: "Bildprompts werden generiert..."
@@ -468,6 +473,7 @@ photo_builder:
     uploading_to_media_store: "Wird hochgeladen…"
     uploaded_to_media_store: "Hochgeladen"
     embed_into_page: "Generierte Bilder in Inhaltsseite einbetten"
+    embed_prefill_message: "Bitte binde die Bilder %fileNames% auf sinnvolle Weise in die Seite %pagePath% ein, so dass sie den Inhalt der Seite optimal ergänzen. Achte auf saubere Ausrichtung und Anordnung."
     uploading_images: "Bilder werden hochgeladen, bitte warten..."
     waiting_for_manifest: "Warten, bis Bilder im Content Delivery Network verfügbar sind..."
     waiting_for_manifest_note: "Dies kann bis zu einer Minute dauern."

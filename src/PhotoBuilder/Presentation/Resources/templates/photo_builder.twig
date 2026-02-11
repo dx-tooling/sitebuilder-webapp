@@ -22,6 +22,7 @@
              editorUrl: path('chat_based_content_editor.presentation.show', { conversationId: conversationId }),
              hasRemoteAssets: hasRemoteAssets,
              supportsResolutionToggle: supportsResolutionToggle,
+             embedPrefillMessage: 'photo_builder.embed_prefill_message'|trans,
          })
          |stimulus_action('photo-builder', 'handlePromptEdited', 'photo-image:promptEdited')
          |stimulus_action('photo-builder', 'handleRegenerateImage', 'photo-image:regenerateRequested')
@@ -35,11 +36,6 @@
                 </h1>
                 <p class="etfswui-text-small">
                     {{ project.name }} — {{ pagePath }}
-                </p>
-                <p class="etfswui-text-small mt-1">
-                    <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium bg-primary-100 text-primary-800 dark:bg-primary-900/30 dark:text-primary-300">
-                        {{ 'photo_builder.active_model'|trans({'%provider%': effectivePhotoBuilderProvider, '%promptModel%': imagePromptModel, '%imageModel%': imageGenerationModel}) }}
-                    </span>
                 </p>
                 {% if supportsResolutionToggle %}
                     <div {{ stimulus_target('photo-builder', 'resolutionToggle') }}
@@ -65,7 +61,7 @@
                 {% endif %}
             </div>
             <a href="{{ path('chat_based_content_editor.presentation.show', { conversationId: conversationId }) }}"
-               class="etfswui-link-as-button-secondary gap-2">
+               class="etfswui-card-back-link">
                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18"/>
                 </svg>
@@ -73,9 +69,7 @@
             </a>
         </div>
 
-        <div class="flex flex-col 2xl:flex-row gap-6">
-            {# Main content area #}
-            <div class="flex-1 min-w-0 space-y-6 {{ hasRemoteAssets ? '2xl:max-w-[65%]' : '' }}">
+        <div class="space-y-6">
 
                 {# Loading overlay #}
                 <div {{ stimulus_target('photo-builder', 'loadingOverlay') }}
@@ -134,7 +128,12 @@
                                 </span>
                             </div>
                         </summary>
-                        <div class="etfswui-card-content pt-0">
+                        <div class="etfswui-card-content pt-0 space-y-3">
+                            <p class="etfswui-text-small">
+                                <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium bg-primary-100 text-primary-800 dark:bg-primary-900/30 dark:text-primary-300">
+                                    {{ 'photo_builder.active_model'|trans({'%provider%': effectivePhotoBuilderProvider, '%promptModel%': imagePromptModel, '%imageModel%': imageGenerationModel}) }}
+                                </span>
+                            </p>
                             <div class="rounded-md bg-dark-50 dark:bg-dark-800 border border-dark-200 dark:border-dark-700 p-3 text-xs text-dark-600 dark:text-dark-400 font-mono whitespace-pre-wrap leading-relaxed">You are a friendly AI assistant that helps the user to generate {{ imageCount }} prompts that each will be fed into an LLM-backed AI image generation agent, in order to generate images that shall be used on a web page with the following contents:
 
 [Content of your page at {{ pagePath }}]
@@ -295,7 +294,6 @@ For each image, call the deliver_image_prompt tool with:
                     {% endif %}
 
                 </div>
-            </div>
         </div>
     </div>
 {% endblock %}

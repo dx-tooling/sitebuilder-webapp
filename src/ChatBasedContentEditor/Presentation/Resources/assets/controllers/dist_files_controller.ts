@@ -27,20 +27,28 @@ export default class extends Controller {
         readOnly: { type: Boolean, default: false },
         photoBuilderUrlPattern: { type: String, default: "" },
         photoBuilderLabel: { type: String, default: "Generate matching images" },
+        editHtmlLabel: { type: String, default: "Edit HTML" },
+        previewLabel: { type: String, default: "Preview" },
     };
 
-    static targets = ["list", "container"];
+    static targets = ["list", "container", "photoBuilderSection", "photoBuilderLinks"];
 
     declare readonly pollUrlValue: string;
     declare readonly pollIntervalValue: number;
     declare readonly readOnlyValue: boolean;
     declare readonly photoBuilderUrlPatternValue: string;
     declare readonly photoBuilderLabelValue: string;
+    declare readonly editHtmlLabelValue: string;
+    declare readonly previewLabelValue: string;
 
     declare readonly hasListTarget: boolean;
     declare readonly listTarget: HTMLElement;
     declare readonly hasContainerTarget: boolean;
     declare readonly containerTarget: HTMLElement;
+    declare readonly hasPhotoBuilderSectionTarget: boolean;
+    declare readonly photoBuilderSectionTarget: HTMLElement;
+    declare readonly hasPhotoBuilderLinksTarget: boolean;
+    declare readonly photoBuilderLinksTarget: HTMLElement;
 
     private pollingTimeoutId: ReturnType<typeof setTimeout> | null = null;
     private lastFilesJson: string = "";
@@ -104,63 +112,116 @@ export default class extends Controller {
         }
 
         this.containerTarget.classList.remove("hidden");
+        this.renderFileList(files);
+        this.renderPhotoBuilderLinks(files);
+    }
+
+    private renderFileList(files: DistFile[]): void {
         this.listTarget.innerHTML = "";
 
         for (const file of files) {
             const li = document.createElement("li");
-            const span = document.createElement("span");
-            span.className = "flex items-center space-x-2 whitespace-nowrap";
+            li.className = "flex items-center justify-between gap-3 py-2 group";
 
-            // Create edit link (icon only) - only in edit mode
+            // Left side: document icon + filename
+            const nameWrapper = document.createElement("div");
+            nameWrapper.className = "flex items-center gap-2 min-w-0";
+            nameWrapper.innerHTML =
+                `<svg class="w-4 h-4 flex-shrink-0 text-dark-400 dark:text-dark-500" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">` +
+                `<path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />` +
+                `</svg>`;
+
+            const fileName = document.createElement("a");
+            fileName.href = file.url;
+            fileName.target = "_blank";
+            fileName.className =
+                "text-sm text-dark-700 dark:text-dark-300 truncate " +
+                "hover:text-primary-600 dark:hover:text-primary-400 transition-colors duration-150";
+            fileName.textContent = file.path;
+            nameWrapper.appendChild(fileName);
+            li.appendChild(nameWrapper);
+
+            // Right side: action buttons
+            const actions = document.createElement("div");
+            actions.className = "flex items-center gap-1 flex-shrink-0";
+
+            // Edit button - only in edit mode
             if (!this.readOnlyValue) {
                 const editLink = document.createElement("a");
                 editLink.href = "#";
-                editLink.className = "etfswui-link-icon";
-                editLink.title = "Edit HTML";
-                editLink.innerHTML = `
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 flex-shrink-0">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125" />
-                    </svg>
-                `;
+                editLink.title = this.editHtmlLabelValue;
+                editLink.className =
+                    "inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium " +
+                    "text-dark-500 hover:text-dark-700 hover:bg-dark-100 " +
+                    "dark:text-dark-400 dark:hover:text-dark-200 dark:hover:bg-dark-700/50 " +
+                    "transition-colors duration-150";
+                editLink.innerHTML =
+                    `<svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">` +
+                    `<path stroke-linecap="round" stroke-linejoin="round" d="M17.25 6.75 22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3-4.5 16.5" />` +
+                    `</svg>` +
+                    `<span>${this.editHtmlLabelValue}</span>`;
                 editLink.addEventListener("click", (e) => {
                     e.preventDefault();
-                    // Extract full path from URL: /workspaces/{workspaceId}/{fullPath} -> {fullPath}
                     const fullPath = file.url.split("/").slice(3).join("/");
                     this.openHtmlEditor(fullPath);
                 });
-                span.appendChild(editLink);
-
-                // Create PhotoBuilder link (camera icon) - only when URL pattern is configured
-                if (this.photoBuilderUrlPatternValue) {
-                    const photoLink = document.createElement("a");
-                    photoLink.href = this.photoBuilderUrlPatternValue.replace(
-                        "__PAGE_PATH__",
-                        encodeURIComponent(file.path),
-                    );
-                    photoLink.className = "etfswui-link-icon";
-                    photoLink.title = this.photoBuilderLabelValue;
-                    photoLink.innerHTML = `
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 flex-shrink-0">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M6.827 6.175A2.31 2.31 0 0 1 5.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 0 0-1.134-.175 2.31 2.31 0 0 1-1.64-1.055l-.822-1.316a2.192 2.192 0 0 0-1.736-1.039 48.774 48.774 0 0 0-5.232 0 2.192 2.192 0 0 0-1.736 1.039l-.821 1.316Z" />
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 12.75a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0ZM18.75 10.5h.008v.008h-.008V10.5Z" />
-                        </svg>
-                    `;
-                    span.appendChild(photoLink);
-                }
+                actions.appendChild(editLink);
             }
 
-            // Create preview link (icon + filename, inline to prevent line break)
+            // Preview button
             const previewLink = document.createElement("a");
             previewLink.href = file.url;
             previewLink.target = "_blank";
+            previewLink.title = this.previewLabelValue;
             previewLink.className =
-                "inline-flex items-center gap-1 text-primary-600 hover:text-primary-800 dark:text-primary-400 dark:hover:text-primary-300";
-            previewLink.title = "Open preview";
-            previewLink.innerHTML = `<svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg><span>${file.path}</span>`;
+                "inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium " +
+                "text-primary-600 hover:text-primary-700 hover:bg-primary-50 " +
+                "dark:text-primary-400 dark:hover:text-primary-300 dark:hover:bg-primary-900/20 " +
+                "transition-colors duration-150";
+            previewLink.innerHTML =
+                `<svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">` +
+                `<path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />` +
+                `</svg>` +
+                `<span>${this.previewLabelValue}</span>`;
+            actions.appendChild(previewLink);
 
-            span.appendChild(previewLink);
-            li.appendChild(span);
+            li.appendChild(actions);
             this.listTarget.appendChild(li);
+        }
+    }
+
+    private renderPhotoBuilderLinks(files: DistFile[]): void {
+        if (!this.hasPhotoBuilderSectionTarget || !this.hasPhotoBuilderLinksTarget) {
+            return;
+        }
+
+        if (!this.photoBuilderUrlPatternValue || this.readOnlyValue || files.length === 0) {
+            this.photoBuilderSectionTarget.classList.add("hidden");
+
+            return;
+        }
+
+        this.photoBuilderSectionTarget.classList.remove("hidden");
+        this.photoBuilderLinksTarget.innerHTML = "";
+
+        for (const file of files) {
+            const link = document.createElement("a");
+            link.href = this.photoBuilderUrlPatternValue.replace("__PAGE_PATH__", encodeURIComponent(file.path));
+            link.title = this.photoBuilderLabelValue;
+            link.className =
+                "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium " +
+                "bg-purple-50 text-purple-700 ring-1 ring-inset ring-purple-700/10 " +
+                "hover:bg-purple-100 hover:text-purple-800 " +
+                "dark:bg-purple-900/20 dark:text-purple-300 dark:ring-purple-400/30 " +
+                "dark:hover:bg-purple-900/40 dark:hover:text-purple-200 " +
+                "transition-colors duration-150";
+            link.innerHTML =
+                `<svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">` +
+                `<path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 0 0-2.455 2.456ZM16.894 20.567 16.5 21.75l-.394-1.183a2.25 2.25 0 0 0-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 0 0 1.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 0 0 1.423 1.423l1.183.394-1.183.394a2.25 2.25 0 0 0-1.423 1.423Z" />` +
+                `</svg>` +
+                `<span>${file.path}</span>`;
+
+            this.photoBuilderLinksTarget.appendChild(link);
         }
     }
 
