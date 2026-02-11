@@ -7,20 +7,7 @@ namespace App\ChatBasedContentEditor\Presentation\Service;
 use InvalidArgumentException;
 use OutOfRangeException;
 use RuntimeException;
-
-use function array_filter;
-use function array_map;
-use function array_splice;
-use function array_values;
-use function dirname;
-use function explode;
-use function file_exists;
-use function file_get_contents;
-use function file_put_contents;
-use function implode;
-use function is_dir;
-use function mkdir;
-use function trim;
+use Symfony\Component\HttpFoundation\Request;
 
 /**
  * Reads, creates, updates, and deletes prompt suggestions in .sitebuilder/prompt-suggestions.md.
@@ -154,5 +141,25 @@ final readonly class PromptSuggestionsService
         if (file_put_contents($filePath, $content) === false) {
             throw new RuntimeException('Could not write suggestions file: ' . $filePath);
         }
+    }
+
+    public function getRequestText(Request $request): ?string
+    {
+        $content = $request->getContent();
+        if ($content === '') {
+            return null;
+        }
+
+        $data = json_decode($content, true);
+        if (
+            !is_array($data)
+            || !array_key_exists('text', $data)
+            || !is_string($data['text'])
+            || trim($data['text']) === ''
+        ) {
+            return null;
+        }
+
+        return $data['text'];
     }
 }
