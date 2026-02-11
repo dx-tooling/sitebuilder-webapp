@@ -20,6 +20,7 @@ export default class extends Controller {
     static values = {
         position: Number,
         hasMediaStore: Boolean,
+        generatingPromptText: { type: String, default: "Generating..." },
     };
 
     static targets = [
@@ -34,6 +35,7 @@ export default class extends Controller {
 
     declare readonly positionValue: number;
     declare readonly hasMediaStoreValue: boolean;
+    declare readonly generatingPromptTextValue: string;
 
     declare readonly imageTarget: HTMLImageElement;
     declare readonly placeholderTarget: HTMLElement;
@@ -47,6 +49,7 @@ export default class extends Controller {
     private imageId: string | null = null;
     private currentStatus = "pending";
     private suggestedFileName: string | null = null;
+    private promptAwaitingRegenerate = false;
 
     /**
      * Called by parent photo-builder controller via event dispatch.
@@ -61,9 +64,22 @@ export default class extends Controller {
         // Store imageId on the element for parent to read
         this.element.setAttribute("data-photo-image-image-id", data.id);
 
-        // Update prompt textarea (if not currently focused)
-        if (data.prompt !== null && document.activeElement !== this.promptTextareaTarget) {
-            this.promptTextareaTarget.value = data.prompt;
+        // Update prompt textarea
+        if (document.activeElement !== this.promptTextareaTarget) {
+            if (this.promptAwaitingRegenerate) {
+                // Only apply new prompt when backend has updated (status indicates regeneration in progress)
+                if (
+                    (data.status === "pending" || data.status === "generating") &&
+                    data.prompt !== null &&
+                    data.prompt !== ""
+                ) {
+                    this.promptTextareaTarget.value = data.prompt;
+                    this.promptTextareaTarget.classList.remove("animate-pulse");
+                    this.promptAwaitingRegenerate = false;
+                }
+            } else if (data.prompt !== null) {
+                this.promptTextareaTarget.value = data.prompt;
+            }
         }
 
         // Update image visibility
@@ -136,11 +152,13 @@ export default class extends Controller {
 
     /**
      * Called by parent when "Regenerate image prompts" is clicked.
-     * Clears the prompt textarea if "Keep prompt" is not checked.
+     * Replaces prompt with "Generating..." if not kept, and shows pulsing.
      */
     clearPromptIfNotKept(): void {
         if (!this.keepCheckboxTarget.checked) {
-            this.promptTextareaTarget.value = "";
+            this.promptTextareaTarget.value = this.generatingPromptTextValue;
+            this.promptTextareaTarget.classList.add("animate-pulse");
+            this.promptAwaitingRegenerate = true;
         }
     }
 

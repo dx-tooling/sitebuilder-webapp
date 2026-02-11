@@ -120,6 +120,7 @@
                             <div {{ stimulus_controller('photo-image', {
                                      position: i,
                                      hasMediaStore: hasRemoteAssets,
+                                     generatingPromptText: 'photo_builder.generating_image'|trans,
                                  })
                                  |stimulus_action('photo-image', 'updateFromState', 'photo-builder:stateChanged')
                                  |stimulus_action('photo-image', 'clearPromptIfNotKept', 'photo-builder:clearPromptIfNotKept') }}

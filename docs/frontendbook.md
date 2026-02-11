@@ -331,7 +331,75 @@ This pattern ensures:
 
 ---
 
-## 6. References
+## 6. Parent-to-Child Communication Between Controllers
+
+When a parent Stimulus controller needs to notify child controllers (e.g. an orchestrator telling per-item controllers to update), **dispatch the event on each child element, not on the parent**.
+
+### The Pitfall
+
+DOM events **bubble upward** (child → parent → document), never downward. If a parent dispatches an event on its own element, child controllers listening on *their* elements will never receive it — even with `bubbles: true`:
+
+```ts
+// BAD: event fires on the parent element and bubbles UP to document.
+// Child controllers listening on their own elements never see it.
+this.element.dispatchEvent(
+    new CustomEvent("my-controller:doSomething", { bubbles: true }),
+);
+```
+
+The child's Twig wiring listens on the child element:
+
+```twig
+<div {{ stimulus_controller('child-ctrl')
+     |stimulus_action('child-ctrl', 'doSomething', 'my-controller:doSomething') }}>
+```
+
+This means the `data-action` is on the **child** `<div>`, so it only captures `my-controller:doSomething` events that fire **on or below** that `<div>`.
+
+### The Correct Pattern
+
+Iterate over the child target elements and dispatch directly on each one:
+
+```ts
+// GOOD: event fires on each child element, where the action listener lives.
+for (const card of this.childCardTargets) {
+    card.dispatchEvent(
+        new CustomEvent("my-controller:doSomething", { bubbles: false }),
+    );
+}
+```
+
+This matches the pattern used for per-element state updates (e.g. passing poll data to each card):
+
+```ts
+for (const card of this.imageCardTargets) {
+    card.dispatchEvent(
+        new CustomEvent("photo-builder:stateChanged", {
+            detail: imageData,
+            bubbles: false,
+        }),
+    );
+}
+```
+
+### When to Use Each Direction
+
+| Direction | Mechanism | Example |
+|---|---|---|
+| **Child → Parent** | `bubbles: true` on the child element; parent listens via `\|stimulus_action` filter | Child card emits `photo-image:uploadRequested`, parent catches it |
+| **Parent → Child** | Loop over child targets, dispatch on each | Parent tells all children to clear prompt text |
+| **Sibling → Sibling** | Go through a shared parent, or use `window` events | Rarely needed; prefer parent orchestration |
+
+### Key Points
+
+1. **Always dispatch on the element where the listener lives** — that's the element with the `data-action` attribute
+2. **Use `bubbles: false`** for parent-to-child events — there is no reason for them to propagate further
+3. **Use Stimulus targets** (e.g. `imageCardTargets`) to collect the child elements to dispatch on
+4. **Child-to-parent** naturally works with bubbling — the child dispatches, the event bubbles up to the parent's element
+
+---
+
+## 7. References
 
 - **Rules**: `.cursor/rules/05-frontend.mdc` (TypeScript, Stimulus, quality).
 - **Architecture**: `docs/archbook.md` — Client-Side Organization, vertical layout.

@@ -236,18 +236,20 @@ export default class extends Controller {
     }
 
     private updateButtonStates(): void {
-        // Disable regenerate prompts button while generating
+        const generating = this.anyGenerating || this.isRegeneratingPrompts;
+
+        // Disable regenerate prompts button while generating or regenerating prompts
         if (this.regeneratePromptsButtonTarget) {
-            this.regeneratePromptsButtonTarget.disabled = this.anyGenerating;
+            this.regeneratePromptsButtonTarget.disabled = generating;
         }
 
         // Disable embed button while generating
         if (this.hasEmbedButtonTarget) {
-            this.embedButtonTarget.disabled = this.anyGenerating;
+            this.embedButtonTarget.disabled = generating;
         }
 
         // Toggle a data attribute on the container for child controllers
-        this.element.setAttribute("data-photo-builder-generating", this.anyGenerating ? "true" : "false");
+        this.element.setAttribute("data-photo-builder-generating", generating ? "true" : "false");
     }
 
     /**
@@ -256,14 +258,13 @@ export default class extends Controller {
     async regeneratePrompts(): Promise<void> {
         if (!this.sessionId || this.anyGenerating) return;
 
-        // Tell child cards to clear prompt textarea if not kept (native event so children can listen)
-        this.element.dispatchEvent(new CustomEvent("photo-builder:clearPromptIfNotKept", { bubbles: true }));
-
-        // Show regenerating overlay and spinner
-        this.isRegeneratingPrompts = true;
-        if (this.hasRegeneratingPromptsOverlayTarget) {
-            this.regeneratingPromptsOverlayTarget.classList.remove("hidden");
+        // Tell child cards to clear prompt textarea if not kept (shows pulsing immediately)
+        for (const card of this.imageCardTargets) {
+            card.dispatchEvent(new CustomEvent("photo-builder:clearPromptIfNotKept", { bubbles: false }));
         }
+
+        this.isRegeneratingPrompts = true;
+        this.updateButtonStates();
 
         // Collect kept image IDs from child controllers
         const keptImageIds: string[] = [];

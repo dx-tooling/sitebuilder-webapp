@@ -70,7 +70,7 @@ final readonly class FakeImageGenerator implements ImageGeneratorInterface
             throw new RuntimeException('Failed to render placeholder PNG.');
         }
 
-        sleep(5); // for realism
+        sleep(1); // for realism
 
         return $pngData;
     }
