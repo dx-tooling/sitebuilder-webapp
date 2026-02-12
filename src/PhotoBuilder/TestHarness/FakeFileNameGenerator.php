@@ -28,6 +28,6 @@ final readonly class FakeFileNameGenerator implements FileNameGeneratorInterface
     ): string {
         $this->logger->info('PhotoBuilder TestHarness: Returning fake filename (skipping LLM call)');
 
-        return 'fake-generated-image.png' . DateAndTimeService::formatFromModifier();
+        return 'fake-generated-image.png';
     }
 }
