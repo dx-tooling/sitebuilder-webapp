@@ -8,9 +8,11 @@ use App\PhotoBuilder\Domain\Entity\PhotoImage;
 use App\PhotoBuilder\Domain\Entity\PhotoSession;
 use App\PhotoBuilder\Domain\Enum\PhotoImageStatus;
 use App\PhotoBuilder\Domain\Service\PhotoBuilderService;
+use App\PhotoBuilder\Infrastructure\Adapter\FileNameGeneratorInterface;
 use App\PhotoBuilder\Infrastructure\Adapter\ImageGeneratorFactory;
 use App\PhotoBuilder\Infrastructure\Message\GenerateImageMessage;
 use App\PhotoBuilder\Infrastructure\Storage\GeneratedImageStorage;
+use App\PhotoBuilder\TestHarness\FakeFileNameGenerator;
 use App\PhotoBuilder\TestHarness\FakeImageGenerator;
 use App\ProjectMgmt\Facade\ProjectMgmtFacadeInterface;
 use App\WorkspaceMgmt\Facade\WorkspaceMgmtFacadeInterface;
@@ -27,6 +29,7 @@ final readonly class GenerateImageHandler
         private EntityManagerInterface       $entityManager,
         private PhotoBuilderService          $photoBuilderService,
         private ImageGeneratorFactory        $imageGeneratorFactory,
+        private FileNameGeneratorInterface   $fileNameGenerator,
         private GeneratedImageStorage        $imageStorage,
         private WorkspaceMgmtFacadeInterface $workspaceMgmtFacade,
         private ProjectMgmtFacadeInterface   $projectMgmtFacade,
@@ -93,6 +96,26 @@ final readonly class GenerateImageHandler
 
             $image->setStoragePath($storagePath);
             $image->setStatus(PhotoImageStatus::Completed);
+
+            // Generate a descriptive filename via LLM (non-fatal on failure)
+            try {
+                $fileNameGenerator = $simulate === '1'
+                    ? new FakeFileNameGenerator($this->logger)
+                    : $this->fileNameGenerator;
+
+                $suggestedFileName = $fileNameGenerator->generateFileName(
+                    $image->getPrompt() ?? '',
+                    $project->getEffectivePhotoBuilderApiKey(),
+                    $provider,
+                );
+                $image->setSuggestedFileName($suggestedFileName);
+            } catch (Throwable $e) {
+                $this->logger->warning('Failed to generate filename for image', [
+                    'imageId' => $message->imageId,
+                    'error'   => $e->getMessage(),
+                ]);
+            }
+
             $this->entityManager->flush();
         } catch (Throwable $e) {
             $this->logger->error('Failed to generate image', [

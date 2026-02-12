@@ -191,6 +191,9 @@ services:
         arguments:
             $photoBuilderGeminiTimeoutSeconds: "%photo_builder.gemini_timeout_seconds%"
 
+    App\PhotoBuilder\Infrastructure\Adapter\FileNameGeneratorInterface:
+        class: App\PhotoBuilder\Infrastructure\Adapter\LlmFileNameGenerator
+
     App\PhotoBuilder\Infrastructure\Adapter\ImageGeneratorFactory: ~
 
     # LLM content editor facade - inject loggers + enable flag

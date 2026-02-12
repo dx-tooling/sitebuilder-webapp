@@ -18,6 +18,8 @@ interface MockControllerState {
     hasUploadButtonTarget: boolean;
     uploadButtonTarget: HTMLButtonElement;
     statusBadgeTarget: HTMLElement;
+    hasFileNameLabelTarget: boolean;
+    fileNameLabelTarget: HTMLElement;
     imageId: string | null;
     currentStatus: string;
     suggestedFileName: string | null;
@@ -48,6 +50,7 @@ const createController = (
         regenerateButton: HTMLButtonElement;
         uploadButton: HTMLButtonElement;
         statusBadge: HTMLElement;
+        fileNameLabel: HTMLElement;
     };
 } => {
     const controllerElement = document.createElement("div");
@@ -61,6 +64,7 @@ const createController = (
     const uploadButton = document.createElement("button");
     const statusBadge = document.createElement("span");
     statusBadge.classList.add("hidden");
+    const fileNameLabel = document.createElement("span");
 
     controllerElement.appendChild(image);
     controllerElement.appendChild(placeholder);
@@ -69,6 +73,7 @@ const createController = (
     controllerElement.appendChild(regenerateButton);
     controllerElement.appendChild(uploadButton);
     controllerElement.appendChild(statusBadge);
+    controllerElement.appendChild(fileNameLabel);
 
     const controller = Object.create(PhotoImageController.prototype) as PhotoImageController;
     const state = controller as unknown as MockControllerState;
@@ -86,6 +91,8 @@ const createController = (
     state.hasUploadButtonTarget = true;
     state.uploadButtonTarget = uploadButton;
     state.statusBadgeTarget = statusBadge;
+    state.hasFileNameLabelTarget = true;
+    state.fileNameLabelTarget = fileNameLabel;
     state.imageId = null;
     state.currentStatus = "pending";
     state.suggestedFileName = null;
@@ -120,6 +127,7 @@ const createController = (
             regenerateButton,
             uploadButton,
             statusBadge,
+            fileNameLabel,
         },
     };
 };
@@ -888,6 +896,106 @@ describe("PhotoImageController", () => {
             controller.requestUpload();
 
             expect(eventHandler).not.toHaveBeenCalled();
+        });
+    });
+
+    describe("fileNameLabel", () => {
+        it("should display suggestedFileName from state update", () => {
+            const { controller, elements } = createController();
+
+            controller.updateFromState(
+                makeStateEvent({
+                    id: "img-1",
+                    position: 0,
+                    prompt: "A sunset",
+                    suggestedFileName: "a-modern-office.png",
+                    status: "completed",
+                    imageUrl: "/file",
+                    errorMessage: null,
+                }),
+            );
+
+            expect(elements.fileNameLabel.textContent).toBe("a-modern-office.png");
+        });
+
+        it("should clear label when suggestedFileName is null", () => {
+            const { controller, elements } = createController();
+
+            // First set a filename
+            controller.updateFromState(
+                makeStateEvent({
+                    id: "img-1",
+                    position: 0,
+                    prompt: "A sunset",
+                    suggestedFileName: "sunset.png",
+                    status: "completed",
+                    imageUrl: "/file",
+                    errorMessage: null,
+                }),
+            );
+            expect(elements.fileNameLabel.textContent).toBe("sunset.png");
+
+            // Then clear it
+            controller.updateFromState(
+                makeStateEvent({
+                    id: "img-1",
+                    position: 0,
+                    prompt: "A sunset",
+                    suggestedFileName: null,
+                    status: "generating",
+                    imageUrl: null,
+                    errorMessage: null,
+                }),
+            );
+            expect(elements.fileNameLabel.textContent).toBe("");
+        });
+
+        it("should update label when suggestedFileName changes", () => {
+            const { controller, elements } = createController();
+
+            controller.updateFromState(
+                makeStateEvent({
+                    id: "img-1",
+                    position: 0,
+                    prompt: "First prompt",
+                    suggestedFileName: "first-prompt.png",
+                    status: "completed",
+                    imageUrl: "/file",
+                    errorMessage: null,
+                }),
+            );
+            expect(elements.fileNameLabel.textContent).toBe("first-prompt.png");
+
+            controller.updateFromState(
+                makeStateEvent({
+                    id: "img-1",
+                    position: 0,
+                    prompt: "Second prompt",
+                    suggestedFileName: "second-prompt.png",
+                    status: "completed",
+                    imageUrl: "/file",
+                    errorMessage: null,
+                }),
+            );
+            expect(elements.fileNameLabel.textContent).toBe("second-prompt.png");
+        });
+
+        it("should not throw when fileNameLabel target is absent", () => {
+            const { controller } = createController({ hasFileNameLabelTarget: false });
+
+            expect(() => {
+                controller.updateFromState(
+                    makeStateEvent({
+                        id: "img-1",
+                        position: 0,
+                        prompt: "test",
+                        suggestedFileName: "test.png",
+                        status: "completed",
+                        imageUrl: "/file",
+                        errorMessage: null,
+                    }),
+                );
+            }).not.toThrow();
         });
     });
 });

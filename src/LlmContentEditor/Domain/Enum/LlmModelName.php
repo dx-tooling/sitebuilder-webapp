@@ -20,9 +20,10 @@ enum LlmModelName: string
     public function maxContextTokens(): int
     {
         return match ($this) {
-            self::Gpt52 => 128_000,
+            self::Gpt52             => 128_000,
+            self::Gemini25FlashLite => 1_048_576,
             self::Gemini3ProPreview, self::Gemini3FlashPreview => 1_048_576,
-            self::GptImage1, self::Gemini3ProImagePreview => 0,
+            self::GptImage1, self::Gemini25FlashImage, self::Gemini3ProImagePreview => 0,
         };
     }
 
@@ -33,9 +34,11 @@ enum LlmModelName: string
     {
         return match ($this) {
             self::Gpt52                  => 1.75,
+            self::Gemini25FlashLite      => 0.075,
             self::Gemini3ProPreview      => 1.25,
             self::Gemini3FlashPreview    => 0.15,
             self::GptImage1              => 0.0, // image models have per-image pricing
+            self::Gemini25FlashImage     => 0.0,
             self::Gemini3ProImagePreview => 0.0,
         };
     }
@@ -47,9 +50,11 @@ enum LlmModelName: string
     {
         return match ($this) {
             self::Gpt52                  => 14.00,
+            self::Gemini25FlashLite      => 0.30,
             self::Gemini3ProPreview      => 10.00,
             self::Gemini3FlashPreview    => 0.60,
             self::GptImage1              => 0.0,
+            self::Gemini25FlashImage     => 0.0,
             self::Gemini3ProImagePreview => 0.0,
         };
     }
@@ -65,7 +70,7 @@ enum LlmModelName: string
     public function isImageGenerationModel(): bool
     {
         return match ($this) {
-            self::GptImage1, self::Gemini3ProImagePreview => true,
+            self::GptImage1, self::Gemini25FlashImage, self::Gemini3ProImagePreview => true,
             default => false,
         };
     }

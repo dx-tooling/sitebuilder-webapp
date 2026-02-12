@@ -35,6 +35,7 @@ export default class extends Controller {
         "uploadButtonUploading",
         "uploadButtonSuccess",
         "statusBadge",
+        "fileNameLabel",
     ];
 
     declare readonly positionValue: number;
@@ -55,6 +56,8 @@ export default class extends Controller {
     declare readonly hasUploadButtonSuccessTarget: boolean;
     declare readonly uploadButtonSuccessTarget: HTMLElement;
     declare readonly statusBadgeTarget: HTMLElement;
+    declare readonly hasFileNameLabelTarget: boolean;
+    declare readonly fileNameLabelTarget: HTMLElement;
 
     private imageId: string | null = null;
     private currentStatus = "pending";
@@ -78,6 +81,10 @@ export default class extends Controller {
         this.currentStatus = data.status;
         this.suggestedFileName = data.suggestedFileName;
         this.uploadedToMediaStore = data.uploadedToMediaStore ?? false;
+
+        if (this.hasFileNameLabelTarget) {
+            this.fileNameLabelTarget.textContent = this.suggestedFileName ?? "";
+        }
 
         // Store imageId on the element for parent to read
         this.element.setAttribute("data-photo-image-image-id", data.id);
