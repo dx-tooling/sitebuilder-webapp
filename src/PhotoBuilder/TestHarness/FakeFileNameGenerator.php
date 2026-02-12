@@ -6,7 +6,6 @@ namespace App\PhotoBuilder\TestHarness;
 
 use App\LlmContentEditor\Facade\Enum\LlmModelProvider;
 use App\PhotoBuilder\Infrastructure\Adapter\FileNameGeneratorInterface;
-use EnterpriseToolingForSymfony\SharedBundle\DateAndTime\Service\DateAndTimeService;
 use Psr\Log\LoggerInterface;
 
 /**

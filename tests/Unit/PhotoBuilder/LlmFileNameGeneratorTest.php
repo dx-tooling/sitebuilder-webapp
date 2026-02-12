@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Unit\PhotoBuilder;
+namespace App\Tests\Unit\PhotoBuilder;
 
 use App\LlmContentEditor\Facade\Enum\LlmModelProvider;
 use App\PhotoBuilder\Infrastructure\Adapter\LlmFileNameGenerator;
