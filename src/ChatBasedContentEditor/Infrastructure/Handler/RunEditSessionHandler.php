@@ -69,10 +69,13 @@ final readonly class RunEditSessionHandler
         $session->setStatus(EditSessionStatus::Running);
         $this->entityManager->flush();
 
+        $conversationId = null;
+
         try {
             // Load previous messages from conversation
             $previousMessages = $this->loadPreviousMessages($session);
             $conversation     = $session->getConversation();
+            $conversationId   = $conversation->getId();
 
             // Set execution context for agent container execution
             $workspace = $this->workspaceMgmtFacade->getWorkspaceById($conversation->getWorkspaceId());
@@ -182,7 +185,14 @@ final readonly class RunEditSessionHandler
             $session->setStatus(EditSessionStatus::Failed);
             $this->entityManager->flush();
         } finally {
-            // Always clear execution context
+            // Refresh last activity when agent finishes so 5-min inactivity countdown starts from now
+            if ($conversationId !== null) {
+                $conversationToUpdate = $this->entityManager->find(Conversation::class, $conversationId);
+                if ($conversationToUpdate !== null) {
+                    $conversationToUpdate->updateLastActivity();
+                    $this->entityManager->flush();
+                }
+            }
             $this->executionContext->clearContext();
         }
     }

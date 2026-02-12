@@ -138,6 +138,14 @@ export default class extends Controller {
             this.resumeActiveSession(activeSession);
         }
 
+        // Reset session countdown when user types in the instruction field
+        if (this.hasInstructionTarget) {
+            this.instructionInputListener = () => {
+                document.dispatchEvent(new CustomEvent("chat-based-content-editor:user-typed"));
+            };
+            this.instructionTarget.addEventListener("input", this.instructionInputListener);
+        }
+
         // Pre-fill instruction textarea if a prefill message was provided (e.g. from PhotoBuilder)
         if (this.prefillMessageValue && this.hasInstructionTarget) {
             this.instructionTarget.value = this.prefillMessageValue;
@@ -145,7 +153,13 @@ export default class extends Controller {
         }
     }
 
+    private instructionInputListener: (() => void) | null = null;
+
     disconnect(): void {
+        if (this.instructionInputListener !== null && this.hasInstructionTarget) {
+            this.instructionTarget.removeEventListener("input", this.instructionInputListener);
+            this.instructionInputListener = null;
+        }
         this.stopPolling();
         this.stopContextUsagePolling();
     }
@@ -358,6 +372,7 @@ export default class extends Controller {
             pollUrl: this.pollUrlTemplateValue.replace("__SESSION_ID__", sessionId),
         };
         this.isPollingActive = true;
+        document.dispatchEvent(new CustomEvent("chat-based-content-editor:agent-work-started"));
         this.pollSession();
     }
 
@@ -429,6 +444,9 @@ export default class extends Controller {
     }
 
     private stopPolling(): void {
+        if (this.isPollingActive) {
+            document.dispatchEvent(new CustomEvent("chat-based-content-editor:agent-work-finished"));
+        }
         this.isPollingActive = false;
         if (this.pollingTimeoutId !== null) {
             clearTimeout(this.pollingTimeoutId);

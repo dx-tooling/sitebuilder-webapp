@@ -60,6 +60,7 @@ final class ChatBasedContentEditorController extends AbstractController
         private readonly TranslatorInterface             $translator,
         private readonly PromptSuggestionsService        $promptSuggestionsService,
         private readonly LlmContentEditorFacadeInterface $llmContentEditorFacade,
+        private readonly int                             $sessionTimeoutMinutes,
     ) {
     }
 
@@ -358,6 +359,7 @@ final class ChatBasedContentEditorController extends AbstractController
             ] : null,
             'remoteAssetBrowserWindowSize' => RemoteContentAssetsFacadeInterface::BROWSER_WINDOW_SIZE,
             'promptSuggestions'            => $promptSuggestions,
+            'sessionTimeoutMinutes'        => $this->sessionTimeoutMinutes,
             'prefillMessage'               => $request->query->getString('prefill'),
         ]);
     }

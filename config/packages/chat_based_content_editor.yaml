@@ -1,4 +1,8 @@
 parameters:
     chat_based_content_editor.bytes_per_token_estimate: 4
+    # Minutes of inactivity after which a conversation is auto-ended (only when conversation tab is not visible or no heartbeats).
+    # Set CHAT_SESSION_TIMEOUT_MINUTES in .env or .env.local to override.
+    chat_based_content_editor.session_timeout_minutes_default: 5
+    chat_based_content_editor.session_timeout_minutes: "%env(default:chat_based_content_editor.session_timeout_minutes_default:int:CHAT_SESSION_TIMEOUT_MINUTES)%"
     # Estimated bytes for system prompt (included in "current context" for the budget bar)
     chat_based_content_editor.system_prompt_bytes_estimate: 8000
