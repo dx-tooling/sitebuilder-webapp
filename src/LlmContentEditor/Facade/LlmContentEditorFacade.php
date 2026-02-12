@@ -295,6 +295,7 @@ final class LlmContentEditorFacade implements LlmContentEditorFacadeInterface
         try {
             return match ($provider) {
                 LlmModelProvider::OpenAI => $this->verifyOpenAiKey($apiKey),
+                LlmModelProvider::Google => $this->verifyGoogleKey($apiKey),
             };
         } catch (Throwable $e) {
             $this->logger->warning('API key verification failed', [
@@ -317,6 +318,23 @@ final class LlmContentEditorFacade implements LlmContentEditorFacadeInterface
             ],
             'timeout' => 10,
         ]);
+
+        return $response->getStatusCode() === 200;
+    }
+
+    /**
+     * Verifies a Google Gemini API key by calling the models endpoint.
+     */
+    private function verifyGoogleKey(string $apiKey): bool
+    {
+        $response = $this->httpClient->request(
+            'GET',
+            'https://generativelanguage.googleapis.com/v1beta/models',
+            [
+                'query'   => ['key' => $apiKey],
+                'timeout' => 10,
+            ]
+        );
 
         return $response->getStatusCode() === 200;
     }

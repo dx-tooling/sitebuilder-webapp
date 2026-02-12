@@ -54,6 +54,7 @@ export default class extends Controller {
         turns: Array,
         readOnly: { type: Boolean, default: false },
         translations: Object,
+        prefillMessage: { type: String, default: "" },
     };
 
     static targets = [
@@ -79,6 +80,7 @@ export default class extends Controller {
     declare readonly turnsValue: TurnData[];
     declare readonly readOnlyValue: boolean;
     declare readonly translationsValue: TranslationsData;
+    declare readonly prefillMessageValue: string;
 
     declare readonly hasMessagesTarget: boolean;
     declare readonly messagesTarget: HTMLElement;
@@ -134,6 +136,12 @@ export default class extends Controller {
         const activeSession = this.activeSessionValue as ActiveSessionData | null;
         if (activeSession && activeSession.id) {
             this.resumeActiveSession(activeSession);
+        }
+
+        // Pre-fill instruction textarea if a prefill message was provided (e.g. from PhotoBuilder)
+        if (this.prefillMessageValue && this.hasInstructionTarget) {
+            this.instructionTarget.value = this.prefillMessageValue;
+            this.instructionTarget.focus();
         }
     }
 

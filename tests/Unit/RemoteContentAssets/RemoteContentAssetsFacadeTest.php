@@ -167,6 +167,96 @@ final class RemoteContentAssetsFacadeTest extends TestCase
         self::assertSame($expectedUrl, $result);
     }
 
+    public function testFindAvailableFileNamesReturnsMatchingBasenames(): void
+    {
+        $manifestUrls      = ['https://example.com/manifest.json'];
+        $manifestAssetUrls = [
+            'https://cdn.example.com/uploads/20260211/00fa0883_office-scene.png',
+            'https://cdn.example.com/uploads/20260211/abc123_team-photo.png',
+            'https://cdn.example.com/uploads/20260210/def456_landscape.jpg',
+        ];
+
+        $fetcher = $this->createMock(RemoteManifestFetcherInterface::class);
+        $fetcher->method('fetchAndMergeAssetUrls')
+            ->with($manifestUrls)
+            ->willReturn($manifestAssetUrls);
+        $facade = $this->createFacadeWithManifestFetcher($fetcher);
+
+        $result = $facade->findAvailableFileNames($manifestUrls, [
+            '00fa0883_office-scene.png',
+            'abc123_team-photo.png',
+            'missing_file.png',
+        ]);
+
+        self::assertSame(['00fa0883_office-scene.png', 'abc123_team-photo.png'], $result);
+    }
+
+    public function testFindAvailableFileNamesReturnsEmptyForNoMatches(): void
+    {
+        $manifestUrls      = ['https://example.com/manifest.json'];
+        $manifestAssetUrls = [
+            'https://cdn.example.com/uploads/20260211/00fa0883_office-scene.png',
+        ];
+
+        $fetcher = $this->createMock(RemoteManifestFetcherInterface::class);
+        $fetcher->method('fetchAndMergeAssetUrls')
+            ->with($manifestUrls)
+            ->willReturn($manifestAssetUrls);
+        $facade = $this->createFacadeWithManifestFetcher($fetcher);
+
+        $result = $facade->findAvailableFileNames($manifestUrls, ['not-in-manifest.png']);
+
+        self::assertSame([], $result);
+    }
+
+    public function testFindAvailableFileNamesReturnsEmptyForEmptyManifests(): void
+    {
+        $fetcher = $this->createMock(RemoteManifestFetcherInterface::class);
+        $fetcher->method('fetchAndMergeAssetUrls')->willReturn([]);
+        $facade = $this->createFacadeWithManifestFetcher($fetcher);
+
+        $result = $facade->findAvailableFileNames([], ['some-file.png']);
+
+        self::assertSame([], $result);
+    }
+
+    public function testFindAvailableFileNamesReturnsEmptyForEmptyFileNames(): void
+    {
+        $fetcher = $this->createMock(RemoteManifestFetcherInterface::class);
+        $facade  = $this->createFacadeWithManifestFetcher($fetcher);
+
+        $result = $facade->findAvailableFileNames(['https://example.com/manifest.json'], []);
+
+        self::assertSame([], $result);
+    }
+
+    public function testFindAvailableFileNamesDoesNotFetchManifestsWhenFileNamesEmpty(): void
+    {
+        $fetcher = $this->createMock(RemoteManifestFetcherInterface::class);
+        $fetcher->expects($this->never())->method('fetchAndMergeAssetUrls');
+        $facade = $this->createFacadeWithManifestFetcher($fetcher);
+
+        $facade->findAvailableFileNames(['https://example.com/manifest.json'], []);
+    }
+
+    public function testFindAvailableFileNamesMatchesByBasenameOnly(): void
+    {
+        $manifestUrls      = ['https://example.com/manifest.json'];
+        $manifestAssetUrls = [
+            'https://cdn.example.com/deep/nested/path/target-file.png',
+        ];
+
+        $fetcher = $this->createMock(RemoteManifestFetcherInterface::class);
+        $fetcher->method('fetchAndMergeAssetUrls')
+            ->with($manifestUrls)
+            ->willReturn($manifestAssetUrls);
+        $facade = $this->createFacadeWithManifestFetcher($fetcher);
+
+        $result = $facade->findAvailableFileNames($manifestUrls, ['target-file.png']);
+
+        self::assertSame(['target-file.png'], $result);
+    }
+
     private function createFacade(?RemoteImageInfoFetcherInterface $imageInfoFetcher = null): RemoteContentAssetsFacade
     {
         return new RemoteContentAssetsFacade(

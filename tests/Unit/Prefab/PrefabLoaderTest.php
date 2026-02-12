@@ -51,8 +51,8 @@ YAML;
             self::assertSame('Test Prefab', $result[0]->name);
             self::assertSame('https://github.com/test/repo.git', $result[0]->projectLink);
             self::assertSame('ghp_test', $result[0]->githubAccessKey);
-            self::assertSame('openai', $result[0]->llmModelProvider);
-            self::assertSame('sk-test', $result[0]->llmApiKey);
+            self::assertSame('openai', $result[0]->contentEditingLlmModelProvider);
+            self::assertSame('sk-test', $result[0]->contentEditingLlmApiKey);
             self::assertFalse($result[0]->keysVisible);
         } finally {
             if (is_file($yamlPath)) {

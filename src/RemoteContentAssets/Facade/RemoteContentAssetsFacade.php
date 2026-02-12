@@ -10,6 +10,12 @@ use App\RemoteContentAssets\Infrastructure\RemoteManifestFetcherInterface;
 use App\RemoteContentAssets\Infrastructure\RemoteManifestValidatorInterface;
 use App\RemoteContentAssets\Infrastructure\S3AssetUploaderInterface;
 
+use function array_key_exists;
+use function basename;
+use function parse_url;
+
+use const PHP_URL_PATH;
+
 final class RemoteContentAssetsFacade implements RemoteContentAssetsFacadeInterface
 {
     public function __construct(
@@ -38,6 +44,38 @@ final class RemoteContentAssetsFacade implements RemoteContentAssetsFacadeInterf
     public function fetchAndMergeAssetUrls(array $manifestUrls): array
     {
         return $this->manifestFetcher->fetchAndMergeAssetUrls($manifestUrls);
+    }
+
+    /**
+     * @param list<string> $manifestUrls
+     * @param list<string> $fileNames
+     *
+     * @return list<string>
+     */
+    public function findAvailableFileNames(array $manifestUrls, array $fileNames): array
+    {
+        if ($fileNames === [] || $manifestUrls === []) {
+            return [];
+        }
+
+        $allUrls = $this->manifestFetcher->fetchAndMergeAssetUrls($manifestUrls);
+
+        $availableBasenames = [];
+        foreach ($allUrls as $url) {
+            $path = parse_url($url, PHP_URL_PATH);
+            if ($path !== null && $path !== false) {
+                $availableBasenames[basename($path)] = true;
+            }
+        }
+
+        $found = [];
+        foreach ($fileNames as $fileName) {
+            if (array_key_exists($fileName, $availableBasenames)) {
+                $found[] = $fileName;
+            }
+        }
+
+        return $found;
     }
 
     public function verifyS3Credentials(

@@ -157,13 +157,13 @@ final class ProjectController extends AbstractController
             return $this->redirectToRoute('project_mgmt.presentation.new');
         }
 
-        $name                 = $request->request->getString('name');
-        $gitUrl               = $request->request->getString('git_url');
-        $githubToken          = $request->request->getString('github_token');
-        $llmModelProvider     = LlmModelProvider::tryFrom($request->request->getString('llm_model_provider'));
-        $contentEditorBackend = AgenticContentEditorBackend::tryFrom($request->request->getString('content_editor_backend'));
-        $llmApiKey            = $request->request->getString('llm_api_key');
-        $agentImage           = $this->resolveAgentImage($request);
+        $name                           = $request->request->getString('name');
+        $gitUrl                         = $request->request->getString('git_url');
+        $githubToken                    = $request->request->getString('github_token');
+        $contentEditingLlmModelProvider = LlmModelProvider::tryFrom($request->request->getString('content_editing_llm_model_provider'));
+        $contentEditorBackend           = AgenticContentEditorBackend::tryFrom($request->request->getString('content_editor_backend'));
+        $contentEditingApiKey           = $request->request->getString('content_editing_api_key');
+        $agentImage                     = $this->resolveAgentImage($request);
 
         // Agent configuration (optional - uses template defaults if empty)
         $agentBackgroundInstructions     = $this->nullIfEmpty($request->request->getString('agent_background_instructions'));
@@ -171,13 +171,13 @@ final class ProjectController extends AbstractController
         $agentOutputInstructions         = $this->nullIfEmpty($request->request->getString('agent_output_instructions'));
         $remoteContentAssetsManifestUrls = $this->parseRemoteContentAssetsManifestUrls($request);
 
-        if ($name === '' || $gitUrl === '' || $githubToken === '' || $llmApiKey === '') {
+        if ($name === '' || $gitUrl === '' || $githubToken === '' || $contentEditingApiKey === '') {
             $this->addFlash('error', $this->translator->trans('flash.error.all_fields_required'));
 
             return $this->redirectToRoute('project_mgmt.presentation.new');
         }
 
-        if ($llmModelProvider === null) {
+        if ($contentEditingLlmModelProvider === null) {
             $this->addFlash('error', $this->translator->trans('flash.error.select_llm_provider'));
 
             return $this->redirectToRoute('project_mgmt.presentation.new');
@@ -203,6 +203,9 @@ final class ProjectController extends AbstractController
             return $this->redirectToRoute('account.presentation.dashboard');
         }
 
+        // PhotoBuilder LLM configuration
+        [$photoBuilderProvider, $photoBuilderApiKey] = $this->resolvePhotoBuilderLlmSettings($request);
+
         // S3 upload configuration (all optional)
         $s3BucketName      = $this->nullIfEmpty($request->request->getString('s3_bucket_name'));
         $s3Region          = $this->nullIfEmpty($request->request->getString('s3_region'));
@@ -216,8 +219,8 @@ final class ProjectController extends AbstractController
             $name,
             $gitUrl,
             $githubToken,
-            $llmModelProvider,
-            $llmApiKey,
+            $contentEditingLlmModelProvider,
+            $contentEditingApiKey,
             ProjectType::DEFAULT,
             $contentEditorBackend,
             $agentImage,
@@ -230,7 +233,10 @@ final class ProjectController extends AbstractController
             $s3AccessKeyId,
             $s3SecretAccessKey,
             $s3IamRoleArn,
-            $s3KeyPrefix
+            $s3KeyPrefix,
+            true,
+            $photoBuilderProvider,
+            $photoBuilderApiKey,
         );
         $this->addFlash('success', $this->translator->trans('flash.success.project_created'));
 
@@ -261,29 +267,31 @@ final class ProjectController extends AbstractController
 
         // Filter out the current project's key from the reuse list
         // Only show keys from the user's organization (security boundary)
-        $currentKey      = $project->getLlmApiKey();
+        $currentKey      = $project->getContentEditingLlmModelProviderApiKey();
         $existingLlmKeys = array_values(array_filter(
             $this->projectMgmtFacade->getExistingLlmApiKeys($organizationId),
             static fn (ExistingLlmApiKeyDto $key) => $key->apiKey !== $currentKey
         ));
 
         // When keys are not visible (e.g. prefab project), do not send real keys to the template
-        $keysVisible        = $project->isKeysVisible();
-        $displayGithubToken = $keysVisible ? $project->getGithubToken() : '';
-        $displayLlmApiKey   = $keysVisible ? $project->getLlmApiKey() : '';
+        $keysVisible                 = $project->isKeysVisible();
+        $displayGithubToken          = $keysVisible ? $project->getGithubToken() : '';
+        $displayContentEditingApiKey = $keysVisible ? $project->getContentEditingLlmModelProviderApiKey() : '';
+        $displayPhotoBuilderApiKey   = $keysVisible ? ($project->getPhotoBuilderLlmModelProviderApiKey() ?? '') : '';
 
         // Get agent config template (used as fallback in template, but project values take precedence)
         $agentConfigTemplate = $this->projectMgmtFacade->getAgentConfigTemplate($project->getProjectType());
 
         return $this->render('@project_mgmt.presentation/project_form.twig', [
-            'project'               => $project,
-            'llmProviders'          => LlmModelProvider::cases(),
-            'contentEditorBackends' => AgenticContentEditorBackend::cases(),
-            'existingLlmKeys'       => $existingLlmKeys,
-            'agentConfigTemplate'   => $agentConfigTemplate,
-            'keysVisible'           => $keysVisible,
-            'displayGithubToken'    => $displayGithubToken,
-            'displayLlmApiKey'      => $displayLlmApiKey,
+            'project'                     => $project,
+            'llmProviders'                => LlmModelProvider::cases(),
+            'contentEditorBackends'       => AgenticContentEditorBackend::cases(),
+            'existingLlmKeys'             => $existingLlmKeys,
+            'agentConfigTemplate'         => $agentConfigTemplate,
+            'keysVisible'                 => $keysVisible,
+            'displayGithubToken'          => $displayGithubToken,
+            'displayContentEditingApiKey' => $displayContentEditingApiKey,
+            'displayPhotoBuilderApiKey'   => $displayPhotoBuilderApiKey,
         ]);
     }
 
@@ -307,14 +315,14 @@ final class ProjectController extends AbstractController
             return $this->redirectToRoute('project_mgmt.presentation.edit', ['id' => $id]);
         }
 
-        $name                 = $request->request->getString('name');
-        $gitUrl               = $request->request->getString('git_url');
-        $keysVisible          = $project->isKeysVisible();
-        $githubToken          = $keysVisible ? $request->request->getString('github_token') : $project->getGithubToken();
-        $llmModelProvider     = LlmModelProvider::tryFrom($request->request->getString('llm_model_provider'));
-        $contentEditorBackend = AgenticContentEditorBackend::tryFrom($request->request->getString('content_editor_backend'));
-        $llmApiKey            = $keysVisible ? $request->request->getString('llm_api_key') : $project->getLlmApiKey();
-        $agentImage           = $this->resolveAgentImage($request);
+        $name                           = $request->request->getString('name');
+        $gitUrl                         = $request->request->getString('git_url');
+        $keysVisible                    = $project->isKeysVisible();
+        $githubToken                    = $keysVisible ? $request->request->getString('github_token') : $project->getGithubToken();
+        $contentEditingLlmModelProvider = LlmModelProvider::tryFrom($request->request->getString('content_editing_llm_model_provider'));
+        $contentEditorBackend           = AgenticContentEditorBackend::tryFrom($request->request->getString('content_editor_backend'));
+        $contentEditingApiKey           = $keysVisible ? $request->request->getString('content_editing_api_key') : $project->getContentEditingLlmModelProviderApiKey();
+        $agentImage                     = $this->resolveAgentImage($request);
 
         // Agent configuration (null means keep existing values)
         $agentBackgroundInstructions     = $this->nullIfEmpty($request->request->getString('agent_background_instructions'));
@@ -323,13 +331,13 @@ final class ProjectController extends AbstractController
         $remoteContentAssetsManifestUrls = $this->parseRemoteContentAssetsManifestUrls($request);
 
         $requireKeys = $keysVisible;
-        if ($name === '' || $gitUrl === '' || ($requireKeys && ($githubToken === '' || $llmApiKey === ''))) {
+        if ($name === '' || $gitUrl === '' || ($requireKeys && ($githubToken === '' || $contentEditingApiKey === ''))) {
             $this->addFlash('error', $this->translator->trans('flash.error.all_fields_required'));
 
             return $this->redirectToRoute('project_mgmt.presentation.edit', ['id' => $id]);
         }
 
-        if ($llmModelProvider === null) {
+        if ($contentEditingLlmModelProvider === null) {
             $this->addFlash('error', $this->translator->trans('flash.error.select_llm_provider'));
 
             return $this->redirectToRoute('project_mgmt.presentation.edit', ['id' => $id]);
@@ -347,6 +355,11 @@ final class ProjectController extends AbstractController
             return $this->redirectToRoute('project_mgmt.presentation.edit', ['id' => $id]);
         }
 
+        // PhotoBuilder LLM configuration
+        [$photoBuilderProvider, $photoBuilderApiKey] = $keysVisible
+            ? $this->resolvePhotoBuilderLlmSettings($request)
+            : [$project->getPhotoBuilderLlmModelProvider(), $project->getPhotoBuilderLlmModelProviderApiKey()];
+
         // S3 upload configuration (all optional)
         $s3BucketName      = $this->nullIfEmpty($request->request->getString('s3_bucket_name'));
         $s3Region          = $this->nullIfEmpty($request->request->getString('s3_region'));
@@ -360,8 +373,8 @@ final class ProjectController extends AbstractController
             $name,
             $gitUrl,
             $githubToken,
-            $llmModelProvider,
-            $llmApiKey,
+            $contentEditingLlmModelProvider,
+            $contentEditingApiKey,
             ProjectType::DEFAULT,
             $contentEditorBackend,
             $agentImage,
@@ -374,7 +387,9 @@ final class ProjectController extends AbstractController
             $s3AccessKeyId,
             $s3SecretAccessKey,
             $s3IamRoleArn,
-            $s3KeyPrefix
+            $s3KeyPrefix,
+            $photoBuilderProvider,
+            $photoBuilderApiKey,
         );
         $this->addFlash('success', $this->translator->trans('flash.success.project_updated'));
 
@@ -603,6 +618,33 @@ final class ProjectController extends AbstractController
         );
 
         return new JsonResponse(['valid' => $valid]);
+    }
+
+    /**
+     * Resolve PhotoBuilder LLM settings from the form.
+     * Returns [null, null] for Option A (use content editing settings),
+     * or [LlmModelProvider, string] for Option B (dedicated settings).
+     *
+     * @return array{0: ?LlmModelProvider, 1: ?string}
+     */
+    private function resolvePhotoBuilderLlmSettings(Request $request): array
+    {
+        $mode = $request->request->getString('photo_builder_llm_mode');
+
+        if ($mode !== 'dedicated') {
+            // Option A: reuse content editing settings
+            return [null, null];
+        }
+
+        $providerValue = $request->request->getString('photo_builder_llm_model_provider');
+        $apiKey        = $request->request->getString('photo_builder_api_key');
+        $provider      = LlmModelProvider::tryFrom($providerValue);
+
+        if ($provider === null || $apiKey === '') {
+            return [null, null];
+        }
+
+        return [$provider, $apiKey];
     }
 
     /**

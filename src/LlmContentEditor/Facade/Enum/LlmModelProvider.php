@@ -13,16 +13,40 @@ use App\LlmContentEditor\Domain\Enum\LlmModelName;
 enum LlmModelProvider: string
 {
     case OpenAI = 'openai';
+    case Google = 'google';
 
     /**
-     * Returns the models supported by this provider.
+     * Returns the text-generation models supported by this provider.
      *
      * @return list<LlmModelName>
      */
-    public function supportedModels(): array
+    public function supportedTextModels(): array
     {
         return match ($this) {
             self::OpenAI => [LlmModelName::Gpt52],
+            self::Google => [LlmModelName::Gemini3ProPreview],
+        };
+    }
+
+    /**
+     * Returns the image-generation model for this provider.
+     */
+    public function imageGenerationModel(): LlmModelName
+    {
+        return match ($this) {
+            self::OpenAI => LlmModelName::GptImage1,
+            self::Google => LlmModelName::Gemini3ProImagePreview,
+        };
+    }
+
+    /**
+     * Returns the text-generation model to use for image prompt generation.
+     */
+    public function imagePromptGenerationModel(): LlmModelName
+    {
+        return match ($this) {
+            self::OpenAI => LlmModelName::Gpt52,
+            self::Google => LlmModelName::Gemini3FlashPreview,
         };
     }
 
@@ -31,7 +55,7 @@ enum LlmModelProvider: string
      */
     public function defaultModel(): LlmModelName
     {
-        return $this->supportedModels()[0];
+        return $this->supportedTextModels()[0];
     }
 
     /**
@@ -41,6 +65,26 @@ enum LlmModelProvider: string
     {
         return match ($this) {
             self::OpenAI => 'OpenAI',
+            self::Google => 'Google (Gemini)',
         };
+    }
+
+    /**
+     * Returns true if this provider is available for content editing.
+     */
+    public function supportsContentEditing(): bool
+    {
+        return match ($this) {
+            self::OpenAI => true,
+            self::Google => false,
+        };
+    }
+
+    /**
+     * Returns true if this provider is available for PhotoBuilder (image generation).
+     */
+    public function supportsPhotoBuilder(): bool
+    {
+        return true;
     }
 }

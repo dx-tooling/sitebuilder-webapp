@@ -91,6 +91,23 @@ Bind **actions** to DOM events (e.g. `submit`, `click`):
 
 `stimulus_action(controllerName, methodName, event)`. Omit the third argument to use the default event for the element (e.g. `submit` for forms, `click` for buttons).
 
+#### Multiple actions on the same element
+
+**IMPORTANT**: Each `{{ stimulus_action(...) }}` call renders its own `data-action` HTML attribute. If you place multiple calls on the same element, only the first takes effect — HTML silently discards duplicate attributes.
+
+To bind **multiple actions** on an element that also has `stimulus_controller`, chain the `|stimulus_action` **filter** off the controller call:
+
+```twig
+<div {{ stimulus_controller('photo-builder', { ... })
+     |stimulus_action('photo-builder', 'handlePromptEdited', 'photo-image:promptEdited')
+     |stimulus_action('photo-builder', 'handleRegenerate', 'photo-image:regenerateRequested')
+     |stimulus_action('photo-builder', 'handleUpload', 'photo-image:uploadRequested') }}>
+```
+
+This pipes the `StimulusAttributes` object through each filter, accumulating all action descriptors into a single `data-action` attribute.
+
+The same principle applies to `|stimulus_target` — use the filter form when combining with other Stimulus helpers on the same element.
+
 ---
 
 ## 3. Controller Structure (TypeScript)
@@ -229,7 +246,8 @@ Handle non‑OK responses and parse JSON or streamed bodies as needed.
 5. **Twig**  
    - `{{ stimulus_controller('kebab-name', { … }) }}` for the element that owns the behavior.  
    - `{{ stimulus_target('kebab-name', 'targetName') }}` on elements the controller needs.  
-   - `{{ stimulus_action('kebab-name', 'methodName', 'event') }}` to wire events.
+   - `{{ stimulus_action('kebab-name', 'methodName', 'event') }}` to wire events.  
+   - **Multiple actions on one element**: use `|stimulus_action` filter chaining, never multiple `{{ stimulus_action() }}` calls (see section 2.4).
 
 6. **Build and quality**  
    - `mise run frontend`  
@@ -313,7 +331,75 @@ This pattern ensures:
 
 ---
 
-## 6. References
+## 6. Parent-to-Child Communication Between Controllers
+
+When a parent Stimulus controller needs to notify child controllers (e.g. an orchestrator telling per-item controllers to update), **dispatch the event on each child element, not on the parent**.
+
+### The Pitfall
+
+DOM events **bubble upward** (child → parent → document), never downward. If a parent dispatches an event on its own element, child controllers listening on *their* elements will never receive it — even with `bubbles: true`:
+
+```ts
+// BAD: event fires on the parent element and bubbles UP to document.
+// Child controllers listening on their own elements never see it.
+this.element.dispatchEvent(
+    new CustomEvent("my-controller:doSomething", { bubbles: true }),
+);
+```
+
+The child's Twig wiring listens on the child element:
+
+```twig
+<div {{ stimulus_controller('child-ctrl')
+     |stimulus_action('child-ctrl', 'doSomething', 'my-controller:doSomething') }}>
+```
+
+This means the `data-action` is on the **child** `<div>`, so it only captures `my-controller:doSomething` events that fire **on or below** that `<div>`.
+
+### The Correct Pattern
+
+Iterate over the child target elements and dispatch directly on each one:
+
+```ts
+// GOOD: event fires on each child element, where the action listener lives.
+for (const card of this.childCardTargets) {
+    card.dispatchEvent(
+        new CustomEvent("my-controller:doSomething", { bubbles: false }),
+    );
+}
+```
+
+This matches the pattern used for per-element state updates (e.g. passing poll data to each card):
+
+```ts
+for (const card of this.imageCardTargets) {
+    card.dispatchEvent(
+        new CustomEvent("photo-builder:stateChanged", {
+            detail: imageData,
+            bubbles: false,
+        }),
+    );
+}
+```
+
+### When to Use Each Direction
+
+| Direction | Mechanism | Example |
+|---|---|---|
+| **Child → Parent** | `bubbles: true` on the child element; parent listens via `\|stimulus_action` filter | Child card emits `photo-image:uploadRequested`, parent catches it |
+| **Parent → Child** | Loop over child targets, dispatch on each | Parent tells all children to clear prompt text |
+| **Sibling → Sibling** | Go through a shared parent, or use `window` events | Rarely needed; prefer parent orchestration |
+
+### Key Points
+
+1. **Always dispatch on the element where the listener lives** — that's the element with the `data-action` attribute
+2. **Use `bubbles: false`** for parent-to-child events — there is no reason for them to propagate further
+3. **Use Stimulus targets** (e.g. `imageCardTargets`) to collect the child elements to dispatch on
+4. **Child-to-parent** naturally works with bubbling — the child dispatches, the event bubbles up to the parent's element
+
+---
+
+## 7. References
 
 - **Rules**: `.cursor/rules/05-frontend.mdc` (TypeScript, Stimulus, quality).
 - **Architecture**: `docs/archbook.md` — Client-Side Organization, vertical layout.

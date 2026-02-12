@@ -22,8 +22,8 @@ final readonly class ProjectInfoDto
         public AgenticContentEditorBackend $contentEditorBackend,
         public string                      $githubUrl,
         public string                      $agentImage,
-        public LlmModelProvider            $llmModelProvider,
-        public string                      $llmApiKey,
+        public LlmModelProvider            $contentEditingLlmModelProvider,
+        public string                      $contentEditingApiKey,
         public string                      $agentBackgroundInstructions,
         public string                      $agentStepInstructions,
         public string                      $agentOutputInstructions,
@@ -35,6 +35,9 @@ final readonly class ProjectInfoDto
         public ?string                     $s3SecretAccessKey = null,
         public ?string                     $s3IamRoleArn = null,
         public ?string                     $s3KeyPrefix = null,
+        // PhotoBuilder LLM Configuration (nullable = falls back to content editing)
+        public ?LlmModelProvider           $photoBuilderLlmModelProvider = null,
+        public ?string                     $photoBuilderApiKey = null,
     ) {
     }
 
@@ -47,5 +50,21 @@ final readonly class ProjectInfoDto
             && $this->s3Region          !== null
             && $this->s3AccessKeyId     !== null
             && $this->s3SecretAccessKey !== null;
+    }
+
+    /**
+     * Returns the effective PhotoBuilder provider (dedicated or content editing fallback).
+     */
+    public function getEffectivePhotoBuilderLlmModelProvider(): LlmModelProvider
+    {
+        return $this->photoBuilderLlmModelProvider ?? $this->contentEditingLlmModelProvider;
+    }
+
+    /**
+     * Returns the effective PhotoBuilder API key (dedicated or content editing fallback).
+     */
+    public function getEffectivePhotoBuilderApiKey(): string
+    {
+        return $this->photoBuilderApiKey ?? $this->contentEditingApiKey;
     }
 }

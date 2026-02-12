@@ -10,6 +10,7 @@ flowchart LR
         ACE["AgenticContentEditor"]
         LLM["LlmContentEditor"]
         CAC["CursorAgentContentEditor"]
+        PB["PhotoBuilder"]
         WSM["WorkspaceMgmt"]
         WST["WorkspaceTooling"]
         ORG["Organization"]
@@ -45,6 +46,11 @@ flowchart LR
 
     CAC -->|tools: build, rules| WSTF
 
+    PB -->|getAccountInfoByEmail| ACC
+    PB -->|getProjectInfo| PRJF
+    PB -->|readWorkspaceFile, getWorkspaceById| WSMF
+    PB -->|uploadAsset| RCAF
+
     WSM -->|getProjectInfo| PRJF
     WSM -->|getLatestConversationId| CBCEF
 
@@ -77,6 +83,7 @@ Method details are in the summary table below.
 | **AgenticContentEditor** | *(dispatches to adapters)* | Facade dispatches to `LlmContentEditorAdapter` and `CursorAgentContentEditorAdapter` via SPI |
 | **LlmContentEditor**      | WorkspaceTooling, ProjectMgmt | runQualityChecks, runTests, runBuild, suggestCommitMessage, getPreviewUrl, list/search remote assets, getWorkspaceRules; getAgentConfigTemplate (EditContentCommand) |
 | **CursorAgentContentEditor** | WorkspaceTooling         | runBuildInWorkspace, runShellCommandAsync, getWorkspaceRules |
+| **PhotoBuilder**           | Account, ProjectMgmt, WorkspaceMgmt, RemoteContentAssets | getAccountInfoByEmail; getProjectInfo (API key, S3 config); readWorkspaceFile (page HTML), getWorkspaceById; uploadAsset (S3) |
 | **WorkspaceMgmt**         | ProjectMgmt, ChatBasedContentEditor | getProjectInfo (setup, git, review); getLatestConversationId (reviewer UI) |
 | **WorkspaceTooling**      | RemoteContentAssets        | fetchAndMergeAssetUrls, getRemoteAssetInfo |
 | **Organization**         | Prefab, ProjectMgmt, WorkspaceMgmt, Account | loadPrefabs, createProjectFromPrefab, dispatchSetupIfNeeded; account resolution and registration |
@@ -107,3 +114,4 @@ Canonical DTOs and enums (`EditStreamChunkDto`, `AgentConfigDto`, `AgenticConten
 - **Organization** onboarding (AccountCoreCreatedSymfonyEventSubscriber) wires **Prefab → ProjectMgmt → WorkspaceMgmt** to create projects and dispatch setup.
 - **ProjectMgmt** presentation layer coordinates **ChatBasedContentEditor**, **WorkspaceMgmt**, **LlmContentEditor**, and **RemoteContentAssets** for project/workspace/conversation and validation flows.
 - **ProjectMgmt** still calls **LlmContentEditor** directly for `verifyApiKey()` — this is intentional as API key verification is LLM-specific and part of project configuration.
+- **PhotoBuilder** reads workspace page HTML via **WorkspaceMgmt**, fetches API keys and S3 config via **ProjectMgmt**, uploads generated images via **RemoteContentAssets**, and validates user access via **Account**.

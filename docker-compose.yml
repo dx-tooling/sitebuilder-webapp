@@ -34,7 +34,8 @@ services:
         build:
             context: .
             dockerfile: docker/app/Dockerfile
-        container_name: etfs_${ETFS_PROJECT_NAME}_messenger
+        deploy:
+            replicas: 5
         volumes:
             - .:/var/www
             - mise_data:/opt/mise

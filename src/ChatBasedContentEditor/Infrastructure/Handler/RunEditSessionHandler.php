@@ -79,13 +79,13 @@ final readonly class RunEditSessionHandler
             $project   = $workspace !== null ? $this->projectMgmtFacade->getProjectInfo($workspace->projectId) : null;
 
             // Ensure we have a valid LLM API key from the project
-            if ($project === null || $project->llmApiKey === '') {
-                $this->logger->error('EditSession failed: no API key configured for project', [
+            if ($project === null || $project->contentEditingApiKey === '') {
+                $this->logger->error('EditSession failed: no LLM API key configured for project', [
                     'sessionId'   => $message->sessionId,
                     'workspaceId' => $conversation->getWorkspaceId(),
                 ]);
 
-                EditSessionChunk::createDoneChunk($session, false, 'No API key configured for this project.');
+                EditSessionChunk::createDoneChunk($session, false, 'No LLM API key configured for this project.');
                 $session->setStatus(EditSessionStatus::Failed);
                 $this->entityManager->flush();
 
@@ -114,7 +114,7 @@ final readonly class RunEditSessionHandler
                 $session->getWorkspacePath(),
                 $session->getInstruction(),
                 $previousMessages,
-                $project->llmApiKey,
+                $project->contentEditingApiKey,
                 $agentConfig,
                 $conversation->getBackendSessionState(),
                 $message->locale,
