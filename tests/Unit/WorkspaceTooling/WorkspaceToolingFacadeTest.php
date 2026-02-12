@@ -376,6 +376,33 @@ final class WorkspaceToolingFacadeTest extends TestCase
         self::assertContains('https://cdn.example.com/images/Hero-Mobile.JPG', $decoded);
     }
 
+    public function testSearchRemoteContentAssetUrlsMatchesFullUrlPathAndDomain(): void
+    {
+        $this->executionContext->setContext(
+            'workspace-id',
+            '/path',
+            null,
+            'project',
+            'image',
+            ['https://example.com/manifest.json']
+        );
+        $remoteContentAssets = $this->createMock(RemoteContentAssetsFacadeInterface::class);
+        $remoteContentAssets->method('fetchAndMergeAssetUrls')->willReturn([
+            'https://foo.com/bar.png',
+            'https://foo.com/uploads/baz.png',
+            'https://uploads.com/bar.png',
+        ]);
+        $facade = $this->createFacadeWithRemoteContentAssets($remoteContentAssets);
+
+        $result = $facade->searchRemoteContentAssetUrls('uploads');
+
+        $decoded = json_decode($result, true, 512, JSON_THROW_ON_ERROR);
+        self::assertIsArray($decoded);
+        self::assertCount(2, $decoded);
+        self::assertContains('https://foo.com/uploads/baz.png', $decoded);
+        self::assertContains('https://uploads.com/bar.png', $decoded);
+    }
+
     private function createFacade(): WorkspaceToolingFacade
     {
         $fileOps                   = new FileOperationsService();
