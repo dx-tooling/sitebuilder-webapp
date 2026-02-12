@@ -42,6 +42,7 @@ class OpenAiImageGenerator implements ImageGeneratorInterface
                 'size'          => self::IMAGE_SIZE,
                 'output_format' => 'png',
             ],
+            'timeout'      => $this->photoBuilderOpenAiTimeoutSeconds,
             'max_duration' => $this->photoBuilderOpenAiTimeoutSeconds,
         ]);
 

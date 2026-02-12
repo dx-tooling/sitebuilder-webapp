@@ -33,12 +33,14 @@ class GeminiImageGenerator implements ImageGeneratorInterface
 
         $response = $this->httpClient->request('POST', $url, [
             'headers' => [
-                'Content-Type' => 'application/json',
+                'Content-Type'     => 'application/json',
+                'X-Server-Timeout' => (string) $this->photoBuilderGeminiTimeoutSeconds,
             ],
             'query' => [
                 'key' => $apiKey,
             ],
             'json'         => $this->buildRequestBody($prompt, $imageSize),
+            'timeout'      => $this->photoBuilderGeminiTimeoutSeconds,
             'max_duration' => $this->photoBuilderGeminiTimeoutSeconds,
         ]);
 
