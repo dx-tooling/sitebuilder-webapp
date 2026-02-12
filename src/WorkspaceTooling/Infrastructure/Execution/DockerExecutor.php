@@ -39,6 +39,7 @@ final class DockerExecutor
      * @param int         $timeout          Timeout in seconds
      * @param bool        $allowNetwork     Whether to allow network access
      * @param string|null $containerName    Optional container name for identification
+     * @param bool        $throwOnFailure   When true, throw on ANY non-zero exit code (not just Docker errors >= 125)
      *
      * @return string Combined stdout and stderr output
      *
@@ -51,7 +52,8 @@ final class DockerExecutor
         string  $workingDirectory = '/workspace',
         int     $timeout = self::DEFAULT_TIMEOUT,
         bool    $allowNetwork = true,
-        ?string $containerName = null
+        ?string $containerName = null,
+        bool    $throwOnFailure = false
     ): string {
         $dockerCommand = $this->buildDockerCommand(
             $image,
@@ -92,6 +94,14 @@ final class DockerExecutor
             if (str_contains($errorOutput, 'permission denied')) {
                 throw new DockerExecutionException(
                     'Docker permission denied. Ensure the Docker socket is accessible.',
+                    $command
+                );
+            }
+
+            // In strict mode, throw on ANY non-zero exit code (used by HTML editor build etc.)
+            if ($throwOnFailure) {
+                throw new DockerExecutionException(
+                    sprintf('Command failed with exit code %d: %s', $exitCode ?? -1, $errorOutput),
                     $command
                 );
             }

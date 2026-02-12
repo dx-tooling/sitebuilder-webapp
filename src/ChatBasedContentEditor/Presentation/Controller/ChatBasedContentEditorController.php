@@ -24,6 +24,7 @@ use App\RemoteContentAssets\Facade\RemoteContentAssetsFacadeInterface;
 use App\WorkspaceMgmt\Facade\Enum\WorkspaceStatus;
 use App\WorkspaceMgmt\Facade\WorkspaceMgmtFacadeInterface;
 use Doctrine\ORM\EntityManagerInterface;
+use Psr\Log\LoggerInterface;
 use RuntimeException;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -60,6 +61,7 @@ final class ChatBasedContentEditorController extends AbstractController
         private readonly TranslatorInterface             $translator,
         private readonly PromptSuggestionsService        $promptSuggestionsService,
         private readonly LlmContentEditorFacadeInterface $llmContentEditorFacade,
+        private readonly LoggerInterface                 $logger,
     ) {
     }
 
@@ -819,7 +821,13 @@ final class ChatBasedContentEditorController extends AbstractController
             $this->workspaceMgmtFacade->writeWorkspaceFile($workspaceId, $sourcePath, $content);
 
             // Run build to update dist/ from src/
-            $this->workspaceMgmtFacade->runBuild($workspaceId);
+            $buildOutput = $this->workspaceMgmtFacade->runBuild($workspaceId);
+
+            $this->logger->info('HTML editor build completed', [
+                'workspaceId' => $workspaceId,
+                'sourcePath'  => $sourcePath,
+                'buildOutput' => $buildOutput,
+            ]);
 
             // Get user email for commit author
             $accountInfo = $this->getAccountInfo($user);
@@ -833,6 +841,12 @@ final class ChatBasedContentEditorController extends AbstractController
 
             return $this->json(['success' => true]);
         } catch (Throwable $e) {
+            $this->logger->error('HTML editor save failed', [
+                'workspaceId' => $workspaceId,
+                'sourcePath'  => $sourcePath,
+                'error'       => $e->getMessage(),
+            ]);
+
             return $this->json(['error' => 'Failed to save file: ' . $e->getMessage()], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }

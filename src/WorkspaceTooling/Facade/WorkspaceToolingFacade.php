@@ -237,7 +237,8 @@ final class WorkspaceToolingFacade extends BaseWorkspaceToolingFacade implements
             '/workspace',
             300,
             true,
-            'html-editor-build'
+            'html-editor-build',
+            true
         );
     }
 }
