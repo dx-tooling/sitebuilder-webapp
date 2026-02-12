@@ -24,6 +24,7 @@ class OpenAiImageGenerator implements ImageGeneratorInterface
 
     public function __construct(
         private readonly HttpClientInterface $httpClient,
+        private readonly int                 $photoBuilderOpenAiTimeoutSeconds = 120,
     ) {
     }
 
@@ -41,6 +42,7 @@ class OpenAiImageGenerator implements ImageGeneratorInterface
                 'size'          => self::IMAGE_SIZE,
                 'output_format' => 'png',
             ],
+            'max_duration' => $this->photoBuilderOpenAiTimeoutSeconds,
         ]);
 
         $statusCode = $response->getStatusCode();

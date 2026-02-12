@@ -23,6 +23,7 @@ class GeminiImageGenerator implements ImageGeneratorInterface
 
     public function __construct(
         private readonly HttpClientInterface $httpClient,
+        private readonly int                 $photoBuilderGeminiTimeoutSeconds = 120,
     ) {
     }
 
@@ -37,7 +38,8 @@ class GeminiImageGenerator implements ImageGeneratorInterface
             'query' => [
                 'key' => $apiKey,
             ],
-            'json' => $this->buildRequestBody($prompt, $imageSize),
+            'json'         => $this->buildRequestBody($prompt, $imageSize),
+            'max_duration' => $this->photoBuilderGeminiTimeoutSeconds,
         ]);
 
         $statusCode = $response->getStatusCode();
