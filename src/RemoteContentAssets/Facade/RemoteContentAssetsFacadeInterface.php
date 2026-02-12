@@ -62,6 +62,17 @@ interface RemoteContentAssetsFacadeInterface
     ): bool;
 
     /**
+     * Check which of the given filenames are present in any of the manifest URLs.
+     * Matches by basename only (folder/path prefix is irrelevant).
+     *
+     * @param list<string> $manifestUrls
+     * @param list<string> $fileNames    Basenames to look for (e.g. "00fa0883_office.png")
+     *
+     * @return list<string> The subset of $fileNames that were found
+     */
+    public function findAvailableFileNames(array $manifestUrls, array $fileNames): array;
+
+    /**
      * Upload an asset to S3.
      *
      * @param string      $bucketName      The S3 bucket name

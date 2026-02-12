@@ -54,6 +54,7 @@ export default class extends Controller {
         turns: Array,
         readOnly: { type: Boolean, default: false },
         translations: Object,
+        prefillMessage: { type: String, default: "" },
     };
 
     static targets = [
@@ -79,6 +80,7 @@ export default class extends Controller {
     declare readonly turnsValue: TurnData[];
     declare readonly readOnlyValue: boolean;
     declare readonly translationsValue: TranslationsData;
+    declare readonly prefillMessageValue: string;
 
     declare readonly hasMessagesTarget: boolean;
     declare readonly messagesTarget: HTMLElement;
@@ -142,6 +144,12 @@ export default class extends Controller {
                 document.dispatchEvent(new CustomEvent("chat-based-content-editor:user-typed"));
             };
             this.instructionTarget.addEventListener("input", this.instructionInputListener);
+        }
+
+        // Pre-fill instruction textarea if a prefill message was provided (e.g. from PhotoBuilder)
+        if (this.prefillMessageValue && this.hasInstructionTarget) {
+            this.instructionTarget.value = this.prefillMessageValue;
+            this.instructionTarget.focus();
         }
     }
 

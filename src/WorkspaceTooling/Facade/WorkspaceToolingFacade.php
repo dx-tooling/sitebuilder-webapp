@@ -145,23 +145,12 @@ final class WorkspaceToolingFacade extends BaseWorkspaceToolingFacade implements
 
         $matchingUrls = [];
         foreach ($urls as $url) {
-            $filename = $this->extractFilenameFromUrl($url);
-            if (preg_match($fullPattern, $filename) === 1) {
+            if (preg_match($fullPattern, $url) === 1) {
                 $matchingUrls[] = $url;
             }
         }
 
         return json_encode($matchingUrls, JSON_THROW_ON_ERROR);
-    }
-
-    private function extractFilenameFromUrl(string $url): string
-    {
-        $path = parse_url($url, PHP_URL_PATH);
-        if ($path === null || $path === false) {
-            return '';
-        }
-
-        return basename($path);
     }
 
     private function isValidRegexPattern(string $pattern): bool

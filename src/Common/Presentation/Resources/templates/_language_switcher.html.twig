@@ -1,9 +1,17 @@
 {# Language Switcher Component #}
 {# Compact toggle style matching the theme toggle button #}
+{# Preserves query string (e.g. page, conversationId on photo builder) when switching locale #}
 <div class="language-switcher flex items-center gap-0.5 text-sm">
     {% for locale in ['en', 'de'] %}
         {% set is_current = app.request.locale == locale %}
-        <a href="{{ path(app.request.attributes.get('_route', 'static_pages.presentation.homepage'), app.request.attributes.get('_route_params', {})|merge({'_locale': locale})) }}"
+        {% set route_params = app.request.attributes.get('_route_params', {})|merge({'_locale': locale}) %}
+        {% set path_url = path(app.request.attributes.get('_route', 'static_pages.presentation.homepage'), route_params) %}
+        {% set query_params = app.request.query.all() %}
+        {% set href = path_url %}
+        {% for k, v in query_params %}
+            {% set href = href ~ (loop.first ? '?' : '&') ~ (k|url_encode) ~ '=' ~ (v|url_encode) %}
+        {% endfor %}
+        <a href="{{ href }}"
            class="px-2 py-1.5 rounded-full uppercase text-xs font-medium tracking-wide {{ is_current ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300' : 'text-dark-500 dark:text-dark-400 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-blue-50 dark:hover:bg-blue-900/10' }} transition-colors"
            {% if is_current %}aria-current="true"{% endif %}
            title="{{ 'language.switch'|trans }}">

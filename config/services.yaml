@@ -20,6 +20,10 @@ parameters:
     docker.host_base_path_default: "/var/www"
     docker.host_base_path: "%env(default:docker.host_base_path_default:HOST_PROJECT_PATH)%"
 
+    # PhotoBuilder image generation request timeouts (in seconds)
+    photo_builder.gemini_timeout_seconds: 120
+    photo_builder.openai_timeout_seconds: 120
+
 services:
     # default configuration for services in *this* file
     _defaults:
@@ -171,6 +175,27 @@ services:
 
     # Conversation log formatter - human-readable plain-text output
     App\LlmContentEditor\Infrastructure\ConversationLog\ConversationLogFormatter: ~
+
+    # PhotoBuilder infrastructure bindings
+    App\PhotoBuilder\Infrastructure\Storage\GeneratedImageStorage:
+        arguments:
+            - "%kernel.project_dir%/var/photo-builder"
+
+    App\PhotoBuilder\Infrastructure\Adapter\PromptGeneratorInterface:
+        class: App\PhotoBuilder\Infrastructure\Adapter\OpenAiPromptGenerator
+
+    App\PhotoBuilder\Infrastructure\Adapter\ImageGeneratorInterface:
+        class: App\PhotoBuilder\Infrastructure\Adapter\OpenAiImageGenerator
+
+    App\PhotoBuilder\Infrastructure\Adapter\OpenAiImageGenerator:
+        arguments:
+            $photoBuilderOpenAiTimeoutSeconds: "%photo_builder.openai_timeout_seconds%"
+
+    App\PhotoBuilder\Infrastructure\Adapter\GeminiImageGenerator:
+        arguments:
+            $photoBuilderGeminiTimeoutSeconds: "%photo_builder.gemini_timeout_seconds%"
+
+    App\PhotoBuilder\Infrastructure\Adapter\ImageGeneratorFactory: ~
 
     # LLM content editor facade - inject loggers + enable flag
     App\LlmContentEditor\Facade\LlmContentEditorFacade:
