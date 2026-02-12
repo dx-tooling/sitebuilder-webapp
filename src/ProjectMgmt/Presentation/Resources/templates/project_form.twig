@@ -185,9 +185,9 @@
             <div id="cursor_api_key_section" class="{{ currentBackend == 'cursor_agent' ? '' : 'hidden' }}">
                 <label for="cursor_api_key" class="etfswui-form-label">{{ 'project.form.cursor_api_key'|trans }}</label>
                 <input type="password"
-                       name="llm_api_key"
+                       name="content_editing_api_key"
                        id="cursor_api_key"
-                       value="{{ project ? (displayLlmApiKey is defined ? displayLlmApiKey : project.llmApiKey) : '' }}"
+                       value="{{ project ? (displayContentEditingApiKey is defined ? displayContentEditingApiKey : project.contentEditingLlmModelProviderApiKey) : '' }}"
                        data-required="{{ (keysVisible is not defined or keysVisible) ? 'true' : 'false' }}"
                        data-force-disabled="{{ (keysVisible is defined and not keysVisible) ? 'true' : 'false' }}"
                        {{ (keysVisible is not defined or keysVisible) and currentBackend == 'cursor_agent' ? 'required' : 'disabled' }}
