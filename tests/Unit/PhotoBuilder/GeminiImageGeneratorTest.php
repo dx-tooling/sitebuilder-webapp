@@ -38,7 +38,7 @@ final class GeminiImageGeneratorTest extends TestCase
             ->willReturn($response);
 
         $generator = new GeminiImageGenerator($httpClient);
-        $result    = $generator->generateImage('A beautiful sunset', 'test-key');
+        $result    = $generator->generateImage('A beautiful sunset', 'test-key', 'gemini-3-pro-image-preview');
 
         self::assertSame($fakeImageData, $result);
     }
@@ -85,7 +85,7 @@ final class GeminiImageGeneratorTest extends TestCase
             ->willReturn($response);
 
         $generator = new GeminiImageGenerator($httpClient);
-        $result    = $generator->generateImage('A beautiful sunset', 'test-key', '1K');
+        $result    = $generator->generateImage('A beautiful sunset', 'test-key', 'gemini-3-pro-image-preview', '1K');
 
         self::assertSame($fakeImageData, $result);
     }
@@ -131,7 +131,7 @@ final class GeminiImageGeneratorTest extends TestCase
             ->willReturn($response);
 
         $generator = new GeminiImageGenerator($httpClient);
-        $generator->generateImage('A sunset', 'test-key', null);
+        $generator->generateImage('A sunset', 'test-key', 'gemini-3-pro-image-preview');
     }
 
     public function testThrowsExceptionOnNon200Status(): void
@@ -147,7 +147,7 @@ final class GeminiImageGeneratorTest extends TestCase
 
         $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('status 429');
-        $generator->generateImage('prompt', 'key');
+        $generator->generateImage('prompt', 'key', 'gemini-3-pro-image-preview');
     }
 
     public function testThrowsExceptionOnMissingImageData(): void
@@ -175,6 +175,6 @@ final class GeminiImageGeneratorTest extends TestCase
 
         $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('no image data');
-        $generator->generateImage('prompt', 'key');
+        $generator->generateImage('prompt', 'key', 'gemini-3-pro-image-preview');
     }
 }

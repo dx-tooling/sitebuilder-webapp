@@ -19,7 +19,6 @@ use const JSON_THROW_ON_ERROR;
 class GeminiImageGenerator implements ImageGeneratorInterface
 {
     private const string API_URL_TEMPLATE = 'https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent';
-    private const string MODEL            = 'gemini-3-pro-image-preview';
 
     public function __construct(
         private readonly HttpClientInterface $httpClient,
@@ -27,9 +26,9 @@ class GeminiImageGenerator implements ImageGeneratorInterface
     ) {
     }
 
-    public function generateImage(string $prompt, string $apiKey, ?string $imageSize = null): string
+    public function generateImage(string $prompt, string $apiKey, string $model, ?string $imageSize = null): string
     {
-        $url = sprintf(self::API_URL_TEMPLATE, self::MODEL);
+        $url = sprintf(self::API_URL_TEMPLATE, $model);
 
         $response = $this->httpClient->request('POST', $url, [
             'headers' => [

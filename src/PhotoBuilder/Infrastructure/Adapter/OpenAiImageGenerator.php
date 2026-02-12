@@ -19,7 +19,6 @@ use const JSON_THROW_ON_ERROR;
 class OpenAiImageGenerator implements ImageGeneratorInterface
 {
     private const string API_URL    = 'https://api.openai.com/v1/images/generations';
-    private const string MODEL      = 'gpt-image-1';
     private const string IMAGE_SIZE = '1024x1024';
 
     public function __construct(
@@ -28,7 +27,7 @@ class OpenAiImageGenerator implements ImageGeneratorInterface
     ) {
     }
 
-    public function generateImage(string $prompt, string $apiKey, ?string $imageSize = null): string
+    public function generateImage(string $prompt, string $apiKey, string $model, ?string $imageSize = null): string
     {
         $response = $this->httpClient->request('POST', self::API_URL, [
             'headers' => [
@@ -36,7 +35,7 @@ class OpenAiImageGenerator implements ImageGeneratorInterface
                 'Content-Type'  => 'application/json',
             ],
             'json' => [
-                'model'         => self::MODEL,
+                'model'         => $model,
                 'prompt'        => $prompt,
                 'n'             => 1,
                 'size'          => self::IMAGE_SIZE,

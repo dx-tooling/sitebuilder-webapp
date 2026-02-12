@@ -8,11 +8,13 @@ enum LlmModelName: string
 {
     // Text generation models
     case Gpt52               = 'gpt-5.2';
+    case Gemini25FlashLite   = 'gemini-2.5-flash-lite';
     case Gemini3ProPreview   = 'gemini-3-pro-preview';
     case Gemini3FlashPreview = 'gemini-3-flash-preview';
 
     // Image generation models
     case GptImage1              = 'gpt-image-1';
+    case Gemini25FlashImage     = 'gemini-2.5-flash-image';
     case Gemini3ProImagePreview = 'gemini-3-pro-image-preview';
 
     public function maxContextTokens(): int

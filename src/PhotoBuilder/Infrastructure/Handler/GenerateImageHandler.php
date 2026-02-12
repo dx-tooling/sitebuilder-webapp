@@ -66,6 +66,7 @@ final readonly class GenerateImageHandler
             // Generate image (or fake if simulation is enabled)
             $simulate  = $_ENV['PHOTO_BUILDER_SIMULATE_IMAGE_GENERATION'] ?? '0';
             $provider  = $project->getEffectivePhotoBuilderLlmModelProvider();
+            $modelName = $provider->imageGenerationModel()->value;
             $generator = $simulate === '1'
                 ? new FakeImageGenerator($this->logger)
                 : $this->imageGeneratorFactory->create($provider);
@@ -73,6 +74,7 @@ final readonly class GenerateImageHandler
             $imageData = $generator->generateImage(
                 $image->getPrompt() ?? '',
                 $project->getEffectivePhotoBuilderApiKey(),
+                $modelName,
                 $message->imageSize,
             );
 

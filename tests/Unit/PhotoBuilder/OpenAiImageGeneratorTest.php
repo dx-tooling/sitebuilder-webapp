@@ -48,7 +48,7 @@ final class OpenAiImageGeneratorTest extends TestCase
             ->willReturn($response);
 
         $generator = new OpenAiImageGenerator($httpClient);
-        $result    = $generator->generateImage('A beautiful sunset', 'test-key');
+        $result    = $generator->generateImage('A beautiful sunset', 'test-key', 'gpt-image-1');
 
         self::assertSame($fakeImageData, $result);
     }
@@ -66,7 +66,7 @@ final class OpenAiImageGeneratorTest extends TestCase
 
         $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('status 429');
-        $generator->generateImage('prompt', 'key');
+        $generator->generateImage('prompt', 'key', 'gpt-image-1');
     }
 
     public function testThrowsExceptionOnMissingDataInResponse(): void
@@ -82,6 +82,6 @@ final class OpenAiImageGeneratorTest extends TestCase
 
         $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('unexpected response structure');
-        $generator->generateImage('prompt', 'key');
+        $generator->generateImage('prompt', 'key', 'gpt-image-1');
     }
 }
