@@ -1174,6 +1174,39 @@ describe("PhotoBuilderController", () => {
             expect(fetchSpy).not.toHaveBeenCalled();
         });
 
+        it("should dispatch resetToGenerating event to all image cards when switching resolution", async () => {
+            const loresButton = document.createElement("button");
+            loresButton.dataset.imageSize = "1K";
+            const hiresButton = document.createElement("button");
+            hiresButton.dataset.imageSize = "2K";
+
+            const { controller, elements } = createController({
+                sessionId: "sess-1",
+                supportsResolutionToggleValue: true,
+                hasLoresButtonTarget: true,
+                loresButtonTarget: loresButton,
+                hasHiresButtonTarget: true,
+                hiresButtonTarget: hiresButton,
+                currentImageSize: "1K",
+            });
+
+            vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(JSON.stringify({ status: "ok" })));
+
+            const cardHandlers = elements.imageCards.map((card) => {
+                const handler = vi.fn();
+                card.addEventListener("photo-builder:resetToGenerating", handler);
+                return handler;
+            });
+
+            const event = { currentTarget: hiresButton } as unknown as Event;
+            await controller.switchResolution(event);
+
+            // All 5 image cards should have received the reset event
+            for (const handler of cardHandlers) {
+                expect(handler).toHaveBeenCalledTimes(1);
+            }
+        });
+
         it("should include current imageSize in single image regenerate request", async () => {
             const { controller } = createController({
                 currentImageSize: "1K",

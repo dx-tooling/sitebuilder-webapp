@@ -452,6 +452,11 @@ export default class extends Controller {
         this.currentImageSize = newSize;
         this.updateResolutionToggleUi();
 
+        // Reset all image cards to generating placeholder immediately
+        for (const card of this.imageCardTargets) {
+            card.dispatchEvent(new CustomEvent("photo-builder:resetToGenerating", { bubbles: false }));
+        }
+
         try {
             const url = this.regenerateAllImagesUrlPatternValue.replace(SESSION_ID_PLACEHOLDER, this.sessionId);
             await fetch(url, {

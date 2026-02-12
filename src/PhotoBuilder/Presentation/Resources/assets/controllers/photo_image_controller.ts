@@ -125,6 +125,7 @@ export default class extends Controller {
             this.lastSetImageUrl = null;
             this.imageTarget.classList.add("hidden");
             this.placeholderTarget.classList.remove("hidden");
+            this.restorePlaceholderContent();
         } else if (data.status === "failed") {
             this.lastSetImageUrl = null;
             this.imageTarget.classList.add("hidden");
@@ -139,6 +140,17 @@ export default class extends Controller {
                 </div>
             `;
         }
+    }
+
+    /**
+     * Restore the default pulsing placeholder content.
+     * Called when transitioning to generating/pending to clear any error HTML from a previous failure.
+     */
+    private restorePlaceholderContent(): void {
+        this.placeholderTarget.innerHTML = `
+            <div class="animate-pulse rounded-full h-8 w-8 bg-dark-300 dark:bg-dark-600"></div>
+            <span class="text-xs text-dark-400 dark:text-dark-500">${this.generatingPromptTextValue}</span>
+        `;
     }
 
     private updateStatusBadge(data: ImageStateDetail): void {
@@ -257,10 +269,36 @@ export default class extends Controller {
     }
 
     /**
+     * Immediately reset the image card to show the pulsing "generating" placeholder.
+     * Called on user-initiated regeneration to provide instant visual feedback,
+     * and by the parent controller for bulk operations (e.g. resolution switch).
+     */
+    resetToGeneratingPlaceholder(): void {
+        this.lastSetImageUrl = null;
+        this.currentStatus = "generating";
+
+        this.restorePlaceholderContent();
+        this.imageTarget.classList.add("hidden");
+        this.placeholderTarget.classList.remove("hidden");
+
+        this.updateStatusBadge({
+            id: this.imageId ?? "",
+            position: this.positionValue,
+            prompt: null,
+            suggestedFileName: null,
+            status: "generating",
+            imageUrl: null,
+            errorMessage: null,
+        });
+    }
+
+    /**
      * Handle "Regenerate image" button click.
      */
     requestRegenerate(): void {
         if (!this.imageId) return;
+
+        this.resetToGeneratingPlaceholder();
 
         this.dispatch("regenerateRequested", {
             detail: {

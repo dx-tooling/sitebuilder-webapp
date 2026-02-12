@@ -183,7 +183,8 @@ For each image, call the deliver_image_prompt tool with:
                                  |stimulus_action('photo-image', 'updateFromState', 'photo-builder:stateChanged')
                                  |stimulus_action('photo-image', 'clearPromptIfNotKept', 'photo-builder:clearPromptIfNotKept')
                                  |stimulus_action('photo-image', 'onUploadComplete', 'photo-builder:uploadComplete')
-                                 |stimulus_action('photo-image', 'onUploadFailed', 'photo-builder:uploadFailed') }}
+                                 |stimulus_action('photo-image', 'onUploadFailed', 'photo-builder:uploadFailed')
+                                 |stimulus_action('photo-image', 'resetToGeneratingPlaceholder', 'photo-builder:resetToGenerating') }}
                                  {{ stimulus_target('photo-builder', 'imageCard') }}
                                  class="etfswui-card">
 

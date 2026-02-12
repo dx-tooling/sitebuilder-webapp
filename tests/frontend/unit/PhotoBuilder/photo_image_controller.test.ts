@@ -364,6 +364,75 @@ describe("PhotoImageController", () => {
 
             expect(elements.placeholder.innerHTML).toContain("Generation failed");
         });
+
+        it("should restore pulsing placeholder when status changes from failed to generating", () => {
+            const { controller, elements } = createController();
+
+            // First: image fails
+            controller.updateFromState(
+                makeStateEvent({
+                    id: "img-1",
+                    position: 0,
+                    prompt: "test",
+                    suggestedFileName: null,
+                    status: "failed",
+                    imageUrl: null,
+                    errorMessage: "Rate limit exceeded",
+                }),
+            );
+            expect(elements.placeholder.innerHTML).toContain("Rate limit exceeded");
+
+            // Then: regeneration starts
+            controller.updateFromState(
+                makeStateEvent({
+                    id: "img-1",
+                    position: 0,
+                    prompt: "test",
+                    suggestedFileName: null,
+                    status: "generating",
+                    imageUrl: null,
+                    errorMessage: null,
+                }),
+            );
+
+            // Placeholder should show pulsing animation, NOT the error message
+            expect(elements.placeholder.innerHTML).not.toContain("Rate limit exceeded");
+            expect(elements.placeholder.innerHTML).toContain("animate-pulse");
+        });
+
+        it("should restore pulsing placeholder when status changes from failed to pending", () => {
+            const { controller, elements } = createController();
+
+            // First: image fails
+            controller.updateFromState(
+                makeStateEvent({
+                    id: "img-1",
+                    position: 0,
+                    prompt: "test",
+                    suggestedFileName: null,
+                    status: "failed",
+                    imageUrl: null,
+                    errorMessage: "Timeout",
+                }),
+            );
+            expect(elements.placeholder.innerHTML).toContain("Timeout");
+
+            // Then: status goes to pending
+            controller.updateFromState(
+                makeStateEvent({
+                    id: "img-1",
+                    position: 0,
+                    prompt: "test",
+                    suggestedFileName: null,
+                    status: "pending",
+                    imageUrl: null,
+                    errorMessage: null,
+                }),
+            );
+
+            expect(elements.placeholder.innerHTML).not.toContain("Timeout");
+            expect(elements.placeholder.innerHTML).toContain("animate-pulse");
+        });
     });
 
     describe("status badge", () => {
@@ -658,6 +727,120 @@ describe("PhotoImageController", () => {
             controller.requestRegenerate();
 
             expect(eventHandler).not.toHaveBeenCalled();
+        });
+
+        it("should immediately show generating placeholder when regenerating a completed image", () => {
+            const { controller, elements } = createController();
+            const state = controller as unknown as MockControllerState;
+            state.imageId = "img-1";
+
+            // First: image is completed and visible
+            controller.updateFromState(
+                makeStateEvent({
+                    id: "img-1",
+                    position: 0,
+                    prompt: "test",
+                    suggestedFileName: "test.jpg",
+                    status: "completed",
+                    imageUrl: "/api/photo-builder/images/img-1/file",
+                    errorMessage: null,
+                }),
+            );
+            expect(elements.image.classList.contains("hidden")).toBe(false);
+            expect(elements.placeholder.classList.contains("hidden")).toBe(true);
+
+            // User clicks regenerate
+            controller.requestRegenerate();
+
+            // Should immediately show generating placeholder
+            expect(elements.image.classList.contains("hidden")).toBe(true);
+            expect(elements.placeholder.classList.contains("hidden")).toBe(false);
+            expect(elements.placeholder.innerHTML).toContain("animate-pulse");
+            expect(elements.statusBadge.textContent).toBe("Generating...");
+        });
+
+        it("should immediately clear error and show generating placeholder when regenerating a failed image", () => {
+            const { controller, elements } = createController();
+            const state = controller as unknown as MockControllerState;
+            state.imageId = "img-1";
+
+            // First: image has failed
+            controller.updateFromState(
+                makeStateEvent({
+                    id: "img-1",
+                    position: 0,
+                    prompt: "test",
+                    suggestedFileName: null,
+                    status: "failed",
+                    imageUrl: null,
+                    errorMessage: "Rate limit exceeded",
+                }),
+            );
+            expect(elements.placeholder.innerHTML).toContain("Rate limit exceeded");
+
+            // User clicks regenerate
+            controller.requestRegenerate();
+
+            // Should immediately show generating placeholder, NOT the error
+            expect(elements.image.classList.contains("hidden")).toBe(true);
+            expect(elements.placeholder.classList.contains("hidden")).toBe(false);
+            expect(elements.placeholder.innerHTML).not.toContain("Rate limit exceeded");
+            expect(elements.placeholder.innerHTML).toContain("animate-pulse");
+            expect(elements.statusBadge.textContent).toBe("Generating...");
+        });
+    });
+
+    describe("resetToGeneratingPlaceholder", () => {
+        it("should reset image card to generating state", () => {
+            const { controller, elements } = createController();
+            const state = controller as unknown as MockControllerState;
+            state.imageId = "img-1";
+
+            // Start with a completed image
+            controller.updateFromState(
+                makeStateEvent({
+                    id: "img-1",
+                    position: 0,
+                    prompt: "test",
+                    suggestedFileName: "test.jpg",
+                    status: "completed",
+                    imageUrl: "/file",
+                    errorMessage: null,
+                }),
+            );
+
+            controller.resetToGeneratingPlaceholder();
+
+            expect(elements.image.classList.contains("hidden")).toBe(true);
+            expect(elements.placeholder.classList.contains("hidden")).toBe(false);
+            expect(elements.placeholder.innerHTML).toContain("animate-pulse");
+            expect(elements.statusBadge.textContent).toBe("Generating...");
+            expect(state.currentStatus).toBe("generating");
+        });
+
+        it("should clear error HTML from placeholder", () => {
+            const { controller, elements } = createController();
+            const state = controller as unknown as MockControllerState;
+            state.imageId = "img-1";
+
+            // Start with a failed image
+            controller.updateFromState(
+                makeStateEvent({
+                    id: "img-1",
+                    position: 0,
+                    prompt: "test",
+                    suggestedFileName: null,
+                    status: "failed",
+                    imageUrl: null,
+                    errorMessage: "Server error",
+                }),
+            );
+            expect(elements.placeholder.innerHTML).toContain("Server error");
+
+            controller.resetToGeneratingPlaceholder();
+
+            expect(elements.placeholder.innerHTML).not.toContain("Server error");
+            expect(elements.placeholder.innerHTML).toContain("animate-pulse");
         });
     });
 
