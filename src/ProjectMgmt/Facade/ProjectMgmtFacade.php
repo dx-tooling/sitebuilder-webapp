@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\ProjectMgmt\Facade;
 
+use App\AgenticContentEditor\Facade\Enum\AgenticContentEditorBackend;
 use App\LlmContentEditor\Facade\Enum\LlmModelProvider;
 use App\Prefab\Facade\Dto\PrefabDto;
 use App\ProjectMgmt\Domain\Entity\Project;
@@ -48,6 +49,7 @@ final class ProjectMgmtFacade implements ProjectMgmtFacadeInterface
             $contentEditingProvider,
             $prefab->contentEditingLlmApiKey,
             ProjectType::DEFAULT,
+            AgenticContentEditorBackend::Llm,
             Project::DEFAULT_AGENT_IMAGE,
             null,
             null,
@@ -169,6 +171,7 @@ final class ProjectMgmtFacade implements ProjectMgmtFacadeInterface
             $project->getGitUrl(),
             $project->getGithubToken(),
             $project->getProjectType(),
+            $project->getContentEditorBackend(),
             $githubUrl,
             $project->getAgentImage(),
             $project->getContentEditingLlmModelProvider(),

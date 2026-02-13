@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\LlmContentEditor;
 
-use App\LlmContentEditor\Facade\Dto\AgentEventDto;
-use App\LlmContentEditor\Facade\Dto\ToolInputEntryDto;
+use App\AgenticContentEditor\Facade\Dto\AgentEventDto;
+use App\AgenticContentEditor\Facade\Dto\ToolInputEntryDto;
 use App\LlmContentEditor\Infrastructure\ProgressMessageResolver;
 use PHPUnit\Framework\TestCase;
 use Symfony\Contracts\Translation\TranslatorInterface;

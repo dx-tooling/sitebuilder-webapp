@@ -6,6 +6,9 @@ namespace App\ChatBasedContentEditor\Presentation\Controller;
 
 use App\Account\Facade\AccountFacadeInterface;
 use App\Account\Facade\Dto\AccountInfoDto;
+use App\AgenticContentEditor\Facade\AgenticContentEditorFacadeInterface;
+use App\AgenticContentEditor\Facade\Dto\AgentConfigDto;
+use App\AgenticContentEditor\Facade\Dto\ConversationMessageDto;
 use App\ChatBasedContentEditor\Domain\Entity\Conversation;
 use App\ChatBasedContentEditor\Domain\Entity\EditSession;
 use App\ChatBasedContentEditor\Domain\Entity\EditSessionChunk;
@@ -16,9 +19,6 @@ use App\ChatBasedContentEditor\Infrastructure\Adapter\DistFileScannerInterface;
 use App\ChatBasedContentEditor\Infrastructure\Message\RunEditSessionMessage;
 use App\ChatBasedContentEditor\Presentation\Service\ConversationContextUsageService;
 use App\ChatBasedContentEditor\Presentation\Service\PromptSuggestionsService;
-use App\LlmContentEditor\Facade\Dto\AgentConfigDto;
-use App\LlmContentEditor\Facade\Dto\ConversationMessageDto;
-use App\LlmContentEditor\Facade\LlmContentEditorFacadeInterface;
 use App\ProjectMgmt\Facade\ProjectMgmtFacadeInterface;
 use App\RemoteContentAssets\Facade\RemoteContentAssetsFacadeInterface;
 use App\WorkspaceMgmt\Facade\Enum\WorkspaceStatus;
@@ -49,17 +49,17 @@ use function json_decode;
 final class ChatBasedContentEditorController extends AbstractController
 {
     public function __construct(
-        private readonly ConversationService             $conversationService,
-        private readonly WorkspaceMgmtFacadeInterface    $workspaceMgmtFacade,
-        private readonly ProjectMgmtFacadeInterface      $projectMgmtFacade,
-        private readonly AccountFacadeInterface          $accountFacade,
-        private readonly EntityManagerInterface          $entityManager,
-        private readonly MessageBusInterface             $messageBus,
-        private readonly DistFileScannerInterface        $distFileScanner,
-        private readonly ConversationContextUsageService $contextUsageService,
-        private readonly TranslatorInterface             $translator,
-        private readonly PromptSuggestionsService        $promptSuggestionsService,
-        private readonly LlmContentEditorFacadeInterface $llmContentEditorFacade,
+        private readonly ConversationService                 $conversationService,
+        private readonly WorkspaceMgmtFacadeInterface        $workspaceMgmtFacade,
+        private readonly ProjectMgmtFacadeInterface          $projectMgmtFacade,
+        private readonly AccountFacadeInterface              $accountFacade,
+        private readonly EntityManagerInterface              $entityManager,
+        private readonly MessageBusInterface                 $messageBus,
+        private readonly DistFileScannerInterface            $distFileScanner,
+        private readonly ConversationContextUsageService     $contextUsageService,
+        private readonly TranslatorInterface                 $translator,
+        private readonly PromptSuggestionsService            $promptSuggestionsService,
+        private readonly AgenticContentEditorFacadeInterface $agenticContentEditorFacade,
     ) {
     }
 
@@ -400,7 +400,7 @@ final class ChatBasedContentEditorController extends AbstractController
 
     /**
      * Dump the full agent context (system prompt + conversation history + last instruction)
-     * as it would be sent to the LLM API. Returns plain text for troubleshooting.
+     * as it would be sent to the backend agent. Returns plain text for troubleshooting.
      */
     #[Route(
         path: '/conversation/{conversationId}/dump-agent-context',
@@ -460,7 +460,8 @@ final class ChatBasedContentEditorController extends AbstractController
             $lastInstruction = $lastSession->getInstruction();
         }
 
-        $dump = $this->llmContentEditorFacade->buildAgentContextDump(
+        $dump = $this->agenticContentEditorFacade->buildAgentContextDump(
+            $conversation->getContentEditorBackend(),
             $lastInstruction,
             $previousMessages,
             $agentConfig

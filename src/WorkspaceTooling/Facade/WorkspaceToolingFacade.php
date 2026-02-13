@@ -7,6 +7,7 @@ namespace App\WorkspaceTooling\Facade;
 use App\RemoteContentAssets\Facade\RemoteContentAssetsFacadeInterface;
 use App\WorkspaceTooling\Infrastructure\Execution\AgentExecutionContext;
 use App\WorkspaceTooling\Infrastructure\Execution\DockerExecutor;
+use App\WorkspaceTooling\Infrastructure\Execution\IsolatedShellExecutor;
 use EtfsCodingAgent\Service\FileOperationsServiceInterface;
 use EtfsCodingAgent\Service\ShellOperationsServiceInterface;
 use EtfsCodingAgent\Service\TextOperationsService;
@@ -239,5 +240,14 @@ final class WorkspaceToolingFacade extends BaseWorkspaceToolingFacade implements
             true,
             'html-editor-build'
         );
+    }
+
+    public function runShellCommandAsync(string $workingDirectory, string $command): StreamingProcessInterface
+    {
+        // Cast to IsolatedShellExecutor to access the async method
+        // This is safe because we control the DI configuration
+        assert($this->shellOperationsService instanceof IsolatedShellExecutor);
+
+        return $this->shellOperationsService->runCommandAsync($workingDirectory, $command);
     }
 }

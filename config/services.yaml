@@ -137,6 +137,18 @@ services:
     App\ChatBasedContentEditor\Facade\ChatBasedContentEditorFacadeInterface:
         class: App\ChatBasedContentEditor\Facade\ChatBasedContentEditorFacade
 
+    App\LlmContentEditor\Infrastructure\LlmContentEditorAdapter: ~
+
+    App\CursorAgentContentEditor\Infrastructure\CursorAgentContentEditorAdapter: ~
+
+    App\AgenticContentEditor\Facade\AgenticContentEditorFacadeInterface:
+        class: App\AgenticContentEditor\Facade\AgenticContentEditorFacade
+        arguments:
+            - [
+                  '@App\LlmContentEditor\Infrastructure\LlmContentEditorAdapter',
+                  '@App\CursorAgentContentEditor\Infrastructure\CursorAgentContentEditorAdapter',
+              ]
+
     # Domain service bindings
     App\WorkspaceMgmt\Domain\Service\WorkspaceStatusGuardInterface:
         class: App\WorkspaceMgmt\Domain\Service\WorkspaceStatusGuard

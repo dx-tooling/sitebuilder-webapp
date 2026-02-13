@@ -54,6 +54,18 @@ interface AgentExecutionContextInterface
     public function getRemoteContentAssetsManifestUrls(): array;
 
     /**
+     * Set a callback that receives streaming command output.
+     *
+     * The callback signature is: fn(string $buffer, bool $isError): void
+     */
+    public function setOutputCallback(?callable $callback): void;
+
+    /**
+     * Get the output callback for streaming command output.
+     */
+    public function getOutputCallback(): ?callable;
+
+    /**
      * Set a suggested commit message from the agent.
      *
      * The agent can call this to suggest an optimal commit message
@@ -67,4 +79,11 @@ interface AgentExecutionContextInterface
      * @return string|null The suggested message, or null if none was set
      */
     public function getSuggestedCommitMessage(): ?string;
+
+    /**
+     * Get the Docker agent image to use for agent containers.
+     *
+     * @return string|null The agent image, or null if not set
+     */
+    public function getAgentImage(): ?string;
 }

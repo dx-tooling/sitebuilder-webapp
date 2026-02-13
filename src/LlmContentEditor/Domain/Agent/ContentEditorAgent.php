@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\LlmContentEditor\Domain\Agent;
 
+use App\AgenticContentEditor\Facade\Dto\AgentConfigDto;
 use App\LlmContentEditor\Domain\Enum\LlmModelName;
 use App\LlmContentEditor\Domain\TurnActivityProviderInterface;
-use App\LlmContentEditor\Facade\Dto\AgentConfigDto;
 use App\LlmContentEditor\Infrastructure\WireLog\LlmWireLogMiddleware;
 use App\WorkspaceTooling\Facade\WorkspaceToolingServiceInterface;
 use EtfsCodingAgent\Agent\BaseCodingAgent;

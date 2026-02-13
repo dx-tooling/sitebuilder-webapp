@@ -45,13 +45,14 @@ final class DockerExecutor
      * @throws DockerExecutionException if command execution fails
      */
     public function run(
-        string  $image,
-        string  $command,
-        string  $mountPath,
-        string  $workingDirectory = '/workspace',
-        int     $timeout = self::DEFAULT_TIMEOUT,
-        bool    $allowNetwork = true,
-        ?string $containerName = null
+        string    $image,
+        string    $command,
+        string    $mountPath,
+        string    $workingDirectory = '/workspace',
+        int       $timeout = self::DEFAULT_TIMEOUT,
+        bool      $allowNetwork = true,
+        ?string   $containerName = null,
+        ?callable $outputCallback = null
     ): string {
         $dockerCommand = $this->buildDockerCommand(
             $image,
@@ -66,7 +67,14 @@ final class DockerExecutor
         $process->setTimeout($timeout);
 
         try {
-            $process->run();
+            $output = '';
+            $process->run(function (string $type, string $buffer) use (&$output, $outputCallback): void {
+                $output .= $buffer;
+
+                if ($outputCallback !== null) {
+                    $outputCallback($buffer, $type === Process::ERR);
+                }
+            });
         } catch (ProcessTimedOutException $e) {
             throw new DockerExecutionException(
                 sprintf('Command timed out after %d seconds', $timeout),
@@ -74,8 +82,6 @@ final class DockerExecutor
                 $e
             );
         }
-
-        $output = $process->getOutput() . $process->getErrorOutput();
 
         if (!$process->isSuccessful()) {
             // Check for common Docker errors
@@ -107,6 +113,59 @@ final class DockerExecutor
         }
 
         return $output;
+    }
+
+    /**
+     * Start a command asynchronously in an isolated Docker container.
+     *
+     * Returns a StreamingDockerProcess that can be polled for completion.
+     * Output is streamed to the callback as it arrives.
+     *
+     * @param string        $image            Docker image to use (e.g., node:22-slim)
+     * @param string        $command          Command to execute inside the container
+     * @param string        $mountPath        Path to mount as /workspace (container path, will be translated)
+     * @param string        $workingDirectory Working directory inside the container (e.g., /workspace)
+     * @param int           $timeout          Timeout in seconds
+     * @param bool          $allowNetwork     Whether to allow network access
+     * @param string|null   $containerName    Optional container name for identification
+     * @param callable|null $outputCallback   Callback for streaming output: fn(string $buffer, bool $isError): void
+     *
+     * @return StreamingDockerProcess The running process wrapper
+     */
+    public function startAsync(
+        string    $image,
+        string    $command,
+        string    $mountPath,
+        string    $workingDirectory = '/workspace',
+        int       $timeout = self::DEFAULT_TIMEOUT,
+        bool      $allowNetwork = true,
+        ?string   $containerName = null,
+        ?callable $outputCallback = null
+    ): StreamingDockerProcess {
+        $dockerCommand = $this->buildDockerCommand(
+            $image,
+            $command,
+            $mountPath,
+            $workingDirectory,
+            $allowNetwork,
+            $containerName
+        );
+
+        $process = new Process($dockerCommand);
+        $process->setTimeout($timeout);
+
+        $streamingProcess = new StreamingDockerProcess($process, $command, $image);
+
+        // Start with output callback
+        $process->start(function (string $type, string $buffer) use ($streamingProcess, $outputCallback): void {
+            $streamingProcess->appendOutput($buffer);
+
+            if ($outputCallback !== null) {
+                $outputCallback($buffer, $type === Process::ERR);
+            }
+        });
+
+        return $streamingProcess;
     }
 
     /**
@@ -190,6 +249,13 @@ final class DockerExecutor
         // Increase Node.js heap size for webpack builds
         $dockerCmd[] = '-e';
         $dockerCmd[] = 'NODE_OPTIONS=--max-old-space-size=1536';
+
+        // Set BASH_ENV to source a script that sets up PATH with mise node installation.
+        // The Cursor CLI spawns fresh bash processes for shellToolCall that don't inherit
+        // environment variables from the parent. BASH_ENV tells non-interactive bash to
+        // source a file before running commands.
+        $dockerCmd[] = '-e';
+        $dockerCmd[] = 'BASH_ENV=/etc/profile.d/mise-path.sh';
 
         // Add the image
         $dockerCmd[] = $image;

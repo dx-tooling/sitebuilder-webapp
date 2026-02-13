@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\ProjectMgmt;
 
+use App\AgenticContentEditor\Facade\Enum\AgenticContentEditorBackend;
 use App\LlmContentEditor\Facade\Enum\LlmModelProvider;
 use App\ProjectMgmt\Domain\Entity\Project;
 use App\ProjectMgmt\Domain\Service\ProjectService;
+use App\ProjectMgmt\Facade\Enum\ProjectType;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
@@ -52,7 +54,8 @@ final class ProjectServiceTest extends TestCase
             'token',
             LlmModelProvider::OpenAI,
             'sk-key',
-            \App\ProjectMgmt\Facade\Enum\ProjectType::DEFAULT,
+            ProjectType::DEFAULT,
+            AgenticContentEditorBackend::Llm,
             'node:22-slim',
             null,
             null,

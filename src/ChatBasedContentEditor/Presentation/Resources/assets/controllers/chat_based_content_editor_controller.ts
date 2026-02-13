@@ -1058,6 +1058,10 @@ export default class extends Controller {
                 wrap.textContent = `✖ ${e.errorMessage ?? tr.unknownError}`;
                 wrap.classList.add("text-red-600/70", "dark:text-red-400/70");
                 break;
+            case "tool_error":
+                wrap.textContent = `✖ ${e.toolName ?? "Tool"} failed: ${e.errorMessage ?? tr.unknownError}`;
+                wrap.classList.add("text-red-600/70", "dark:text-red-400/70");
+                break;
             default:
                 wrap.textContent = `[${e.kind}]`;
                 wrap.classList.add("text-dark-400", "dark:text-dark-500");
@@ -1143,9 +1147,12 @@ export default class extends Controller {
     }
 
     private updateActivityIndicators(container: HTMLElement, event: AgentEvent): void {
-        // Only react to tool_calling events - Working badge tracks tool calls
+        // Working badge tracks tool calls (including run_build)
         if (event.kind === "tool_calling") {
             this.onToolCall(container);
+        }
+        if (event.kind === "tool_called" || event.kind === "tool_error") {
+            this.completeActivityIndicators(container);
         }
     }
 

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\ChatBasedContentEditor\Domain\Entity;
 
+use App\AgenticContentEditor\Facade\Enum\AgenticContentEditorBackend;
 use App\ChatBasedContentEditor\Domain\Enum\ConversationStatus;
 use DateTimeImmutable;
 use Doctrine\Common\Collections\ArrayCollection;
@@ -25,17 +26,19 @@ class Conversation
      * @throws Exception
      */
     public function __construct(
-        string $workspaceId,
-        string $userId,
-        string $workspacePath
+        string                      $workspaceId,
+        string                      $userId,
+        string                      $workspacePath,
+        AgenticContentEditorBackend $contentEditorBackend = AgenticContentEditorBackend::Llm
     ) {
-        $this->workspaceId   = $workspaceId;
-        $this->userId        = $userId;
-        $this->workspacePath = $workspacePath;
-        $this->status        = ConversationStatus::ONGOING;
-        $this->createdAt     = DateAndTimeService::getDateTimeImmutable();
-        $this->editSessions  = new ArrayCollection();
-        $this->messages      = new ArrayCollection();
+        $this->workspaceId          = $workspaceId;
+        $this->userId               = $userId;
+        $this->workspacePath        = $workspacePath;
+        $this->status               = ConversationStatus::ONGOING;
+        $this->contentEditorBackend = $contentEditorBackend;
+        $this->createdAt            = DateAndTimeService::getDateTimeImmutable();
+        $this->editSessions         = new ArrayCollection();
+        $this->messages             = new ArrayCollection();
     }
 
     #[ORM\Id]
@@ -105,6 +108,25 @@ class Conversation
     }
 
     #[ORM\Column(
+        type: Types::STRING,
+        length: 32,
+        nullable: false,
+        enumType: AgenticContentEditorBackend::class,
+        options: ['default' => AgenticContentEditorBackend::Llm->value]
+    )]
+    private AgenticContentEditorBackend $contentEditorBackend = AgenticContentEditorBackend::Llm;
+
+    public function getContentEditorBackend(): AgenticContentEditorBackend
+    {
+        return $this->contentEditorBackend;
+    }
+
+    public function setContentEditorBackend(AgenticContentEditorBackend $contentEditorBackend): void
+    {
+        $this->contentEditorBackend = $contentEditorBackend;
+    }
+
+    #[ORM\Column(
         type: Types::DATETIME_IMMUTABLE,
         nullable: false
     )]
@@ -134,6 +156,23 @@ class Conversation
     public function updateLastActivity(): void
     {
         $this->lastActivityAt = DateAndTimeService::getDateTimeImmutable();
+    }
+
+    #[ORM\Column(
+        type: Types::STRING,
+        length: 64,
+        nullable: true
+    )]
+    private ?string $backendSessionState = null;
+
+    public function getBackendSessionState(): ?string
+    {
+        return $this->backendSessionState;
+    }
+
+    public function setBackendSessionState(?string $backendSessionState): void
+    {
+        $this->backendSessionState = $backendSessionState;
     }
 
     /**

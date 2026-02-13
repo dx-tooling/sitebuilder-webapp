@@ -8,6 +8,19 @@ use EtfsCodingAgent\Service\WorkspaceToolingServiceInterface as BaseWorkspaceToo
 
 interface WorkspaceToolingServiceInterface extends BaseWorkspaceToolingFacadeInterface
 {
+    /**
+     * Start a shell command asynchronously.
+     *
+     * Returns a StreamingProcessInterface that can be polled for completion.
+     * Output is streamed to any configured callback as it arrives.
+     *
+     * @param string $workingDirectory The working directory (e.g., /workspace)
+     * @param string $command          The command to execute
+     *
+     * @return StreamingProcessInterface The running process wrapper
+     */
+    public function runShellCommandAsync(string $workingDirectory, string $command): StreamingProcessInterface;
+
     public function runQualityChecks(string $pathToFolder): string;
 
     public function runTests(string $pathToFolder): string;

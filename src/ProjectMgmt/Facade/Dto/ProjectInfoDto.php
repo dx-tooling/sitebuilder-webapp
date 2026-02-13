@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\ProjectMgmt\Facade\Dto;
 
+use App\AgenticContentEditor\Facade\Enum\AgenticContentEditorBackend;
 use App\LlmContentEditor\Facade\Enum\LlmModelProvider;
 use App\ProjectMgmt\Facade\Enum\ProjectType;
 
@@ -13,29 +14,30 @@ final readonly class ProjectInfoDto
      * @param list<string> $remoteContentAssetsManifestUrls
      */
     public function __construct(
-        public string            $id,
-        public string            $name,
-        public string            $gitUrl,
-        public string            $githubToken,
-        public ProjectType       $projectType,
-        public string            $githubUrl,
-        public string            $agentImage,
-        public LlmModelProvider  $contentEditingLlmModelProvider,
-        public string            $contentEditingApiKey,
-        public string            $agentBackgroundInstructions,
-        public string            $agentStepInstructions,
-        public string            $agentOutputInstructions,
-        public array             $remoteContentAssetsManifestUrls = [],
+        public string                      $id,
+        public string                      $name,
+        public string                      $gitUrl,
+        public string                      $githubToken,
+        public ProjectType                 $projectType,
+        public AgenticContentEditorBackend $contentEditorBackend,
+        public string                      $githubUrl,
+        public string                      $agentImage,
+        public LlmModelProvider            $contentEditingLlmModelProvider,
+        public string                      $contentEditingApiKey,
+        public string                      $agentBackgroundInstructions,
+        public string                      $agentStepInstructions,
+        public string                      $agentOutputInstructions,
+        public array                       $remoteContentAssetsManifestUrls = [],
         // S3 Upload Configuration (all optional)
-        public ?string           $s3BucketName = null,
-        public ?string           $s3Region = null,
-        public ?string           $s3AccessKeyId = null,
-        public ?string           $s3SecretAccessKey = null,
-        public ?string           $s3IamRoleArn = null,
-        public ?string           $s3KeyPrefix = null,
+        public ?string                     $s3BucketName = null,
+        public ?string                     $s3Region = null,
+        public ?string                     $s3AccessKeyId = null,
+        public ?string                     $s3SecretAccessKey = null,
+        public ?string                     $s3IamRoleArn = null,
+        public ?string                     $s3KeyPrefix = null,
         // PhotoBuilder LLM Configuration (nullable = falls back to content editing)
-        public ?LlmModelProvider $photoBuilderLlmModelProvider = null,
-        public ?string           $photoBuilderApiKey = null,
+        public ?LlmModelProvider           $photoBuilderLlmModelProvider = null,
+        public ?string                     $photoBuilderApiKey = null,
     ) {
     }
 

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\ProjectMgmt\Presentation\Controller;
 
 use App\Account\Facade\AccountFacadeInterface;
+use App\AgenticContentEditor\Facade\Enum\AgenticContentEditorBackend;
 use App\ChatBasedContentEditor\Facade\ChatBasedContentEditorFacadeInterface;
 use App\LlmContentEditor\Facade\Enum\LlmModelProvider;
 use App\LlmContentEditor\Facade\LlmContentEditorFacadeInterface;
@@ -135,10 +136,11 @@ final class ProjectController extends AbstractController
         $defaultTemplate = $this->projectMgmtFacade->getAgentConfigTemplate(ProjectType::DEFAULT);
 
         return $this->render('@project_mgmt.presentation/project_form.twig', [
-            'project'             => null,
-            'llmProviders'        => LlmModelProvider::cases(),
-            'existingLlmKeys'     => $this->projectMgmtFacade->getExistingLlmApiKeys($organizationId),
-            'agentConfigTemplate' => $defaultTemplate,
+            'project'               => null,
+            'llmProviders'          => LlmModelProvider::cases(),
+            'contentEditorBackends' => AgenticContentEditorBackend::cases(),
+            'existingLlmKeys'       => $this->projectMgmtFacade->getExistingLlmApiKeys($organizationId),
+            'agentConfigTemplate'   => $defaultTemplate,
         ]);
     }
 
@@ -159,6 +161,7 @@ final class ProjectController extends AbstractController
         $gitUrl                         = $request->request->getString('git_url');
         $githubToken                    = $request->request->getString('github_token');
         $contentEditingLlmModelProvider = LlmModelProvider::tryFrom($request->request->getString('content_editing_llm_model_provider'));
+        $contentEditorBackend           = AgenticContentEditorBackend::tryFrom($request->request->getString('content_editor_backend'));
         $contentEditingApiKey           = $request->request->getString('content_editing_api_key');
         $agentImage                     = $this->resolveAgentImage($request);
 
@@ -176,6 +179,12 @@ final class ProjectController extends AbstractController
 
         if ($contentEditingLlmModelProvider === null) {
             $this->addFlash('error', $this->translator->trans('flash.error.select_llm_provider'));
+
+            return $this->redirectToRoute('project_mgmt.presentation.new');
+        }
+
+        if ($contentEditorBackend === null) {
+            $this->addFlash('error', $this->translator->trans('flash.error.select_content_editor_backend'));
 
             return $this->redirectToRoute('project_mgmt.presentation.new');
         }
@@ -213,6 +222,7 @@ final class ProjectController extends AbstractController
             $contentEditingLlmModelProvider,
             $contentEditingApiKey,
             ProjectType::DEFAULT,
+            $contentEditorBackend,
             $agentImage,
             $agentBackgroundInstructions,
             $agentStepInstructions,
@@ -275,6 +285,7 @@ final class ProjectController extends AbstractController
         return $this->render('@project_mgmt.presentation/project_form.twig', [
             'project'                     => $project,
             'llmProviders'                => LlmModelProvider::cases(),
+            'contentEditorBackends'       => AgenticContentEditorBackend::cases(),
             'existingLlmKeys'             => $existingLlmKeys,
             'agentConfigTemplate'         => $agentConfigTemplate,
             'keysVisible'                 => $keysVisible,
@@ -309,6 +320,7 @@ final class ProjectController extends AbstractController
         $keysVisible                    = $project->isKeysVisible();
         $githubToken                    = $keysVisible ? $request->request->getString('github_token') : $project->getGithubToken();
         $contentEditingLlmModelProvider = LlmModelProvider::tryFrom($request->request->getString('content_editing_llm_model_provider'));
+        $contentEditorBackend           = AgenticContentEditorBackend::tryFrom($request->request->getString('content_editor_backend'));
         $contentEditingApiKey           = $keysVisible ? $request->request->getString('content_editing_api_key') : $project->getContentEditingLlmModelProviderApiKey();
         $agentImage                     = $this->resolveAgentImage($request);
 
@@ -327,6 +339,12 @@ final class ProjectController extends AbstractController
 
         if ($contentEditingLlmModelProvider === null) {
             $this->addFlash('error', $this->translator->trans('flash.error.select_llm_provider'));
+
+            return $this->redirectToRoute('project_mgmt.presentation.edit', ['id' => $id]);
+        }
+
+        if ($contentEditorBackend === null) {
+            $this->addFlash('error', $this->translator->trans('flash.error.select_content_editor_backend'));
 
             return $this->redirectToRoute('project_mgmt.presentation.edit', ['id' => $id]);
         }
@@ -358,6 +376,7 @@ final class ProjectController extends AbstractController
             $contentEditingLlmModelProvider,
             $contentEditingApiKey,
             ProjectType::DEFAULT,
+            $contentEditorBackend,
             $agentImage,
             $agentBackgroundInstructions,
             $agentStepInstructions,

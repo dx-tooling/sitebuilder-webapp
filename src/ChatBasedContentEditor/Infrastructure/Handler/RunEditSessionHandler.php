@@ -5,6 +5,12 @@ declare(strict_types=1);
 namespace App\ChatBasedContentEditor\Infrastructure\Handler;
 
 use App\Account\Facade\AccountFacadeInterface;
+use App\AgenticContentEditor\Facade\AgenticContentEditorFacadeInterface;
+use App\AgenticContentEditor\Facade\Dto\AgentConfigDto;
+use App\AgenticContentEditor\Facade\Dto\AgentEventDto;
+use App\AgenticContentEditor\Facade\Dto\ConversationMessageDto;
+use App\AgenticContentEditor\Facade\Dto\ToolInputEntryDto;
+use App\AgenticContentEditor\Facade\Enum\EditStreamChunkType;
 use App\ChatBasedContentEditor\Domain\Entity\Conversation;
 use App\ChatBasedContentEditor\Domain\Entity\ConversationMessage;
 use App\ChatBasedContentEditor\Domain\Entity\EditSession;
@@ -13,12 +19,6 @@ use App\ChatBasedContentEditor\Domain\Enum\ConversationMessageRole;
 use App\ChatBasedContentEditor\Domain\Enum\EditSessionStatus;
 use App\ChatBasedContentEditor\Infrastructure\Message\RunEditSessionMessage;
 use App\ChatBasedContentEditor\Infrastructure\Service\ConversationUrlServiceInterface;
-use App\LlmContentEditor\Facade\Dto\AgentConfigDto;
-use App\LlmContentEditor\Facade\Dto\AgentEventDto;
-use App\LlmContentEditor\Facade\Dto\ConversationMessageDto;
-use App\LlmContentEditor\Facade\Dto\ToolInputEntryDto;
-use App\LlmContentEditor\Facade\Enum\EditStreamChunkType;
-use App\LlmContentEditor\Facade\LlmContentEditorFacadeInterface;
 use App\ProjectMgmt\Facade\ProjectMgmtFacadeInterface;
 use App\WorkspaceMgmt\Facade\WorkspaceMgmtFacadeInterface;
 use App\WorkspaceTooling\Facade\AgentExecutionContextInterface;
@@ -36,14 +36,14 @@ use const JSON_THROW_ON_ERROR;
 final readonly class RunEditSessionHandler
 {
     public function __construct(
-        private EntityManagerInterface          $entityManager,
-        private LlmContentEditorFacadeInterface $facade,
-        private LoggerInterface                 $logger,
-        private WorkspaceMgmtFacadeInterface    $workspaceMgmtFacade,
-        private ProjectMgmtFacadeInterface      $projectMgmtFacade,
-        private AccountFacadeInterface          $accountFacade,
-        private ConversationUrlServiceInterface $conversationUrlService,
-        private AgentExecutionContextInterface  $executionContext,
+        private EntityManagerInterface              $entityManager,
+        private AgenticContentEditorFacadeInterface $facade,
+        private LoggerInterface                     $logger,
+        private WorkspaceMgmtFacadeInterface        $workspaceMgmtFacade,
+        private ProjectMgmtFacadeInterface          $projectMgmtFacade,
+        private AccountFacadeInterface              $accountFacade,
+        private ConversationUrlServiceInterface     $conversationUrlService,
+        private AgentExecutionContextInterface      $executionContext,
     ) {
     }
 
@@ -110,11 +110,13 @@ final readonly class RunEditSessionHandler
             );
 
             $generator = $this->facade->streamEditWithHistory(
+                $conversation->getContentEditorBackend(),
                 $session->getWorkspacePath(),
                 $session->getInstruction(),
                 $previousMessages,
                 $project->contentEditingApiKey,
                 $agentConfig,
+                $conversation->getBackendSessionState(),
                 $message->locale,
             );
 
@@ -157,6 +159,9 @@ final readonly class RunEditSessionHandler
                     // Persist new conversation messages
                     $this->persistConversationMessage($conversation, $chunk->message);
                 } elseif ($chunk->chunkType === EditStreamChunkType::Done) {
+                    if ($chunk->backendSessionState !== null) {
+                        $conversation->setBackendSessionState($chunk->backendSessionState);
+                    }
                     EditSessionChunk::createDoneChunk(
                         $session,
                         $chunk->success ?? false,
@@ -227,9 +232,11 @@ final readonly class RunEditSessionHandler
         }
 
         if ($event->toolInputs !== null) {
+            /** @var list<ToolInputEntryDto> $toolInputs */
+            $toolInputs         = $event->toolInputs;
             $data['toolInputs'] = array_map(
                 static fn (ToolInputEntryDto $t) => ['key' => $t->key, 'value' => $t->value],
-                $event->toolInputs
+                $toolInputs
             );
         }
 

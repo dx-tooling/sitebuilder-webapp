@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\ProjectMgmt\Domain\Entity;
 
+use App\AgenticContentEditor\Facade\Enum\AgenticContentEditorBackend;
 use App\LlmContentEditor\Facade\Enum\LlmModelProvider;
 use App\ProjectMgmt\Domain\ValueObject\AgentConfigTemplate;
 use App\ProjectMgmt\Facade\Enum\ProjectType;
@@ -27,18 +28,19 @@ class Project
      * @param list<string>|null $remoteContentAssetsManifestUrls
      */
     public function __construct(
-        string           $organizationId,
-        string           $name,
-        string           $gitUrl,
-        string           $githubToken,
-        LlmModelProvider $contentEditingLlmModelProvider,
-        string           $contentEditingLlmModelProviderApiKey,
-        ProjectType      $projectType = ProjectType::DEFAULT,
-        string           $agentImage = self::DEFAULT_AGENT_IMAGE,
-        ?string          $agentBackgroundInstructions = null,
-        ?string          $agentStepInstructions = null,
-        ?string          $agentOutputInstructions = null,
-        ?array           $remoteContentAssetsManifestUrls = null
+        string                      $organizationId,
+        string                      $name,
+        string                      $gitUrl,
+        string                      $githubToken,
+        LlmModelProvider            $contentEditingLlmModelProvider,
+        string                      $contentEditingLlmModelProviderApiKey,
+        ProjectType                 $projectType = ProjectType::DEFAULT,
+        AgenticContentEditorBackend $contentEditorBackend = AgenticContentEditorBackend::Llm,
+        string                      $agentImage = self::DEFAULT_AGENT_IMAGE,
+        ?string                     $agentBackgroundInstructions = null,
+        ?string                     $agentStepInstructions = null,
+        ?string                     $agentOutputInstructions = null,
+        ?array                      $remoteContentAssetsManifestUrls = null
     ) {
         $this->organizationId                       = $organizationId;
         $this->name                                 = $name;
@@ -47,6 +49,7 @@ class Project
         $this->contentEditingLlmModelProvider       = $contentEditingLlmModelProvider;
         $this->contentEditingLlmModelProviderApiKey = $contentEditingLlmModelProviderApiKey;
         $this->projectType                          = $projectType;
+        $this->contentEditorBackend                 = $contentEditorBackend;
         $this->agentImage                           = $agentImage;
         $this->createdAt                            = DateAndTimeService::getDateTimeImmutable();
         $this->remoteContentAssetsManifestUrls      = $remoteContentAssetsManifestUrls !== null && $remoteContentAssetsManifestUrls !== [] ? $remoteContentAssetsManifestUrls : null;
@@ -150,6 +153,25 @@ class Project
     public function setProjectType(ProjectType $projectType): void
     {
         $this->projectType = $projectType;
+    }
+
+    #[ORM\Column(
+        type: Types::STRING,
+        length: 32,
+        nullable: false,
+        enumType: AgenticContentEditorBackend::class,
+        options: ['default' => AgenticContentEditorBackend::Llm->value]
+    )]
+    private AgenticContentEditorBackend $contentEditorBackend = AgenticContentEditorBackend::Llm;
+
+    public function getContentEditorBackend(): AgenticContentEditorBackend
+    {
+        return $this->contentEditorBackend;
+    }
+
+    public function setContentEditorBackend(AgenticContentEditorBackend $contentEditorBackend): void
+    {
+        $this->contentEditorBackend = $contentEditorBackend;
     }
 
     #[ORM\Column(

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\LlmContentEditor\Infrastructure;
 
-use App\LlmContentEditor\Facade\Dto\AgentEventDto;
+use App\AgenticContentEditor\Facade\Dto\AgentEventDto;
 
 /**
  * Typed queue for AgentEventDto used to collect events from the observer.
