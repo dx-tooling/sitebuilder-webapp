@@ -23,6 +23,7 @@ parameters:
     # PhotoBuilder image generation request timeouts (in seconds)
     photo_builder.gemini_timeout_seconds: 120
     photo_builder.openai_timeout_seconds: 120
+    llm_content_editor.simulate: "%env(bool:LLM_CONTENT_EDITOR_SIMULATE)%"
 
 services:
     # default configuration for services in *this* file
@@ -202,3 +203,10 @@ services:
             $llmWireLogger: "@monolog.logger.llm_wire"
             $llmConversationLogger: "@monolog.logger.llm_conversation"
             $llmWireLogEnabled: "%env(bool:LLM_WIRE_LOG_ENABLED)%"
+
+    App\LlmContentEditor\Facade\SwitchableLlmContentEditorFacade:
+        arguments:
+            $simulate: "%llm_content_editor.simulate%"
+
+    App\LlmContentEditor\Facade\LlmContentEditorFacadeInterface:
+        alias: App\LlmContentEditor\Facade\SwitchableLlmContentEditorFacade
