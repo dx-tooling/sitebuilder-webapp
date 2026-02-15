@@ -10,6 +10,7 @@ export default defineConfig({
     use: {
         baseURL: process.env.BASE_URL ?? "http://127.0.0.1:8080",
         trace: "on-first-retry",
+        testIdAttribute: "data-test-id",
     },
     projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
 });

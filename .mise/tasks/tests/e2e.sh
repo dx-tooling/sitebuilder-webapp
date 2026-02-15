@@ -40,6 +40,9 @@ docker compose $COMPOSE_FILES exec -T app php bin/console doctrine:database:drop
 docker compose $COMPOSE_FILES exec -T app php bin/console doctrine:database:create --env=test
 docker compose $COMPOSE_FILES exec -T app php bin/console doctrine:migrations:migrate --no-interaction --env=test
 
+echo "Creating default e2e user..."
+docker compose $COMPOSE_FILES exec -T app php bin/console app:e2e:create-user e2e@example.com --password=e2e-secret
+
 echo "Installing Playwright dependencies (if needed)..."
 (cd tests/End2End && npm install)
 (cd tests/End2End && npx playwright install chromium 2>/dev/null || true)

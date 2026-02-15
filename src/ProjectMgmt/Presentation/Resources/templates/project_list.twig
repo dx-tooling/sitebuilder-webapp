@@ -3,10 +3,10 @@
 {% block title %}{{ 'project.list.title'|trans }}{% endblock %}
 
 {% block content %}
-    <div class="space-y-6">
+    <div class="space-y-6" data-test-id="project-list-page">
         <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-                <h1 class="text-2xl font-semibold text-dark-900 dark:text-dark-100">{{ 'project.list.heading'|trans }}</h1>
+                <h1 class="text-2xl font-semibold text-dark-900 dark:text-dark-100" data-test-id="project-list-heading">{{ 'project.list.heading'|trans }}</h1>
                 <p class="text-dark-600 dark:text-dark-400 mt-1">{{ 'project.list.description'|trans }}</p>
             </div>
             {% if projectsWithStatus is not empty %}
