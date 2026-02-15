@@ -224,6 +224,12 @@ jobs:
                   docker compose ${{ env.COMPOSE_FILES }} exec -T app mise install
                   docker compose ${{ env.COMPOSE_FILES }} exec -T app composer install
                   docker compose ${{ env.COMPOSE_FILES }} exec -T app mise exec node -- npm install --no-save
+            - name: Build frontend assets
+              run: |
+                  docker compose ${{ env.COMPOSE_FILES }} exec -T app rm -rf public/assets
+                  docker compose ${{ env.COMPOSE_FILES }} exec -T app mise exec node -- php bin/console tailwind:build
+                  docker compose ${{ env.COMPOSE_FILES }} exec -T app mise exec node -- php bin/console typescript:build
+                  docker compose ${{ env.COMPOSE_FILES }} exec -T app php bin/console asset-map:compile
             - name: Wait for app
               run: |
                   for i in $(seq 1 30); do
