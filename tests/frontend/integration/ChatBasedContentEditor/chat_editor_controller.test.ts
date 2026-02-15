@@ -26,8 +26,7 @@ describe("ChatBasedContentEditorController", () => {
     afterEach(async () => {
         // Stop Stimulus application first
         application.stop();
-        // Wait for any pending microtasks
-        await new Promise((resolve) => setTimeout(resolve, 0));
+        await Promise.resolve();
         // Clear DOM before jsdom cleanup
         document.body.innerHTML = "";
         document.head.innerHTML = "";
@@ -76,10 +75,12 @@ describe("ChatBasedContentEditorController", () => {
      * Helper to wait for Stimulus controller to connect and process.
      */
     async function waitForController(): Promise<void> {
-        // Wait for microtask queue to flush (Stimulus connects on next microtask)
-        await new Promise((resolve) => setTimeout(resolve, 50));
-        // Additional wait for any async operations in connect()
-        await new Promise((resolve) => setTimeout(resolve, 50));
+        await vi.waitFor(() => {
+            const submitButton = document.querySelector(
+                "[data-chat-based-content-editor-target='submit']",
+            ) as HTMLButtonElement | null;
+            expect(submitButton).not.toBeNull();
+        });
     }
 
     describe("initialization", () => {

@@ -166,6 +166,12 @@ final class ProjectDeleteTest extends WebTestCase
 
         // Assert: Returns 404 (project not found in deleted state)
         self::assertResponseStatusCodeSame(404);
+
+        $this->entityManager->clear();
+        $unchangedProject = $this->entityManager->find(Project::class, $projectId);
+        self::assertNotNull($unchangedProject);
+        self::assertFalse($unchangedProject->isDeleted());
+        self::assertNull($unchangedProject->getDeletedAt());
     }
 
     public function testPermanentDeleteAlsoDeletesWorkspace(): void
@@ -242,6 +248,12 @@ final class ProjectDeleteTest extends WebTestCase
 
         // Assert: Returns 404 (already deleted)
         self::assertResponseStatusCodeSame(404);
+
+        $this->entityManager->clear();
+        $unchangedProject = $this->entityManager->find(Project::class, $projectId);
+        self::assertNotNull($unchangedProject);
+        self::assertTrue($unchangedProject->isDeleted());
+        self::assertNotNull($unchangedProject->getDeletedAt());
     }
 
     public function testRestoreProjectMakesItActiveAgain(): void
@@ -294,6 +306,12 @@ final class ProjectDeleteTest extends WebTestCase
 
         // Assert: Returns 404 (project not in deleted state)
         self::assertResponseStatusCodeSame(404);
+
+        $this->entityManager->clear();
+        $unchangedProject = $this->entityManager->find(Project::class, $projectId);
+        self::assertNotNull($unchangedProject);
+        self::assertFalse($unchangedProject->isDeleted());
+        self::assertNull($unchangedProject->getDeletedAt());
     }
 
     public function testRestoredProjectAppearsInActiveList(): void

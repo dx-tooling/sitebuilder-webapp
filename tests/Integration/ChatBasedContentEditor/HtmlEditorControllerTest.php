@@ -334,25 +334,26 @@ final class HtmlEditorControllerTest extends WebTestCase
         self::assertStringContainsString('CSRF', (string) $response['error']);
     }
 
-    public function testSavePageReturns404WhenWorkspaceNotFound(): void
+    public function testSavePageReturns403BeforeWorkspaceLookupWhenCsrfTokenInvalid(): void
     {
         $user = $this->createTestUser('user@example.com', 'password123');
         $this->loginAsUser($this->client, $user);
 
-        // Use an invalid token - the 404 check happens after CSRF validation fails,
-        // so we test with an invalid token first
         $this->client->request('POST', '/en/workspace/00000000-0000-0000-0000-000000000000/save-page', [
             'path'        => 'dist/index.html',
             'content'     => '<html></html>',
-            '_csrf_token' => 'any-token',
+            '_csrf_token' => 'invalid-token',
         ]);
 
-        // With invalid CSRF, we get 403 first. For a true 404 test, we'd need valid CSRF.
-        // This test validates the endpoint exists and rejects unauthorized requests.
         self::assertResponseStatusCodeSame(403);
+
+        /** @var array{error?: string} $response */
+        $response = json_decode((string) $this->client->getResponse()->getContent(), true);
+        self::assertArrayHasKey('error', $response);
+        self::assertStringContainsString('CSRF', (string) $response['error']);
     }
 
-    public function testSavePageReturns400WhenPathParameterMissing(): void
+    public function testSavePageReturns403BeforePathValidationWhenCsrfTokenInvalid(): void
     {
         $user = $this->createTestUser('user@example.com', 'password123');
 
@@ -366,15 +367,17 @@ final class HtmlEditorControllerTest extends WebTestCase
 
         $this->loginAsUser($this->client, $user);
 
-        // Without a valid CSRF token, we can't test the 400 response directly.
-        // This test verifies the endpoint rejects requests without a valid token.
         $this->client->request('POST', '/en/workspace/' . $workspaceId . '/save-page', [
             'content'     => '<html></html>',
             '_csrf_token' => 'invalid-token',
         ]);
 
-        // Expect 403 due to invalid CSRF (validation happens before path check)
         self::assertResponseStatusCodeSame(403);
+
+        /** @var array{error?: string} $response */
+        $response = json_decode((string) $this->client->getResponse()->getContent(), true);
+        self::assertArrayHasKey('error', $response);
+        self::assertStringContainsString('CSRF', (string) $response['error']);
     }
 
     // ==========================================
