@@ -19,12 +19,12 @@ This will:
 
 1. Start the app stack in Symfony **test** env (`docker-compose.yml` + `docker-compose.e2e.yml`)
 2. Reset the test database (drop, create, migrate)
-3. Run Playwright tests against `http://localhost:8080` (or `BASE_URL` if set)
+3. Run Playwright tests against `http://127.0.0.1:8080` (or `BASE_URL` if set)
 
 ## Options
 
 - **`--no-start`** – Skip starting the stack. Only reset the test DB and run Playwright. Use when the e2e stack is already up.
-- **`BASE_URL`** – Override base URL (default: `http://localhost:8080`).
+- **`BASE_URL`** – Override base URL (default: `http://127.0.0.1:8080`).
 
 Example:
 
@@ -39,7 +39,7 @@ If the stack is already up and the test DB is reset:
 ```bash
 cd tests/End2End
 npm install
-BASE_URL=http://localhost:8080 npx playwright test
+BASE_URL=http://127.0.0.1:8080 npx playwright test
 ```
 
 ## Test user shortcut

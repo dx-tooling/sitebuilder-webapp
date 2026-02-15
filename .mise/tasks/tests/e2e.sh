@@ -6,7 +6,7 @@ set -e
 
 COMPOSE_FILES="-f docker-compose.yml -f docker-compose.e2e.yml"
 NO_START="${usage_no_start:-false}"
-BASE_URL="${BASE_URL:-http://localhost:8080}"
+BASE_URL="${BASE_URL:-http://127.0.0.1:8080}"
 
 echo
 echo "End-to-end tests (Playwright)"
