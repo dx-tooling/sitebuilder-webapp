@@ -34,14 +34,14 @@ test.describe("full flow (sign in, create project, use editor)", () => {
         await page.getByTestId("project-form-submit").click();
         await page.waitForURL(/\/en\/projects\/?$/, { timeout: 20000 });
 
-        // 4. Project list after create (may have prefab projects + our new one)
+        // 4. Project list after create: exactly one project (no prefabs.yaml in repo)
         await expect(page.getByTestId("project-list-page")).toBeVisible({
             timeout: 10000,
         });
         await expect(page.getByTestId("project-list-heading")).toBeVisible();
-        expect(await page.locator('[data-test-class="project-list-item"]').count()).toBeGreaterThanOrEqual(1);
+        await expect(page.locator('[data-test-class="project-list-item"]')).toHaveCount(1);
 
-        // 5. Open editor (Edit content) for the first project
+        // 5. Open editor (Edit content) for our project
         await page.locator('[data-test-class="project-list-edit-content-link"]').first().click();
 
         // 6. Either workspace setup page (then redirect) or editor directly
