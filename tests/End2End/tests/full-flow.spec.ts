@@ -34,25 +34,23 @@ test.describe("full flow (sign in, create project, use editor)", () => {
         await page.getByTestId("project-form-submit").click();
         await page.waitForURL(/\/en\/projects\/?$/, { timeout: 20000 });
 
-        // 4. Project list after create: exactly one project (no prefabs.yaml in repo)
+        // 4. Project list after create: at least one project (no prefabs in repo; retries may leave N from prior runs)
         await expect(page.getByTestId("project-list-page")).toBeVisible({
             timeout: 10000,
         });
         await expect(page.getByTestId("project-list-heading")).toBeVisible();
-        await expect(page.locator('[data-test-class="project-list-item"]')).toHaveCount(1);
+        await expect(page.locator('[data-test-class="project-list-item"]').first()).toBeVisible();
 
-        // 5. Open editor (Edit content) for our project
-        await page.locator('[data-test-class="project-list-edit-content-link"]').first().click();
+        // 5. Open editor (Edit content) for the project we created (by name; robust to retries)
+        await page
+            .locator('[data-test-class="project-list-item"]')
+            .filter({ hasText: "E2E Test Project" })
+            .locator('[data-test-class="project-list-edit-content-link"]')
+            .click();
 
-        // 6. Either workspace setup page (then redirect) or editor directly
-        const setupPage = page.getByTestId("workspace-setup-page");
+        // 6. Wait for editor (setup may show first then redirect; CI can be slow)
         const editorPage = page.getByTestId("editor-page");
-
-        if (await setupPage.isVisible()) {
-            await expect(editorPage).toBeVisible({ timeout: 120000 });
-        } else {
-            await expect(editorPage).toBeVisible({ timeout: 10000 });
-        }
+        await expect(editorPage).toBeVisible({ timeout: 120000 });
 
         // 7. Send a message in the editor
         await expect(page.getByTestId("editor-message-input")).toBeVisible();
