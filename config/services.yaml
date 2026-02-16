@@ -109,6 +109,9 @@ services:
     App\RemoteContentAssets\Infrastructure\RemoteManifestFetcherInterface:
         class: App\RemoteContentAssets\Infrastructure\RemoteManifestFetcher
 
+    App\RemoteContentAssets\Infrastructure\S3AssetUploaderInterface:
+        class: App\RemoteContentAssets\Infrastructure\S3AssetUploader
+
     # Remote content assets facade - metadata for remote images (dimensions, size, mime type),
     # manifest validation and fetching
     App\RemoteContentAssets\Facade\RemoteContentAssetsFacadeInterface:
@@ -117,6 +120,7 @@ services:
             - "@App\\RemoteContentAssets\\Infrastructure\\RemoteImageInfoFetcherInterface"
             - "@App\\RemoteContentAssets\\Infrastructure\\RemoteManifestValidatorInterface"
             - "@App\\RemoteContentAssets\\Infrastructure\\RemoteManifestFetcherInterface"
+            - "@App\\RemoteContentAssets\\Infrastructure\\S3AssetUploaderInterface"
 
     # Sitebuilder-specific workspace tooling facade
     App\WorkspaceTooling\Facade\WorkspaceToolingFacadeInterface:
