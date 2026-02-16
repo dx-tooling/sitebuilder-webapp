@@ -191,3 +191,65 @@ jobs:
                   docker compose exec -T app mise exec node -- npm exec tsc
                   docker compose exec -T app php vendor/bin/phpstan --memory-limit=1024M
                   git diff --exit-code
+
+    tests-e2e:
+        name: E2E tests
+        runs-on: ubuntu-latest
+        needs: [build-app-image]
+        env:
+            HOST_PROJECT_PATH: ${{ github.workspace }}
+            COMPOSE_FILES: -f docker-compose.yml -f docker-compose.ci.yml -f docker-compose.e2e.yml
+        steps:
+            - uses: actions/checkout@v4
+            - name: Login to GitHub Container Registry
+              uses: docker/login-action@v3
+              with:
+                  registry: ghcr.io
+                  username: ${{ github.actor }}
+                  password: ${{ secrets.GITHUB_TOKEN }}
+            - name: Pull app image
+              run: docker pull ${{ env.APP_IMAGE }}
+            - name: Start E2E stack
+              run: docker compose ${{ env.COMPOSE_FILES }} up -d app nginx mariadb
+            - name: Wait for MariaDB
+              run: |
+                  for i in $(seq 1 30); do
+                    docker compose ${{ env.COMPOSE_FILES }} exec -T mariadb mariadb -uroot -psecret -e "SELECT 1" && break
+                    echo "Waiting for MariaDB... ($i/30)"
+                    sleep 2
+                  done
+            - name: Install dependencies
+              run: |
+                  docker compose ${{ env.COMPOSE_FILES }} exec -T app mise trust
+                  docker compose ${{ env.COMPOSE_FILES }} exec -T app mise install
+                  docker compose ${{ env.COMPOSE_FILES }} exec -T app composer install
+                  docker compose ${{ env.COMPOSE_FILES }} exec -T app mise exec node -- npm install --no-save
+            - name: Build frontend assets
+              run: |
+                  docker compose ${{ env.COMPOSE_FILES }} exec -T app rm -rf public/assets
+                  docker compose ${{ env.COMPOSE_FILES }} exec -T app mise exec node -- php bin/console tailwind:build
+                  docker compose ${{ env.COMPOSE_FILES }} exec -T app mise exec node -- php bin/console typescript:build
+                  docker compose ${{ env.COMPOSE_FILES }} exec -T app php bin/console asset-map:compile
+            - name: Wait for app
+              run: |
+                  for i in $(seq 1 30); do
+                    code=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8080/ 2>/dev/null || true)
+                    if [ "$code" = "200" ] || [ "$code" = "302" ]; then break; fi
+                    echo "Waiting for app... ($i/30)"
+                    sleep 2
+                  done
+            - name: Reset test DB and create e2e user
+              run: |
+                  docker compose ${{ env.COMPOSE_FILES }} exec -T app php bin/console doctrine:database:drop --env=test --if-exists --force
+                  docker compose ${{ env.COMPOSE_FILES }} exec -T app php bin/console doctrine:database:create --env=test
+                  docker compose ${{ env.COMPOSE_FILES }} exec -T app php bin/console doctrine:migrations:migrate --no-interaction --env=test
+                  docker compose ${{ env.COMPOSE_FILES }} exec -T app php bin/console app:e2e:create-user e2e@example.com --password=e2e-secret
+            - name: Install Playwright
+              run: |
+                  cd tests/End2End
+                  npm ci
+                  npx playwright install --with-deps chromium
+            - name: Run Playwright tests
+              run: |
+                  cd tests/End2End
+                  BASE_URL=http://127.0.0.1:8080 npx playwright test

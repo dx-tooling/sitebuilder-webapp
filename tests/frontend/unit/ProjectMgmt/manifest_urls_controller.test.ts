@@ -5,6 +5,11 @@ import ManifestUrlsController from "../../../../src/ProjectMgmt/Presentation/Res
 describe("ManifestUrlsController", () => {
     let application: Application;
 
+    const flushMicrotasks = async (): Promise<void> => {
+        await Promise.resolve();
+        await Promise.resolve();
+    };
+
     beforeEach(() => {
         document.body.innerHTML = "";
         application = Application.start();
@@ -37,7 +42,7 @@ describe("ManifestUrlsController", () => {
             </form>
         `;
         document.body.innerHTML = html;
-        await new Promise((resolve) => setTimeout(resolve, 50));
+        await flushMicrotasks();
         return document.body.querySelector("form") as HTMLFormElement;
     };
 
@@ -48,7 +53,7 @@ describe("ManifestUrlsController", () => {
 
         textarea.dispatchEvent(new Event("input", { bubbles: true }));
 
-        await new Promise((resolve) => setTimeout(resolve, 50));
+        await flushMicrotasks();
         expect(syntaxError.classList.contains("hidden")).toBe(true);
     });
 
@@ -59,7 +64,7 @@ describe("ManifestUrlsController", () => {
 
         textarea.dispatchEvent(new Event("input", { bubbles: true }));
 
-        await new Promise((resolve) => setTimeout(resolve, 50));
+        await flushMicrotasks();
         expect(syntaxError.classList.contains("hidden")).toBe(false);
     });
 
@@ -70,7 +75,7 @@ describe("ManifestUrlsController", () => {
 
         textarea.dispatchEvent(new Event("input", { bubbles: true }));
 
-        await new Promise((resolve) => setTimeout(resolve, 50));
+        await flushMicrotasks();
         expect(syntaxError.classList.contains("hidden")).toBe(true);
     });
 
@@ -80,7 +85,7 @@ describe("ManifestUrlsController", () => {
         const textarea = document.querySelector('[data-manifest-urls-target="input"]') as HTMLTextAreaElement;
 
         textarea.dispatchEvent(new Event("input", { bubbles: true }));
-        await new Promise((resolve) => setTimeout(resolve, 50));
+        await flushMicrotasks();
 
         const submitEvent = new Event("submit", {
             bubbles: true,

@@ -6,12 +6,24 @@ namespace App\LlmContentEditor\Domain\Enum;
 
 enum LlmModelName: string
 {
-    case Gpt52 = 'gpt-5.2';
+    // Text generation models
+    case Gpt52               = 'gpt-5.2';
+    case Gemini25FlashLite   = 'gemini-2.5-flash-lite';
+    case Gemini3ProPreview   = 'gemini-3-pro-preview';
+    case Gemini3FlashPreview = 'gemini-3-flash-preview';
+
+    // Image generation models
+    case GptImage1              = 'gpt-image-1';
+    case Gemini25FlashImage     = 'gemini-2.5-flash-image';
+    case Gemini3ProImagePreview = 'gemini-3-pro-image-preview';
 
     public function maxContextTokens(): int
     {
         return match ($this) {
-            self::Gpt52 => 128_000,
+            self::Gpt52             => 128_000,
+            self::Gemini25FlashLite => 1_048_576,
+            self::Gemini3ProPreview, self::Gemini3FlashPreview => 1_048_576,
+            self::GptImage1, self::Gemini25FlashImage, self::Gemini3ProImagePreview => 0,
         };
     }
 
@@ -21,7 +33,13 @@ enum LlmModelName: string
     public function inputCostPer1M(): float
     {
         return match ($this) {
-            self::Gpt52 => 1.75,
+            self::Gpt52                  => 1.75,
+            self::Gemini25FlashLite      => 0.075,
+            self::Gemini3ProPreview      => 1.25,
+            self::Gemini3FlashPreview    => 0.15,
+            self::GptImage1              => 0.0, // image models have per-image pricing
+            self::Gemini25FlashImage     => 0.0,
+            self::Gemini3ProImagePreview => 0.0,
         };
     }
 
@@ -31,12 +49,29 @@ enum LlmModelName: string
     public function outputCostPer1M(): float
     {
         return match ($this) {
-            self::Gpt52 => 14.00,
+            self::Gpt52                  => 14.00,
+            self::Gemini25FlashLite      => 0.30,
+            self::Gemini3ProPreview      => 10.00,
+            self::Gemini3FlashPreview    => 0.60,
+            self::GptImage1              => 0.0,
+            self::Gemini25FlashImage     => 0.0,
+            self::Gemini3ProImagePreview => 0.0,
         };
     }
 
     public static function defaultForContentEditor(): self
     {
         return self::Gpt52;
+    }
+
+    /**
+     * Returns true if this model is used for image generation (not text).
+     */
+    public function isImageGenerationModel(): bool
+    {
+        return match ($this) {
+            self::GptImage1, self::Gemini25FlashImage, self::Gemini3ProImagePreview => true,
+            default => false,
+        };
     }
 }

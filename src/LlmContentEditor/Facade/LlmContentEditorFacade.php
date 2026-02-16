@@ -21,7 +21,6 @@ use App\WorkspaceTooling\Facade\WorkspaceToolingServiceInterface;
 use Generator;
 use NeuronAI\Chat\Messages\AssistantMessage;
 use NeuronAI\Chat\Messages\Message;
-use NeuronAI\Chat\Messages\ToolCallMessage;
 use NeuronAI\Chat\Messages\ToolCallResultMessage;
 use NeuronAI\Chat\Messages\UserMessage;
 use NeuronAI\SystemPrompt;
@@ -30,12 +29,14 @@ use SplQueue;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Throwable;
 
-use function array_key_exists;
 use function is_array;
 use function is_string;
 use function mb_strlen;
 use function mb_substr;
 use function sprintf;
+use function trim;
+
+use const JSON_THROW_ON_ERROR;
 
 final class LlmContentEditorFacade implements LlmContentEditorFacadeInterface
 {
@@ -78,7 +79,8 @@ final class LlmContentEditorFacade implements LlmContentEditorFacadeInterface
         AgentConfigDto $agentConfig,
         string         $locale = 'en',
     ): Generator {
-        // Convert previous message DTOs to NeuronAI messages
+        // Convert previous message DTOs to NeuronAI messages. Include turn_activity_summary so the
+        // context is conversation-shaped: user, assistant, turn_activity_summary, user, assistant, ...
         $initialMessages = [];
         foreach ($previousMessages as $dto) {
             try {
@@ -105,25 +107,30 @@ final class LlmContentEditorFacade implements LlmContentEditorFacadeInterface
             $prompt = $instruction;
         }
 
-        // Create a queue to collect new messages for persistence
+        // Create a queue to collect new messages for persistence.
         /** @var SplQueue<ConversationMessageDto> $messageQueue */
         $messageQueue = new SplQueue();
 
-        // Create chat history with previous messages and a callback for new ones
-        $chatHistory = new CallbackChatHistory($initialMessages);
+        // Create chat history with previous messages and a callback for new ones.
+        // Use the model's actual context window so trimming matches the model's capacity.
+        $model       = LlmModelName::defaultForContentEditor();
+        $chatHistory = new CallbackChatHistory($initialMessages, $model->maxContextTokens());
         $chatHistory->setOnNewMessageCallback(function (Message $message) use ($messageQueue): void {
-            // Only persist user and assistant messages for conversation history.
-            // Tool call/result messages are internal to a single turn and cause
-            // OpenAI API format issues when replayed (400 Bad Request).
-            //
-            // Additionally, only save messages with actual content to avoid
-            // empty or intermediate messages during tool usage flows.
-            $shouldSave = match (true) {
-                $message instanceof UserMessage      && !$message instanceof ToolCallResultMessage => true,
-                $message instanceof AssistantMessage && !$message instanceof ToolCallMessage       => $this->hasNonEmptyContent($message),
-                default                                                                            => false,
-            };
+            if ($message instanceof AssistantMessage) {
+                $content = $message->getContent();
+                if (is_string($content) && trim($content) !== '') {
+                    try {
+                        $messageQueue->enqueue($this->messageSerializer->toDto($message));
+                    } catch (Throwable) {
+                        // Skip messages that can't be serialized
+                    }
+                }
 
+                return;
+            }
+
+            // Persist user messages. Tool call/result messages are never persisted.
+            $shouldSave = $message instanceof UserMessage && !$message instanceof ToolCallResultMessage;
             if (!$shouldSave) {
                 return;
             }
@@ -138,7 +145,7 @@ final class LlmContentEditorFacade implements LlmContentEditorFacadeInterface
 
         $agent = new ContentEditorAgent(
             $this->workspaceTooling,
-            LlmModelName::defaultForContentEditor(),
+            $model,
             $llmApiKey,
             $agentConfig,
             $this->llmWireLogEnabled ? $this->llmWireLogger : null,
@@ -158,6 +165,7 @@ final class LlmContentEditorFacade implements LlmContentEditorFacadeInterface
             $stream  = $agent->stream($message);
 
             $accumulatedContent = '';
+
             foreach ($stream as $chunk) {
                 // Yield any queued messages for persistence
                 while (!$messageQueue->isEmpty()) {
@@ -181,9 +189,19 @@ final class LlmContentEditorFacade implements LlmContentEditorFacadeInterface
                 $this->llmConversationLogger->info(sprintf('ASSISTANT → %s', $this->truncateForLog($accumulatedContent, 300)));
             }
 
-            // Yield any remaining queued messages
+            // Yield any remaining queued messages (assistant message from callback)
             while (!$messageQueue->isEmpty()) {
                 yield new EditStreamChunkDto(EditStreamChunkType::Message, null, null, null, null, $messageQueue->dequeue());
+            }
+
+            // Persist the turn activity journal as a turn_activity_summary for cross-turn memory
+            $journalSummary = $chatHistory->getTurnActivitySummary();
+            if ($journalSummary !== '') {
+                $noteDto = new ConversationMessageDto(
+                    ConversationMessageDto::ROLE_TURN_ACTIVITY_SUMMARY,
+                    json_encode(['content' => $journalSummary], JSON_THROW_ON_ERROR),
+                );
+                yield new EditStreamChunkDto(EditStreamChunkType::Message, null, null, null, null, $noteDto);
             }
 
             foreach ($queue->drain() as $eventDto) {
@@ -198,6 +216,19 @@ final class LlmContentEditorFacade implements LlmContentEditorFacadeInterface
         } catch (Throwable $e) {
             if ($this->llmWireLogEnabled) {
                 $this->llmConversationLogger->info(sprintf('ERROR → %s', $e->getMessage()));
+            }
+            // Even on error, persist what journal we have for cross-turn context
+            $journalSummary = $chatHistory->getTurnActivitySummary();
+            if ($journalSummary !== '') {
+                try {
+                    $noteDto = new ConversationMessageDto(
+                        ConversationMessageDto::ROLE_TURN_ACTIVITY_SUMMARY,
+                        json_encode(['content' => $journalSummary], JSON_THROW_ON_ERROR),
+                    );
+                    yield new EditStreamChunkDto(EditStreamChunkType::Message, null, null, null, null, $noteDto);
+                } catch (Throwable) {
+                    // Ignore serialization errors in error path
+                }
             }
             yield new EditStreamChunkDto(EditStreamChunkType::Done, null, null, false, $e->getMessage());
         }
@@ -229,13 +260,14 @@ final class LlmContentEditorFacade implements LlmContentEditorFacadeInterface
         $lines[] = $systemPrompt;
         $lines[] = '';
 
-        // Format conversation history
+        // Format conversation history (includes turn activity summaries so dump reflects full agent context)
         if ($previousMessages !== []) {
             $lines[] = '=== CONVERSATION HISTORY ===';
             $lines[] = '';
 
             foreach ($previousMessages as $msg) {
-                $lines[] = '--- ' . strtoupper($msg->role) . ' ---';
+                $label   = $msg->role === ConversationMessageDto::ROLE_TURN_ACTIVITY_SUMMARY ? 'TURN ACTIVITY SUMMARY' : strtoupper($msg->role);
+                $lines[] = '--- ' . $label . ' ---';
 
                 $decoded = json_decode($msg->contentJson, true);
                 if (is_array($decoded) && array_key_exists('content', $decoded) && is_string($decoded['content'])) {
@@ -275,6 +307,7 @@ final class LlmContentEditorFacade implements LlmContentEditorFacadeInterface
         try {
             return match ($provider) {
                 LlmModelProvider::OpenAI => $this->verifyOpenAiKey($apiKey),
+                LlmModelProvider::Google => $this->verifyGoogleKey($apiKey),
             };
         } catch (Throwable $e) {
             $this->logger->warning('API key verification failed', [
@@ -302,6 +335,23 @@ final class LlmContentEditorFacade implements LlmContentEditorFacadeInterface
     }
 
     /**
+     * Verifies a Google Gemini API key by calling the models endpoint.
+     */
+    private function verifyGoogleKey(string $apiKey): bool
+    {
+        $response = $this->httpClient->request(
+            'GET',
+            'https://generativelanguage.googleapis.com/v1beta/models',
+            [
+                'query'   => ['key' => $apiKey],
+                'timeout' => 10,
+            ]
+        );
+
+        return $response->getStatusCode() === 200;
+    }
+
+    /**
      * Truncate a string for human-readable conversation log output.
      */
     private function truncateForLog(string $value, int $maxLength): string
@@ -311,24 +361,5 @@ final class LlmContentEditorFacade implements LlmContentEditorFacadeInterface
         }
 
         return $value;
-    }
-
-    /**
-     * Check if a message has non-empty content worth persisting.
-     */
-    private function hasNonEmptyContent(Message $message): bool
-    {
-        $content = $message->getContent();
-
-        if ($content === null) {
-            return false;
-        }
-
-        if (is_string($content)) {
-            return trim($content) !== '';
-        }
-
-        // Arrays or other types - consider them as having content
-        return true;
     }
 }

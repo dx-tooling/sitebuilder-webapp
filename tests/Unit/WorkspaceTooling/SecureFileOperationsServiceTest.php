@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Unit\WorkspaceTooling;
+namespace App\Tests\Unit\WorkspaceTooling;
 
 use App\WorkspaceTooling\Infrastructure\Execution\AgentExecutionContext;
 use App\WorkspaceTooling\Infrastructure\Security\SecureFileOperationsService;

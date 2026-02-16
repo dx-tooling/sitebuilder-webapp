@@ -4,7 +4,7 @@ import { Controller } from "@hotwired/stimulus";
  * Stimulus controller for browsing remote content assets.
  * Features:
  * - Fetches asset URLs from configured manifest endpoint
- * - Search/filter by filename
+ * - Search/filter by full URL (domain, path, filename)
  * - Scrollable list with configurable visible window size
  * - Image preview for image URLs
  * - Click to open asset in new tab
@@ -71,7 +71,7 @@ export default class extends Controller {
 
     private urls: string[] = [];
     private filteredUrls: string[] = [];
-    private itemHeight: number = 64;
+    private itemHeight: number = 80;
     private isLoading: boolean = false;
     private isUploading: boolean = false;
 
@@ -366,11 +366,7 @@ export default class extends Controller {
         if (query === "") {
             this.filteredUrls = this.urls;
         } else {
-            this.filteredUrls = this.urls.filter((url) => {
-                const filename = this.extractFilename(url).toLowerCase();
-
-                return filename.includes(query);
-            });
+            this.filteredUrls = this.urls.filter((url) => url.toLowerCase().includes(query));
         }
 
         this.updateCount();
@@ -441,9 +437,9 @@ export default class extends Controller {
             previewLink.appendChild(this.createFileIcon());
         }
 
-        // Filename container (flex-1 to take remaining space, but link only wraps text)
+        // Filename container (flex-1 to take remaining space): filename + URL prefix line
         const filenameContainer = document.createElement("div");
-        filenameContainer.className = "flex-1 min-w-0"; // min-w-0 allows truncation to work
+        filenameContainer.className = "flex-1 min-w-0 flex flex-col gap-0.5";
 
         const filenameLink = document.createElement("a");
         filenameLink.href = url;
@@ -457,7 +453,15 @@ export default class extends Controller {
             e.stopPropagation(); // Prevent row click from firing
         });
 
+        const urlPrefix = this.urlWithoutFilename(url);
+        const urlPrefixEl = document.createElement("div");
+        urlPrefixEl.setAttribute("data-remote-asset-url-prefix", "");
+        urlPrefixEl.className = "truncate text-xs text-dark-400 dark:text-dark-500 block max-w-full";
+        urlPrefixEl.textContent = urlPrefix;
+        urlPrefixEl.title = urlPrefix;
+
         filenameContainer.appendChild(filenameLink);
+        filenameContainer.appendChild(urlPrefixEl);
 
         // Add to chat button
         const addButton = document.createElement("button");
@@ -510,6 +514,28 @@ export default class extends Controller {
             const segments = url.split("/").filter(Boolean);
 
             return segments[segments.length - 1] || url;
+        }
+    }
+
+    /**
+     * Base URL (scheme + host + path without filename), with trailing slash.
+     * Used to display the folder/context beneath the filename in the list.
+     */
+    private urlWithoutFilename(url: string): string {
+        try {
+            const urlObj = new URL(url);
+            const pathname = urlObj.pathname;
+            const segments = pathname.split("/").filter(Boolean);
+
+            if (segments.length <= 1) {
+                return urlObj.origin + (pathname.endsWith("/") ? pathname : pathname + "/");
+            }
+
+            const pathWithoutLast = "/" + segments.slice(0, -1).join("/") + "/";
+
+            return urlObj.origin + pathWithoutLast;
+        } catch {
+            return url;
         }
     }
 

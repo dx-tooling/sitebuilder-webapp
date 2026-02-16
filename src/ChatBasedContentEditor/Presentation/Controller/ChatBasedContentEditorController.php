@@ -238,7 +238,8 @@ final class ChatBasedContentEditorController extends AbstractController
     )]
     public function show(
         string        $conversationId,
-        #[CurrentUser] UserInterface $user
+        Request       $request,
+        #[CurrentUser] UserInterface $user,
     ): Response {
         $conversation = $this->entityManager->find(Conversation::class, $conversationId);
         if ($conversation === null) {
@@ -357,6 +358,7 @@ final class ChatBasedContentEditorController extends AbstractController
             ] : null,
             'remoteAssetBrowserWindowSize' => RemoteContentAssetsFacadeInterface::BROWSER_WINDOW_SIZE,
             'promptSuggestions'            => $promptSuggestions,
+            'prefillMessage'               => $request->query->getString('prefill'),
         ]);
     }
 
@@ -437,6 +439,7 @@ final class ChatBasedContentEditorController extends AbstractController
             $projectInfo->agentBackgroundInstructions,
             $projectInfo->agentStepInstructions,
             $projectInfo->agentOutputInstructions,
+            '/workspace',
         );
 
         // Collect conversation messages as DTOs

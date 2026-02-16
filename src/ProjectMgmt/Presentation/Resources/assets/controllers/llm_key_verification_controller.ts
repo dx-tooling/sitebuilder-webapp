@@ -71,10 +71,14 @@ export default class extends Controller {
     private async performVerification(apiKey: string): Promise<void> {
         this.isVerifying = true;
 
-        // Get the selected provider
-        const providerInput = document.querySelector(
-            'input[name="llm_model_provider"]:checked',
-        ) as HTMLInputElement | null;
+        // Get the selected provider: look in the closest fieldset/form ancestor first
+        // (covers the PhotoBuilder dedicated settings panel where radios are siblings),
+        // then fall back to the content editing provider radio.
+        const scope = this.element.closest("fieldset") ?? this.element.closest("form") ?? document;
+        const providerInput = (scope.querySelector('input[name$="_llm_model_provider"]:checked') ??
+            document.querySelector(
+                'input[name="content_editing_llm_model_provider"]:checked',
+            )) as HTMLInputElement | null;
         const provider = providerInput?.value || "openai";
 
         // Show spinner, hide others

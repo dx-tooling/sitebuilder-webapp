@@ -419,6 +419,52 @@ describe("RemoteAssetBrowserController", () => {
         expect(listEl.querySelectorAll('button[title="Add to chat"]').length).toBe(2);
     });
 
+    it("filters by path and domain, not only filename", async () => {
+        const mockFetch = vi.fn().mockResolvedValue({
+            ok: true,
+            json: () =>
+                Promise.resolve({
+                    urls: ["https://foo.com/bar.png", "https://foo.com/uploads/baz.png", "https://uploads.com/bar.png"],
+                }),
+        });
+        vi.stubGlobal("fetch", mockFetch);
+
+        await createControllerElement();
+        await new Promise((resolve) => setTimeout(resolve, 100));
+
+        const searchInput = document.querySelector('[data-remote-asset-browser-target="search"]') as HTMLInputElement;
+        const listEl = document.querySelector('[data-remote-asset-browser-target="list"]') as HTMLElement;
+
+        // Search "uploads" must match path (foo.com/uploads/) and domain (uploads.com)
+        searchInput.value = "uploads";
+        searchInput.dispatchEvent(new Event("input", { bubbles: true }));
+        await new Promise((resolve) => setTimeout(resolve, 50));
+
+        expect(listEl.querySelectorAll('button[title="Add to chat"]').length).toBe(2);
+    });
+
+    it("renders full URL prefix beneath filename for each asset", async () => {
+        const mockFetch = vi.fn().mockResolvedValue({
+            ok: true,
+            json: () =>
+                Promise.resolve({
+                    urls: ["https://content-assets.example.com/callven-corporate/uploads/20260129/image.png"],
+                }),
+        });
+        vi.stubGlobal("fetch", mockFetch);
+
+        await createControllerElement();
+        await new Promise((resolve) => setTimeout(resolve, 100));
+
+        const listEl = document.querySelector('[data-remote-asset-browser-target="list"]') as HTMLElement;
+        const urlPrefixEl = listEl.querySelector("[data-remote-asset-url-prefix]");
+
+        expect(urlPrefixEl).not.toBeNull();
+        expect(urlPrefixEl?.textContent).toContain(
+            "https://content-assets.example.com/callven-corporate/uploads/20260129/",
+        );
+    });
+
     describe("upload functionality", () => {
         const createControllerElementWithUpload = async (): Promise<HTMLElement> => {
             const html = `

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\LlmContentEditor\Domain\Agent;
 
 use App\LlmContentEditor\Domain\Enum\LlmModelName;
+use App\LlmContentEditor\Domain\TurnActivityProviderInterface;
 use App\LlmContentEditor\Facade\Dto\AgentConfigDto;
 use App\LlmContentEditor\Infrastructure\WireLog\LlmWireLogMiddleware;
 use App\WorkspaceTooling\Facade\WorkspaceToolingServiceInterface;
@@ -53,14 +54,28 @@ class ContentEditorAgent extends BaseCodingAgent
 
     /**
      * System prompt includes working folder path when set, so it survives context-window trimming.
+     * When the chat history has a TurnActivityJournal, the journal summary is appended so the model
+     * always knows what tool calls it has already made — even after aggressive context-window trimming
+     * removes the actual tool-call messages from the history.
+     *
+     * Called before each LLM API request within the agentic loop (each recursive stream() call).
      *
      * @see https://github.com/dx-tooling/sitebuilder-webapp/issues/79
+     * @see https://github.com/dx-tooling/sitebuilder-webapp/issues/83
      */
     public function instructions(): string
     {
         $base = parent::instructions();
         if ($this->agentConfig->workingFolderPath !== null && $this->agentConfig->workingFolderPath !== '') {
             $base .= "\n\nWORKING FOLDER (use for all path-based tools): " . $this->agentConfig->workingFolderPath;
+        }
+
+        $history = $this->resolveChatHistory();
+        if ($history instanceof TurnActivityProviderInterface) {
+            $summary = $history->getTurnActivitySummary();
+            if ($summary !== '') {
+                $base .= "\n\n---\nACTIONS PERFORMED SO FAR THIS TURN:\n" . $summary;
+            }
         }
 
         return $base;
@@ -163,12 +178,12 @@ class ContentEditorAgent extends BaseCodingAgent
 
             Tool::make(
                 'search_remote_content_asset_urls',
-                'Search remote content asset URLs using a regex pattern. Matches against filenames (not full URLs). Returns JSON array of matching URLs. Use for precise filtering when you need specific assets. Examples: "hero" matches files containing hero, "^banner_" matches files starting with banner_, "\\.png$" matches PNG files.'
+                'Search remote content asset URLs using a regex pattern. Matches against the full URL (domain, path, and filename). Returns JSON array of matching URLs. Use for precise filtering when you need specific assets. Examples: "hero" matches URLs containing hero, "uploads" matches URLs with uploads in path or domain, "\\.png$" matches PNG files.'
             )->addProperty(
                 new ToolProperty(
                     'regex_pattern',
                     PropertyType::STRING,
-                    'PCRE regex pattern to match against filenames (without delimiters). Examples: "hero", "^banner_", "\\.jpg$"',
+                    'PCRE regex pattern to match against the full URL (without delimiters). Examples: "hero", "uploads", "\\.jpg$"',
                     true
                 )
             )->setCallable(fn (string $regex_pattern): string => $this->sitebuilderFacade->searchRemoteContentAssetUrls($regex_pattern)),
