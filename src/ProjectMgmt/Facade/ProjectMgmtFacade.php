@@ -40,6 +40,10 @@ final class ProjectMgmtFacade implements ProjectMgmtFacadeInterface
             throw new RuntimeException('Invalid prefab content_editing_llm_model_provider: ' . $prefab->contentEditingLlmModelProvider);
         }
 
+        $photoBuilderProvider = $prefab->photoBuilderLlmModelProvider !== null
+            ? LlmModelProvider::tryFrom($prefab->photoBuilderLlmModelProvider)
+            : null;
+
         $project = $this->projectService->create(
             $organizationId,
             $prefab->name,
@@ -60,8 +64,8 @@ final class ProjectMgmtFacade implements ProjectMgmtFacadeInterface
             null,
             null,
             $prefab->keysVisible,
-            null, // photoBuilderLlmModelProvider: prefabs always use content editing settings
-            null, // photoBuilderLlmModelProviderApiKey
+            $photoBuilderProvider,
+            $prefab->photoBuilderLlmApiKey,
         );
 
         $projectId = $project->getId();

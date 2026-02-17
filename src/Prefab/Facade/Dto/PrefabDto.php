@@ -11,12 +11,14 @@ namespace App\Prefab\Facade\Dto;
 final readonly class PrefabDto
 {
     public function __construct(
-        public string $name,
-        public string $projectLink,
-        public string $githubAccessKey,
-        public string $contentEditingLlmModelProvider,
-        public string $contentEditingLlmApiKey,
-        public bool   $keysVisible = true,
+        public string  $name,
+        public string  $projectLink,
+        public string  $githubAccessKey,
+        public string  $contentEditingLlmModelProvider,
+        public string  $contentEditingLlmApiKey,
+        public bool    $keysVisible = true,
+        public ?string $photoBuilderLlmModelProvider = null,
+        public ?string $photoBuilderLlmApiKey = null,
     ) {
     }
 }

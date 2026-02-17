@@ -79,7 +79,7 @@ These fields are required when creating or editing a project.
 - `photoBuilderLlmModelProvider` -- `openai` or `google`, nullable
 - `photoBuilderLlmModelProviderApiKey` -- the matching API key, nullable
 
-**Fallback rule**: When the PhotoBuilder fields are `null`, the application uses the content editing provider and API key for the PhotoBuilder. This is the default for all projects, including prefab-created projects.
+**Fallback rule**: When the PhotoBuilder fields are `null`, the application uses the content editing provider and API key for the PhotoBuilder. This is the default for all projects, including prefab-created projects. Prefabs can optionally set dedicated PhotoBuilder provider and API key in `prefabs.yaml` (e.g. Google Gemini for image generation) so that the created project uses them instead of the content-editing settings.
 
 The project form offers two options:
 
