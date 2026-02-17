@@ -41,10 +41,11 @@ test.describe("full flow (sign in, create project, use editor)", () => {
         await expect(page.getByTestId("project-list-heading")).toBeVisible();
         await expect(page.locator('[data-test-class="project-list-item"]').first()).toBeVisible();
 
-        // 5. Open editor (Edit content) for the project we created (by name; robust to retries)
+        // 5. Open editor (Edit content) for the project we just created (last row with this name; retries add more)
         await page
             .locator('[data-test-class="project-list-item"]')
             .filter({ hasText: "E2E Test Project" })
+            .last()
             .locator('[data-test-class="project-list-edit-content-link"]')
             .click();
 

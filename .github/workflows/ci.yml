@@ -210,7 +210,7 @@ jobs:
             - name: Pull app image
               run: docker pull ${{ env.APP_IMAGE }}
             - name: Start E2E stack
-              run: docker compose ${{ env.COMPOSE_FILES }} up -d app nginx mariadb
+              run: docker compose ${{ env.COMPOSE_FILES }} up -d app messenger nginx mariadb
             - name: Wait for MariaDB
               run: |
                   for i in $(seq 1 30); do
