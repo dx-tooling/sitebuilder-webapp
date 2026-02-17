@@ -1,7 +1,11 @@
-# E2E override: run app in test env, nginx with test env and fixed port for Playwright.
+# E2E override: run app and messenger in test env, nginx with test env and fixed port for Playwright.
 # Use: docker compose -f docker-compose.yml -f docker-compose.e2e.yml up -d
 services:
     app:
+        environment:
+            APP_ENV: test
+
+    messenger:
         environment:
             APP_ENV: test
 

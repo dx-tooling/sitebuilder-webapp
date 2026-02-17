@@ -12,6 +12,7 @@
     {% endif %}
 
     <div class="space-y-6"
+         data-test-id="editor-page"
          {{ stimulus_controller('chat-based-content-editor', {
              runUrl: runUrl,
              pollUrlTemplate: pollUrlTemplate,
@@ -226,6 +227,7 @@
                                 <label for="instruction" class="block text-sm font-medium text-dark-700 dark:text-dark-300 mb-1">{{ 'editor.input_label'|trans }}</label>
                                 <textarea {{ stimulus_target('chat-based-content-editor', 'instruction') }}
                                           {{ stimulus_action('chat-based-content-editor', 'handleKeydown', 'keydown') }}
+                                          data-test-id="editor-message-input"
                                           name="instruction"
                                           id="instruction"
                                           rows="3"
@@ -236,6 +238,7 @@
                             <div class="flex items-center gap-4">
                                 <button type="submit"
                                         {{ stimulus_target('chat-based-content-editor', 'submit') }}
+                                        data-test-id="editor-send-button"
                                         class="px-4 py-2 rounded-md bg-primary-600 text-white text-sm font-medium hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:focus:ring-offset-dark-900 disabled:opacity-50 disabled:cursor-not-allowed">
                                     {{ 'editor.make_changes'|trans }}
                                 </button>
