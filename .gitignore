@@ -52,5 +52,9 @@ public/workspaces/*
 
 .playwright-mcp/
 
+# E2E Playwright (tests/End2End)
+/tests/End2End/playwright-report/
+/tests/End2End/test-results/
+
 # Generated conversation log viewer files (in project root)
 /conversation-log-*.html

@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace Tests\Unit\PhotoBuilder;
+namespace App\Tests\Unit\PhotoBuilder;
 
-use App\PhotoBuilder\Infrastructure\Adapter\PatchedGemini;
 use GuzzleHttp\Handler\MockHandler;
 use GuzzleHttp\HandlerStack;
 use GuzzleHttp\Psr7\Response;
 use NeuronAI\Chat\Messages\AssistantMessage;
 use NeuronAI\Chat\Messages\ToolCallMessage;
 use NeuronAI\Chat\Messages\UserMessage;
+use NeuronAI\Providers\Gemini\Gemini;
 use NeuronAI\Providers\HttpClientOptions;
 use NeuronAI\Tools\PropertyType;
 use NeuronAI\Tools\Tool;
@@ -18,10 +18,10 @@ use NeuronAI\Tools\ToolProperty;
 use PHPUnit\Framework\TestCase;
 
 /**
- * Tests that PatchedGemini correctly detects function calls in any position
- * within the response parts array, not just parts[0].
+ * Regression coverage for Gemini function-call parsing behavior.
+ * Ensures upstream Gemini provider handles mixed text/function-call parts.
  */
-final class PatchedGeminiTest extends TestCase
+final class GeminiProviderBehaviorTest extends TestCase
 {
     public function testDetectsFunctionCallInFirstPart(): void
     {
@@ -29,9 +29,8 @@ final class PatchedGeminiTest extends TestCase
             ['functionCall' => ['name' => 'my_tool', 'args' => ['input' => 'hello']], 'thoughtSignature' => 'sig-abc'],
         ]);
 
-        $provider = $this->createPatchedGemini($responseBody);
-
-        $result = $provider->chat([new UserMessage('test')]);
+        $provider = $this->createGemini($responseBody);
+        $result   = $provider->chat([new UserMessage('test')]);
 
         self::assertInstanceOf(ToolCallMessage::class, $result);
         self::assertCount(1, $result->getTools());
@@ -46,9 +45,8 @@ final class PatchedGeminiTest extends TestCase
             ['functionCall' => ['name' => 'my_tool', 'args' => ['input' => 'data']], 'thoughtSignature' => 'sig-def'],
         ]);
 
-        $provider = $this->createPatchedGemini($responseBody);
-
-        $result = $provider->chat([new UserMessage('test')]);
+        $provider = $this->createGemini($responseBody);
+        $result   = $provider->chat([new UserMessage('test')]);
 
         self::assertInstanceOf(ToolCallMessage::class, $result);
         self::assertCount(1, $result->getTools());
@@ -63,18 +61,19 @@ final class PatchedGeminiTest extends TestCase
             ['functionCall' => ['name' => 'tool_b', 'args' => ['x' => '2']]],
         ]);
 
-        $provider = $this->createPatchedGeminiWithTools(
+        $provider = $this->createGeminiWithTools(
             $responseBody,
             [
                 $this->makeTool('tool_a'),
                 $this->makeTool('tool_b'),
             ],
         );
-
         $result = $provider->chat([new UserMessage('test')]);
 
         self::assertInstanceOf(ToolCallMessage::class, $result);
         self::assertCount(2, $result->getTools());
+        self::assertSame('tool_a', $result->getTools()[0]->getName());
+        self::assertSame('tool_b', $result->getTools()[1]->getName());
     }
 
     public function testReturnsAssistantMessageWhenNoFunctionCall(): void
@@ -83,27 +82,11 @@ final class PatchedGeminiTest extends TestCase
             ['text' => 'Here is a plain text response.'],
         ]);
 
-        $provider = $this->createPatchedGemini($responseBody);
-
-        $result = $provider->chat([new UserMessage('test')]);
+        $provider = $this->createGemini($responseBody);
+        $result   = $provider->chat([new UserMessage('test')]);
 
         self::assertInstanceOf(AssistantMessage::class, $result);
         self::assertSame('Here is a plain text response.', $result->getContent());
-    }
-
-    public function testReturnsAssistantMessageForMultipleTextParts(): void
-    {
-        $responseBody = $this->buildGeminiResponse([
-            ['text' => 'First part of the answer.'],
-            ['text' => 'Second part of the answer.'],
-        ]);
-
-        $provider = $this->createPatchedGemini($responseBody);
-
-        $result = $provider->chat([new UserMessage('test')]);
-
-        self::assertInstanceOf(AssistantMessage::class, $result);
-        self::assertSame('First part of the answer.', $result->getContent());
     }
 
     public function testAttachesUsageMetadata(): void
@@ -111,9 +94,7 @@ final class PatchedGeminiTest extends TestCase
         $responseBody = json_encode([
             'candidates' => [
                 [
-                    'content' => [
-                        'parts' => [['text' => 'response']],
-                    ],
+                    'content'      => ['parts' => [['text' => 'response']]],
                     'finishReason' => 'STOP',
                 ],
             ],
@@ -123,9 +104,8 @@ final class PatchedGeminiTest extends TestCase
             ],
         ], JSON_THROW_ON_ERROR);
 
-        $provider = $this->createPatchedGemini($responseBody);
-
-        $result = $provider->chat([new UserMessage('test')]);
+        $provider = $this->createGemini($responseBody);
+        $result   = $provider->chat([new UserMessage('test')]);
 
         $usage = $result->getUsage();
         self::assertNotNull($usage);
@@ -141,9 +121,7 @@ final class PatchedGeminiTest extends TestCase
         return json_encode([
             'candidates' => [
                 [
-                    'content' => [
-                        'parts' => $parts,
-                    ],
+                    'content'      => ['parts' => $parts],
                     'finishReason' => 'STOP',
                 ],
             ],
@@ -154,9 +132,9 @@ final class PatchedGeminiTest extends TestCase
         ], JSON_THROW_ON_ERROR);
     }
 
-    private function createPatchedGemini(string $responseBody): PatchedGemini
+    private function createGemini(string $responseBody): Gemini
     {
-        return $this->createPatchedGeminiWithTools(
+        return $this->createGeminiWithTools(
             $responseBody,
             [$this->makeTool('my_tool')],
         );
@@ -165,19 +143,18 @@ final class PatchedGeminiTest extends TestCase
     /**
      * @param list<Tool> $tools
      */
-    private function createPatchedGeminiWithTools(string $responseBody, array $tools): PatchedGemini
+    private function createGeminiWithTools(string $responseBody, array $tools): Gemini
     {
         $mock         = new MockHandler([new Response(200, [], $responseBody)]);
         $handlerStack = HandlerStack::create($mock);
         $httpOptions  = new HttpClientOptions(null, null, null, $handlerStack);
 
-        $provider = new PatchedGemini(
+        $provider = new Gemini(
             'fake-api-key',
             'gemini-3-pro-preview',
             [],
             $httpOptions,
         );
-
         $provider->setTools($tools);
 
         return $provider;

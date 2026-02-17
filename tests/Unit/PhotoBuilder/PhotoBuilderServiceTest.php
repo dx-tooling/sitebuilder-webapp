@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Unit\PhotoBuilder;
+namespace App\Tests\Unit\PhotoBuilder;
 
 use App\PhotoBuilder\Domain\Dto\ImagePromptResultDto;
 use App\PhotoBuilder\Domain\Entity\PhotoImage;

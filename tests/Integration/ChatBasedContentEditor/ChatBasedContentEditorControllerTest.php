@@ -404,6 +404,7 @@ final class ChatBasedContentEditorControllerTest extends WebTestCase
             $ownerUserId,
             ConversationStatus::ONGOING
         );
+        self::assertNull($conversation->getLastActivityAt());
 
         // Act: Try to send heartbeat as other user
         $this->loginAsUser($this->client, $otherUser);
@@ -413,6 +414,16 @@ final class ChatBasedContentEditorControllerTest extends WebTestCase
 
         // Assert: Access denied
         self::assertResponseStatusCodeSame(403);
+
+        $responseData = json_decode((string) $this->client->getResponse()->getContent(), true);
+        self::assertIsArray($responseData);
+        self::assertArrayHasKey('error', $responseData);
+        self::assertSame('Not authorized.', $responseData['error']);
+
+        $this->entityManager->clear();
+        $unchangedConversation = $this->entityManager->find(Conversation::class, $conversationId);
+        self::assertNotNull($unchangedConversation);
+        self::assertNull($unchangedConversation->getLastActivityAt());
     }
 
     public function testHeartbeatReturnsErrorWhenConversationIsNotOngoing(): void
@@ -434,6 +445,7 @@ final class ChatBasedContentEditorControllerTest extends WebTestCase
             $userId,
             ConversationStatus::FINISHED
         );
+        self::assertNull($conversation->getLastActivityAt());
 
         // Act: Try to send heartbeat on finished conversation
         $this->loginAsUser($this->client, $user);
@@ -443,6 +455,16 @@ final class ChatBasedContentEditorControllerTest extends WebTestCase
 
         // Assert: Bad request
         self::assertResponseStatusCodeSame(400);
+
+        $responseData = json_decode((string) $this->client->getResponse()->getContent(), true);
+        self::assertIsArray($responseData);
+        self::assertArrayHasKey('error', $responseData);
+        self::assertSame('Conversation is not ongoing.', $responseData['error']);
+
+        $this->entityManager->clear();
+        $unchangedConversation = $this->entityManager->find(Conversation::class, $conversationId);
+        self::assertNotNull($unchangedConversation);
+        self::assertNull($unchangedConversation->getLastActivityAt());
     }
 
     public function testHeartbeatReturns404WhenConversationDoesNotExist(): void
@@ -456,5 +478,10 @@ final class ChatBasedContentEditorControllerTest extends WebTestCase
 
         // Assert: 404 Not Found
         self::assertResponseStatusCodeSame(404);
+
+        $responseData = json_decode((string) $this->client->getResponse()->getContent(), true);
+        self::assertIsArray($responseData);
+        self::assertArrayHasKey('error', $responseData);
+        self::assertSame('Conversation not found.', $responseData['error']);
     }
 }

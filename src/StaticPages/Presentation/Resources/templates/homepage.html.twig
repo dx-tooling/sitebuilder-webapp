@@ -3,9 +3,9 @@
 {% block title %}{{ 'homepage.title'|trans }}{% endblock %}
 
 {% block body %}
-    <div class="max-w-4xl mx-auto">
+    <div class="max-w-4xl mx-auto" data-test-id="homepage">
         {# Hero Section #}
-        <div class="text-center mb-16">
+        <div class="text-center mb-16" data-test-id="homepage-hero">
             <h1 class="text-4xl sm:text-5xl font-bold text-dark-900 dark:text-white mb-6">
                 {{ 'homepage.hero_title'|trans }}
             </h1>

@@ -46,7 +46,7 @@ enum LlmModelProvider: string
     {
         return match ($this) {
             self::OpenAI => LlmModelName::Gpt52,
-            self::Google => LlmModelName::Gemini25FlashLite,
+            self::Google => LlmModelName::Gemini3FlashPreview,
         };
     }
 

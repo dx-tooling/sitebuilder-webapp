@@ -1,0 +1,49 @@
+---
+description: "Stable selectors for e2e tests: data-test-id and data-test-class. Use when writing or changing e2e tests or UI templates/Stimulus code that are under e2e test."
+globs: ["src/**/Presentation/**/*.twig", "src/**/Presentation/Resources/assets/controllers/**/*.ts", "tests/End2End/**/*.ts"]
+alwaysApply: false
+---
+
+# E2E Test Selectors
+
+To keep e2e tests stable when look and feel changes (copy, styling, layout), we target **functionality and structure** via dedicated test attributes instead of roles, labels, or visible text.
+
+## Attributes
+
+- **`data-test-id="value"`** – Identifies a **unique** element on the page (same spirit as a CSS `id`). Use for one-off elements: page container, main heading, primary form, primary submit button, key inputs.
+- **`data-test-class="value"`** – Identifies a **category** of elements (same spirit as a CSS `class`). Use when multiple elements share the same test role: form fields, list items, error messages of the same type.
+
+Use kebab-case for values (e.g. `sign-in-page`, `project-list-heading`).
+
+## Where to add them
+
+- **Templates (Twig):** Add `data-test-id` or `data-test-class` to the elements that e2e tests need to find or interact with (forms, inputs, buttons, headings, page/section containers).
+- **Stimulus / frontend (TypeScript):** Controllers live under `src/<Vertical>/Presentation/Resources/assets/controllers/` (see `docs/frontendbook.md`). When a Stimulus controller adds or renders DOM that e2e tests need to target (e.g. dynamic panels, buttons, inputs, or containers created in Twig where the controller is attached), add the same attributes there: in Twig alongside `stimulus_controller` / `stimulus_target` / `stimulus_action`, or in TypeScript when creating elements in the DOM. Any UI that is under e2e test and is rendered or controlled by Stimulus should carry test attributes so tests stay stable when copy or styles change.
+- Only add attributes for **UI that is (or will be) covered by e2e tests**. Avoid decorating every element.
+
+## In the test code (Playwright)
+
+- **`data-test-id`:** Use `page.getByTestId("value")`. Playwright is configured with `testIdAttribute: "data-test-id"`.
+- **`data-test-class`:** Use `page.locator('[data-test-class="value"]')`. For multiple matches, use `.first()`, `.nth(i)`, or filter as needed.
+
+Prefer these selectors over `getByRole`, `getByLabel`, or `getByText` for assertions and interactions that must survive copy or styling changes. Use roles/labels/text only when the test is explicitly about that visible content (e.g. accessibility or copy).
+
+## Examples
+
+```html
+<div data-test-id="sign-in-page">
+  <h1 data-test-id="sign-in-heading">Welcome back</h1>
+  <form data-test-id="sign-in-form">
+    <div data-test-class="form-field">
+      <input data-test-id="sign-in-email" type="email" />
+    </div>
+    <button type="submit" data-test-id="sign-in-submit">Continue</button>
+  </form>
+</div>
+```
+
+```ts
+await page.getByTestId("sign-in-email").fill("e2e@example.com");
+await page.getByTestId("sign-in-submit").click();
+await expect(page.getByTestId("project-list-heading")).toBeVisible();
+```

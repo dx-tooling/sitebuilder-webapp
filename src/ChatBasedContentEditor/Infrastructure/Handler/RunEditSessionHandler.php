@@ -118,6 +118,8 @@ final readonly class RunEditSessionHandler
                 $message->locale,
             );
 
+            $streamEndedWithFailure = false;
+
             foreach ($generator as $chunk) {
                 // Cooperative cancellation: check status directly via DBAL to avoid
                 // entityManager->refresh() which fails on readonly entity properties.
@@ -157,6 +159,7 @@ final readonly class RunEditSessionHandler
                     // Persist new conversation messages
                     $this->persistConversationMessage($conversation, $chunk->message);
                 } elseif ($chunk->chunkType === EditStreamChunkType::Done) {
+                    $streamEndedWithFailure = ($chunk->success ?? false) !== true;
                     EditSessionChunk::createDoneChunk(
                         $session,
                         $chunk->success ?? false,
@@ -165,6 +168,13 @@ final readonly class RunEditSessionHandler
                 }
 
                 $this->entityManager->flush();
+            }
+
+            if ($streamEndedWithFailure) {
+                $session->setStatus(EditSessionStatus::Failed);
+                $this->entityManager->flush();
+
+                return;
             }
 
             $session->setStatus(EditSessionStatus::Completed);

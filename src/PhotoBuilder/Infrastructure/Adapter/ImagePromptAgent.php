@@ -9,6 +9,7 @@ use App\PhotoBuilder\Domain\Dto\ImagePromptResultDto;
 use GuzzleHttp\HandlerStack;
 use NeuronAI\Agent;
 use NeuronAI\Providers\AIProviderInterface;
+use NeuronAI\Providers\Gemini\Gemini;
 use NeuronAI\Providers\HttpClientOptions;
 use NeuronAI\Providers\OpenAI\OpenAI;
 use NeuronAI\Tools\PropertyType;
@@ -62,7 +63,7 @@ class ImagePromptAgent extends Agent
                 false,
                 $httpOptions,
             ),
-            LlmModelProvider::Google => new PatchedGemini(
+            LlmModelProvider::Google => new Gemini(
                 $this->apiKey,
                 $model,
                 [],

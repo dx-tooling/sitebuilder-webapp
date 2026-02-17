@@ -136,16 +136,17 @@ final class CallbackChatHistoryTest extends TestCase
         // With no genuine UserMessage tracked, the history may be empty
         // after trimming (this is acceptable — the fix only restores
         // genuine UserMessages, not ToolCallResultMessages)
-        $messages = $history->getMessages();
+        $messages            = $history->getMessages();
+        $genuineUserMessages = array_values(array_filter(
+            $messages,
+            static fn (Message $message): bool => $message instanceof UserMessage && !$message instanceof ToolCallResultMessage
+        ));
 
-        foreach ($messages as $message) {
-            // If any message remains, it should not be a fabricated UserMessage
-            self::assertNotInstanceOf(
-                ToolCallResultMessage::class,
-                $message,
-                'ToolCallResultMessage should not be used as the restored UserMessage'
-            );
-        }
+        self::assertSame(
+            [],
+            $genuineUserMessages,
+            'No genuine UserMessage should be restored when history only contains tool messages'
+        );
     }
 
     public function testCallbackIsStillInvokedAfterTrimRecovery(): void

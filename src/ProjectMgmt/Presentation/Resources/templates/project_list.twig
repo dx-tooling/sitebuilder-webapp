@@ -3,14 +3,15 @@
 {% block title %}{{ 'project.list.title'|trans }}{% endblock %}
 
 {% block content %}
-    <div class="space-y-6">
+    <div class="space-y-6" data-test-id="project-list-page">
         <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-                <h1 class="text-2xl font-semibold text-dark-900 dark:text-dark-100">{{ 'project.list.heading'|trans }}</h1>
+                <h1 class="text-2xl font-semibold text-dark-900 dark:text-dark-100" data-test-id="project-list-heading">{{ 'project.list.heading'|trans }}</h1>
                 <p class="text-dark-600 dark:text-dark-400 mt-1">{{ 'project.list.description'|trans }}</p>
             </div>
             {% if projectsWithStatus is not empty %}
                 <a href="{{ path('project_mgmt.presentation.new') }}"
+                   data-test-id="project-list-add-project"
                    class="inline-flex justify-center px-4 py-2 rounded-md bg-primary-600 text-white text-sm font-medium hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:focus:ring-offset-dark-900">
                     {{ 'project.list.add_project'|trans }}
                 </a>
@@ -26,6 +27,7 @@
                 <p class="mt-1 text-sm text-dark-500 dark:text-dark-400">{{ 'project.list.no_projects_description'|trans }}</p>
                 <div class="mt-6">
                     <a href="{{ path('project_mgmt.presentation.new') }}"
+                       data-test-id="project-list-add-project"
                        class="inline-flex items-center px-4 py-2 rounded-md bg-primary-600 text-white text-sm font-medium hover:bg-primary-700">
                         {{ 'project.list.add_project'|trans }}
                     </a>
@@ -43,7 +45,7 @@
                         'MERGED': 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200',
                         'PROBLEM': 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
                     } %}
-                    <div class="rounded-lg border border-dark-200 dark:border-dark-700 bg-white dark:bg-dark-900 p-4">
+                    <div class="rounded-lg border border-dark-200 dark:border-dark-700 bg-white dark:bg-dark-900 p-4" data-test-class="project-list-item">
                         <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                             {# Project info section #}
                             <div class="flex-1 min-w-0 space-y-2">
@@ -103,6 +105,7 @@
                                     </a>
                                 {% else %}
                                     <a href="{{ path('chat_based_content_editor.presentation.start', { projectId: item.project.id }) }}"
+                                       data-test-class="project-list-edit-content-link"
                                        class="inline-flex items-center px-3 py-1.5 rounded-md bg-primary-600 text-white text-sm font-medium hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500">
                                         {{ 'project.list.edit_content'|trans }}
                                     </a>

@@ -3,7 +3,7 @@
 {% block title %}{{ 'workspace.setup.title'|trans }}{% endblock %}
 
 {% block content %}
-    <div class="max-w-2xl mx-auto space-y-6" {{ stimulus_controller('workspace-setup', {
+    <div class="max-w-2xl mx-auto space-y-6" data-test-id="workspace-setup-page" {{ stimulus_controller('workspace-setup', {
         pollUrl: pollUrl,
         redirectUrl: redirectUrl,
         translations: {
