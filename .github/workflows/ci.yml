@@ -51,15 +51,15 @@ jobs:
             - name: Restore Composer cache
               uses: actions/cache@v4
               with:
-                path: vendor
-                key: composer-${{ hashFiles('composer.lock') }}
-                restore-keys: composer-
+                  path: vendor
+                  key: composer-${{ hashFiles('composer.lock') }}
+                  restore-keys: composer-
             - name: Restore npm cache
               uses: actions/cache@v4
               with:
-                path: node_modules
-                key: npm-${{ hashFiles('package-lock.json') }}
-                restore-keys: npm-
+                  path: node_modules
+                  key: npm-${{ hashFiles('package-lock.json') }}
+                  restore-keys: npm-
             - name: Login to GitHub Container Registry
               uses: docker/login-action@v3
               with:
@@ -93,15 +93,15 @@ jobs:
             - name: Restore Composer cache
               uses: actions/cache@v4
               with:
-                path: vendor
-                key: composer-${{ hashFiles('composer.lock') }}
-                restore-keys: composer-
+                  path: vendor
+                  key: composer-${{ hashFiles('composer.lock') }}
+                  restore-keys: composer-
             - name: Restore npm cache
               uses: actions/cache@v4
               with:
-                path: node_modules
-                key: npm-${{ hashFiles('package-lock.json') }}
-                restore-keys: npm-
+                  path: node_modules
+                  key: npm-${{ hashFiles('package-lock.json') }}
+                  restore-keys: npm-
             - name: Login to GitHub Container Registry
               uses: docker/login-action@v3
               with:
@@ -132,15 +132,15 @@ jobs:
             - name: Restore Composer cache
               uses: actions/cache@v4
               with:
-                path: vendor
-                key: composer-${{ hashFiles('composer.lock') }}
-                restore-keys: composer-
+                  path: vendor
+                  key: composer-${{ hashFiles('composer.lock') }}
+                  restore-keys: composer-
             - name: Restore npm cache
               uses: actions/cache@v4
               with:
-                path: node_modules
-                key: npm-${{ hashFiles('package-lock.json') }}
-                restore-keys: npm-
+                  path: node_modules
+                  key: npm-${{ hashFiles('package-lock.json') }}
+                  restore-keys: npm-
             - name: Login to GitHub Container Registry
               uses: docker/login-action@v3
               with:
@@ -201,15 +201,15 @@ jobs:
             - name: Restore Composer cache
               uses: actions/cache@v4
               with:
-                path: vendor
-                key: composer-${{ hashFiles('composer.lock') }}
-                restore-keys: composer-
+                  path: vendor
+                  key: composer-${{ hashFiles('composer.lock') }}
+                  restore-keys: composer-
             - name: Restore npm cache
               uses: actions/cache@v4
               with:
-                path: node_modules
-                key: npm-${{ hashFiles('package-lock.json') }}
-                restore-keys: npm-
+                  path: node_modules
+                  key: npm-${{ hashFiles('package-lock.json') }}
+                  restore-keys: npm-
             - name: Login to GitHub Container Registry
               uses: docker/login-action@v3
               with:
@@ -252,15 +252,15 @@ jobs:
             - name: Restore Composer cache
               uses: actions/cache@v4
               with:
-                path: vendor
-                key: composer-${{ hashFiles('composer.lock') }}
-                restore-keys: composer-
+                  path: vendor
+                  key: composer-${{ hashFiles('composer.lock') }}
+                  restore-keys: composer-
             - name: Restore npm cache
               uses: actions/cache@v4
               with:
-                path: node_modules
-                key: npm-${{ hashFiles('package-lock.json') }}
-                restore-keys: npm-
+                  path: node_modules
+                  key: npm-${{ hashFiles('package-lock.json') }}
+                  restore-keys: npm-
             - name: Login to GitHub Container Registry
               uses: docker/login-action@v3
               with:
@@ -307,15 +307,15 @@ jobs:
             - name: Restore Playwright deps cache
               uses: actions/cache@v4
               with:
-                path: tests/End2End/node_modules
-                key: playwright-deps-${{ hashFiles('tests/End2End/package-lock.json') }}
-                restore-keys: playwright-deps-
+                  path: tests/End2End/node_modules
+                  key: playwright-deps-${{ hashFiles('tests/End2End/package-lock.json') }}
+                  restore-keys: playwright-deps-
             - name: Restore Playwright browsers cache
               uses: actions/cache@v4
               with:
-                path: /home/runner/.cache/ms-playwright
-                key: playwright-browsers-${{ hashFiles('tests/End2End/package-lock.json') }}
-                restore-keys: playwright-browsers-
+                  path: /home/runner/.cache/ms-playwright
+                  key: playwright-browsers-${{ hashFiles('tests/End2End/package-lock.json') }}
+                  restore-keys: playwright-browsers-
             - name: Install Playwright
               run: |
                   cd tests/End2End
