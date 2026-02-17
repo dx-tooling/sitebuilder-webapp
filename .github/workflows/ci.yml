@@ -220,6 +220,13 @@ jobs:
               run: docker pull ${{ env.APP_IMAGE }}
             - name: Start Docker services
               run: docker compose -f docker-compose.yml -f docker-compose.ci.yml up -d app mariadb
+            - name: Wait for MariaDB
+              run: |
+                  for i in {1..30}; do
+                    docker compose exec -T mariadb mariadb -uroot -psecret -e "SELECT 1" && break
+                    echo "Waiting for MariaDB... ($i/30)"
+                    sleep 2
+                  done
             - name: Install dependencies
               run: |
                   docker compose exec -T app mise trust
