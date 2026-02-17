@@ -414,17 +414,7 @@
             </div>
 
             {# Remote assets sidebar - only show if project has manifest URLs configured #}
-            {% if hasRemoteAssets %}
-                {% include '@remote_content_assets.presentation/_remote_asset_browser_sidebar.html.twig' with {
-                    project: project,
-                    workspaceId: workspace.id,
-                    windowSize: remoteAssetBrowserWindowSize,
-                    parentStimulusActions: [
-                        { controller: 'chat-based-content-editor', action: 'handleAssetInsert', event: 'remote-asset-browser:insert' },
-                        { controller: 'chat-based-content-editor', action: 'handleUploadComplete', event: 'remote-asset-browser:uploadComplete' }
-                    ]
-                } %}
-            {% endif %}
+            {% include '@remote_content_assets.presentation/remote_asset_area.twig' %}
         </div>
 
         {# Info section with cross-links - subtle placement at bottom #}
