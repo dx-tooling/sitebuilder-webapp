@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Unit\WorkspaceMgmt;
+namespace App\Tests\Unit\WorkspaceMgmt;
 
 use App\WorkspaceMgmt\Domain\Service\WorkspaceStatusGuard;
 use App\WorkspaceMgmt\Facade\Enum\WorkspaceStatus;

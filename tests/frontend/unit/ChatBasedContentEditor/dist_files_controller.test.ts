@@ -15,10 +15,18 @@ interface MockControllerState {
     pollUrlValue: string;
     pollIntervalValue: number;
     readOnlyValue: boolean;
+    photoBuilderUrlPatternValue: string;
+    photoBuilderLabelValue: string;
+    editHtmlLabelValue: string;
+    previewLabelValue: string;
     hasListTarget: boolean;
     listTarget: HTMLElement | null;
     hasContainerTarget: boolean;
     containerTarget: HTMLElement | null;
+    hasPhotoBuilderSectionTarget: boolean;
+    photoBuilderSectionTarget: HTMLElement | null;
+    hasPhotoBuilderLinksTarget: boolean;
+    photoBuilderLinksTarget: HTMLElement | null;
     pollingTimeoutId: ReturnType<typeof setTimeout> | null;
     lastFilesJson: string;
     isActive: boolean;
@@ -35,12 +43,20 @@ const createController = (
     state.pollUrlValue = "/workspace/test-id/dist-files";
     state.pollIntervalValue = 3000;
     state.readOnlyValue = false;
+    state.photoBuilderUrlPatternValue = "";
+    state.photoBuilderLabelValue = "Generate matching images";
+    state.editHtmlLabelValue = "Edit HTML";
+    state.previewLabelValue = "Preview";
 
     // Default targets (not present)
     state.hasListTarget = false;
     state.listTarget = null;
     state.hasContainerTarget = false;
     state.containerTarget = null;
+    state.hasPhotoBuilderSectionTarget = false;
+    state.photoBuilderSectionTarget = null;
+    state.hasPhotoBuilderLinksTarget = false;
+    state.photoBuilderLinksTarget = null;
 
     // Private state
     state.pollingTimeoutId = null;
@@ -60,17 +76,24 @@ const createController = (
     return controller;
 };
 
-const createFullController = (): {
+const createFullController = (
+    overrides: Partial<MockControllerState> = {},
+): {
     controller: DistFilesController;
     elements: {
         list: HTMLUListElement;
         container: HTMLElement;
+        photoBuilderSection: HTMLElement;
+        photoBuilderLinks: HTMLElement;
         controllerElement: HTMLElement;
     };
 } => {
     const list = document.createElement("ul");
     const container = document.createElement("div");
     container.classList.add("hidden");
+    const photoBuilderSection = document.createElement("div");
+    photoBuilderSection.classList.add("hidden");
+    const photoBuilderLinks = document.createElement("div");
     const controllerElement = document.createElement("div");
 
     const controller = createController(
@@ -79,6 +102,11 @@ const createFullController = (): {
             listTarget: list,
             hasContainerTarget: true,
             containerTarget: container,
+            hasPhotoBuilderSectionTarget: true,
+            photoBuilderSectionTarget: photoBuilderSection,
+            hasPhotoBuilderLinksTarget: true,
+            photoBuilderLinksTarget: photoBuilderLinks,
+            ...overrides,
         },
         controllerElement,
     );
@@ -88,6 +116,8 @@ const createFullController = (): {
         elements: {
             list,
             container,
+            photoBuilderSection,
+            photoBuilderLinks,
             controllerElement,
         },
     };
@@ -193,6 +223,26 @@ describe("DistFilesController", () => {
             controller.disconnect();
         });
 
+        it("should not include PhotoBuilder camera icon in file rows", async () => {
+            const { controller, elements } = createFullController({
+                photoBuilderUrlPatternValue: "/photo-builder/ws-123?page=__PAGE_PATH__",
+            });
+            const files: DistFile[] = [{ path: "index.html", url: "/workspaces/ws-123/dist/index.html" }];
+
+            vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(JSON.stringify({ files }), { status: 200 }));
+
+            controller.connect();
+            await runSinglePollCycle();
+
+            // File rows should only have edit + preview links, no camera icon
+            const fileRowLinks = elements.list.querySelectorAll("a");
+            Array.from(fileRowLinks).forEach((link) => {
+                expect(link.getAttribute("title")).not.toBe("Generate matching images");
+            });
+
+            controller.disconnect();
+        });
+
         it("should display file path text", async () => {
             const { controller, elements } = createFullController();
             const files: DistFile[] = [{ path: "pages/about.html", url: "/ws/dist/pages/about.html" }];
@@ -228,21 +278,7 @@ describe("DistFilesController", () => {
 
     describe("readOnly mode", () => {
         it("should show preview link when readOnly is true", async () => {
-            const list = document.createElement("ul");
-            const container = document.createElement("div");
-            container.classList.add("hidden");
-            const controllerElement = document.createElement("div");
-
-            const controller = createController(
-                {
-                    hasListTarget: true,
-                    listTarget: list,
-                    hasContainerTarget: true,
-                    containerTarget: container,
-                    readOnlyValue: true,
-                },
-                controllerElement,
-            );
+            const { controller, elements } = createFullController({ readOnlyValue: true });
 
             const files: DistFile[] = [{ path: "index.html", url: "/workspaces/ws-123/dist/index.html" }];
             vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(JSON.stringify({ files }), { status: 200 }));
@@ -250,7 +286,7 @@ describe("DistFilesController", () => {
             controller.connect();
             await runSinglePollCycle();
 
-            const previewLink = list.querySelector('a[target="_blank"]');
+            const previewLink = elements.list.querySelector('a[target="_blank"]');
             expect(previewLink).not.toBeNull();
             expect(previewLink?.getAttribute("href")).toBe("/workspaces/ws-123/dist/index.html");
 
@@ -273,21 +309,7 @@ describe("DistFilesController", () => {
         });
 
         it("should not show edit links for any file when readOnly is true", async () => {
-            const list = document.createElement("ul");
-            const container = document.createElement("div");
-            container.classList.add("hidden");
-            const controllerElement = document.createElement("div");
-
-            const controller = createController(
-                {
-                    hasListTarget: true,
-                    listTarget: list,
-                    hasContainerTarget: true,
-                    containerTarget: container,
-                    readOnlyValue: true,
-                },
-                controllerElement,
-            );
+            const { controller, elements } = createFullController({ readOnlyValue: true });
 
             const files: DistFile[] = [
                 { path: "index.html", url: "/workspaces/ws-123/dist/index.html" },
@@ -299,12 +321,12 @@ describe("DistFilesController", () => {
             controller.connect();
             await runSinglePollCycle();
 
-            const editLinks = list.querySelectorAll('a[title="Edit HTML"]');
+            const editLinks = elements.list.querySelectorAll('a[title="Edit HTML"]');
             expect(editLinks.length).toBe(0);
 
-            // But all preview links should be present
-            const previewLinks = list.querySelectorAll('a[target="_blank"]');
-            expect(previewLinks.length).toBe(3);
+            // Preview button links + clickable filenames should all be present (2 per file)
+            const previewLinks = elements.list.querySelectorAll('a[target="_blank"]');
+            expect(previewLinks.length).toBe(6);
 
             controller.disconnect();
         });
@@ -400,6 +422,188 @@ describe("DistFilesController", () => {
             editLink.click();
 
             expect(eventBubbles).toBe(true);
+
+            controller.disconnect();
+        });
+    });
+
+    describe("photoBuilder CTA", () => {
+        it("should show PhotoBuilder section and render links when photoBuilderUrlPattern is set", async () => {
+            const { controller, elements } = createFullController({
+                photoBuilderUrlPatternValue: "/photo-builder/ws-123?page=__PAGE_PATH__&conversationId=conv-456",
+            });
+
+            const files: DistFile[] = [{ path: "index.html", url: "/workspaces/ws-123/dist/index.html" }];
+            vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(JSON.stringify({ files }), { status: 200 }));
+
+            controller.connect();
+            await runSinglePollCycle();
+
+            // Section should be visible
+            expect(elements.photoBuilderSection.classList.contains("hidden")).toBe(false);
+
+            // Should have a link in the photoBuilderLinks container
+            const links = elements.photoBuilderLinks.querySelectorAll("a");
+            expect(links.length).toBe(1);
+            expect(links[0].getAttribute("href")).toBe(
+                "/photo-builder/ws-123?page=" + encodeURIComponent("index.html") + "&conversationId=conv-456",
+            );
+            expect(links[0].textContent).toContain("index.html");
+
+            controller.disconnect();
+        });
+
+        it("should keep PhotoBuilder section hidden when photoBuilderUrlPattern is empty", async () => {
+            const { controller, elements } = createFullController();
+
+            const files: DistFile[] = [{ path: "index.html", url: "/workspaces/ws-123/dist/index.html" }];
+            vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(JSON.stringify({ files }), { status: 200 }));
+
+            controller.connect();
+            await runSinglePollCycle();
+
+            expect(elements.photoBuilderSection.classList.contains("hidden")).toBe(true);
+            expect(elements.photoBuilderLinks.children.length).toBe(0);
+
+            controller.disconnect();
+        });
+
+        it("should keep PhotoBuilder section hidden in readOnly mode even with URL pattern", async () => {
+            const { controller, elements } = createFullController({
+                readOnlyValue: true,
+                photoBuilderUrlPatternValue: "/photo-builder/ws-123?page=__PAGE_PATH__",
+            });
+
+            const files: DistFile[] = [{ path: "index.html", url: "/workspaces/ws-123/dist/index.html" }];
+            vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(JSON.stringify({ files }), { status: 200 }));
+
+            controller.connect();
+            await runSinglePollCycle();
+
+            expect(elements.photoBuilderSection.classList.contains("hidden")).toBe(true);
+            expect(elements.photoBuilderLinks.children.length).toBe(0);
+
+            controller.disconnect();
+        });
+
+        it("should use custom label as link title", async () => {
+            const { controller, elements } = createFullController({
+                photoBuilderUrlPatternValue: "/photo-builder/ws-123?page=__PAGE_PATH__",
+                photoBuilderLabelValue: "Custom label",
+            });
+
+            const files: DistFile[] = [{ path: "index.html", url: "/workspaces/ws-123/dist/index.html" }];
+            vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(JSON.stringify({ files }), { status: 200 }));
+
+            controller.connect();
+            await runSinglePollCycle();
+
+            const link = elements.photoBuilderLinks.querySelector('a[title="Custom label"]');
+            expect(link).not.toBeNull();
+
+            controller.disconnect();
+        });
+
+        it("should encode page path in PhotoBuilder URL", async () => {
+            const { controller, elements } = createFullController({
+                photoBuilderUrlPatternValue: "/photo-builder/ws-1?page=__PAGE_PATH__",
+            });
+
+            const files: DistFile[] = [
+                { path: "pages/about us.html", url: "/workspaces/ws-1/dist/pages/about us.html" },
+            ];
+            vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(JSON.stringify({ files }), { status: 200 }));
+
+            controller.connect();
+            await runSinglePollCycle();
+
+            const link = elements.photoBuilderLinks.querySelector("a") as HTMLAnchorElement;
+            expect(link).not.toBeNull();
+            expect(link.href).toContain(encodeURIComponent("pages/about us.html"));
+
+            controller.disconnect();
+        });
+
+        it("should render one link per page file in the PhotoBuilder section", async () => {
+            const { controller, elements } = createFullController({
+                photoBuilderUrlPatternValue: "/photo-builder/ws-1?page=__PAGE_PATH__",
+            });
+
+            const files: DistFile[] = [
+                { path: "index.html", url: "/workspaces/ws-1/dist/index.html" },
+                { path: "about.html", url: "/workspaces/ws-1/dist/about.html" },
+                { path: "contact.html", url: "/workspaces/ws-1/dist/contact.html" },
+            ];
+            vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(JSON.stringify({ files }), { status: 200 }));
+
+            controller.connect();
+            await runSinglePollCycle();
+
+            const links = elements.photoBuilderLinks.querySelectorAll("a");
+            expect(links.length).toBe(3);
+            expect(links[0].textContent).toContain("index.html");
+            expect(links[1].textContent).toContain("about.html");
+            expect(links[2].textContent).toContain("contact.html");
+
+            controller.disconnect();
+        });
+
+        it("should hide PhotoBuilder section when files become empty", async () => {
+            const { controller, elements } = createFullController({
+                photoBuilderUrlPatternValue: "/photo-builder/ws-1?page=__PAGE_PATH__",
+            });
+
+            // First poll with files
+            const fetchMock = vi.spyOn(globalThis, "fetch");
+            fetchMock.mockResolvedValueOnce(
+                new Response(
+                    JSON.stringify({ files: [{ path: "index.html", url: "/workspaces/ws-1/dist/index.html" }] }),
+                    { status: 200 },
+                ),
+            );
+
+            controller.connect();
+            await runSinglePollCycle();
+
+            expect(elements.photoBuilderSection.classList.contains("hidden")).toBe(false);
+
+            // Second poll with no files
+            fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ files: [] }), { status: 200 }));
+
+            await vi.advanceTimersByTimeAsync(3000);
+
+            expect(elements.container.classList.contains("hidden")).toBe(true);
+
+            controller.disconnect();
+        });
+
+        it("should gracefully handle missing photoBuilder targets", async () => {
+            const list = document.createElement("ul");
+            const container = document.createElement("div");
+            container.classList.add("hidden");
+            const controllerElement = document.createElement("div");
+
+            const controller = createController(
+                {
+                    hasListTarget: true,
+                    listTarget: list,
+                    hasContainerTarget: true,
+                    containerTarget: container,
+                    hasPhotoBuilderSectionTarget: false,
+                    hasPhotoBuilderLinksTarget: false,
+                    photoBuilderUrlPatternValue: "/photo-builder/ws-1?page=__PAGE_PATH__",
+                },
+                controllerElement,
+            );
+
+            const files: DistFile[] = [{ path: "index.html", url: "/workspaces/ws-1/dist/index.html" }];
+            vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(JSON.stringify({ files }), { status: 200 }));
+
+            controller.connect();
+            await runSinglePollCycle();
+
+            // Should not throw, file list still renders
+            expect(list.children.length).toBe(1);
 
             controller.disconnect();
         });

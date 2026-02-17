@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Unit\ProjectMgmt;
+namespace App\Tests\Unit\ProjectMgmt;
 
 use App\LlmContentEditor\Facade\Enum\LlmModelProvider;
 use App\ProjectMgmt\Domain\Entity\Project;
@@ -33,7 +33,7 @@ final class ProjectServiceTest extends TestCase
         self::assertSame('My Project', $project->getName());
         self::assertSame('https://github.com/org/repo.git', $project->getGitUrl());
         self::assertSame('github-token-123', $project->getGithubToken());
-        self::assertSame('sk-test-key-123', $project->getLlmApiKey());
+        self::assertSame('sk-test-key-123', $project->getContentEditingLlmModelProviderApiKey());
         self::assertSame([], $project->getRemoteContentAssetsManifestUrls());
     }
 
@@ -83,7 +83,7 @@ final class ProjectServiceTest extends TestCase
         self::assertSame('New Name', $project->getName());
         self::assertSame('https://new.git', $project->getGitUrl());
         self::assertSame('new-token', $project->getGithubToken());
-        self::assertSame('sk-new-key', $project->getLlmApiKey());
+        self::assertSame('sk-new-key', $project->getContentEditingLlmModelProviderApiKey());
     }
 
     public function testUpdatePreservesCreatedAtTimestamp(): void

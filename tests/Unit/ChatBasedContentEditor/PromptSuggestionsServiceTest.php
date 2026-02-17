@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Unit\ChatBasedContentEditor;
+namespace App\Tests\Unit\ChatBasedContentEditor;
 
 use App\ChatBasedContentEditor\Presentation\Service\PromptSuggestionsService;
 use InvalidArgumentException;

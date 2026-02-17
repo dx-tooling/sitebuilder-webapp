@@ -24,33 +24,35 @@ final class ProjectService
      * @param list<string>|null $remoteContentAssetsManifestUrls
      */
     public function create(
-        string           $organizationId,
-        string           $name,
-        string           $gitUrl,
-        string           $githubToken,
-        LlmModelProvider $llmModelProvider,
-        string           $llmApiKey,
-        ProjectType      $projectType = ProjectType::DEFAULT,
-        string           $agentImage = Project::DEFAULT_AGENT_IMAGE,
-        ?string          $agentBackgroundInstructions = null,
-        ?string          $agentStepInstructions = null,
-        ?string          $agentOutputInstructions = null,
-        ?array           $remoteContentAssetsManifestUrls = null,
-        ?string          $s3BucketName = null,
-        ?string          $s3Region = null,
-        ?string          $s3AccessKeyId = null,
-        ?string          $s3SecretAccessKey = null,
-        ?string          $s3IamRoleArn = null,
-        ?string          $s3KeyPrefix = null,
-        bool             $keysVisible = true
+        string            $organizationId,
+        string            $name,
+        string            $gitUrl,
+        string            $githubToken,
+        LlmModelProvider  $contentEditingLlmModelProvider,
+        string            $contentEditingLlmModelProviderApiKey,
+        ProjectType       $projectType = ProjectType::DEFAULT,
+        string            $agentImage = Project::DEFAULT_AGENT_IMAGE,
+        ?string           $agentBackgroundInstructions = null,
+        ?string           $agentStepInstructions = null,
+        ?string           $agentOutputInstructions = null,
+        ?array            $remoteContentAssetsManifestUrls = null,
+        ?string           $s3BucketName = null,
+        ?string           $s3Region = null,
+        ?string           $s3AccessKeyId = null,
+        ?string           $s3SecretAccessKey = null,
+        ?string           $s3IamRoleArn = null,
+        ?string           $s3KeyPrefix = null,
+        bool              $keysVisible = true,
+        ?LlmModelProvider $photoBuilderLlmModelProvider = null,
+        ?string           $photoBuilderLlmModelProviderApiKey = null,
     ): Project {
         $project = new Project(
             $organizationId,
             $name,
             $gitUrl,
             $githubToken,
-            $llmModelProvider,
-            $llmApiKey,
+            $contentEditingLlmModelProvider,
+            $contentEditingLlmModelProviderApiKey,
             $projectType,
             $agentImage,
             $agentBackgroundInstructions,
@@ -60,6 +62,8 @@ final class ProjectService
         );
 
         $project->setKeysVisible($keysVisible);
+        $project->setPhotoBuilderLlmModelProvider($photoBuilderLlmModelProvider);
+        $project->setPhotoBuilderLlmModelProviderApiKey($photoBuilderLlmModelProviderApiKey);
 
         // Set S3 configuration if provided
         $project->setS3BucketName($s3BucketName);
@@ -79,30 +83,32 @@ final class ProjectService
      * @param list<string>|null $remoteContentAssetsManifestUrls
      */
     public function update(
-        Project          $project,
-        string           $name,
-        string           $gitUrl,
-        string           $githubToken,
-        LlmModelProvider $llmModelProvider,
-        string           $llmApiKey,
-        ProjectType      $projectType = ProjectType::DEFAULT,
-        string           $agentImage = Project::DEFAULT_AGENT_IMAGE,
-        ?string          $agentBackgroundInstructions = null,
-        ?string          $agentStepInstructions = null,
-        ?string          $agentOutputInstructions = null,
-        ?array           $remoteContentAssetsManifestUrls = null,
-        ?string          $s3BucketName = null,
-        ?string          $s3Region = null,
-        ?string          $s3AccessKeyId = null,
-        ?string          $s3SecretAccessKey = null,
-        ?string          $s3IamRoleArn = null,
-        ?string          $s3KeyPrefix = null
+        Project           $project,
+        string            $name,
+        string            $gitUrl,
+        string            $githubToken,
+        LlmModelProvider  $contentEditingLlmModelProvider,
+        string            $contentEditingLlmModelProviderApiKey,
+        ProjectType       $projectType = ProjectType::DEFAULT,
+        string            $agentImage = Project::DEFAULT_AGENT_IMAGE,
+        ?string           $agentBackgroundInstructions = null,
+        ?string           $agentStepInstructions = null,
+        ?string           $agentOutputInstructions = null,
+        ?array            $remoteContentAssetsManifestUrls = null,
+        ?string           $s3BucketName = null,
+        ?string           $s3Region = null,
+        ?string           $s3AccessKeyId = null,
+        ?string           $s3SecretAccessKey = null,
+        ?string           $s3IamRoleArn = null,
+        ?string           $s3KeyPrefix = null,
+        ?LlmModelProvider $photoBuilderLlmModelProvider = null,
+        ?string           $photoBuilderLlmModelProviderApiKey = null,
     ): void {
         $project->setName($name);
         $project->setGitUrl($gitUrl);
         $project->setGithubToken($githubToken);
-        $project->setLlmModelProvider($llmModelProvider);
-        $project->setLlmApiKey($llmApiKey);
+        $project->setContentEditingLlmModelProvider($contentEditingLlmModelProvider);
+        $project->setContentEditingLlmModelProviderApiKey($contentEditingLlmModelProviderApiKey);
         $project->setProjectType($projectType);
         $project->setAgentImage($agentImage);
 
@@ -118,6 +124,10 @@ final class ProjectService
         if ($remoteContentAssetsManifestUrls !== null) {
             $project->setRemoteContentAssetsManifestUrls($remoteContentAssetsManifestUrls);
         }
+
+        // PhotoBuilder LLM fields (null = use content editing settings)
+        $project->setPhotoBuilderLlmModelProvider($photoBuilderLlmModelProvider);
+        $project->setPhotoBuilderLlmModelProviderApiKey($photoBuilderLlmModelProviderApiKey);
 
         // S3 fields are always updated (can be cleared by passing null)
         $project->setS3BucketName($s3BucketName);

@@ -79,7 +79,7 @@ final readonly class RunEditSessionHandler
             $project   = $workspace !== null ? $this->projectMgmtFacade->getProjectInfo($workspace->projectId) : null;
 
             // Ensure we have a valid LLM API key from the project
-            if ($project === null || $project->llmApiKey === '') {
+            if ($project === null || $project->contentEditingApiKey === '') {
                 $this->logger->error('EditSession failed: no LLM API key configured for project', [
                     'sessionId'   => $message->sessionId,
                     'workspaceId' => $conversation->getWorkspaceId(),
@@ -113,10 +113,12 @@ final readonly class RunEditSessionHandler
                 $session->getWorkspacePath(),
                 $session->getInstruction(),
                 $previousMessages,
-                $project->llmApiKey,
+                $project->contentEditingApiKey,
                 $agentConfig,
                 $message->locale,
             );
+
+            $streamEndedWithFailure = false;
 
             foreach ($generator as $chunk) {
                 // Cooperative cancellation: check status directly via DBAL to avoid
@@ -157,6 +159,7 @@ final readonly class RunEditSessionHandler
                     // Persist new conversation messages
                     $this->persistConversationMessage($conversation, $chunk->message);
                 } elseif ($chunk->chunkType === EditStreamChunkType::Done) {
+                    $streamEndedWithFailure = ($chunk->success ?? false) !== true;
                     EditSessionChunk::createDoneChunk(
                         $session,
                         $chunk->success ?? false,
@@ -165,6 +168,13 @@ final readonly class RunEditSessionHandler
                 }
 
                 $this->entityManager->flush();
+            }
+
+            if ($streamEndedWithFailure) {
+                $session->setStatus(EditSessionStatus::Failed);
+                $this->entityManager->flush();
+
+                return;
             }
 
             $session->setStatus(EditSessionStatus::Completed);

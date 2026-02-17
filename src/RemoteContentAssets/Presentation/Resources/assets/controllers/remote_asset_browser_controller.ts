@@ -4,12 +4,13 @@ import { Controller } from "@hotwired/stimulus";
  * Stimulus controller for browsing remote content assets.
  * Features:
  * - Fetches asset URLs from configured manifest endpoint
- * - Search/filter by filename
+ * - Search/filter by full URL (domain, path, filename)
  * - Scrollable list with configurable visible window size
  * - Image preview for image URLs
  * - Click to open asset in new tab
  * - Add to chat button dispatches custom event for insertion
- * - Drag-and-drop upload to S3 (when configured)
+ * - Drag-and-drop upload to S3 (when configured, supports multiple files)
+ * - Clickable dropzone to open file dialog (supports multiple files)
  */
 export default class extends Controller {
     static values = {
@@ -30,7 +31,9 @@ export default class extends Controller {
         "empty",
         "search",
         "dropzone",
+        "fileInput",
         "uploadProgress",
+        "uploadProgressText",
         "uploadError",
         "uploadSuccess",
     ];
@@ -55,8 +58,12 @@ export default class extends Controller {
     declare readonly searchTarget: HTMLInputElement;
     declare readonly hasDropzoneTarget: boolean;
     declare readonly dropzoneTarget: HTMLElement;
+    declare readonly hasFileInputTarget: boolean;
+    declare readonly fileInputTarget: HTMLInputElement;
     declare readonly hasUploadProgressTarget: boolean;
     declare readonly uploadProgressTarget: HTMLElement;
+    declare readonly hasUploadProgressTextTarget: boolean;
+    declare readonly uploadProgressTextTarget: HTMLElement;
     declare readonly hasUploadErrorTarget: boolean;
     declare readonly uploadErrorTarget: HTMLElement;
     declare readonly hasUploadSuccessTarget: boolean;
@@ -64,7 +71,7 @@ export default class extends Controller {
 
     private urls: string[] = [];
     private filteredUrls: string[] = [];
-    private itemHeight: number = 64;
+    private itemHeight: number = 80;
     private isLoading: boolean = false;
     private isUploading: boolean = false;
 
@@ -120,7 +127,7 @@ export default class extends Controller {
     }
 
     /**
-     * Handle drop event - upload the file.
+     * Handle drop event - upload all dropped files.
      */
     private async handleDrop(e: DragEvent): Promise<void> {
         e.preventDefault();
@@ -136,52 +143,122 @@ export default class extends Controller {
             return;
         }
 
-        // Only upload the first file
-        await this.uploadFile(files[0]);
+        await this.uploadFiles(files);
     }
 
     /**
-     * Upload a file to S3.
+     * Open the native file dialog by clicking the hidden file input.
      */
-    private async uploadFile(file: File): Promise<void> {
+    openFileDialog(): void {
+        if (!this.isUploadEnabled() || !this.hasFileInputTarget || this.isUploading) {
+            return;
+        }
+
+        // Reset value so the same file(s) can be re-selected
+        this.fileInputTarget.value = "";
+        this.fileInputTarget.click();
+    }
+
+    /**
+     * Handle file selection from the native file dialog.
+     */
+    handleFileSelect(e: Event): void {
+        const input = e.target as HTMLInputElement;
+        const files = input.files;
+        if (!files || files.length === 0) {
+            return;
+        }
+
+        void this.uploadFiles(files);
+    }
+
+    /**
+     * Upload multiple files sequentially to S3.
+     */
+    private async uploadFiles(files: FileList): Promise<void> {
         if (!this.isUploadEnabled() || this.isUploading) {
             return;
         }
 
         this.isUploading = true;
-        this.showUploadStatus("progress");
+        const total = files.length;
+        let successCount = 0;
+        let errorCount = 0;
 
-        try {
-            const formData = new FormData();
-            formData.append("file", file);
-            formData.append("workspace_id", this.workspaceIdValue);
-            formData.append("_csrf_token", this.uploadCsrfTokenValue);
+        for (let i = 0; i < total; i++) {
+            this.updateUploadProgressText(i + 1, total);
+            this.showUploadStatus("progress");
 
-            const response = await fetch(this.uploadUrlValue, {
-                method: "POST",
-                headers: {
-                    "X-Requested-With": "XMLHttpRequest",
-                },
-                body: formData,
-            });
-
-            const data = (await response.json()) as { success?: boolean; url?: string; error?: string };
-
-            if (data.success && data.url) {
-                this.showUploadStatus("success");
-                // Notify chat controller about the upload
-                this.dispatch("uploadComplete", { detail: { url: data.url } });
-                // Re-fetch the asset list to show updated manifests
-                await this.fetchAssets();
-                // Auto-hide success message after 3 seconds
-                setTimeout(() => this.showUploadStatus("none"), 3000);
-            } else {
-                this.showUploadError(data.error || "Upload failed");
+            try {
+                const uploaded = await this.uploadSingleFile(files[i]);
+                if (uploaded) {
+                    successCount++;
+                } else {
+                    errorCount++;
+                }
+            } catch {
+                errorCount++;
             }
-        } catch {
+        }
+
+        // Re-fetch the asset list once after all uploads
+        if (successCount > 0) {
+            await this.fetchAssets();
+        }
+
+        // Show final status
+        if (errorCount > 0 && successCount === 0) {
             this.showUploadError("Upload failed. Please try again.");
-        } finally {
-            this.isUploading = false;
+        } else if (errorCount > 0) {
+            this.showUploadError(`${errorCount} of ${total} uploads failed.`);
+        } else {
+            this.showUploadStatus("success");
+            setTimeout(() => this.showUploadStatus("none"), 3000);
+        }
+
+        this.isUploading = false;
+    }
+
+    /**
+     * Upload a single file to S3. Returns true on success.
+     */
+    private async uploadSingleFile(file: File): Promise<boolean> {
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("workspace_id", this.workspaceIdValue);
+        formData.append("_csrf_token", this.uploadCsrfTokenValue);
+
+        const response = await fetch(this.uploadUrlValue, {
+            method: "POST",
+            headers: {
+                "X-Requested-With": "XMLHttpRequest",
+            },
+            body: formData,
+        });
+
+        const data = (await response.json()) as { success?: boolean; url?: string; error?: string };
+
+        if (data.success && data.url) {
+            this.dispatch("uploadComplete", { detail: { url: data.url } });
+
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Update the upload progress text for multi-file uploads.
+     */
+    private updateUploadProgressText(current: number, total: number): void {
+        if (!this.hasUploadProgressTextTarget) {
+            return;
+        }
+
+        if (total === 1) {
+            this.uploadProgressTextTarget.textContent = "";
+        } else {
+            this.uploadProgressTextTarget.textContent = `(${current}/${total})`;
         }
     }
 
@@ -289,11 +366,7 @@ export default class extends Controller {
         if (query === "") {
             this.filteredUrls = this.urls;
         } else {
-            this.filteredUrls = this.urls.filter((url) => {
-                const filename = this.extractFilename(url).toLowerCase();
-
-                return filename.includes(query);
-            });
+            this.filteredUrls = this.urls.filter((url) => url.toLowerCase().includes(query));
         }
 
         this.updateCount();
@@ -364,9 +437,9 @@ export default class extends Controller {
             previewLink.appendChild(this.createFileIcon());
         }
 
-        // Filename container (flex-1 to take remaining space, but link only wraps text)
+        // Filename container (flex-1 to take remaining space): filename + URL prefix line
         const filenameContainer = document.createElement("div");
-        filenameContainer.className = "flex-1 min-w-0"; // min-w-0 allows truncation to work
+        filenameContainer.className = "flex-1 min-w-0 flex flex-col gap-0.5";
 
         const filenameLink = document.createElement("a");
         filenameLink.href = url;
@@ -380,7 +453,15 @@ export default class extends Controller {
             e.stopPropagation(); // Prevent row click from firing
         });
 
+        const urlPrefix = this.urlWithoutFilename(url);
+        const urlPrefixEl = document.createElement("div");
+        urlPrefixEl.setAttribute("data-remote-asset-url-prefix", "");
+        urlPrefixEl.className = "truncate text-xs text-dark-400 dark:text-dark-500 block max-w-full";
+        urlPrefixEl.textContent = urlPrefix;
+        urlPrefixEl.title = urlPrefix;
+
         filenameContainer.appendChild(filenameLink);
+        filenameContainer.appendChild(urlPrefixEl);
 
         // Add to chat button
         const addButton = document.createElement("button");
@@ -433,6 +514,28 @@ export default class extends Controller {
             const segments = url.split("/").filter(Boolean);
 
             return segments[segments.length - 1] || url;
+        }
+    }
+
+    /**
+     * Base URL (scheme + host + path without filename), with trailing slash.
+     * Used to display the folder/context beneath the filename in the list.
+     */
+    private urlWithoutFilename(url: string): string {
+        try {
+            const urlObj = new URL(url);
+            const pathname = urlObj.pathname;
+            const segments = pathname.split("/").filter(Boolean);
+
+            if (segments.length <= 1) {
+                return urlObj.origin + (pathname.endsWith("/") ? pathname : pathname + "/");
+            }
+
+            const pathWithoutLast = "/" + segments.slice(0, -1).join("/") + "/";
+
+            return urlObj.origin + pathWithoutLast;
+        } catch {
+            return url;
         }
     }
 

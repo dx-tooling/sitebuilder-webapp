@@ -35,9 +35,9 @@ final class ProjectMgmtFacade implements ProjectMgmtFacadeInterface
 
     public function createProjectFromPrefab(string $organizationId, PrefabDto $prefab): string
     {
-        $llmModelProvider = LlmModelProvider::tryFrom($prefab->llmModelProvider);
-        if ($llmModelProvider === null) {
-            throw new RuntimeException('Invalid prefab llm_model_provider: ' . $prefab->llmModelProvider);
+        $contentEditingProvider = LlmModelProvider::tryFrom($prefab->contentEditingLlmModelProvider);
+        if ($contentEditingProvider === null) {
+            throw new RuntimeException('Invalid prefab content_editing_llm_model_provider: ' . $prefab->contentEditingLlmModelProvider);
         }
 
         $project = $this->projectService->create(
@@ -45,8 +45,8 @@ final class ProjectMgmtFacade implements ProjectMgmtFacadeInterface
             $prefab->name,
             $prefab->projectLink,
             $prefab->githubAccessKey,
-            $llmModelProvider,
-            $prefab->llmApiKey,
+            $contentEditingProvider,
+            $prefab->contentEditingLlmApiKey,
             ProjectType::DEFAULT,
             Project::DEFAULT_AGENT_IMAGE,
             null,
@@ -59,7 +59,9 @@ final class ProjectMgmtFacade implements ProjectMgmtFacadeInterface
             null,
             null,
             null,
-            $prefab->keysVisible
+            $prefab->keysVisible,
+            null, // photoBuilderLlmModelProvider: prefabs always use content editing settings
+            null, // photoBuilderLlmModelProviderApiKey
         );
 
         $projectId = $project->getId();
@@ -132,7 +134,7 @@ final class ProjectMgmtFacade implements ProjectMgmtFacadeInterface
             if (!$project->isKeysVisible()) {
                 continue;
             }
-            $apiKey = $project->getLlmApiKey();
+            $apiKey = $project->getContentEditingLlmModelProviderApiKey();
             if ($apiKey === '') {
                 continue;
             }
@@ -169,8 +171,8 @@ final class ProjectMgmtFacade implements ProjectMgmtFacadeInterface
             $project->getProjectType(),
             $githubUrl,
             $project->getAgentImage(),
-            $project->getLlmModelProvider(),
-            $project->getLlmApiKey(),
+            $project->getContentEditingLlmModelProvider(),
+            $project->getContentEditingLlmModelProviderApiKey(),
             $project->getAgentBackgroundInstructions(),
             $project->getAgentStepInstructions(),
             $project->getAgentOutputInstructions(),
@@ -181,6 +183,8 @@ final class ProjectMgmtFacade implements ProjectMgmtFacadeInterface
             $project->getS3SecretAccessKey(),
             $project->getS3IamRoleArn(),
             $project->getS3KeyPrefix(),
+            $project->getPhotoBuilderLlmModelProvider(),
+            $project->getPhotoBuilderLlmModelProviderApiKey(),
         );
     }
 

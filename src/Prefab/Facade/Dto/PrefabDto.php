@@ -14,8 +14,8 @@ final readonly class PrefabDto
         public string $name,
         public string $projectLink,
         public string $githubAccessKey,
-        public string $llmModelProvider,
-        public string $llmApiKey,
+        public string $contentEditingLlmModelProvider,
+        public string $contentEditingLlmApiKey,
         public bool   $keysVisible = true,
     ) {
     }
