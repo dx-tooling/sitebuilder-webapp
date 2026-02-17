@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Organization\Domain\SymfonyEventSubscriber;
 
+use App\Account\Facade\AccountFacadeInterface;
 use App\Account\Facade\SymfonyEvent\AccountCoreCreatedSymfonyEvent;
 use App\Organization\Domain\Service\OrganizationDomainServiceInterface;
 use App\Organization\Facade\SymfonyEvent\CurrentlyActiveOrganizationChangedSymfonyEvent;
@@ -12,6 +13,7 @@ use App\ProjectMgmt\Facade\ProjectMgmtFacadeInterface;
 use App\WorkspaceMgmt\Facade\WorkspaceMgmtFacadeInterface;
 use Exception;
 use Psr\Log\LoggerInterface;
+use RuntimeException;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Throwable;
@@ -25,7 +27,8 @@ readonly class AccountCoreCreatedSymfonyEventSubscriber
         private PrefabFacadeInterface              $prefabFacade,
         private ProjectMgmtFacadeInterface         $projectMgmtFacade,
         private WorkspaceMgmtFacadeInterface       $workspaceMgmtFacade,
-        private LoggerInterface                    $logger
+        private AccountFacadeInterface             $accountFacade,
+        private LoggerInterface                    $logger,
     ) {
     }
 
@@ -46,11 +49,18 @@ readonly class AccountCoreCreatedSymfonyEventSubscriber
             )
         );
 
+        $accountInfo = $this->accountFacade->getAccountInfoById($event->accountCoreId);
+        if ($accountInfo === null) {
+            throw new RuntimeException(
+                'Account not found for workspace setup; accountCoreId: ' . $event->accountCoreId
+            );
+        }
+
         $prefabs = $this->prefabFacade->loadPrefabs();
         foreach ($prefabs as $prefab) {
             try {
                 $projectId = $this->projectMgmtFacade->createProjectFromPrefab($organization->getId(), $prefab);
-                $this->workspaceMgmtFacade->dispatchSetupIfNeeded($projectId);
+                $this->workspaceMgmtFacade->dispatchSetupIfNeeded($projectId, $accountInfo->email);
             } catch (Throwable $e) {
                 $this->logger->warning('Prefab project creation failed', [
                     'organization_id' => $organization->getId(),

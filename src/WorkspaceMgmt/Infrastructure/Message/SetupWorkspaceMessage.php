@@ -13,7 +13,8 @@ use EnterpriseToolingForSymfony\SharedBundle\WorkerSystem\SymfonyMessage\Immedia
 readonly class SetupWorkspaceMessage implements ImmediateSymfonyMessageInterface
 {
     public function __construct(
-        public string $workspaceId
+        public string $workspaceId,
+        public string $userEmail,
     ) {
     }
 }
