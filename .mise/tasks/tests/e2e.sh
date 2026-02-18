@@ -13,7 +13,14 @@ echo "End-to-end tests (Playwright)"
 echo "BASE_URL=${BASE_URL}"
 echo
 
+restore_dev_stack() {
+    echo ""
+    echo "Restoring dev stack (docker compose up -d)..."
+    docker compose up -d
+}
+
 if [ "${NO_START}" != "true" ]; then
+    trap restore_dev_stack EXIT
     echo "Starting stack with e2e override..."
     docker compose $COMPOSE_FILES up -d
     echo "Waiting for MariaDB..."
@@ -48,6 +55,15 @@ echo "Installing Playwright dependencies (if needed)..."
 (cd tests/End2End && npx playwright install chromium 2>/dev/null || true)
 
 echo "Running Playwright tests..."
+set +e
 (cd tests/End2End && BASE_URL="$BASE_URL" npx playwright test)
+PLAYWRIGHT_EXIT=$?
+set -e
 
-echo "E2E tests completed!"
+if [ $PLAYWRIGHT_EXIT -eq 0 ]; then
+    echo "E2E tests completed!"
+else
+    echo "E2E tests failed (exit code $PLAYWRIGHT_EXIT)."
+fi
+
+exit $PLAYWRIGHT_EXIT

@@ -16,6 +16,7 @@
         {% endfor %}
 
         <form method="POST"
+              data-test-id="project-form"
               action="{{ project ? path('project_mgmt.presentation.update', { id: project.id }) : path('project_mgmt.presentation.create') }}"
               class="space-y-6 bg-white dark:bg-dark-800 rounded-lg border border-dark-200 dark:border-dark-700 p-6"
               {{ stimulus_controller('manifest-urls', {
@@ -31,6 +32,7 @@
                 <input type="text"
                        name="name"
                        id="name"
+                       data-test-id="project-form-name"
                        value="{{ project ? project.name : '' }}"
                        required
                        placeholder="{{ 'project.form.placeholder_project_name'|trans }}"
@@ -42,6 +44,7 @@
                 <input type="url"
                        name="git_url"
                        id="git_url"
+                       data-test-id="project-form-git-url"
                        value="{{ project ? project.gitUrl : '' }}"
                        required
                        placeholder="{{ 'project.form.placeholder_project_link'|trans }}"
@@ -57,6 +60,7 @@
                 <input type="password"
                        name="github_token"
                        id="github_token"
+                       data-test-id="project-form-github-token"
                        value="{{ project ? (displayGithubToken is defined ? displayGithubToken : project.githubToken) : '' }}"
                        {{ (keysVisible is not defined or keysVisible) ? 'required' : 'disabled' }}
                        placeholder="{{ (keysVisible is defined and not keysVisible) ? 'project.form.keys_managed_by_deployment'|trans : 'project.form.placeholder_github_token'|trans }}"
@@ -93,6 +97,7 @@
                 <input type="password"
                        name="content_editing_api_key"
                        id="content_editing_api_key"
+                       data-test-id="project-form-content-editing-api-key"
                        value="{{ project ? (displayContentEditingApiKey is defined ? displayContentEditingApiKey : project.contentEditingLlmModelProviderApiKey) : '' }}"
                        {{ (keysVisible is not defined or keysVisible) ? 'required' : 'disabled' }}
                        placeholder="{{ (keysVisible is defined and not keysVisible) ? 'project.form.keys_managed_by_deployment'|trans : 'project.form.placeholder_llm_api_key'|trans }}"
@@ -593,6 +598,7 @@
                     {{ 'common.cancel'|trans }}
                 </a>
                 <button type="submit"
+                        data-test-id="project-form-submit"
                         class="px-4 py-2 rounded-md bg-primary-600 text-white text-sm font-medium hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:focus:ring-offset-dark-900">
                     {{ project ? 'project.form.update_project_button'|trans : 'project.form.add_project_button'|trans }}
                 </button>

@@ -25,6 +25,9 @@ parameters:
     photo_builder.openai_timeout_seconds: 120
     llm_content_editor.simulate: "%env(bool:LLM_CONTENT_EDITOR_SIMULATE)%"
 
+    # E2E workspace fixture (used by SimulatedGitAdapter when APP_ENV=test)
+    e2e.workspace_fixture_path: "%kernel.project_dir%/tests/fixtures/e2e-workspace-template"
+
 services:
     # default configuration for services in *this* file
     _defaults:
@@ -106,6 +109,9 @@ services:
     App\RemoteContentAssets\Infrastructure\RemoteManifestFetcherInterface:
         class: App\RemoteContentAssets\Infrastructure\RemoteManifestFetcher
 
+    App\RemoteContentAssets\Infrastructure\S3AssetUploaderInterface:
+        class: App\RemoteContentAssets\Infrastructure\S3AssetUploader
+
     # Remote content assets facade - metadata for remote images (dimensions, size, mime type),
     # manifest validation and fetching
     App\RemoteContentAssets\Facade\RemoteContentAssetsFacadeInterface:
@@ -114,6 +120,7 @@ services:
             - "@App\\RemoteContentAssets\\Infrastructure\\RemoteImageInfoFetcherInterface"
             - "@App\\RemoteContentAssets\\Infrastructure\\RemoteManifestValidatorInterface"
             - "@App\\RemoteContentAssets\\Infrastructure\\RemoteManifestFetcherInterface"
+            - "@App\\RemoteContentAssets\\Infrastructure\\S3AssetUploaderInterface"
 
     # Sitebuilder-specific workspace tooling facade
     App\WorkspaceTooling\Facade\WorkspaceToolingFacadeInterface:
@@ -137,10 +144,6 @@ services:
 
     App\ChatBasedContentEditor\Facade\ChatBasedContentEditorFacadeInterface:
         class: App\ChatBasedContentEditor\Facade\ChatBasedContentEditorFacade
-
-    # Domain service bindings
-    App\WorkspaceMgmt\Domain\Service\WorkspaceStatusGuardInterface:
-        class: App\WorkspaceMgmt\Domain\Service\WorkspaceStatusGuard
 
     # Infrastructure adapter bindings
     App\WorkspaceMgmt\Infrastructure\Adapter\GitAdapterInterface:
@@ -210,3 +213,25 @@ services:
 
     App\LlmContentEditor\Facade\LlmContentEditorFacadeInterface:
         alias: App\LlmContentEditor\Facade\SwitchableLlmContentEditorFacade
+
+when@test:
+    services:
+        # E2E/test doubles: no external HTTP or git/GitHub calls
+        App\RemoteContentAssets\Infrastructure\RemoteManifestValidatorInterface:
+            class: App\RemoteContentAssets\TestHarness\SimulatedRemoteManifestValidator
+
+        App\RemoteContentAssets\Infrastructure\S3AssetUploaderInterface:
+            class: App\RemoteContentAssets\TestHarness\SimulatedS3AssetUploader
+
+        App\WorkspaceMgmt\Infrastructure\Adapter\GitAdapterInterface:
+            class: App\WorkspaceMgmt\TestHarness\SimulatedGitAdapter
+            arguments:
+                $workspaceFixturePath: "%e2e.workspace_fixture_path%"
+                $realGitAdapter: "@App\\WorkspaceMgmt\\Infrastructure\\Adapter\\GitCliAdapter"
+
+        App\WorkspaceMgmt\Infrastructure\Adapter\GitHubAdapterInterface:
+            class: App\WorkspaceMgmt\TestHarness\SimulatedGitHubAdapter
+
+        # E2E: no-op setup steps (priority so it is used instead of DefaultProjectSetupStepsProvider)
+        App\WorkspaceMgmt\TestHarness\E2eNoOpProjectSetupStepsProvider:
+            tags: [{ name: workspace_mgmt.setup_steps_provider, priority: 100 }]

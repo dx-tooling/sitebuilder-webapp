@@ -108,6 +108,37 @@ final class PrefabLoader
             return null;
         }
 
+        $photoBuilderProviderRaw = array_key_exists('photo_builder_llm_model_provider', $item) && is_string($item['photo_builder_llm_model_provider'])
+            ? trim($item['photo_builder_llm_model_provider'])
+            : null;
+        $photoBuilderApiKey = array_key_exists('photo_builder_llm_api_key', $item) && is_string($item['photo_builder_llm_api_key'])
+            ? $item['photo_builder_llm_api_key']
+            : null;
+
+        if (($photoBuilderProviderRaw !== null && $photoBuilderProviderRaw !== '') !== ($photoBuilderApiKey !== null && $photoBuilderApiKey !== '')) {
+            $this->logger->warning('Prefab entry skipped: photo_builder_llm_model_provider and photo_builder_llm_api_key must both be set or both omitted', [
+                'index' => $index,
+            ]);
+
+            return null;
+        }
+
+        $photoBuilderProvider         = null;
+        $photoBuilderApiKeyNormalized = null;
+        if ($photoBuilderProviderRaw !== null && $photoBuilderProviderRaw !== '' && $photoBuilderApiKey !== null && $photoBuilderApiKey !== '') {
+            $photoBuilderProviderEnum = LlmModelProvider::tryFrom($photoBuilderProviderRaw);
+            if ($photoBuilderProviderEnum === null || !$photoBuilderProviderEnum->supportsPhotoBuilder()) {
+                $this->logger->warning('Prefab entry skipped: invalid or unsupported photo_builder_llm_model_provider', [
+                    'index' => $index,
+                    'value' => $photoBuilderProviderRaw,
+                ]);
+
+                return null;
+            }
+            $photoBuilderProvider         = $photoBuilderProviderEnum->value;
+            $photoBuilderApiKeyNormalized = $photoBuilderApiKey;
+        }
+
         return new PrefabDto(
             $name,
             $projectLink,
@@ -115,6 +146,8 @@ final class PrefabLoader
             $llmModelProvider->value,
             $llmApiKey,
             $keysVisible,
+            $photoBuilderProvider,
+            $photoBuilderApiKeyNormalized,
         );
     }
 }

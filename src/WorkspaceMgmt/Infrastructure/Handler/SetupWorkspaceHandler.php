@@ -43,7 +43,7 @@ final readonly class SetupWorkspaceHandler
                 'workspaceId' => $message->workspaceId,
             ]);
 
-            $this->setupService->setup($workspace);
+            $this->setupService->setup($workspace, $message->userEmail);
 
             $this->logger->info('Async workspace setup completed', [
                 'workspaceId' => $message->workspaceId,

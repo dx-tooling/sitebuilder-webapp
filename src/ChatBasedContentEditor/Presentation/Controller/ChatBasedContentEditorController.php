@@ -147,7 +147,7 @@ final class ChatBasedContentEditorController extends AbstractController
 
         try {
             // Dispatch async setup if needed - this will start setup in background
-            $workspace = $this->workspaceMgmtFacade->dispatchSetupIfNeeded($projectId);
+            $workspace = $this->workspaceMgmtFacade->dispatchSetupIfNeeded($projectId, $accountInfo->email);
 
             // If setup was dispatched (workspace is now IN_SETUP), show waiting page
             if ($workspace->status === WorkspaceStatus::IN_SETUP) {
