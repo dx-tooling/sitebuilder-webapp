@@ -12,6 +12,7 @@ describe("PromptSuggestionsController", () => {
         formModal: HTMLElement;
         formInput: HTMLTextAreaElement;
         formTitle: HTMLElement;
+        formError: HTMLElement;
         deleteModal: HTMLElement;
     }
 
@@ -55,6 +56,8 @@ describe("PromptSuggestionsController", () => {
         formModal.classList.add("hidden");
         const formInput = document.createElement("textarea");
         const formTitle = document.createElement("h3");
+        const formError = document.createElement("p");
+        formError.classList.add("hidden");
         const deleteModal = document.createElement("div");
         deleteModal.classList.add("hidden");
 
@@ -77,6 +80,8 @@ describe("PromptSuggestionsController", () => {
             formInputTarget: HTMLTextAreaElement;
             hasFormTitleTarget: boolean;
             formTitleTarget: HTMLElement;
+            hasFormErrorTarget: boolean;
+            formErrorTarget: HTMLElement;
             hasDeleteModalTarget: boolean;
             deleteModalTarget: HTMLElement;
             createUrlValue: string;
@@ -107,6 +112,8 @@ describe("PromptSuggestionsController", () => {
         state.formInputTarget = formInput;
         state.hasFormTitleTarget = true;
         state.formTitleTarget = formTitle;
+        state.hasFormErrorTarget = true;
+        state.formErrorTarget = formError;
         state.hasDeleteModalTarget = true;
         state.deleteModalTarget = deleteModal;
         state.createUrlValue = "/conversation/123/prompt-suggestions";
@@ -129,6 +136,7 @@ describe("PromptSuggestionsController", () => {
             formModal,
             formInput,
             formTitle,
+            formError,
             deleteModal,
         };
     };
@@ -504,6 +512,66 @@ describe("PromptSuggestionsController", () => {
             await controller.submitForm();
 
             expect(formModal.classList.contains("hidden")).toBe(true);
+        });
+
+        it("shows error message and keeps modal open on 400 response", async () => {
+            const { controller, formModal, formInput, formError } = createController();
+
+            fetchSpy.mockResolvedValueOnce({
+                ok: false,
+                status: 400,
+                json: () =>
+                    Promise.resolve({
+                        error: "This suggestion already exists.",
+                    }),
+            });
+
+            controller.showAddModal();
+            formInput.value = "Duplicate suggestion";
+
+            await controller.submitForm();
+
+            expect(formModal.classList.contains("hidden")).toBe(false);
+            expect(formError.classList.contains("hidden")).toBe(false);
+            expect(formError.textContent).toBe("This suggestion already exists.");
+        });
+
+        it("clears error message when modal is reopened", async () => {
+            const { controller, formInput, formError } = createController();
+
+            fetchSpy.mockResolvedValueOnce({
+                ok: false,
+                status: 400,
+                json: () =>
+                    Promise.resolve({
+                        error: "This suggestion already exists.",
+                    }),
+            });
+
+            controller.showAddModal();
+            formInput.value = "Duplicate";
+
+            await controller.submitForm();
+            expect(formError.classList.contains("hidden")).toBe(false);
+
+            controller.showAddModal();
+            expect(formError.classList.contains("hidden")).toBe(true);
+            expect(formError.textContent).toBe("");
+        });
+
+        it("shows generic error on network failure", async () => {
+            const { controller, formModal, formInput, formError } = createController();
+
+            fetchSpy.mockRejectedValueOnce(new Error("Network error"));
+
+            controller.showAddModal();
+            formInput.value = "Some suggestion";
+
+            await controller.submitForm();
+
+            expect(formModal.classList.contains("hidden")).toBe(false);
+            expect(formError.classList.contains("hidden")).toBe(false);
+            expect(formError.textContent).toBe("An unexpected error occurred.");
         });
     });
 

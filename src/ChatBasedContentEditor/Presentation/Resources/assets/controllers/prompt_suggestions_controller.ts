@@ -14,6 +14,7 @@ export default class extends Controller {
         "formModal",
         "formInput",
         "formTitle",
+        "formError",
         "deleteModal",
     ];
 
@@ -54,6 +55,8 @@ export default class extends Controller {
     declare readonly formInputTarget: HTMLTextAreaElement;
     declare readonly hasFormTitleTarget: boolean;
     declare readonly formTitleTarget: HTMLElement;
+    declare readonly hasFormErrorTarget: boolean;
+    declare readonly formErrorTarget: HTMLElement;
     declare readonly hasDeleteModalTarget: boolean;
     declare readonly deleteModalTarget: HTMLElement;
 
@@ -197,7 +200,7 @@ export default class extends Controller {
             return;
         }
 
-        const text = this.formInputTarget.value.trim();
+        const text = this.sanitizeText(this.formInputTarget.value);
         if (text === "") {
             return;
         }
@@ -213,11 +216,19 @@ export default class extends Controller {
             method = "PUT";
         }
 
-        const suggestions = await this.sendRequest(url, method, { text });
-        if (suggestions !== null) {
-            this.refreshSuggestionsList(suggestions);
+        const result = await this.sendRequest(url, method, { text });
+
+        if (result === null) {
+            this.showFormError("An unexpected error occurred.");
+            return;
         }
 
+        if ("error" in result) {
+            this.showFormError(result.error);
+            return;
+        }
+
+        this.refreshSuggestionsList(result.suggestions);
         this.hideFormModal();
     }
 
@@ -254,10 +265,10 @@ export default class extends Controller {
         }
 
         const url = this.deleteUrlTemplateValue.replace("99999", String(this.deleteIndex));
-        const suggestions = await this.sendRequest(url, "DELETE");
+        const result = await this.sendRequest(url, "DELETE");
 
-        if (suggestions !== null) {
-            this.refreshSuggestionsList(suggestions);
+        if (result !== null && "suggestions" in result) {
+            this.refreshSuggestionsList(result.suggestions);
         }
 
         this.cancelDelete();
@@ -274,21 +285,39 @@ export default class extends Controller {
             this.formTitleTarget.textContent = title;
         }
 
+        this.clearFormError();
         this.formInputTarget.value = text;
         this.formInputTarget.placeholder = this.placeholderValue;
         this.formModalTarget.classList.remove("hidden");
 
-        // Focus the textarea after it becomes visible
         requestAnimationFrame(() => {
             this.formInputTarget.focus();
         });
     }
 
+    private showFormError(message: string): void {
+        if (this.hasFormErrorTarget) {
+            this.formErrorTarget.textContent = message;
+            this.formErrorTarget.classList.remove("hidden");
+        }
+    }
+
+    private clearFormError(): void {
+        if (this.hasFormErrorTarget) {
+            this.formErrorTarget.textContent = "";
+            this.formErrorTarget.classList.add("hidden");
+        }
+    }
+
     /**
-     * Send a JSON request to the API and return the updated suggestions list.
-     * Returns null if the request failed.
+     * Send a JSON request to the API.
+     * Returns a success object with suggestions, an error object with a message, or null on network failure.
      */
-    private async sendRequest(url: string, method: string, body?: Record<string, string>): Promise<string[] | null> {
+    private async sendRequest(
+        url: string,
+        method: string,
+        body?: Record<string, string>,
+    ): Promise<{ suggestions: string[] } | { error: string } | null> {
         try {
             const options: RequestInit = {
                 method,
@@ -304,16 +333,16 @@ export default class extends Controller {
             }
 
             const response = await fetch(url, options);
-
-            if (!response.ok) {
-                return null;
-            }
-
             const data = (await response.json()) as {
                 suggestions?: string[];
+                error?: string;
             };
 
-            return data.suggestions ?? null;
+            if (!response.ok) {
+                return { error: data.error ?? "Request failed." };
+            }
+
+            return { suggestions: data.suggestions ?? [] };
         } catch {
             return null;
         }
@@ -418,5 +447,16 @@ export default class extends Controller {
         } else {
             this.expandCollapseWrapperTarget.classList.add("hidden");
         }
+    }
+
+    private sanitizeText(raw: string): string {
+        return (
+            raw
+                .replace(/[\r\n]+/g, " ")
+                // eslint-disable-next-line no-control-regex
+                .replace(/[\x00-\x1F\x7F-\x9F]/g, "")
+                .replace(/\s{2,}/g, " ")
+                .trim()
+        );
     }
 }

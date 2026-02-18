@@ -63,12 +63,17 @@ final readonly class PromptSuggestionsService
      */
     public function addSuggestion(string $workspacePath, string $text): array
     {
-        $text = trim($text);
+        $text = $this->sanitize($text);
         if ($text === '') {
             throw new InvalidArgumentException('Suggestion text must not be empty.');
         }
 
         $suggestions = $this->getSuggestions($workspacePath);
+
+        if ($this->isDuplicate($text, $suggestions)) {
+            throw new InvalidArgumentException('This suggestion already exists.');
+        }
+
         array_unshift($suggestions, $text);
 
         $this->saveSuggestions($workspacePath, $suggestions);
@@ -83,7 +88,7 @@ final readonly class PromptSuggestionsService
      */
     public function updateSuggestion(string $workspacePath, int $index, string $text): array
     {
-        $text = trim($text);
+        $text = $this->sanitize($text);
         if ($text === '') {
             throw new InvalidArgumentException('Suggestion text must not be empty.');
         }
@@ -92,6 +97,10 @@ final readonly class PromptSuggestionsService
 
         if ($index < 0 || $index >= count($suggestions)) {
             throw new OutOfRangeException('Suggestion index ' . $index . ' is out of range.');
+        }
+
+        if ($this->isDuplicate($text, $suggestions, $index)) {
+            throw new InvalidArgumentException('This suggestion already exists.');
         }
 
         $suggestions[$index] = $text;
@@ -120,6 +129,44 @@ final readonly class PromptSuggestionsService
         $this->saveSuggestions($workspacePath, $suggestions);
 
         return $suggestions;
+    }
+
+    /**
+     * @param list<string> $suggestions
+     */
+    private function isDuplicate(string $text, array $suggestions, ?int $excludeIndex = null): bool
+    {
+        $normalised = mb_strtolower($text);
+
+        foreach ($suggestions as $index => $existing) {
+            if ($excludeIndex !== null && $index === $excludeIndex) {
+                continue;
+            }
+
+            if (mb_strtolower($existing) === $normalised) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Strip newlines, control characters, and collapse whitespace to produce a single-line string.
+     * Suggestions are stored one per line, so embedded newlines would corrupt the file format.
+     */
+    private function sanitize(string $text): string
+    {
+        // Replace newlines with spaces
+        $text = str_replace(["\r\n", "\r", "\n"], ' ', $text);
+
+        // Remove invisible/control characters (Unicode category C) but keep regular spaces
+        $text = (string) preg_replace('/[\p{C}]+/u', '', $text);
+
+        // Collapse multiple spaces into one
+        $text = (string) preg_replace('/\s{2,}/', ' ', $text);
+
+        return trim($text);
     }
 
     /**

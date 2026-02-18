@@ -204,6 +204,28 @@ final class PromptSuggestionsServiceTest extends TestCase
         $service->addSuggestion($this->tempDir, '   ');
     }
 
+    public function testAddSuggestionThrowsOnDuplicate(): void
+    {
+        $this->createSuggestionsFile("Existing suggestion\n");
+
+        $service = new PromptSuggestionsService();
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('This suggestion already exists.');
+        $service->addSuggestion($this->tempDir, 'Existing suggestion');
+    }
+
+    public function testAddSuggestionThrowsOnCaseInsensitiveDuplicate(): void
+    {
+        $this->createSuggestionsFile("Create a landing page\n");
+
+        $service = new PromptSuggestionsService();
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('This suggestion already exists.');
+        $service->addSuggestion($this->tempDir, 'create a LANDING page');
+    }
+
     // ─── updateSuggestion ──────────────────────────────────────────
 
     public function testUpdateSuggestionReplacesAtIndex(): void
@@ -275,6 +297,27 @@ final class PromptSuggestionsServiceTest extends TestCase
 
         $this->expectException(OutOfRangeException::class);
         $service->updateSuggestion($this->tempDir, 5, 'Text');
+    }
+
+    public function testUpdateSuggestionThrowsOnDuplicate(): void
+    {
+        $this->createSuggestionsFile("First\nSecond\nThird\n");
+
+        $service = new PromptSuggestionsService();
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('This suggestion already exists.');
+        $service->updateSuggestion($this->tempDir, 0, 'Second');
+    }
+
+    public function testUpdateSuggestionAllowsSameTextAtSameIndex(): void
+    {
+        $this->createSuggestionsFile("First\nSecond\n");
+
+        $service = new PromptSuggestionsService();
+        $result  = $service->updateSuggestion($this->tempDir, 0, 'FIRST');
+
+        self::assertSame(['FIRST', 'Second'], $result);
     }
 
     // ─── deleteSuggestion ──────────────────────────────────────────
