@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\WorkspaceTooling\Infrastructure\Execution;
 
+use Psr\Log\LoggerInterface;
 use Symfony\Component\Process\Exception\ProcessTimedOutException;
 use Symfony\Component\Process\Process;
 
@@ -24,8 +25,9 @@ final class DockerExecutor
     private const int DEFAULT_TIMEOUT = 300; // 5 minutes
 
     public function __construct(
-        private readonly string $containerBasePath,
-        private readonly string $hostBasePath
+        private readonly string          $containerBasePath,
+        private readonly string          $hostBasePath,
+        private readonly LoggerInterface $logger,
     ) {
     }
 
@@ -67,6 +69,14 @@ final class DockerExecutor
         $process = new Process($dockerCommand);
         $process->setTimeout($timeout);
 
+        $this->logger->info('Executing Docker command', [
+            'command'       => implode(' ', $dockerCommand),
+            'image'         => $image,
+            'mountPath'     => $mountPath,
+            'hostBasePath'  => $this->hostBasePath,
+            'containerName' => $containerName,
+        ]);
+
         try {
             $process->run();
         } catch (ProcessTimedOutException $e) {
@@ -80,9 +90,15 @@ final class DockerExecutor
         $output = $process->getOutput() . $process->getErrorOutput();
 
         if (!$process->isSuccessful()) {
-            // Check for common Docker errors
             $exitCode    = $process->getExitCode();
             $errorOutput = $process->getErrorOutput();
+
+            $this->logger->error('Docker command failed', [
+                'exitCode' => $exitCode,
+                'stderr'   => $errorOutput,
+                'stdout'   => $process->getOutput(),
+                'command'  => implode(' ', $dockerCommand),
+            ]);
 
             if (str_contains($errorOutput, 'Unable to find image')) {
                 throw new DockerExecutionException(

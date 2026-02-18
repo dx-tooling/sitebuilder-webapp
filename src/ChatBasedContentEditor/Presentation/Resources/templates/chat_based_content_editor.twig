@@ -140,14 +140,17 @@
                  {{ stimulus_controller('html-editor', {
                      loadUrl: path('chat_based_content_editor.presentation.page_content', { workspaceId: workspace.id }),
                      saveUrl: path('chat_based_content_editor.presentation.save_page', { workspaceId: workspace.id }),
+                     buildStatusUrlTemplate: path('chat_based_content_editor.presentation.build_status', { workspaceId: workspace.id, buildId: '00000000-0000-0000-0000-000000000000' }),
                      workspaceId: workspace.id,
                      translations: {
                          editing: 'editor.html_editor_editing'|trans,
                          saveChanges: 'editor.html_editor_save_changes'|trans,
                          close: 'editor.html_editor_close'|trans,
                          saving: 'editor.html_editor_saving'|trans,
+                         building: 'editor.html_editor_building'|trans,
                          saveSuccess: 'editor.html_editor_save_success'|trans,
                          saveError: 'editor.html_editor_save_error'|trans,
+                         buildError: 'editor.html_editor_build_error'|trans,
                          loadError: 'editor.html_editor_load_error'|trans
                      }
                  }) }}
