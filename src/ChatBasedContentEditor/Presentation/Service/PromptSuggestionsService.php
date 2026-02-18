@@ -16,6 +16,7 @@ final readonly class PromptSuggestionsService
 {
     private const string SUGGESTIONS_FILE_PATH = '.sitebuilder/prompt-suggestions.md';
     public const int MAX_SUGGESTIONS           = 50;
+    public const int MAX_TEXT_LENGTH           = 2500;
 
     /**
      * Get prompt suggestions from the workspace's .sitebuilder/prompt-suggestions.md file.
@@ -69,6 +70,10 @@ final readonly class PromptSuggestionsService
             throw new InvalidArgumentException('Suggestion text must not be empty.');
         }
 
+        if (mb_strlen($text) > self::MAX_TEXT_LENGTH) {
+            throw new InvalidArgumentException('Suggestion text must not exceed ' . self::MAX_TEXT_LENGTH . ' characters.');
+        }
+
         $suggestions = $this->getSuggestions($workspacePath);
 
         if (count($suggestions) >= self::MAX_SUGGESTIONS) {
@@ -96,6 +101,10 @@ final readonly class PromptSuggestionsService
         $text = $this->sanitize($text);
         if ($text === '') {
             throw new InvalidArgumentException('Suggestion text must not be empty.');
+        }
+
+        if (mb_strlen($text) > self::MAX_TEXT_LENGTH) {
+            throw new InvalidArgumentException('Suggestion text must not exceed ' . self::MAX_TEXT_LENGTH . ' characters.');
         }
 
         $suggestions = $this->getSuggestions($workspacePath);

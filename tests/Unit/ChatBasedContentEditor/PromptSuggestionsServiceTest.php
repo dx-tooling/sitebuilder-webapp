@@ -256,6 +256,24 @@ final class PromptSuggestionsServiceTest extends TestCase
         self::assertSame('Last allowed', $result[0]);
     }
 
+    public function testAddSuggestionThrowsWhenTextExceedsMaxLength(): void
+    {
+        $service = new PromptSuggestionsService();
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('must not exceed');
+        $service->addSuggestion($this->tempDir, str_repeat('a', PromptSuggestionsService::MAX_TEXT_LENGTH + 1));
+    }
+
+    public function testAddSuggestionAllowsTextAtMaxLength(): void
+    {
+        $service = new PromptSuggestionsService();
+        $result  = $service->addSuggestion($this->tempDir, str_repeat('a', PromptSuggestionsService::MAX_TEXT_LENGTH));
+
+        self::assertCount(1, $result);
+        self::assertSame(PromptSuggestionsService::MAX_TEXT_LENGTH, mb_strlen($result[0]));
+    }
+
     // ─── updateSuggestion ──────────────────────────────────────────
 
     public function testUpdateSuggestionReplacesAtIndex(): void
@@ -307,6 +325,17 @@ final class PromptSuggestionsServiceTest extends TestCase
 
         $this->expectException(InvalidArgumentException::class);
         $service->updateSuggestion($this->tempDir, 0, '');
+    }
+
+    public function testUpdateSuggestionThrowsWhenTextExceedsMaxLength(): void
+    {
+        $this->createSuggestionsFile("First\nSecond\n");
+
+        $service = new PromptSuggestionsService();
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('must not exceed');
+        $service->updateSuggestion($this->tempDir, 0, str_repeat('b', PromptSuggestionsService::MAX_TEXT_LENGTH + 1));
     }
 
     public function testUpdateSuggestionThrowsOnNegativeIndex(): void
