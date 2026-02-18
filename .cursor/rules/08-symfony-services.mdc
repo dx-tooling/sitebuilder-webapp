@@ -1,0 +1,29 @@
+---
+description: "Symfony service container, autowiring, config/services.yaml. Use when adding or changing services, interfaces, or DI configuration."
+globs: ["config/services.yaml", "config/**/services*.yaml", "src/**/*.php"]
+alwaysApply: false
+---
+
+# Symfony Services and Autowiring
+
+**Reference**: See [Symfony Autowiring](https://symfony.com/doc/current/service_container/autowiring.html).
+
+## Interface Bindings
+
+**Do not add explicit interface → implementation bindings in `config/services.yaml` when:**
+
+- The interface has **exactly one** concrete implementation in the application, and
+- That implementation is in the autowired resource path (e.g. `App\` → `../src/`).
+
+Symfony's autowiring will automatically inject the single implementation when a type hint asks for the interface. Adding a redundant `InterfaceName: class: ImplementationName` entry is unnecessary and should be avoided.
+
+**Add explicit configuration only when:**
+
+- The implementation lives outside the autowired resource (e.g. in a third-party bundle or vendor), or
+- You need to pass specific constructor arguments, or
+- There are multiple implementations and you must choose one (or use tags/compiler passes), or
+- You need an alias to a decorator or a specific service id.
+
+## When in Doubt
+
+Prefer omitting the binding and relying on autowiring; if the container fails with "multiple implementations" or "no service for interface", then add the minimal explicit configuration needed.

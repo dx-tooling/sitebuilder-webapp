@@ -145,10 +145,6 @@ services:
     App\ChatBasedContentEditor\Facade\ChatBasedContentEditorFacadeInterface:
         class: App\ChatBasedContentEditor\Facade\ChatBasedContentEditorFacade
 
-    # Domain service bindings
-    App\WorkspaceMgmt\Domain\Service\WorkspaceStatusGuardInterface:
-        class: App\WorkspaceMgmt\Domain\Service\WorkspaceStatusGuard
-
     # Infrastructure adapter bindings
     App\WorkspaceMgmt\Infrastructure\Adapter\GitAdapterInterface:
         class: App\WorkspaceMgmt\Infrastructure\Adapter\GitCliAdapter

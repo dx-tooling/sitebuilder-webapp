@@ -8,10 +8,17 @@
 #   project_link:     Git repository URL (e.g. https://github.com/org/repo.git)
 #   github_access_key: GitHub personal access token
 #   llm_model_provider: One of: openai (see LlmModelProvider enum)
-#   llm_api_key:      API key for the LLM provider
+#   llm_api_key:      API key for the LLM provider (content editing)
 #   keys_visible:     (optional, default true) If false, GitHub and LLM keys are
 #                     set and used by the app but never shown to org users
 #                     (edit form, reuse-existing-key UI).
+#
+# Optional keys for dedicated PhotoBuilder (e.g. Google Gemini image generation):
+#   photo_builder_llm_model_provider: One of: openai, google. If set, photo_builder_llm_api_key is required.
+#   photo_builder_llm_api_key:         API key for the PhotoBuilder provider (image + prompt generation).
+# If both are omitted, PhotoBuilder uses the content-editing LLM settings.
+# When set, the created project will use this provider and key for image generation
+# (e.g. Gemini models). Do not commit real keys; use deployment secrets (CI, gh-secrets, etc.).
 #
 # prefabs:
 #   - name: "My Prefab Project"
@@ -19,4 +26,14 @@
 #     github_access_key: "ghp_xxxxxxxxxxxx"
 #     llm_model_provider: "openai"
 #     llm_api_key: "sk-..."
+#     keys_visible: false
+#
+#   # Example: prefab with dedicated Google Gemini for image generation
+#   - name: "Prefab with Gemini PhotoBuilder"
+#     project_link: "https://github.com/example/other-repo.git"
+#     github_access_key: "ghp_xxxxxxxxxxxx"
+#     llm_model_provider: "openai"
+#     llm_api_key: "sk-..."
+#     photo_builder_llm_model_provider: "google"
+#     photo_builder_llm_api_key: "AIza..."
 #     keys_visible: false

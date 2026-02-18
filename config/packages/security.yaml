@@ -17,6 +17,7 @@ security:
                 login_path: account.presentation.sign_in
                 check_path: account.presentation.sign_in
                 default_target_path: project_mgmt.presentation.list
+                enable_csrf: true
                 username_parameter: email
                 password_parameter: password
             logout:
