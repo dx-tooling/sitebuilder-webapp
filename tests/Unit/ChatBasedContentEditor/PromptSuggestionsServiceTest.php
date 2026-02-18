@@ -226,6 +226,36 @@ final class PromptSuggestionsServiceTest extends TestCase
         $service->addSuggestion($this->tempDir, 'create a LANDING page');
     }
 
+    public function testAddSuggestionThrowsWhenMaxLimitReached(): void
+    {
+        $lines = implode("\n", array_map(
+            static fn (int $i): string => 'Suggestion ' . $i,
+            range(1, PromptSuggestionsService::MAX_SUGGESTIONS)
+        ));
+        $this->createSuggestionsFile($lines . "\n");
+
+        $service = new PromptSuggestionsService();
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Maximum number of suggestions');
+        $service->addSuggestion($this->tempDir, 'One too many');
+    }
+
+    public function testAddSuggestionAllowsUpToMaxLimit(): void
+    {
+        $lines = implode("\n", array_map(
+            static fn (int $i): string => 'Suggestion ' . $i,
+            range(1, PromptSuggestionsService::MAX_SUGGESTIONS - 1)
+        ));
+        $this->createSuggestionsFile($lines . "\n");
+
+        $service = new PromptSuggestionsService();
+        $result  = $service->addSuggestion($this->tempDir, 'Last allowed');
+
+        self::assertCount(PromptSuggestionsService::MAX_SUGGESTIONS, $result);
+        self::assertSame('Last allowed', $result[0]);
+    }
+
     // ─── updateSuggestion ──────────────────────────────────────────
 
     public function testUpdateSuggestionReplacesAtIndex(): void

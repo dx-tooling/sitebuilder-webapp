@@ -15,6 +15,7 @@ use Symfony\Component\HttpFoundation\Request;
 final readonly class PromptSuggestionsService
 {
     private const string SUGGESTIONS_FILE_PATH = '.sitebuilder/prompt-suggestions.md';
+    public const int MAX_SUGGESTIONS           = 50;
 
     /**
      * Get prompt suggestions from the workspace's .sitebuilder/prompt-suggestions.md file.
@@ -69,6 +70,10 @@ final readonly class PromptSuggestionsService
         }
 
         $suggestions = $this->getSuggestions($workspacePath);
+
+        if (count($suggestions) >= self::MAX_SUGGESTIONS) {
+            throw new InvalidArgumentException('Maximum number of suggestions (' . self::MAX_SUGGESTIONS . ') reached.');
+        }
 
         if ($this->isDuplicate($text, $suggestions)) {
             throw new InvalidArgumentException('This suggestion already exists.');
