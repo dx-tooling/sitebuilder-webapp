@@ -250,13 +250,6 @@ final class DockerExecutor
         $dockerCmd[] = '-e';
         $dockerCmd[] = 'NODE_OPTIONS=--max-old-space-size=1536';
 
-        // Set BASH_ENV to source a script that sets up PATH with mise node installation.
-        // The Cursor CLI spawns fresh bash processes for shellToolCall that don't inherit
-        // environment variables from the parent. BASH_ENV tells non-interactive bash to
-        // source a file before running commands.
-        $dockerCmd[] = '-e';
-        $dockerCmd[] = 'BASH_ENV=/etc/profile.d/mise-path.sh';
-
         // Add the image
         $dockerCmd[] = $image;
 

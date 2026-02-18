@@ -22,7 +22,7 @@ final class CursorAgentContentEditorAdapterTest extends TestCase
 
         $executionContext = $this->createMock(AgentExecutionContextInterface::class);
 
-        $this->adapter = new CursorAgentContentEditorAdapter($workspaceTooling, $executionContext);
+        $this->adapter = new CursorAgentContentEditorAdapter($workspaceTooling, $executionContext, 'test-cursor-image');
     }
 
     public function testBuildAgentContextDumpIncludesSystemContextOnFirstMessage(): void

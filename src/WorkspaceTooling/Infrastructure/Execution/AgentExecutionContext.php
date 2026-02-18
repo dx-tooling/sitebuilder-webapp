@@ -33,6 +33,7 @@ final class AgentExecutionContext implements AgentExecutionContextInterface
     private ?string $conversationId         = null;
     private ?string $projectName            = null;
     private ?string $agentImage             = null;
+    private ?string $originalAgentImage     = null;
     private ?string $suggestedCommitMessage = null;
     private ?Closure $outputCallback        = null;
 
@@ -72,6 +73,7 @@ final class AgentExecutionContext implements AgentExecutionContextInterface
         $this->conversationId                  = null;
         $this->projectName                     = null;
         $this->agentImage                      = null;
+        $this->originalAgentImage              = null;
         $this->suggestedCommitMessage          = null;
         $this->remoteContentAssetsManifestUrls = null;
         $this->outputCallback                  = null;
@@ -127,6 +129,20 @@ final class AgentExecutionContext implements AgentExecutionContextInterface
     public function getAgentImage(): ?string
     {
         return $this->agentImage;
+    }
+
+    public function overrideAgentImage(string $image): void
+    {
+        $this->originalAgentImage = $this->agentImage;
+        $this->agentImage         = $image;
+    }
+
+    public function restoreAgentImage(): void
+    {
+        if ($this->originalAgentImage !== null) {
+            $this->agentImage         = $this->originalAgentImage;
+            $this->originalAgentImage = null;
+        }
     }
 
     /**

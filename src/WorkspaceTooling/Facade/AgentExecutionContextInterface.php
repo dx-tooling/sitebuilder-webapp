@@ -86,4 +86,20 @@ interface AgentExecutionContextInterface
      * @return string|null The agent image, or null if not set
      */
     public function getAgentImage(): ?string;
+
+    /**
+     * Temporarily override the agent image.
+     *
+     * Use this when a specific adapter needs a different Docker image than the
+     * project-level default (e.g., the Cursor agent needs the app image with
+     * the CLI installed, not the project's node image).
+     *
+     * The original image is preserved and can be restored via restoreAgentImage().
+     */
+    public function overrideAgentImage(string $image): void;
+
+    /**
+     * Restore the agent image to the value before the last overrideAgentImage() call.
+     */
+    public function restoreAgentImage(): void;
 }

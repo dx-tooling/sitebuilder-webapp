@@ -30,6 +30,7 @@ final class CursorAgentContentEditorAdapter implements AgenticContentEditorAdapt
     public function __construct(
         private readonly WorkspaceToolingServiceInterface $workspaceTooling,
         private readonly AgentExecutionContextInterface   $executionContext,
+        private readonly string                           $cursorAgentImage,
     ) {
     }
 
@@ -65,6 +66,10 @@ final class CursorAgentContentEditorAdapter implements AgenticContentEditorAdapt
 
             yield new EditStreamChunkDto(EditStreamChunkType::Event, null, new AgentEventDto('inference_start'));
 
+            // The Cursor CLI is installed in the app image, not in the project's agent image.
+            // Override the agent image so the IsolatedShellExecutor uses the correct image.
+            $this->executionContext->overrideAgentImage($this->cursorAgentImage);
+
             $agent   = new ContentEditorAgent($this->workspaceTooling);
             $process = $agent->startAsync('/workspace', $prompt, $apiKey, $backendSessionState);
 
@@ -84,6 +89,9 @@ final class CursorAgentContentEditorAdapter implements AgenticContentEditorAdapt
             foreach ($collector->drain() as $chunk) {
                 yield $chunk;
             }
+
+            // Restore the project's agent image for the build step
+            $this->executionContext->restoreAgentImage();
 
             $lastSessionId = $collector->getLastSessionId();
 
@@ -114,6 +122,7 @@ final class CursorAgentContentEditorAdapter implements AgenticContentEditorAdapt
             yield new EditStreamChunkDto(EditStreamChunkType::Event, null, new AgentEventDto('inference_stop'));
             yield new EditStreamChunkDto(EditStreamChunkType::Done, null, null, false, $e->getMessage());
         } finally {
+            $this->executionContext->restoreAgentImage();
             $this->executionContext->setOutputCallback(null);
         }
     }

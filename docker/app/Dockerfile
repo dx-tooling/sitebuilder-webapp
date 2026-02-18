@@ -77,6 +77,17 @@ RUN mkdir -p /opt/mise/data /opt/mise/cache /opt/mise/state && \
     chmod -R 777 /opt/mise && \
     mise install node@24
 
+# Create a custom entrypoint that adds the mise node bin directory to PATH.
+# This makes node/npm/npx available in the default PATH for all invocations:
+# docker-compose services, docker run commands, and non-interactive sh -c calls.
+# The resolved path is baked at build time so there is no runtime lookup overhead.
+RUN NODE_BIN="$(mise where node)/bin" && \
+    printf '#!/bin/sh\nset -e\nexport PATH="%s:$PATH"\nexec docker-php-entrypoint "$@"\n' "$NODE_BIN" \
+        > /usr/local/bin/app-entrypoint && \
+    chmod +x /usr/local/bin/app-entrypoint
+
+ENTRYPOINT ["app-entrypoint"]
+
 # Shell activation for interactive use (debugging)
 RUN echo 'eval "$(/usr/bin/env mise activate bash)"' >> ~/.bashrc
 RUN echo 'eval "$(/usr/bin/env mise activate zsh)"' >> ~/.zshrc

@@ -20,6 +20,11 @@ parameters:
     docker.host_base_path_default: "/var/www"
     docker.host_base_path: "%env(default:docker.host_base_path_default:HOST_PROJECT_PATH)%"
 
+    # Docker image that contains the Cursor Agent CLI.
+    # Set via CURSOR_AGENT_IMAGE env var (docker-compose sets this to the app image).
+    cursor_agent.image_default: "node:22-slim"
+    cursor_agent.image: "%env(default:cursor_agent.image_default:CURSOR_AGENT_IMAGE)%"
+
 services:
     # default configuration for services in *this* file
     _defaults:
@@ -135,7 +140,9 @@ services:
 
     App\LlmContentEditor\Infrastructure\LlmContentEditorAdapter: ~
 
-    App\CursorAgentContentEditor\Infrastructure\CursorAgentContentEditorAdapter: ~
+    App\CursorAgentContentEditor\Infrastructure\CursorAgentContentEditorAdapter:
+        arguments:
+            $cursorAgentImage: "%cursor_agent.image%"
 
     App\AgenticContentEditor\Facade\AgenticContentEditorFacadeInterface:
         class: App\AgenticContentEditor\Facade\AgenticContentEditorFacade

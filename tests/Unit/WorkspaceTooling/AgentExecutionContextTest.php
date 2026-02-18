@@ -82,4 +82,45 @@ final class AgentExecutionContextTest extends TestCase
 
         self::assertSame([], $context->getRemoteContentAssetsManifestUrls());
     }
+
+    public function testOverrideAgentImageReplacesCurrentImage(): void
+    {
+        $context = new AgentExecutionContext();
+        $context->setContext('ws-id', '/path', null, 'project', 'node:22-slim');
+
+        $context->overrideAgentImage('app-image-with-cursor-cli');
+
+        self::assertSame('app-image-with-cursor-cli', $context->getAgentImage());
+    }
+
+    public function testRestoreAgentImageBringsBackOriginal(): void
+    {
+        $context = new AgentExecutionContext();
+        $context->setContext('ws-id', '/path', null, 'project', 'node:22-slim');
+
+        $context->overrideAgentImage('app-image-with-cursor-cli');
+        $context->restoreAgentImage();
+
+        self::assertSame('node:22-slim', $context->getAgentImage());
+    }
+
+    public function testRestoreAgentImageIsNoOpWithoutOverride(): void
+    {
+        $context = new AgentExecutionContext();
+        $context->setContext('ws-id', '/path', null, 'project', 'node:22-slim');
+
+        $context->restoreAgentImage();
+
+        self::assertSame('node:22-slim', $context->getAgentImage());
+    }
+
+    public function testClearContextResetsOverriddenAgentImage(): void
+    {
+        $context = new AgentExecutionContext();
+        $context->setContext('ws-id', '/path', null, 'project', 'node:22-slim');
+        $context->overrideAgentImage('app-image');
+        $context->clearContext();
+
+        self::assertNull($context->getAgentImage());
+    }
 }

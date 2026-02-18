@@ -51,12 +51,9 @@ class ContentEditorAgent extends BaseCodingAgent
             $sessionArg = '--resume ' . escapeshellarg($resumeSessionId);
         }
 
-        // Create a script that sets up PATH with mise node installation, then set BASH_ENV to source it.
-        // The Cursor CLI spawns fresh bash processes for shellToolCall that don't inherit environment
-        // variables from the parent. BASH_ENV tells non-interactive bash to source this file first.
+        // Node/npm are symlinked into /usr/local/bin in the Dockerfile, so they are
+        // available in the default PATH for all shells (including Cursor CLI subprocesses).
         return sprintf(
-            'echo \'export PATH="/opt/mise/data/installs/node/24.13.0/bin:$PATH"\' > /etc/profile.d/mise-path.sh && ' .
-            'export BASH_ENV=/etc/profile.d/mise-path.sh && ' .
             'AGENT_BIN=%s; ' .
             'if [ ! -x "$AGENT_BIN" ]; then echo "agent not found" >&2; exit 127; fi; ' .
             '"$AGENT_BIN" --output-format stream-json --stream-partial-output --force %s --api-key %s -p %s',
