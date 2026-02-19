@@ -13,6 +13,7 @@ use EtfsCodingAgent\Service\FileOperationsService;
 use EtfsCodingAgent\Service\ShellOperationsServiceInterface;
 use EtfsCodingAgent\Service\TextOperationsService;
 use PHPUnit\Framework\TestCase;
+use Psr\Log\NullLogger;
 
 final class WorkspaceToolingFacadeTest extends TestCase
 {
@@ -411,7 +412,7 @@ final class WorkspaceToolingFacadeTest extends TestCase
         $remoteContentAssetsFacade = $this->createMock(RemoteContentAssetsFacadeInterface::class);
         // DockerExecutor is final, so we create a real instance with dummy paths
         // The tests don't call runBuildInWorkspace, so this is safe
-        $dockerExecutor = new DockerExecutor('/tmp', '/tmp');
+        $dockerExecutor = new DockerExecutor('/tmp', '/tmp', new NullLogger());
 
         return new WorkspaceToolingFacade($fileOps, $textOps, $shellOps, $this->executionContext, $remoteContentAssetsFacade, $dockerExecutor);
     }
@@ -459,7 +460,7 @@ final class WorkspaceToolingFacadeTest extends TestCase
         $shellOps = $this->createMock(ShellOperationsServiceInterface::class);
         // DockerExecutor is final, so we create a real instance with dummy paths
         // The tests don't call runBuildInWorkspace, so this is safe
-        $dockerExecutor = new DockerExecutor('/tmp', '/tmp');
+        $dockerExecutor = new DockerExecutor('/tmp', '/tmp', new NullLogger());
 
         return new WorkspaceToolingFacade($fileOps, $textOps, $shellOps, $this->executionContext, $remoteContentAssetsFacade, $dockerExecutor);
     }

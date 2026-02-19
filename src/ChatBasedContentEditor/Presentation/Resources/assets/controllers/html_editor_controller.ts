@@ -5,19 +5,35 @@ interface TranslationsData {
     saveChanges: string;
     close: string;
     saving: string;
+    building: string;
     saveSuccess: string;
     saveError: string;
+    buildError: string;
     loadError: string;
+}
+
+interface SaveResponse {
+    buildId?: string;
+    error?: string;
+}
+
+interface BuildStatusResponse {
+    status: string;
+    error: string | null;
 }
 
 /**
  * Stimulus controller for the HTML editor.
  * Allows users to edit HTML content of dist files directly.
+ *
+ * After saving, an async build is dispatched via Symfony Messenger.
+ * The controller polls the build status endpoint until completed or failed.
  */
 export default class extends Controller {
     static values = {
         loadUrl: String,
         saveUrl: String,
+        buildStatusUrlTemplate: String,
         workspaceId: String,
         translations: Object,
     };
@@ -36,6 +52,7 @@ export default class extends Controller {
 
     declare readonly loadUrlValue: string;
     declare readonly saveUrlValue: string;
+    declare readonly buildStatusUrlTemplateValue: string;
     declare readonly workspaceIdValue: string;
     declare readonly translationsValue: TranslationsData;
 
@@ -60,13 +77,17 @@ export default class extends Controller {
 
     private currentPath: string = "";
     private csrfToken: string = "";
+    private buildPollTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
     connect(): void {
-        // Get CSRF token from the page
         const csrfInput = document.querySelector<HTMLInputElement>('input[name="_html_editor_csrf_token"]');
         if (csrfInput) {
             this.csrfToken = csrfInput.value;
         }
+    }
+
+    disconnect(): void {
+        this.stopBuildPolling();
     }
 
     /**
@@ -84,7 +105,6 @@ export default class extends Controller {
         this.hideError();
         this.hideSuccess();
 
-        // Slide up chat area and slide down editor container
         if (this.hasChatAreaTarget) {
             this.chatAreaTarget.classList.remove("grid-rows-[1fr]");
             this.chatAreaTarget.classList.add("grid-rows-[0fr]");
@@ -94,9 +114,7 @@ export default class extends Controller {
             this.containerTarget.classList.add("grid-rows-[1fr]");
         }
 
-        // Update page name display - show source path with mapping info
         if (this.hasPageNameDisplayTarget) {
-            // Map dist/ path to src/ path for display
             const sourcePath = path.startsWith("dist/") ? "src/" + path.substring(5) : path;
             this.pageNameDisplayTarget.textContent = `${sourcePath}`;
         }
@@ -128,7 +146,7 @@ export default class extends Controller {
     }
 
     /**
-     * Save the HTML changes.
+     * Save the HTML changes and start polling for build completion.
      */
     async saveChanges(): Promise<void> {
         if (!this.currentPath || !this.hasTextareaTarget) {
@@ -137,7 +155,7 @@ export default class extends Controller {
 
         this.hideError();
         this.hideSuccess();
-        this.setSaving(true);
+        this.setBusy(true, this.translationsValue.saving);
 
         const formData = new FormData();
         formData.append("path", this.currentPath);
@@ -151,37 +169,39 @@ export default class extends Controller {
                 body: formData,
             });
 
-            const data = (await response.json()) as { success?: boolean; error?: string };
+            const data = (await response.json()) as SaveResponse;
 
             if (!response.ok || data.error) {
                 this.showError(data.error || this.translationsValue.saveError);
-                this.setSaving(false);
+                this.setBusy(false);
 
                 return;
             }
 
-            this.showSuccess(this.translationsValue.saveSuccess);
-            this.setSaving(false);
+            if (data.buildId) {
+                this.setBusy(true, this.translationsValue.building);
+                this.pollBuildStatus(data.buildId);
+            } else {
+                this.showSuccess(this.translationsValue.saveSuccess);
+                this.setBusy(false);
+            }
         } catch (err) {
             const msg = err instanceof Error ? err.message : this.translationsValue.saveError;
             this.showError(msg);
-            this.setSaving(false);
+            this.setBusy(false);
         }
     }
 
-    /**
-     * Close the editor without saving.
-     */
     closeEditor(): void {
         this.currentPath = "";
         this.hideError();
         this.hideSuccess();
+        this.stopBuildPolling();
 
         if (this.hasTextareaTarget) {
             this.textareaTarget.value = "";
         }
 
-        // Slide up editor container and slide down chat area
         if (this.hasContainerTarget) {
             this.containerTarget.classList.remove("grid-rows-[1fr]");
             this.containerTarget.classList.add("grid-rows-[0fr]");
@@ -189,6 +209,58 @@ export default class extends Controller {
         if (this.hasChatAreaTarget) {
             this.chatAreaTarget.classList.remove("grid-rows-[0fr]");
             this.chatAreaTarget.classList.add("grid-rows-[1fr]");
+        }
+    }
+
+    private pollBuildStatus(buildId: string): void {
+        this.stopBuildPolling();
+
+        const url = this.buildStatusUrlTemplateValue.replace("00000000-0000-0000-0000-000000000000", buildId);
+
+        const doPoll = async (): Promise<void> => {
+            try {
+                const response = await fetch(url, {
+                    headers: { "X-Requested-With": "XMLHttpRequest" },
+                });
+
+                if (!response.ok) {
+                    this.showError(this.translationsValue.buildError);
+                    this.setBusy(false);
+
+                    return;
+                }
+
+                const data = (await response.json()) as BuildStatusResponse;
+
+                if (data.status === "completed") {
+                    this.showSuccess(this.translationsValue.saveSuccess);
+                    this.setBusy(false);
+
+                    return;
+                }
+
+                if (data.status === "failed") {
+                    this.showError(data.error || this.translationsValue.buildError);
+                    this.setBusy(false);
+
+                    return;
+                }
+
+                // Still pending or running -- schedule next poll
+                this.buildPollTimeoutId = setTimeout(() => void doPoll(), 1000);
+            } catch {
+                this.showError(this.translationsValue.buildError);
+                this.setBusy(false);
+            }
+        };
+
+        void doPoll();
+    }
+
+    private stopBuildPolling(): void {
+        if (this.buildPollTimeoutId !== null) {
+            clearTimeout(this.buildPollTimeoutId);
+            this.buildPollTimeoutId = null;
         }
     }
 
@@ -236,15 +308,15 @@ export default class extends Controller {
         }
     }
 
-    private setSaving(saving: boolean): void {
+    private setBusy(busy: boolean, buttonText?: string): void {
         if (this.hasSaveButtonTarget) {
-            this.saveButtonTarget.disabled = saving;
-            this.saveButtonTarget.textContent = saving
-                ? this.translationsValue.saving
+            this.saveButtonTarget.disabled = busy;
+            this.saveButtonTarget.textContent = busy
+                ? (buttonText ?? this.translationsValue.saving)
                 : this.translationsValue.saveChanges;
         }
         if (this.hasCloseButtonTarget) {
-            this.closeButtonTarget.disabled = saving;
+            this.closeButtonTarget.disabled = busy;
         }
     }
 }
