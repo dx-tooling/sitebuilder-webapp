@@ -22,6 +22,7 @@ use Symfony\Component\Process\Process;
 final class DockerExecutor
 {
     private const int DEFAULT_TIMEOUT = 300; // 5 minutes
+    private const string AGENT_CONTAINER_PREFIX = 'sitebuilder-ws-';
 
     public function __construct(
         private readonly string $containerBasePath,
@@ -145,6 +146,69 @@ final class DockerExecutor
         $pullProcess->run();
 
         return $pullProcess->isSuccessful();
+    }
+
+    /**
+     * Stop running agent containers for a specific workspace+conversation.
+     *
+     * This is used for immediate cancellation: when a user clicks "Stop", we
+     * terminate active tool/runtime containers so long-running operations are
+     * interrupted as quickly as possible.
+     */
+    public function stopAgentContainersForConversation(string $workspaceId, string $conversationId): int
+    {
+        $workspaceShort    = substr($workspaceId, 0, 8);
+        $conversationShort = substr($conversationId, 0, 8);
+        $nameNeedle        = '-' . $workspaceShort . '-' . $conversationShort . '-';
+
+        $listProcess = new Process([
+            'docker',
+            'ps',
+            '--format',
+            '{{.Names}}',
+            '--filter',
+            'name=' . self::AGENT_CONTAINER_PREFIX,
+        ]);
+        $listProcess->setTimeout(10);
+        $listProcess->run();
+
+        if (!$listProcess->isSuccessful()) {
+            throw new DockerExecutionException(
+                'Failed to list running Docker containers.',
+                'docker ps --format {{.Names}} --filter name=' . self::AGENT_CONTAINER_PREFIX
+            );
+        }
+
+        $stoppedCount = 0;
+        $namesOutput  = trim($listProcess->getOutput());
+        if ($namesOutput === '') {
+            return $stoppedCount;
+        }
+
+        foreach (explode("\n", $namesOutput) as $containerName) {
+            $containerName = trim($containerName);
+            if ($containerName === '') {
+                continue;
+            }
+
+            if (!str_starts_with($containerName, self::AGENT_CONTAINER_PREFIX)) {
+                continue;
+            }
+
+            if (!str_contains($containerName, $nameNeedle)) {
+                continue;
+            }
+
+            $stopProcess = new Process(['docker', 'stop', '--time', '1', $containerName]);
+            $stopProcess->setTimeout(15);
+            $stopProcess->run();
+
+            if ($stopProcess->isSuccessful()) {
+                $stoppedCount++;
+            }
+        }
+
+        return $stoppedCount;
     }
 
     /**

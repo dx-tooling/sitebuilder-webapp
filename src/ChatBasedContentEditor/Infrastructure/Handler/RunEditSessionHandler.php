@@ -69,10 +69,11 @@ final readonly class RunEditSessionHandler
         $session->setStatus(EditSessionStatus::Running);
         $this->entityManager->flush();
 
+        $conversation = $session->getConversation();
+
         try {
             // Load previous messages from conversation
             $previousMessages = $this->loadPreviousMessages($session);
-            $conversation     = $session->getConversation();
 
             // Set execution context for agent container execution
             $workspace = $this->workspaceMgmtFacade->getWorkspaceById($conversation->getWorkspaceId());
@@ -121,29 +122,8 @@ final readonly class RunEditSessionHandler
             $streamEndedWithFailure = false;
 
             foreach ($generator as $chunk) {
-                // Cooperative cancellation: check status directly via DBAL to avoid
-                // entityManager->refresh() which fails on readonly entity properties.
-                $currentStatus = $this->entityManager->getConnection()->fetchOne(
-                    'SELECT status FROM edit_sessions WHERE id = ?',
-                    [$session->getId()]
-                );
-
-                if ($currentStatus === EditSessionStatus::Cancelling->value) {
-                    // Persist a synthetic assistant message so the LLM on the next turn
-                    // understands this turn was interrupted and won't try to answer it.
-                    new ConversationMessage(
-                        $conversation,
-                        ConversationMessageRole::Assistant,
-                        json_encode(
-                            ['content' => '[Cancelled by the user — disregard this turn.]'],
-                            JSON_THROW_ON_ERROR
-                        )
-                    );
-
-                    EditSessionChunk::createDoneChunk($session, false, 'Cancelled by user.');
-                    $session->setStatus(EditSessionStatus::Cancelled);
-                    $this->entityManager->flush();
-
+                if ($this->isCancellationRequested($session)) {
+                    $this->finalizeCancelledSession($session, $conversation);
                     return;
                 }
 
@@ -159,6 +139,11 @@ final readonly class RunEditSessionHandler
                     // Persist new conversation messages
                     $this->persistConversationMessage($conversation, $chunk->message);
                 } elseif ($chunk->chunkType === EditStreamChunkType::Done) {
+                    if (($chunk->success ?? false) !== true && $this->isCancellationRequested($session)) {
+                        $this->finalizeCancelledSession($session, $conversation);
+                        return;
+                    }
+
                     $streamEndedWithFailure = ($chunk->success ?? false) !== true;
                     EditSessionChunk::createDoneChunk(
                         $session,
@@ -171,6 +156,12 @@ final readonly class RunEditSessionHandler
             }
 
             if ($streamEndedWithFailure) {
+                if ($this->isCancellationRequested($session)) {
+                    $session->setStatus(EditSessionStatus::Cancelled);
+                    $this->entityManager->flush();
+                    return;
+                }
+
                 $session->setStatus(EditSessionStatus::Failed);
                 $this->entityManager->flush();
 
@@ -183,6 +174,11 @@ final readonly class RunEditSessionHandler
             // Commit and push changes after successful edit session
             $this->commitChangesAfterEdit($conversation, $session);
         } catch (Throwable $e) {
+            if ($this->isCancellationRequested($session)) {
+                $this->finalizeCancelledSession($session, $conversation);
+                return;
+            }
+
             $this->logger->error('EditSession failed', [
                 'sessionId' => $message->sessionId,
                 'error'     => $e->getMessage(),
@@ -308,5 +304,42 @@ final readonly class RunEditSessionHandler
         }
 
         return mb_substr($message, 0, $maxLength - 3) . '...';
+    }
+
+    private function isCancellationRequested(EditSession $session): bool
+    {
+        if ($session->getStatus() === EditSessionStatus::Cancelling) {
+            return true;
+        }
+
+        $sessionId = $session->getId();
+        if ($sessionId === null) {
+            return false;
+        }
+
+        // Query status directly to detect cancellation from parallel requests immediately.
+        $currentStatus = $this->entityManager->getConnection()->fetchOne(
+            'SELECT status FROM edit_sessions WHERE id = ?',
+            [$sessionId]
+        );
+
+        return $currentStatus === EditSessionStatus::Cancelling->value;
+    }
+
+    private function finalizeCancelledSession(EditSession $session, Conversation $conversation): void
+    {
+        // Keep conversation context consistent for future turns.
+        new ConversationMessage(
+            $conversation,
+            ConversationMessageRole::Assistant,
+            json_encode(
+                ['content' => '[Cancelled by the user — disregard this turn.]'],
+                JSON_THROW_ON_ERROR
+            )
+        );
+
+        EditSessionChunk::createDoneChunk($session, false, 'Cancelled by user.');
+        $session->setStatus(EditSessionStatus::Cancelled);
+        $this->entityManager->flush();
     }
 }
