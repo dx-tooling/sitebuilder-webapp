@@ -75,6 +75,13 @@ interface WorkspaceToolingServiceInterface extends BaseWorkspaceToolingFacadeInt
     public function getWorkspaceRules(): string;
 
     /**
+     * Fetch the textual content of a remote web page via cURL.
+     * Returns JSON with keys: url, finalUrl, statusCode, contentType, content, truncated.
+     * On failure, returns JSON with keys: error, url. Never throws.
+     */
+    public function fetchRemoteWebPage(string $url): string;
+
+    /**
      * Run build (npm run build) in the specified workspace.
      *
      * This method runs the build process in an isolated Docker container.

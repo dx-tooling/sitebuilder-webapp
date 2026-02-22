@@ -403,17 +403,106 @@ final class WorkspaceToolingFacadeTest extends TestCase
         self::assertContains('https://uploads.com/bar.png', $decoded);
     }
 
+    public function testFetchRemoteWebPageReturnsParsedJsonForValidUrl(): void
+    {
+        $this->executionContext->setContext(
+            'workspace-id',
+            $this->tempDir,
+            null,
+            'project',
+            'image'
+        );
+        $shellOps = $this->createMock(ShellOperationsServiceInterface::class);
+        $shellOps->expects(self::once())
+            ->method('runCommand')
+            ->with(
+                '/workspace',
+                self::callback(static fn (string $command): bool => str_contains($command, 'curl -L -sS'))
+            )
+            ->willReturn("<html><body>Hello</body></html>\n__PB_CURL_META__200\ttext/html\thttps://example.com/final");
+        $facade = $this->createFacadeWithShellOps($shellOps);
+
+        $result = $facade->fetchRemoteWebPage('https://example.com/start');
+
+        $decoded = json_decode($result, true, 512, JSON_THROW_ON_ERROR);
+        self::assertIsArray($decoded);
+        self::assertSame('https://example.com/start', $decoded['url']);
+        self::assertSame('https://example.com/final', $decoded['finalUrl']);
+        self::assertSame(200, $decoded['statusCode']);
+        self::assertSame('text/html', $decoded['contentType']);
+        self::assertSame('<html><body>Hello</body></html>', $decoded['content']);
+        self::assertFalse($decoded['truncated']);
+    }
+
+    public function testFetchRemoteWebPageReturnsErrorForInvalidSchemeWithoutShellCall(): void
+    {
+        $shellOps = $this->createMock(ShellOperationsServiceInterface::class);
+        $shellOps->expects(self::never())->method('runCommand');
+        $facade = $this->createFacadeWithShellOps($shellOps);
+
+        $result = $facade->fetchRemoteWebPage('ftp://example.com/file.txt');
+
+        $decoded = json_decode($result, true, 512, JSON_THROW_ON_ERROR);
+        self::assertIsArray($decoded);
+        self::assertSame('ftp://example.com/file.txt', $decoded['url']);
+        self::assertArrayHasKey('error', $decoded);
+        self::assertStringContainsString('Invalid URL', $decoded['error']);
+    }
+
+    public function testFetchRemoteWebPageReturnsErrorWhenCurlOutputCannotBeParsed(): void
+    {
+        $this->executionContext->setContext(
+            'workspace-id',
+            $this->tempDir,
+            null,
+            'project',
+            'image'
+        );
+        $shellOps = $this->createMock(ShellOperationsServiceInterface::class);
+        $shellOps->expects(self::once())
+            ->method('runCommand')
+            ->willReturn('curl: (6) Could not resolve host: no-such-host.invalid');
+        $facade = $this->createFacadeWithShellOps($shellOps);
+
+        $result = $facade->fetchRemoteWebPage('https://no-such-host.invalid');
+
+        $decoded = json_decode($result, true, 512, JSON_THROW_ON_ERROR);
+        self::assertIsArray($decoded);
+        self::assertSame('https://no-such-host.invalid', $decoded['url']);
+        self::assertArrayHasKey('error', $decoded);
+        self::assertStringContainsString('metadata', strtolower($decoded['error']));
+    }
+
+    public function testFetchRemoteWebPageTruncatesLargeResponses(): void
+    {
+        $this->executionContext->setContext(
+            'workspace-id',
+            $this->tempDir,
+            null,
+            'project',
+            'image'
+        );
+        $largeBody = str_repeat('A', 60_000);
+        $shellOps  = $this->createMock(ShellOperationsServiceInterface::class);
+        $shellOps->expects(self::once())
+            ->method('runCommand')
+            ->willReturn($largeBody . "\n__PB_CURL_META__200\ttext/plain\thttps://example.com/long");
+        $facade = $this->createFacadeWithShellOps($shellOps);
+
+        $result = $facade->fetchRemoteWebPage('https://example.com/long');
+
+        $decoded = json_decode($result, true, 512, JSON_THROW_ON_ERROR);
+        self::assertIsArray($decoded);
+        self::assertTrue($decoded['truncated']);
+        self::assertSame(50_000, strlen($decoded['content']));
+    }
+
     private function createFacade(): WorkspaceToolingFacade
     {
-        $fileOps                   = new FileOperationsService();
-        $textOps                   = new TextOperationsService($fileOps);
-        $shellOps                  = $this->createMock(ShellOperationsServiceInterface::class);
         $remoteContentAssetsFacade = $this->createMock(RemoteContentAssetsFacadeInterface::class);
-        // DockerExecutor is final, so we create a real instance with dummy paths
-        // The tests don't call runBuildInWorkspace, so this is safe
-        $dockerExecutor = new DockerExecutor('/tmp', '/tmp');
+        $shellOps                  = $this->createMock(ShellOperationsServiceInterface::class);
 
-        return new WorkspaceToolingFacade($fileOps, $textOps, $shellOps, $this->executionContext, $remoteContentAssetsFacade, $dockerExecutor);
+        return $this->createFacadeWithDependencies($shellOps, $remoteContentAssetsFacade);
     }
 
     public function testGetRemoteAssetInfoReturnsErrorJsonWhenFacadeReturnsNull(): void
@@ -454,14 +543,36 @@ final class WorkspaceToolingFacadeTest extends TestCase
 
     private function createFacadeWithRemoteContentAssets(RemoteContentAssetsFacadeInterface $remoteContentAssetsFacade): WorkspaceToolingFacade
     {
-        $fileOps  = new FileOperationsService();
-        $textOps  = new TextOperationsService($fileOps);
         $shellOps = $this->createMock(ShellOperationsServiceInterface::class);
+
+        return $this->createFacadeWithDependencies($shellOps, $remoteContentAssetsFacade);
+    }
+
+    private function createFacadeWithShellOps(ShellOperationsServiceInterface $shellOps): WorkspaceToolingFacade
+    {
+        $remoteContentAssetsFacade = $this->createMock(RemoteContentAssetsFacadeInterface::class);
+
+        return $this->createFacadeWithDependencies($shellOps, $remoteContentAssetsFacade);
+    }
+
+    private function createFacadeWithDependencies(
+        ShellOperationsServiceInterface    $shellOps,
+        RemoteContentAssetsFacadeInterface $remoteContentAssetsFacade
+    ): WorkspaceToolingFacade {
+        $fileOps = new FileOperationsService();
+        $textOps = new TextOperationsService($fileOps);
         // DockerExecutor is final, so we create a real instance with dummy paths
         // The tests don't call runBuildInWorkspace, so this is safe
         $dockerExecutor = new DockerExecutor('/tmp', '/tmp');
 
-        return new WorkspaceToolingFacade($fileOps, $textOps, $shellOps, $this->executionContext, $remoteContentAssetsFacade, $dockerExecutor);
+        return new WorkspaceToolingFacade(
+            $fileOps,
+            $textOps,
+            $shellOps,
+            $this->executionContext,
+            $remoteContentAssetsFacade,
+            $dockerExecutor
+        );
     }
 
     private function removeDirectory(string $dir): void
