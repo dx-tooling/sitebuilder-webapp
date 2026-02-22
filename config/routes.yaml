@@ -7,13 +7,18 @@ root_redirect:
         permanent: false
 
 controller:
-    resource: "../src/**/*Controller.php"
+    resource: "../src/**/Presentation/Controller/*Controller.php"
     type: attribute
     prefix: /{_locale}
     requirements:
         _locale: en|de
     defaults:
         _locale: en
+
+api_controllers:
+    resource: "../src/**/Api/Controller/*Controller.php"
+    type: attribute
+    prefix: /api
 
 shared:
     resource: "@SharedBundle/config/routes.yaml"
