@@ -165,6 +165,28 @@ final class RunEditSessionHandlerSimulationTest extends KernelTestCase
         self::assertSame('Cancelled by user.', $payload['errorMessage'] ?? null);
     }
 
+    public function testCancellingSessionDuringExecutionPersistsCancelledDoneChunk(): void
+    {
+        // Uses [simulate_cancel_always] marker: the simulated facade throws CancelledException
+        // mid-stream after yielding initial chunks, verifying the handler's catch block and the
+        // full CancelledException propagation path from facade through the foreach generator loop.
+        $sessionId = $this->createSessionFixture('update hero title [simulate_cancel_always]');
+
+        ($this->handler)(new RunEditSessionMessage($sessionId, 'en'));
+
+        $this->entityManager->clear();
+        $session = $this->entityManager->find(EditSession::class, $sessionId);
+        self::assertNotNull($session);
+        self::assertSame(EditSessionStatus::Cancelled, $session->getStatus());
+
+        $doneChunk = $this->findLastDoneChunk($session);
+        self::assertNotNull($doneChunk);
+        $payload = json_decode($doneChunk->getPayloadJson(), true);
+        self::assertIsArray($payload);
+        self::assertFalse(($payload['success'] ?? null) === true);
+        self::assertSame('Cancelled by user.', $payload['errorMessage'] ?? null);
+    }
+
     public function testCancellingSessionBeforeExecutionPersistsCancelledDoneChunk(): void
     {
         $sessionId = $this->createSessionFixture('normal flow');

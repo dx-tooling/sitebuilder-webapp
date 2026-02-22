@@ -198,6 +198,75 @@ describe("ChatBasedContentEditorController", () => {
         });
     });
 
+    describe("cancel flow", () => {
+        it("shows stoppingSlow message after 10 second cancellation timeout", async () => {
+            vi.stubGlobal(
+                "fetch",
+                vi.fn(async (input: RequestInfo | URL) => {
+                    const url = String(input);
+                    if (url.includes("/api/cancel/")) {
+                        return { ok: true, json: async () => ({}) };
+                    }
+                    return {
+                        ok: true,
+                        json: async () => ({ chunks: [], lastId: 0, status: "running" }),
+                    };
+                }),
+            );
+
+            createChatEditorFixture();
+            await waitForController();
+
+            const element = document.querySelector(
+                "[data-controller='chat-based-content-editor']",
+            ) as HTMLElement;
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const controllerAny = application.getControllerForElementAndIdentifier(
+                element,
+                "chat-based-content-editor",
+            ) as any;
+
+            // Inject currentPollingState directly to simulate an active polling session
+            // without relying on the async resumeActiveSession flow
+            controllerAny.currentPollingState = {
+                sessionId: "cancel-test-sess",
+                container: document.createElement("div"),
+                lastId: 0,
+                pollUrl: "/api/poll/cancel-test-sess",
+            };
+            controllerAny.isPollingActive = true;
+
+            // Spy on setTimeout to capture the 10-second slow-cancel callback
+            let slowCancelCallback: (() => void) | null = null;
+            const realSetTimeout = global.setTimeout.bind(global);
+            const setTimeoutSpy = vi
+                .spyOn(global, "setTimeout")
+                .mockImplementation((fn: TimerHandler, delay?: number, ...args: unknown[]) => {
+                    if (delay === 10_000 && typeof fn === "function") {
+                        slowCancelCallback = fn as () => void;
+                        return 0 as unknown as ReturnType<typeof setTimeout>;
+                    }
+                    return realSetTimeout(fn as () => void, delay, ...args);
+                });
+
+            await controllerAny.handleCancel();
+
+            setTimeoutSpy.mockRestore();
+
+            const cancelButton = document.querySelector(
+                "[data-chat-based-content-editor-target='cancelButton']",
+            ) as HTMLButtonElement;
+
+            expect(cancelButton.textContent).toBe(translations.stopping);
+            expect(slowCancelCallback).not.toBeNull();
+
+            // Simulate the 10-second timeout elapsing
+            slowCancelCallback!();
+
+            expect(cancelButton.textContent).toBe(translations.stoppingSlow);
+        });
+    });
+
     describe("interactive flow", () => {
         it("submits instruction, calls run endpoint, and polls session output", async () => {
             vi.stubGlobal(
