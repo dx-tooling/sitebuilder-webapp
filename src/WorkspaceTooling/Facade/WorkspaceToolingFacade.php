@@ -240,4 +240,9 @@ final class WorkspaceToolingFacade extends BaseWorkspaceToolingFacade implements
             'html-editor-build'
         );
     }
+
+    public function stopAgentContainersForConversation(string $workspaceId, string $conversationId): int
+    {
+        return $this->dockerExecutor->stopAgentContainersForConversation($workspaceId, $conversationId);
+    }
 }

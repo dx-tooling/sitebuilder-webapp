@@ -23,7 +23,7 @@ use App\ProjectMgmt\Facade\ProjectMgmtFacadeInterface;
 use App\RemoteContentAssets\Facade\RemoteContentAssetsFacadeInterface;
 use App\WorkspaceMgmt\Facade\Enum\WorkspaceStatus;
 use App\WorkspaceMgmt\Facade\WorkspaceMgmtFacadeInterface;
-use App\WorkspaceTooling\Infrastructure\Execution\DockerExecutor;
+use App\WorkspaceTooling\Facade\WorkspaceToolingServiceInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use RuntimeException;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -61,7 +61,7 @@ final class ChatBasedContentEditorController extends AbstractController
         private readonly TranslatorInterface             $translator,
         private readonly PromptSuggestionsService        $promptSuggestionsService,
         private readonly LlmContentEditorFacadeInterface $llmContentEditorFacade,
-        private readonly DockerExecutor                  $dockerExecutor,
+        private readonly WorkspaceToolingServiceInterface $workspaceToolingFacade,
     ) {
     }
 
@@ -662,7 +662,7 @@ final class ChatBasedContentEditorController extends AbstractController
         if ($conversationId !== null) {
             try {
                 // Best-effort hard stop for long-running tool/runtime containers.
-                $this->dockerExecutor->stopAgentContainersForConversation(
+                $this->workspaceToolingFacade->stopAgentContainersForConversation(
                     $conversation->getWorkspaceId(),
                     $conversationId
                 );
