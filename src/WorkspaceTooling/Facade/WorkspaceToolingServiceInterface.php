@@ -87,4 +87,13 @@ interface WorkspaceToolingServiceInterface extends BaseWorkspaceToolingFacadeInt
      * @return string the build output
      */
     public function runBuildInWorkspace(string $workspacePath, string $agentImage): string;
+
+    /**
+     * Stop all running agent containers for a workspace conversation.
+     *
+     * Used for immediate cancellation from the chat editor stop action.
+     *
+     * @return int number of containers that were stopped
+     */
+    public function stopAgentContainersForConversation(string $workspaceId, string $conversationId): int;
 }
