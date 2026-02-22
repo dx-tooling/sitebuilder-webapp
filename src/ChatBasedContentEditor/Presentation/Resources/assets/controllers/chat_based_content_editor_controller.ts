@@ -420,7 +420,15 @@ export default class extends Controller {
 
             const data = (await response.json()) as PollResponse;
 
+            // Ignore any late poll payload after user requested cancellation.
+            if (this.isCancellationRequested) {
+                return;
+            }
+
             for (const chunk of data.chunks) {
+                if (this.isCancellationRequested) {
+                    return;
+                }
                 if (this.handleChunk(chunk, container)) {
                     this.stopPolling();
                     this.resetSubmitButton();
