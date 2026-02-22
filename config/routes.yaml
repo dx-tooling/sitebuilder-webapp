@@ -6,6 +6,11 @@ root_redirect:
         path: /en/
         permanent: false
 
+api:
+    resource: "../src/**/Api/**/*Controller.php"
+    type: attribute
+    prefix: /api
+
 controller:
     resource: "../src/**/*Controller.php"
     type: attribute
@@ -14,6 +19,7 @@ controller:
         _locale: en|de
     defaults:
         _locale: en
+    exclude: "../src/**/Api/**"
 
 shared:
     resource: "@SharedBundle/config/routes.yaml"
