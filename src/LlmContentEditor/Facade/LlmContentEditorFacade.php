@@ -11,6 +11,7 @@ use App\LlmContentEditor\Facade\Dto\ConversationMessageDto;
 use App\LlmContentEditor\Facade\Dto\EditStreamChunkDto;
 use App\LlmContentEditor\Facade\Enum\EditStreamChunkType;
 use App\LlmContentEditor\Facade\Enum\LlmModelProvider;
+use App\LlmContentEditor\Facade\Exception\CancelledException;
 use App\LlmContentEditor\Infrastructure\AgentEventQueue;
 use App\LlmContentEditor\Infrastructure\ChatHistory\CallbackChatHistory;
 use App\LlmContentEditor\Infrastructure\ChatHistory\MessageSerializer;
@@ -18,6 +19,7 @@ use App\LlmContentEditor\Infrastructure\ConversationLog\LlmConversationLogObserv
 use App\LlmContentEditor\Infrastructure\Observer\AgentEventCollectingObserver;
 use App\LlmContentEditor\Infrastructure\ProgressMessageResolver;
 use App\WorkspaceTooling\Facade\WorkspaceToolingServiceInterface;
+use Closure;
 use Generator;
 use NeuronAI\Chat\Messages\AssistantMessage;
 use NeuronAI\Chat\Messages\Message;
@@ -78,6 +80,7 @@ final class LlmContentEditorFacade implements LlmContentEditorFacadeInterface
         string         $llmApiKey,
         AgentConfigDto $agentConfig,
         string         $locale = 'en',
+        ?Closure       $isCancelled = null,
     ): Generator {
         // Convert previous message DTOs to NeuronAI messages. Include turn_activity_summary so the
         // context is conversation-shaped: user, assistant, turn_activity_summary, user, assistant, ...
@@ -149,6 +152,7 @@ final class LlmContentEditorFacade implements LlmContentEditorFacadeInterface
             $llmApiKey,
             $agentConfig,
             $this->llmWireLogEnabled ? $this->llmWireLogger : null,
+            $isCancelled,
         );
         $agent->withChatHistory($chatHistory);
 
@@ -167,6 +171,11 @@ final class LlmContentEditorFacade implements LlmContentEditorFacadeInterface
             $accumulatedContent = '';
 
             foreach ($stream as $chunk) {
+                // Check cancellation before processing each chunk from the stream
+                if ($isCancelled !== null && $isCancelled()) {
+                    throw new CancelledException();
+                }
+
                 // Yield any queued messages for persistence
                 while (!$messageQueue->isEmpty()) {
                     yield new EditStreamChunkDto(EditStreamChunkType::Message, null, null, null, null, $messageQueue->dequeue());
@@ -213,6 +222,23 @@ final class LlmContentEditorFacade implements LlmContentEditorFacadeInterface
             }
 
             yield new EditStreamChunkDto(EditStreamChunkType::Done, null, null, true, null);
+        } catch (CancelledException) {
+            if ($this->llmWireLogEnabled) {
+                $this->llmConversationLogger->info('CANCELLED → Cancelled by user.');
+            }
+            $journalSummary = $chatHistory->getTurnActivitySummary();
+            if ($journalSummary !== '') {
+                try {
+                    $noteDto = new ConversationMessageDto(
+                        ConversationMessageDto::ROLE_TURN_ACTIVITY_SUMMARY,
+                        json_encode(['content' => $journalSummary], JSON_THROW_ON_ERROR),
+                    );
+                    yield new EditStreamChunkDto(EditStreamChunkType::Message, null, null, null, null, $noteDto);
+                } catch (Throwable) {
+                    // Ignore serialization errors in error path
+                }
+            }
+            yield new EditStreamChunkDto(EditStreamChunkType::Done, null, null, false, 'Cancelled by user.');
         } catch (Throwable $e) {
             if ($this->llmWireLogEnabled) {
                 $this->llmConversationLogger->info(sprintf('ERROR → %s', $e->getMessage()));

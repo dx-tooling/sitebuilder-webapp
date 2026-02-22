@@ -18,6 +18,7 @@ use App\LlmContentEditor\Facade\Dto\AgentEventDto;
 use App\LlmContentEditor\Facade\Dto\ConversationMessageDto;
 use App\LlmContentEditor\Facade\Dto\ToolInputEntryDto;
 use App\LlmContentEditor\Facade\Enum\EditStreamChunkType;
+use App\LlmContentEditor\Facade\Exception\CancelledException;
 use App\LlmContentEditor\Facade\LlmContentEditorFacadeInterface;
 use App\ProjectMgmt\Facade\ProjectMgmtFacadeInterface;
 use App\WorkspaceMgmt\Facade\WorkspaceMgmtFacadeInterface;
@@ -29,6 +30,7 @@ use Throwable;
 
 use function mb_strlen;
 use function mb_substr;
+use function microtime;
 
 use const JSON_THROW_ON_ERROR;
 
@@ -109,6 +111,24 @@ final readonly class RunEditSessionHandler
                 '/workspace',
             );
 
+            // Throttled cancellation callback: queries DB at most 2×/second to detect
+            // EditSessionStatus::Cancelling, enabling deep cancellation without DB overload.
+            $lastCancelCheck = 0.0;
+            $isCancelled     = function () use ($session, &$lastCancelCheck): bool {
+                $now = microtime(true);
+                if ($now - $lastCancelCheck < 0.5) {
+                    return false;
+                }
+                $lastCancelCheck = $now;
+
+                $currentStatus = $this->entityManager->getConnection()->fetchOne(
+                    'SELECT status FROM edit_sessions WHERE id = ?',
+                    [$session->getId()]
+                );
+
+                return $currentStatus === EditSessionStatus::Cancelling->value;
+            };
+
             $generator = $this->facade->streamEditWithHistory(
                 $session->getWorkspacePath(),
                 $session->getInstruction(),
@@ -116,37 +136,13 @@ final readonly class RunEditSessionHandler
                 $project->contentEditingApiKey,
                 $agentConfig,
                 $message->locale,
+                $isCancelled,
             );
 
             $streamEndedWithFailure = false;
+            $cancelDetectedInStream = false;
 
             foreach ($generator as $chunk) {
-                // Cooperative cancellation: check status directly via DBAL to avoid
-                // entityManager->refresh() which fails on readonly entity properties.
-                $currentStatus = $this->entityManager->getConnection()->fetchOne(
-                    'SELECT status FROM edit_sessions WHERE id = ?',
-                    [$session->getId()]
-                );
-
-                if ($currentStatus === EditSessionStatus::Cancelling->value) {
-                    // Persist a synthetic assistant message so the LLM on the next turn
-                    // understands this turn was interrupted and won't try to answer it.
-                    new ConversationMessage(
-                        $conversation,
-                        ConversationMessageRole::Assistant,
-                        json_encode(
-                            ['content' => '[Cancelled by the user — disregard this turn.]'],
-                            JSON_THROW_ON_ERROR
-                        )
-                    );
-
-                    EditSessionChunk::createDoneChunk($session, false, 'Cancelled by user.');
-                    $session->setStatus(EditSessionStatus::Cancelled);
-                    $this->entityManager->flush();
-
-                    return;
-                }
-
                 if ($chunk->chunkType === EditStreamChunkType::Text && $chunk->content !== null) {
                     EditSessionChunk::createTextChunk($session, $chunk->content);
                 } elseif ($chunk->chunkType === EditStreamChunkType::Event && $chunk->event !== null) {
@@ -160,6 +156,9 @@ final readonly class RunEditSessionHandler
                     $this->persistConversationMessage($conversation, $chunk->message);
                 } elseif ($chunk->chunkType === EditStreamChunkType::Done) {
                     $streamEndedWithFailure = ($chunk->success ?? false) !== true;
+                    if ($streamEndedWithFailure && $chunk->errorMessage === 'Cancelled by user.') {
+                        $cancelDetectedInStream = true;
+                    }
                     EditSessionChunk::createDoneChunk(
                         $session,
                         $chunk->success ?? false,
@@ -168,6 +167,23 @@ final readonly class RunEditSessionHandler
                 }
 
                 $this->entityManager->flush();
+            }
+
+            if ($cancelDetectedInStream) {
+                // The facade detected cancellation during streaming and yielded a Done chunk.
+                // Persist a synthetic assistant message for next-turn context continuity.
+                new ConversationMessage(
+                    $conversation,
+                    ConversationMessageRole::Assistant,
+                    json_encode(
+                        ['content' => '[Cancelled by the user — disregard this turn.]'],
+                        JSON_THROW_ON_ERROR
+                    )
+                );
+                $session->setStatus(EditSessionStatus::Cancelled);
+                $this->entityManager->flush();
+
+                return;
             }
 
             if ($streamEndedWithFailure) {
@@ -182,6 +198,21 @@ final readonly class RunEditSessionHandler
 
             // Commit and push changes after successful edit session
             $this->commitChangesAfterEdit($conversation, $session);
+        } catch (CancelledException) {
+            // Persist a synthetic assistant message so the LLM on the next turn
+            // understands this turn was interrupted and won't try to answer it.
+            new ConversationMessage(
+                $conversation,
+                ConversationMessageRole::Assistant,
+                json_encode(
+                    ['content' => '[Cancelled by the user — disregard this turn.]'],
+                    JSON_THROW_ON_ERROR
+                )
+            );
+
+            EditSessionChunk::createDoneChunk($session, false, 'Cancelled by user.');
+            $session->setStatus(EditSessionStatus::Cancelled);
+            $this->entityManager->flush();
         } catch (Throwable $e) {
             $this->logger->error('EditSession failed', [
                 'sessionId' => $message->sessionId,

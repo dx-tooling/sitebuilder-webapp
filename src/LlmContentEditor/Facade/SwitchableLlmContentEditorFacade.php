@@ -9,6 +9,7 @@ use App\LlmContentEditor\Facade\Dto\ConversationMessageDto;
 use App\LlmContentEditor\Facade\Dto\EditStreamChunkDto;
 use App\LlmContentEditor\Facade\Enum\LlmModelProvider;
 use App\LlmContentEditor\TestHarness\SimulatedLlmContentEditorFacade;
+use Closure;
 use Generator;
 use Psr\Log\LoggerInterface;
 
@@ -45,6 +46,7 @@ final readonly class SwitchableLlmContentEditorFacade implements LlmContentEdito
         string         $llmApiKey,
         AgentConfigDto $agentConfig,
         string         $locale = 'en',
+        ?Closure       $isCancelled = null,
     ): Generator {
         return $this->activeFacade()->streamEditWithHistory(
             $workspacePath,
@@ -52,7 +54,8 @@ final readonly class SwitchableLlmContentEditorFacade implements LlmContentEdito
             $previousMessages,
             $llmApiKey,
             $agentConfig,
-            $locale
+            $locale,
+            $isCancelled,
         );
     }
 

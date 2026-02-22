@@ -8,6 +8,7 @@ use App\LlmContentEditor\Facade\Dto\AgentConfigDto;
 use App\LlmContentEditor\Facade\Dto\ConversationMessageDto;
 use App\LlmContentEditor\Facade\Dto\EditStreamChunkDto;
 use App\LlmContentEditor\Facade\Enum\LlmModelProvider;
+use Closure;
 use Generator;
 
 interface LlmContentEditorFacadeInterface
@@ -31,6 +32,7 @@ interface LlmContentEditorFacadeInterface
      * @param string                       $llmApiKey        The API key for the LLM provider (BYOK)
      * @param AgentConfigDto               $agentConfig      Agent configuration from project settings
      * @param string                       $locale           UI locale for progress messages (e.g. 'en', 'de')
+     * @param ?Closure(): bool             $isCancelled      Callback returning true when cancellation has been requested; null disables cooperative cancellation
      *
      * @return Generator<EditStreamChunkDto>
      */
@@ -41,6 +43,7 @@ interface LlmContentEditorFacadeInterface
         string         $llmApiKey,
         AgentConfigDto $agentConfig,
         string         $locale = 'en',
+        ?Closure       $isCancelled = null,
     ): Generator;
 
     /**

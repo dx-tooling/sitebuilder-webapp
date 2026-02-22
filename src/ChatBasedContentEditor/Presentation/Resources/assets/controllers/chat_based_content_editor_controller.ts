@@ -39,6 +39,7 @@ interface TranslationsData {
     inProgress: string;
     stop: string;
     stopping: string;
+    stoppingSlow: string;
     cancelled: string;
 }
 
@@ -105,6 +106,7 @@ export default class extends Controller {
 
     private pollingTimeoutId: ReturnType<typeof setTimeout> | null = null;
     private contextUsageTimeoutId: ReturnType<typeof setTimeout> | null = null;
+    private cancellingTimeoutId: ReturnType<typeof setTimeout> | null = null;
     private autoScrollEnabled: boolean = true;
     private submitOnEnterEnabled: boolean = true;
     private isContextUsagePollingActive: boolean = false;
@@ -325,6 +327,14 @@ export default class extends Controller {
             this.cancelButtonTarget.textContent = t.stopping;
         }
 
+        // Show a warning if cancellation is not confirmed within 10 seconds
+        this.cancellingTimeoutId = setTimeout(() => {
+            this.cancellingTimeoutId = null;
+            if (this.hasCancelButtonTarget && this.isPollingActive) {
+                this.cancelButtonTarget.textContent = t.stoppingSlow;
+            }
+        }, 10000);
+
         try {
             const csrfInput = document.querySelector('input[name="_csrf_token"]') as HTMLInputElement | null;
 
@@ -342,11 +352,22 @@ export default class extends Controller {
             // Don't stop polling — let the polling loop detect the cancelled status
             // and done chunk naturally, so all pre-cancellation output is displayed.
         } catch {
-            // If the cancel request fails, re-enable the button so the user can retry
+            // If the cancel request fails, clear the timeout and re-enable the button
+            if (this.cancellingTimeoutId !== null) {
+                clearTimeout(this.cancellingTimeoutId);
+                this.cancellingTimeoutId = null;
+            }
             if (this.hasCancelButtonTarget) {
                 this.cancelButtonTarget.disabled = false;
                 this.cancelButtonTarget.textContent = t.stop;
             }
+        }
+    }
+
+    private clearCancellingTimeout(): void {
+        if (this.cancellingTimeoutId !== null) {
+            clearTimeout(this.cancellingTimeoutId);
+            this.cancellingTimeoutId = null;
         }
     }
 
@@ -434,6 +455,7 @@ export default class extends Controller {
             clearTimeout(this.pollingTimeoutId);
             this.pollingTimeoutId = null;
         }
+        this.clearCancellingTimeout();
         this.currentPollingState = null;
     }
 
