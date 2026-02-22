@@ -201,6 +201,18 @@ class ContentEditorAgent extends BaseCodingAgent
             )->setCallable(fn (string $url): string => $this->sitebuilderFacade->getRemoteAssetInfo($url)),
 
             Tool::make(
+                'fetch_remote_web_page',
+                'Fetch textual content from a remote web page via cURL. Use this when the user asks to inspect, summarize, adapt, or copy content from an external URL. Returns JSON with response metadata and page content; on failure returns JSON with an "error" key.'
+            )->addProperty(
+                new ToolProperty(
+                    'url',
+                    PropertyType::STRING,
+                    'The absolute URL to fetch (http or https).',
+                    true
+                )
+            )->setCallable(fn (string $url): string => $this->sitebuilderFacade->fetchRemoteWebPage($url)),
+
+            Tool::make(
                 'get_workspace_rules',
                 'Get project-specific rules from .sitebuilder/rules/ folders. Returns a JSON object where keys are rule names (filename without .md extension) and values are the rule contents (Markdown text). IMPORTANT: You must call this tool at least once at the start of every session to understand project-specific conventions and requirements.'
             )->setCallable(fn (): string => $this->sitebuilderFacade->getWorkspaceRules()),

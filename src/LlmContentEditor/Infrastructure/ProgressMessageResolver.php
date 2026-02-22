@@ -52,6 +52,7 @@ final readonly class ProgressMessageResolver
             'list_remote_content_asset_urls'   => 'fetching_remote_asset_urls',
             'search_remote_content_asset_urls' => 'searching_remote_assets',
             'get_remote_asset_info'            => 'getting_remote_asset_info',
+            'fetch_remote_web_page'            => 'fetching_remote_web_page',
             'suggest_commit_message'           => 'suggesting_commit_message',
             'get_preview_url'                  => $label !== null ? 'getting_preview_url' : 'getting_preview_url_only',
             default                            => $label !== null ? 'running_tool_on' : null,
