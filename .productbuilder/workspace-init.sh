@@ -30,7 +30,11 @@ EOF
 docker compose up -d
 sleep 5
 
-docker compose exec -T app composer install --no-interaction
+# COMPOSER_NO_UNZIP=1 forces Composer to use PHP's ZipArchive instead of the
+# system unzip binary. The workspace is bind-mounted from the macOS host, whose
+# case-insensitive filesystem causes unzip to fail on packages containing files
+# that differ only in case. ZipArchive handles this transparently.
+docker compose exec -T -e COMPOSER_NO_UNZIP=1 app composer install --no-interaction
 
 mise run in-app-container mise trust
 mise run in-app-container mise install
