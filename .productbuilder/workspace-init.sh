@@ -27,6 +27,11 @@ HOST_PROJECT_PATH="${HOST_PROJECT_PATH}"
 ETFS_PROJECT_NAME="${ETFS_PROJECT_NAME}"
 EOF
 
+# Start app first so Docker populates the mise_data volume from the image without
+# contention. Starting all services at once causes a race condition where multiple
+# containers try to initialize the same new volume simultaneously, resulting in
+# "mkdir ... file exists" errors from the Docker daemon.
+docker compose up -d app
 docker compose up -d
 sleep 5
 
