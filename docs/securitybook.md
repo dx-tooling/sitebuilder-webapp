@@ -207,7 +207,7 @@ when@test:
 
 ```yaml
 access_control:
-    - { path: ^/api/, roles: PUBLIC_ACCESS }
+    - { path: ^/api-v1/, roles: PUBLIC_ACCESS }
     - { path: ^/sign-in, roles: PUBLIC_ACCESS }
     - { path: ^/sign-up, roles: PUBLIC_ACCESS }
     - { path: "^/organization/invitation/[^/]+$", roles: PUBLIC_ACCESS }
