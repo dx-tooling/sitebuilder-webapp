@@ -7,6 +7,7 @@ namespace App\Tests\Unit\LlmContentEditor;
 use App\LlmContentEditor\Domain\Agent\ContentEditorAgent;
 use App\LlmContentEditor\Domain\Enum\LlmModelName;
 use App\LlmContentEditor\Facade\Dto\AgentConfigDto;
+use App\LlmContentEditor\Facade\Exception\CancelledException;
 use App\LlmContentEditor\Infrastructure\ChatHistory\CallbackChatHistory;
 use App\ProjectMgmt\Domain\ValueObject\AgentConfigTemplate;
 use App\ProjectMgmt\Facade\Enum\ProjectType;
@@ -181,6 +182,93 @@ final class ContentEditorAgentTest extends TestCase
         $outputInstructions = $outputRef->invoke($agent);
 
         self::assertSame(['Custom output'], $outputInstructions);
+    }
+
+    /**
+     * When the isCancelled callback returns true, executeSingleTool must throw
+     * CancelledException before the underlying tool is executed.
+     */
+    public function testExecuteSingleToolThrowsCancelledExceptionWhenCallbackReturnsTrue(): void
+    {
+        $agent = new ContentEditorAgent(
+            $this->createMockWorkspaceTooling(),
+            LlmModelName::defaultForContentEditor(),
+            'sk-test-key',
+            $this->createDefaultAgentConfig(),
+            null,
+            fn (): bool => true,
+        );
+
+        $tool = Tool::make('test_tool', 'A test tool');
+
+        $ref = new ReflectionMethod(ContentEditorAgent::class, 'executeSingleTool');
+        $ref->setAccessible(true);
+
+        $this->expectException(CancelledException::class);
+
+        $ref->invoke($agent, $tool);
+    }
+
+    /**
+     * When the isCancelled callback returns false, executeSingleTool must not
+     * throw CancelledException and must delegate to the parent implementation.
+     */
+    public function testExecuteSingleToolDoesNotThrowCancelledExceptionWhenCallbackReturnsFalse(): void
+    {
+        $toolExecuted = false;
+
+        $tool = Tool::make('test_tool', 'A test tool')
+            ->setCallable(function () use (&$toolExecuted): string {
+                $toolExecuted = true;
+
+                return 'executed';
+            });
+
+        $agent = new ContentEditorAgent(
+            $this->createMockWorkspaceTooling(),
+            LlmModelName::defaultForContentEditor(),
+            'sk-test-key',
+            $this->createDefaultAgentConfig(),
+            null,
+            fn (): bool => false,
+        );
+
+        $ref = new ReflectionMethod(ContentEditorAgent::class, 'executeSingleTool');
+        $ref->setAccessible(true);
+
+        $ref->invoke($agent, $tool);
+
+        self::assertTrue($toolExecuted, 'Tool callable must be invoked when cancellation is not requested.');
+    }
+
+    /**
+     * When no isCancelled callback is provided, executeSingleTool must execute
+     * the tool normally without any cancellation check.
+     */
+    public function testExecuteSingleToolDoesNotThrowWhenNoCancelledCallbackProvided(): void
+    {
+        $toolExecuted = false;
+
+        $tool = Tool::make('test_tool', 'A test tool')
+            ->setCallable(function () use (&$toolExecuted): string {
+                $toolExecuted = true;
+
+                return 'executed';
+            });
+
+        $agent = new ContentEditorAgent(
+            $this->createMockWorkspaceTooling(),
+            LlmModelName::defaultForContentEditor(),
+            'sk-test-key',
+            $this->createDefaultAgentConfig(),
+        );
+
+        $ref = new ReflectionMethod(ContentEditorAgent::class, 'executeSingleTool');
+        $ref->setAccessible(true);
+
+        $ref->invoke($agent, $tool);
+
+        self::assertTrue($toolExecuted, 'Tool callable must be invoked when no cancellation callback is registered.');
     }
 
     private function createMockWorkspaceTooling(): WorkspaceToolingServiceInterface

@@ -11,6 +11,7 @@ use App\LlmContentEditor\Facade\Dto\EditStreamChunkDto;
 use App\LlmContentEditor\Facade\Dto\ToolInputEntryDto;
 use App\LlmContentEditor\Facade\Enum\EditStreamChunkType;
 use App\LlmContentEditor\Facade\Enum\LlmModelProvider;
+use App\LlmContentEditor\Facade\Exception\CancelledException;
 use App\LlmContentEditor\Facade\LlmContentEditorFacadeInterface;
 use Closure;
 use Generator;
@@ -24,8 +25,9 @@ use const JSON_THROW_ON_ERROR;
 
 final class SimulatedLlmContentEditorFacade implements LlmContentEditorFacadeInterface
 {
-    private const string ERROR_MARKER = '[simulate_error]';
-    private const string TOOL_MARKER  = '[simulate_tool]';
+    private const string ERROR_MARKER         = '[simulate_error]';
+    private const string TOOL_MARKER          = '[simulate_tool]';
+    private const string CANCEL_ALWAYS_MARKER = '[simulate_cancel_always]';
 
     /**
      * @return Generator<EditStreamChunkDto>
@@ -78,6 +80,14 @@ final class SimulatedLlmContentEditorFacade implements LlmContentEditorFacadeInt
             null
         );
         yield new EditStreamChunkDto(EditStreamChunkType::Progress, 'Analyzing instruction...');
+
+        if ($isCancelled !== null && $isCancelled()) {
+            throw new CancelledException();
+        }
+
+        if (str_contains($normalizedInstruction, self::CANCEL_ALWAYS_MARKER)) {
+            throw new CancelledException();
+        }
 
         if (str_contains($normalizedInstruction, self::TOOL_MARKER)) {
             $toolInputs = [

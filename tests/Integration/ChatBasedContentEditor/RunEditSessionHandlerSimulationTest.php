@@ -139,6 +139,32 @@ final class RunEditSessionHandlerSimulationTest extends KernelTestCase
         self::assertSame('Simulated provider failure', $donePayload['errorMessage'] ?? null);
     }
 
+    /**
+     * When the LLM facade throws CancelledException during stream execution —
+     * the path taken when the isCancelled callback fires mid-turn — the handler
+     * must catch it and persist a Cancelled status with a failed Done chunk,
+     * distinct from the error path (which produces a Failed status).
+     */
+    public function testCancellingDuringExecutionPersistsCancelledStatusAndFailedDoneChunk(): void
+    {
+        $sessionId = $this->createSessionFixture('simulate mid-execution stop [simulate_cancel_always]');
+
+        ($this->handler)(new RunEditSessionMessage($sessionId, 'en'));
+
+        $this->entityManager->clear();
+        $session = $this->entityManager->find(EditSession::class, $sessionId);
+        self::assertNotNull($session);
+        self::assertSame(EditSessionStatus::Cancelled, $session->getStatus());
+
+        $doneChunk = $this->findLastDoneChunk($session);
+        self::assertNotNull($doneChunk);
+
+        $payload = json_decode($doneChunk->getPayloadJson(), true);
+        self::assertIsArray($payload);
+        self::assertFalse(($payload['success'] ?? null) === true);
+        self::assertSame('Cancelled by user.', $payload['errorMessage'] ?? null);
+    }
+
     public function testCancellingSessionBeforeExecutionPersistsCancelledDoneChunk(): void
     {
         $sessionId = $this->createSessionFixture('normal flow');
