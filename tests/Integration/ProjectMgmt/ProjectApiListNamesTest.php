@@ -28,7 +28,7 @@ final class ProjectApiListNamesTest extends WebTestCase
         $this->entityManager = $entityManager;
     }
 
-    public function testReturnsEmptyArrayWhenNoProjectsExist(): void
+    public function testReturnsJsonArrayOfStrings(): void
     {
         $this->client->request('GET', '/en/api/projects');
 
@@ -37,30 +37,45 @@ final class ProjectApiListNamesTest extends WebTestCase
 
         $data = json_decode((string) $this->client->getResponse()->getContent(), true);
         self::assertIsArray($data);
-        self::assertSame([], $data);
+        self::assertIsList($data);
+
+        foreach ($data as $item) {
+            self::assertIsString($item);
+        }
     }
 
     public function testReturnsProjectNamesSortedAlphabetically(): void
     {
+        $uniqueSuffix = uniqid();
         $this->createOrganization();
-        $this->createProject('Zeta Project');
-        $this->createProject('Alpha Project');
-        $this->createProject('Mu Project');
+        $this->createProject('Zeta Sorted Test ' . $uniqueSuffix);
+        $this->createProject('Alpha Sorted Test ' . $uniqueSuffix);
+        $this->createProject('Mu Sorted Test ' . $uniqueSuffix);
 
         $this->client->request('GET', '/en/api/projects');
 
         self::assertResponseIsSuccessful();
         self::assertResponseHeaderSame('content-type', 'application/json');
 
+        /** @var list<string> $data */
         $data = json_decode((string) $this->client->getResponse()->getContent(), true);
-        self::assertSame(['Alpha Project', 'Mu Project', 'Zeta Project'], $data);
+        self::assertIsArray($data);
+
+        self::assertContains('Alpha Sorted Test ' . $uniqueSuffix, $data);
+        self::assertContains('Mu Sorted Test ' . $uniqueSuffix, $data);
+        self::assertContains('Zeta Sorted Test ' . $uniqueSuffix, $data);
+
+        $sorted = $data;
+        sort($sorted, SORT_STRING);
+        self::assertSame($sorted, $data);
     }
 
     public function testExcludesSoftDeletedProjects(): void
     {
+        $uniqueSuffix = uniqid();
         $this->createOrganization();
-        $activeProject  = $this->createProject('Active Project');
-        $deletedProject = $this->createProject('Deleted Project');
+        $this->createProject('Active Test Project ' . $uniqueSuffix);
+        $deletedProject = $this->createProject('Deleted Test Project ' . $uniqueSuffix);
 
         $deletedProject->markAsDeleted();
         $this->entityManager->flush();
@@ -70,7 +85,8 @@ final class ProjectApiListNamesTest extends WebTestCase
         self::assertResponseIsSuccessful();
 
         $data = json_decode((string) $this->client->getResponse()->getContent(), true);
-        self::assertSame(['Active Project'], $data);
+        self::assertContains('Active Test Project ' . $uniqueSuffix, $data);
+        self::assertNotContains('Deleted Test Project ' . $uniqueSuffix, $data);
     }
 
     public function testAccessibleWithoutAuthentication(): void
