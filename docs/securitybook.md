@@ -207,6 +207,7 @@ when@test:
 
 ```yaml
 access_control:
+    - { path: ^/api/, roles: PUBLIC_ACCESS }
     - { path: ^/sign-in, roles: PUBLIC_ACCESS }
     - { path: ^/sign-up, roles: PUBLIC_ACCESS }
     - { path: "^/organization/invitation/[^/]+$", roles: PUBLIC_ACCESS }
@@ -217,7 +218,7 @@ access_control:
     - { path: ^/organization, roles: ROLE_USER }
 ```
 
-Only the first matching rule applies. Public pages (sign-in, sign-up, invitation acceptance) are explicitly listed. All application features require `ROLE_USER`. The role hierarchy grants `ROLE_ADMIN` all permissions of `ROLE_USER`:
+Only the first matching rule applies. Public pages (sign-in, sign-up, invitation acceptance) and API endpoints (`/api/`) are explicitly listed as public. All application features require `ROLE_USER`. The role hierarchy grants `ROLE_ADMIN` all permissions of `ROLE_USER`:
 
 ```yaml
 role_hierarchy:
