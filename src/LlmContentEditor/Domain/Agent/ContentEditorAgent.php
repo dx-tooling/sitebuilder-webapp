@@ -7,26 +7,37 @@ namespace App\LlmContentEditor\Domain\Agent;
 use App\LlmContentEditor\Domain\Enum\LlmModelName;
 use App\LlmContentEditor\Domain\TurnActivityProviderInterface;
 use App\LlmContentEditor\Facade\Dto\AgentConfigDto;
+use App\LlmContentEditor\Facade\Exception\CancelledException;
 use App\LlmContentEditor\Infrastructure\WireLog\LlmWireLogMiddleware;
 use App\WorkspaceTooling\Facade\WorkspaceToolingServiceInterface;
+use Closure;
 use EtfsCodingAgent\Agent\BaseCodingAgent;
 use NeuronAI\Providers\AIProviderInterface;
 use NeuronAI\Providers\HttpClientOptions;
 use NeuronAI\Providers\OpenAI\OpenAI;
 use NeuronAI\Tools\PropertyType;
 use NeuronAI\Tools\Tool;
+use NeuronAI\Tools\ToolInterface;
 use NeuronAI\Tools\ToolProperty;
 use Psr\Log\LoggerInterface;
 
 class ContentEditorAgent extends BaseCodingAgent
 {
+    /** @var ?Closure(): bool */
+    private ?Closure $isCancelled;
+
+    /**
+     * @param ?Closure(): bool $isCancelled Callback returning true when cancellation has been requested
+     */
     public function __construct(
         private readonly WorkspaceToolingServiceInterface $sitebuilderFacade,
         private readonly LlmModelName                     $model,
         private readonly string                           $apiKey,
         private readonly AgentConfigDto                   $agentConfig,
         private readonly ?LoggerInterface                 $wireLogger = null,
+        ?Closure                                          $isCancelled = null,
     ) {
+        $this->isCancelled = $isCancelled;
         parent::__construct($sitebuilderFacade);
     }
 
@@ -103,6 +114,20 @@ class ContentEditorAgent extends BaseCodingAgent
     protected function getOutputInstructions(): array
     {
         return explode("\n", $this->agentConfig->outputInstructions);
+    }
+
+    /**
+     * Check for cancellation before each tool execution to prevent starting
+     * new long-running operations (builds, tests, shell commands) after the
+     * user has clicked Stop.
+     */
+    protected function executeSingleTool(ToolInterface $tool): void
+    {
+        if ($this->isCancelled !== null && ($this->isCancelled)()) {
+            throw new CancelledException();
+        }
+
+        parent::executeSingleTool($tool);
     }
 
     /**

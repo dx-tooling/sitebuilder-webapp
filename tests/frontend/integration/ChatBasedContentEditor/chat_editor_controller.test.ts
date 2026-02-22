@@ -23,6 +23,7 @@ describe("ChatBasedContentEditorController", () => {
         inProgress: "In progress",
         stop: "Stop",
         stopping: "Stopping...",
+        stoppingSlow: "Cancellation is taking longer than expected...",
         cancelled: "Cancelled",
     };
 

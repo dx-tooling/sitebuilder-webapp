@@ -39,6 +39,7 @@ interface TranslationsData {
     inProgress: string;
     stop: string;
     stopping: string;
+    stoppingSlow: string;
     cancelled: string;
 }
 
@@ -110,6 +111,9 @@ export default class extends Controller {
     private isContextUsagePollingActive: boolean = false;
     private isPollingActive: boolean = false;
 
+    // Cancel timeout: shows a warning if cancellation takes too long
+    private cancelSlowTimeoutId: ReturnType<typeof setTimeout> | null = null;
+
     // Activity indicators state (Working/Thinking badges)
     private activityThinkingTimerId: ReturnType<typeof setInterval> | null = null;
     private activityWorkingTimeoutId: ReturnType<typeof setTimeout> | null = null;
@@ -148,6 +152,7 @@ export default class extends Controller {
     disconnect(): void {
         this.stopPolling();
         this.stopContextUsagePolling();
+        this.clearCancelSlowTimeout();
     }
 
     private startContextUsagePolling(): void {
@@ -325,6 +330,14 @@ export default class extends Controller {
             this.cancelButtonTarget.textContent = t.stopping;
         }
 
+        // Start a timeout: if cancellation isn't confirmed within 10s, show a warning
+        this.clearCancelSlowTimeout();
+        this.cancelSlowTimeoutId = setTimeout(() => {
+            if (this.hasCancelButtonTarget && this.cancelButtonTarget.disabled) {
+                this.cancelButtonTarget.textContent = t.stoppingSlow;
+            }
+        }, 10_000);
+
         try {
             const csrfInput = document.querySelector('input[name="_csrf_token"]') as HTMLInputElement | null;
 
@@ -343,6 +356,7 @@ export default class extends Controller {
             // and done chunk naturally, so all pre-cancellation output is displayed.
         } catch {
             // If the cancel request fails, re-enable the button so the user can retry
+            this.clearCancelSlowTimeout();
             if (this.hasCancelButtonTarget) {
                 this.cancelButtonTarget.disabled = false;
                 this.cancelButtonTarget.textContent = t.stop;
@@ -435,6 +449,14 @@ export default class extends Controller {
             this.pollingTimeoutId = null;
         }
         this.currentPollingState = null;
+        this.clearCancelSlowTimeout();
+    }
+
+    private clearCancelSlowTimeout(): void {
+        if (this.cancelSlowTimeoutId !== null) {
+            clearTimeout(this.cancelSlowTimeoutId);
+            this.cancelSlowTimeoutId = null;
+        }
     }
 
     private resetSubmitButton(): void {

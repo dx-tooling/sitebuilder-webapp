@@ -437,6 +437,7 @@ js:
         in_progress: "In Bearbeitung"
         stop: "Stopp"
         stopping: "Wird gestoppt..."
+        stopping_slow: "Abbruch dauert länger als erwartet..."
         cancelled: "Abgebrochen"
     workspace:
         taking_longer: "Das dauert länger als erwartet. Bitte versuchen Sie es erneut."

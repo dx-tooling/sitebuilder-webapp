@@ -12,6 +12,7 @@ use App\LlmContentEditor\Facade\Dto\ToolInputEntryDto;
 use App\LlmContentEditor\Facade\Enum\EditStreamChunkType;
 use App\LlmContentEditor\Facade\Enum\LlmModelProvider;
 use App\LlmContentEditor\Facade\LlmContentEditorFacadeInterface;
+use Closure;
 use Generator;
 use JsonException;
 
@@ -43,6 +44,7 @@ final class SimulatedLlmContentEditorFacade implements LlmContentEditorFacadeInt
 
     /**
      * @param list<ConversationMessageDto> $previousMessages
+     * @param ?Closure(): bool             $isCancelled
      *
      * @return Generator<EditStreamChunkDto>
      *
@@ -55,6 +57,7 @@ final class SimulatedLlmContentEditorFacade implements LlmContentEditorFacadeInt
         string         $llmApiKey,
         AgentConfigDto $agentConfig,
         string         $locale = 'en',
+        ?Closure       $isCancelled = null,
     ): Generator {
         $normalizedInstruction = trim($instruction);
 

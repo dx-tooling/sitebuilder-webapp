@@ -18,6 +18,7 @@ use App\LlmContentEditor\Facade\Dto\AgentEventDto;
 use App\LlmContentEditor\Facade\Dto\ConversationMessageDto;
 use App\LlmContentEditor\Facade\Dto\ToolInputEntryDto;
 use App\LlmContentEditor\Facade\Enum\EditStreamChunkType;
+use App\LlmContentEditor\Facade\Exception\CancelledException;
 use App\LlmContentEditor\Facade\LlmContentEditorFacadeInterface;
 use App\ProjectMgmt\Facade\ProjectMgmtFacadeInterface;
 use App\WorkspaceMgmt\Facade\WorkspaceMgmtFacadeInterface;
@@ -69,10 +70,11 @@ final readonly class RunEditSessionHandler
         $session->setStatus(EditSessionStatus::Running);
         $this->entityManager->flush();
 
+        $conversation = $session->getConversation();
+
         try {
             // Load previous messages from conversation
             $previousMessages = $this->loadPreviousMessages($session);
-            $conversation     = $session->getConversation();
 
             // Set execution context for agent container execution
             $workspace = $this->workspaceMgmtFacade->getWorkspaceById($conversation->getWorkspaceId());
@@ -109,6 +111,23 @@ final readonly class RunEditSessionHandler
                 '/workspace',
             );
 
+            // Throttled cancellation callback: checks the DB at most every 0.5s
+            $lastCancelCheck = 0.0;
+            $isCancelled = function () use ($session, &$lastCancelCheck): bool {
+                $now = microtime(true);
+                if ($now - $lastCancelCheck < 0.5) {
+                    return false;
+                }
+                $lastCancelCheck = $now;
+
+                $currentStatus = $this->entityManager->getConnection()->fetchOne(
+                    'SELECT status FROM edit_sessions WHERE id = ?',
+                    [$session->getId()]
+                );
+
+                return $currentStatus === EditSessionStatus::Cancelling->value;
+            };
+
             $generator = $this->facade->streamEditWithHistory(
                 $session->getWorkspacePath(),
                 $session->getInstruction(),
@@ -116,6 +135,7 @@ final readonly class RunEditSessionHandler
                 $project->contentEditingApiKey,
                 $agentConfig,
                 $message->locale,
+                $isCancelled,
             );
 
             $streamEndedWithFailure = false;
@@ -182,6 +202,19 @@ final readonly class RunEditSessionHandler
 
             // Commit and push changes after successful edit session
             $this->commitChangesAfterEdit($conversation, $session);
+        } catch (CancelledException) {
+            new ConversationMessage(
+                $conversation,
+                ConversationMessageRole::Assistant,
+                json_encode(
+                    ['content' => '[Cancelled by the user — disregard this turn.]'],
+                    JSON_THROW_ON_ERROR
+                )
+            );
+
+            EditSessionChunk::createDoneChunk($session, false, 'Cancelled by user.');
+            $session->setStatus(EditSessionStatus::Cancelled);
+            $this->entityManager->flush();
         } catch (Throwable $e) {
             $this->logger->error('EditSession failed', [
                 'sessionId' => $message->sessionId,
