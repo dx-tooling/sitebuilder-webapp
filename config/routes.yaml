@@ -9,7 +9,7 @@ root_redirect:
 api:
     resource: "../src/**/Api/**/*Controller.php"
     type: attribute
-    prefix: /api-v1
+    prefix: /public-api-v1
 
 controller:
     resource: "../src/**/*Controller.php"

@@ -37,7 +37,7 @@ final class ProjectNamesApiTest extends WebTestCase
         $this->createProject($organizationId, 'Beta Project');
         $this->createProject($organizationId, 'Alpha Project');
 
-        $this->client->request('GET', '/api-v1/project-names');
+        $this->client->request('GET', '/public-api-v1/project-names');
 
         self::assertResponseIsSuccessful();
         self::assertResponseHeaderSame('content-type', 'application/json');
@@ -63,7 +63,7 @@ final class ProjectNamesApiTest extends WebTestCase
         $deleted->markAsDeleted();
         $this->entityManager->flush();
 
-        $this->client->request('GET', '/api-v1/project-names');
+        $this->client->request('GET', '/public-api-v1/project-names');
 
         self::assertResponseIsSuccessful();
 
@@ -76,7 +76,7 @@ final class ProjectNamesApiTest extends WebTestCase
 
     public function testAccessibleWithoutAuthentication(): void
     {
-        $this->client->request('GET', '/api-v1/project-names');
+        $this->client->request('GET', '/public-api-v1/project-names');
 
         self::assertResponseIsSuccessful();
         self::assertResponseHeaderSame('content-type', 'application/json');
@@ -84,7 +84,7 @@ final class ProjectNamesApiTest extends WebTestCase
 
     public function testReturnsEmptyArrayWhenNoProjects(): void
     {
-        $this->client->request('GET', '/api-v1/project-names');
+        $this->client->request('GET', '/public-api-v1/project-names');
 
         self::assertResponseIsSuccessful();
 
