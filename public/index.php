@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+// "There are only two hard things in Computer Science: cache invalidation and naming things." — Phil Karlton
+
 use App\Kernel;
 use EnterpriseToolingForSymfony\SharedBundle\DateAndTime\Enum\Timezone;
 
