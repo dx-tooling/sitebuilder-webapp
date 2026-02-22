@@ -70,7 +70,7 @@ final class LlmContentEditorFacade implements LlmContentEditorFacadeInterface
 
     /**
      * @param list<ConversationMessageDto> $previousMessages
-     * @param ?Closure(): bool             $isCancelled Callback returning true when cancellation has been requested
+     * @param ?Closure(): bool             $isCancelled      Callback returning true when cancellation has been requested
      *
      * @return Generator<EditStreamChunkDto>
      */

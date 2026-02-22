@@ -113,7 +113,7 @@ final readonly class RunEditSessionHandler
 
             // Throttled cancellation callback: checks the DB at most every 0.5s
             $lastCancelCheck = 0.0;
-            $isCancelled = function () use ($session, &$lastCancelCheck): bool {
+            $isCancelled     = function () use ($session, &$lastCancelCheck): bool {
                 $now = microtime(true);
                 if ($now - $lastCancelCheck < 0.5) {
                     return false;

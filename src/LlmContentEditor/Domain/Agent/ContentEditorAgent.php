@@ -131,7 +131,7 @@ class ContentEditorAgent extends BaseCodingAgent
     }
 
     /**
-     * @return list<\NeuronAI\Tools\ToolInterface>
+     * @return list<ToolInterface>
      */
     protected function tools(): array
     {
