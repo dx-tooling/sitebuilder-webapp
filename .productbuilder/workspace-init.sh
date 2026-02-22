@@ -27,7 +27,9 @@ HOST_PROJECT_PATH="${HOST_PROJECT_PATH}"
 ETFS_PROJECT_NAME="${ETFS_PROJECT_NAME}"
 EOF
 
-docker compose up --build -d
+docker compose up -d
+sleep 5
+
 docker compose exec -T app composer install --no-interaction
 
 mise run in-app-container mise trust
