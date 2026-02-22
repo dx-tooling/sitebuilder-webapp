@@ -194,6 +194,23 @@ final class ProjectService
     }
 
     /**
+     * @return list<string>
+     */
+    public function getAllNonDeletedProjectNames(): array
+    {
+        /** @var list<string> $names */
+        $names = $this->entityManager->createQueryBuilder()
+            ->select('p.name')
+            ->from(Project::class, 'p')
+            ->where('p.deletedAt IS NULL')
+            ->orderBy('p.name', 'ASC')
+            ->getQuery()
+            ->getSingleColumnResult();
+
+        return $names;
+    }
+
+    /**
      * Find all soft-deleted projects for an organization.
      *
      * @return list<Project>
