@@ -173,6 +173,23 @@ final class ProjectService
     }
 
     /**
+     * @return list<string>
+     */
+    public function getAllProjectNames(): array
+    {
+        /** @var list<array{name: string}> $rows */
+        $rows = $this->entityManager->createQueryBuilder()
+            ->select('p.name')
+            ->from(Project::class, 'p')
+            ->where('p.deletedAt IS NULL')
+            ->orderBy('p.name', 'ASC')
+            ->getQuery()
+            ->getArrayResult();
+
+        return array_map(static fn (array $row): string => $row['name'], $rows);
+    }
+
+    /**
      * Find all non-deleted projects for an organization.
      *
      * @return list<Project>

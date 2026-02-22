@@ -6,8 +6,12 @@ root_redirect:
         path: /en/
         permanent: false
 
-controller:
-    resource: "../src/**/*Controller.php"
+api_controllers:
+    resource: "../src/**/Api/**/*Controller.php"
+    type: attribute
+
+presentation_controllers:
+    resource: "../src/**/Presentation/**/*Controller.php"
     type: attribute
     prefix: /{_locale}
     requirements:
