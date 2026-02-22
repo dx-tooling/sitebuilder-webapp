@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\StaticPages\Presentation\Controller;
 
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
@@ -43,5 +44,15 @@ class ContentController extends AbstractController
     public function workflowDocsAction(): Response
     {
         return $this->render('@static_pages.presentation/workflow_docs.html.twig');
+    }
+
+    #[Route(
+        path   : '/hello',
+        name   : 'static_pages.presentation.hello',
+        methods: [Request::METHOD_GET]
+    )]
+    public function helloAction(): JsonResponse
+    {
+        return new JsonResponse(['message' => 'Hello, World!']);
     }
 }
