@@ -6,6 +6,7 @@ namespace App\Account\Infrastructure\Security;
 
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 use Symfony\Component\HttpFoundation\RedirectResponse;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Session\FlashBagAwareSessionInterface;
 use Symfony\Component\Security\Http\Event\LoginSuccessEvent;
 
@@ -31,7 +32,7 @@ final readonly class LoginSuccessFunnyGreetingListener
         }
 
         $request = $event->getRequest();
-        if (!$request->hasSession()) {
+        if (!$this->isHtmlRequest($request) || !$request->hasSession()) {
             return;
         }
 
@@ -41,5 +42,21 @@ final readonly class LoginSuccessFunnyGreetingListener
         }
 
         $session->getFlashBag()->add(FunnyGreetingProvider::FLASH_TYPE, $this->funnyGreetingProvider->getRandomGreetingKey());
+    }
+
+    private function isHtmlRequest(Request $request): bool
+    {
+        if ($request->isXmlHttpRequest()) {
+            return false;
+        }
+
+        $requestFormat = $request->getRequestFormat('');
+        if ($requestFormat !== '' && $requestFormat !== 'html') {
+            return false;
+        }
+
+        $preferredFormat = $request->getPreferredFormat('');
+
+        return $preferredFormat === '' || $preferredFormat === 'html';
     }
 }

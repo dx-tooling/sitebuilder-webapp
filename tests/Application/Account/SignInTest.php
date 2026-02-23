@@ -8,6 +8,7 @@ use App\Account\Domain\Service\AccountDomainService;
 use App\Account\Infrastructure\Security\FunnyGreetingProvider;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
+use Symfony\Component\DomCrawler\Crawler;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
 /**
@@ -141,16 +142,24 @@ final class SignInTest extends WebTestCase
 
     private function assertGreetingOccurrences(string $locale, int $expectedOccurrences): void
     {
-        $expectedGreetings = $this->getLocalizedGreetings($locale);
-        $responseContent   = $this->client->getResponse()->getContent();
+        $responseContent = $this->client->getResponse()->getContent();
         self::assertIsString($responseContent);
 
-        $actualOccurrences = 0;
-        foreach ($expectedGreetings as $expectedGreeting) {
-            $actualOccurrences += substr_count($responseContent, $expectedGreeting);
+        $crawler            = new Crawler($responseContent);
+        $greetingFlashNodes = $crawler->filter(sprintf('div[role="alert"][data-flash-type="%s"]', FunnyGreetingProvider::FLASH_TYPE));
+        self::assertCount($expectedOccurrences, $greetingFlashNodes);
+
+        if ($expectedOccurrences === 0) {
+            return;
         }
 
-        self::assertSame($expectedOccurrences, $actualOccurrences);
+        $expectedGreetings = $this->getLocalizedGreetings($locale);
+        $actualGreetings   = $greetingFlashNodes->each(
+            static fn (Crawler $greetingFlashNode): string => trim($greetingFlashNode->text(''))
+        );
+        foreach ($actualGreetings as $actualGreeting) {
+            self::assertContains($actualGreeting, $expectedGreetings);
+        }
     }
 
     /**

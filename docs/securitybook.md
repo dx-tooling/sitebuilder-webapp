@@ -30,6 +30,42 @@ providers:
 `SecurityUserProvider` also implements `PasswordUpgraderInterface`, so Symfony can transparently rehash passwords when the hashing algorithm changes -- without any controller involvement.
 
 
+## Post-sign-in greeting flash messages
+
+After a successful authentication on the `main` firewall, the app shows one localized nerd-humor greeting as a one-time flash message on the first rendered page.
+
+### Why this exists
+
+- Provides lightweight positive feedback that sign-in succeeded.
+- Keeps behavior centralized in one security hook instead of spreading it across controllers.
+
+### Implementation details
+
+1. `LoginSuccessFunnyGreetingListener` (`src/Account/Infrastructure/Security/LoginSuccessFunnyGreetingListener.php`) listens to `LoginSuccessEvent`.
+2. `FunnyGreetingProvider` (`src/Account/Infrastructure/Security/FunnyGreetingProvider.php`) owns the allowed translation keys and returns one random key per login.
+3. The listener stores the **translation key** in the flash bag under type `auth_greeting`.
+4. `base_appshell.html.twig` (`src/Common/Presentation/Resources/templates/base_appshell.html.twig`) renders that flash and translates it with Twig `trans`.
+
+### Guardrails
+
+The listener intentionally skips adding a greeting when:
+
+- the login is not on the `main` firewall,
+- there is a previous token (to avoid duplicate flashes from token refresh flows),
+- a non-redirect custom response is already set,
+- there is no session/flash bag available,
+- the request is non-HTML (for example JSON/AJAX contexts).
+
+### Translation keys
+
+The greeting texts live in:
+
+- `translations/messages.en.yaml` under `auth.greeting.1` ... `auth.greeting.5`
+- `translations/messages.de.yaml` under `auth.greeting.1` ... `auth.greeting.5`
+
+Because the flash stores keys (not pre-translated strings), rendering uses the active locale of the page shown after sign-in.
+
+
 ## CSRF Protection: Stateless Tokens
 
 The application uses **stateless CSRF tokens** (Symfony 7.2+), not the traditional session-bound tokens. This is a fundamentally different protection model.

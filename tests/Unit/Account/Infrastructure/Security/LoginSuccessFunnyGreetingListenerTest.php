@@ -91,6 +91,34 @@ final class LoginSuccessFunnyGreetingListenerTest extends TestCase
         self::assertFalse($request->hasSession());
     }
 
+    public function testHandleSkipsForJsonRequests(): void
+    {
+        $provider = new FunnyGreetingProvider();
+        $listener = new LoginSuccessFunnyGreetingListener($provider);
+        $request  = new Request([], [], [], [], [], ['HTTP_ACCEPT' => 'application/json']);
+        $session  = new Session(new MockArraySessionStorage());
+        $request->setSession($session);
+
+        $event = $this->createEvent($request);
+        $listener->handle($event);
+
+        self::assertSame([], $session->getFlashBag()->get(FunnyGreetingProvider::FLASH_TYPE));
+    }
+
+    public function testHandleSkipsForXmlHttpRequests(): void
+    {
+        $provider = new FunnyGreetingProvider();
+        $listener = new LoginSuccessFunnyGreetingListener($provider);
+        $request  = new Request([], [], [], [], [], ['HTTP_X_REQUESTED_WITH' => 'XMLHttpRequest']);
+        $session  = new Session(new MockArraySessionStorage());
+        $request->setSession($session);
+
+        $event = $this->createEvent($request);
+        $listener->handle($event);
+
+        self::assertSame([], $session->getFlashBag()->get(FunnyGreetingProvider::FLASH_TYPE));
+    }
+
     private function createEvent(
         Request         $request,
         string          $firewallName = 'main',
