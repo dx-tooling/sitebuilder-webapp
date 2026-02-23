@@ -7,6 +7,7 @@ import { Controller } from "@hotwired/stimulus";
 export default class extends Controller {
     static targets = [
         "suggestion",
+        "suggestionRow",
         "expandButton",
         "collapseButton",
         "expandCollapseWrapper",
@@ -39,6 +40,7 @@ export default class extends Controller {
     };
 
     declare readonly suggestionTargets: HTMLButtonElement[];
+    declare readonly suggestionRowTargets: HTMLElement[];
     declare readonly hasExpandButtonTarget: boolean;
     declare readonly expandButtonTarget: HTMLButtonElement;
     declare readonly hasCollapseButtonTarget: boolean;
@@ -75,6 +77,15 @@ export default class extends Controller {
 
     /** Index of the suggestion pending deletion */
     deleteIndex: number | null = null;
+
+    /** Whether the suggestions list is currently expanded */
+    expanded = false;
+
+    connect(): void {
+        this.expanded = false;
+        this.applySuggestionVisibility();
+        this.updateExpandCollapseState(this.getSuggestionRows().length);
+    }
 
     // ─── Display: insert, hover, expand/collapse ────────────────
 
@@ -114,41 +125,18 @@ export default class extends Controller {
      * Show all hidden suggestions and toggle expand/collapse buttons.
      */
     expand(): void {
-        // Show all hidden suggestion rows (the parent wrapper divs)
-        this.suggestionTargets.forEach((button) => {
-            const row = button.closest("[data-index]") as HTMLElement | null;
-            if (row) {
-                row.classList.remove("hidden");
-            }
-        });
-
-        if (this.hasExpandButtonTarget) {
-            this.expandButtonTarget.classList.add("hidden");
-        }
-        if (this.hasCollapseButtonTarget) {
-            this.collapseButtonTarget.classList.remove("hidden");
-        }
+        this.expanded = true;
+        this.applySuggestionVisibility();
+        this.updateExpandCollapseState(this.getSuggestionRows().length);
     }
 
     /**
      * Hide suggestions beyond maxVisible and toggle expand/collapse buttons.
      */
     collapse(): void {
-        this.suggestionTargets.forEach((button, index) => {
-            if (index >= this.maxVisibleValue) {
-                const row = button.closest("[data-index]") as HTMLElement | null;
-                if (row) {
-                    row.classList.add("hidden");
-                }
-            }
-        });
-
-        if (this.hasExpandButtonTarget) {
-            this.expandButtonTarget.classList.remove("hidden");
-        }
-        if (this.hasCollapseButtonTarget) {
-            this.collapseButtonTarget.classList.add("hidden");
-        }
+        this.expanded = false;
+        this.applySuggestionVisibility();
+        this.updateExpandCollapseState(this.getSuggestionRows().length);
     }
 
     // ─── Add / Edit modal ───────────────────────────────────────
@@ -363,6 +351,7 @@ export default class extends Controller {
             const row = document.createElement("div");
             row.className = "group flex items-start gap-1";
             row.dataset.index = String(index);
+            row.dataset.promptSuggestionsTarget = "suggestionRow";
 
             const button = document.createElement("button");
             button.type = "button";
@@ -380,10 +369,6 @@ export default class extends Controller {
             const actions = document.createElement("div");
             actions.className =
                 "flex-shrink-0 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity";
-
-            if (index >= this.maxVisibleValue) {
-                row.classList.add("hidden");
-            }
 
             // Edit button
             const editBtn = document.createElement("button");
@@ -414,7 +399,8 @@ export default class extends Controller {
             container.appendChild(row);
         });
 
-        // Update expand/collapse buttons based on the new suggestion count
+        this.expanded = false;
+        this.applySuggestionVisibility();
         this.updateExpandCollapseState(suggestions.length);
     }
 
@@ -432,21 +418,42 @@ export default class extends Controller {
         if (hiddenCount > 0) {
             this.expandCollapseWrapperTarget.classList.remove("hidden");
 
-            // Reset to collapsed state
             if (this.hasExpandButtonTarget) {
-                this.expandButtonTarget.classList.remove("hidden");
                 this.expandButtonTarget.textContent = this.showMoreTemplateValue.replace(
                     "{count}",
                     String(hiddenCount),
                 );
+                this.expandButtonTarget.classList.toggle("hidden", this.expanded);
+                this.expandButtonTarget.setAttribute("aria-expanded", String(this.expanded));
             }
             if (this.hasCollapseButtonTarget) {
-                this.collapseButtonTarget.classList.add("hidden");
                 this.collapseButtonTarget.textContent = this.showLessLabelValue;
+                this.collapseButtonTarget.classList.toggle("hidden", !this.expanded);
+                this.collapseButtonTarget.setAttribute("aria-expanded", String(this.expanded));
             }
         } else {
+            this.expanded = false;
             this.expandCollapseWrapperTarget.classList.add("hidden");
         }
+    }
+
+    private getSuggestionRows(): HTMLElement[] {
+        if (!this.hasSuggestionListTarget) {
+            return this.suggestionRowTargets;
+        }
+
+        return Array.from(
+            this.suggestionListTarget.querySelectorAll<HTMLElement>(
+                '[data-prompt-suggestions-target~="suggestionRow"]',
+            ),
+        );
+    }
+
+    private applySuggestionVisibility(): void {
+        this.getSuggestionRows().forEach((row, index) => {
+            const shouldHide = !this.expanded && index >= this.maxVisibleValue;
+            row.classList.toggle("hidden", shouldHide);
+        });
     }
 
     private sanitizeText(raw: string): string {
