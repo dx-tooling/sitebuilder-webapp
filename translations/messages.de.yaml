@@ -360,6 +360,15 @@ workflow_docs:
         manual_2: "SiteBuilder benachrichtigen, wenn ein PR zusammengeführt wurde (Reviewer-Aktion)"
         manual_3: "Verwaiste PRs nach Arbeitsbereich-Reset schließen"
 
+# Authentifizierungsgruesse
+auth:
+    greeting:
+        1: "Willkommen zurueck! Deine Merge-Konflikte haben dich vermisst."
+        2: "Authentifizierung erfolgreich. Kaffeelevel: produktionsreif."
+        3: "Du bist jetzt eingeloggt. Moegen deine Tests gruen bleiben."
+        4: "Zugriff gewaehrt. Deine Stacktraces machen gerade Urlaub."
+        5: "Sitzung hergestellt. Die CI-Pipeline gruesst dich."
+
 # Flash messages
 flash:
     error:
