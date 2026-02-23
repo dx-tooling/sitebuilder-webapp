@@ -23,12 +23,13 @@ final class LoginSuccessFunnyGreetingListenerTest extends TestCase
         $provider = new FunnyGreetingProvider();
         $listener = new LoginSuccessFunnyGreetingListener($provider);
         $request  = new Request();
-        $request->setSession(new Session(new MockArraySessionStorage()));
+        $session  = new Session(new MockArraySessionStorage());
+        $request->setSession($session);
 
         $event = $this->createEvent($request);
         $listener->handle($event);
 
-        $flashMessages = $request->getSession()->getFlashBag()->get('auth_greeting');
+        $flashMessages = $session->getFlashBag()->get('auth_greeting');
         self::assertCount(1, $flashMessages);
         self::assertContains($flashMessages[0], $provider->getAvailableGreetingKeys());
     }
@@ -38,13 +39,14 @@ final class LoginSuccessFunnyGreetingListenerTest extends TestCase
         $provider = new FunnyGreetingProvider();
         $listener = new LoginSuccessFunnyGreetingListener($provider);
         $request  = new Request();
-        $request->setSession(new Session(new MockArraySessionStorage()));
+        $session  = new Session(new MockArraySessionStorage());
+        $request->setSession($session);
 
         $previousToken = $this->createMock(TokenInterface::class);
-        $event         = $this->createEvent($request, previousToken: $previousToken);
+        $event         = $this->createEvent($request, 'main', $previousToken);
         $listener->handle($event);
 
-        self::assertSame([], $request->getSession()->getFlashBag()->get('auth_greeting'));
+        self::assertSame([], $session->getFlashBag()->get('auth_greeting'));
     }
 
     public function testHandleSkipsWhenRequestHasNoSession(): void

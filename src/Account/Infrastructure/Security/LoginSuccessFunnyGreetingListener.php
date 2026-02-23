@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Account\Infrastructure\Security;
 
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
+use Symfony\Component\HttpFoundation\Session\FlashBagAwareSessionInterface;
 use Symfony\Component\Security\Http\Event\LoginSuccessEvent;
 
 #[AsEventListener(event: LoginSuccessEvent::class, method: 'handle')]
@@ -26,9 +27,11 @@ final readonly class LoginSuccessFunnyGreetingListener
             return;
         }
 
-        $request
-            ->getSession()
-            ->getFlashBag()
-            ->add('auth_greeting', $this->funnyGreetingProvider->getRandomGreetingKey());
+        $session = $request->getSession();
+        if (!$session instanceof FlashBagAwareSessionInterface) {
+            return;
+        }
+
+        $session->getFlashBag()->add('auth_greeting', $this->funnyGreetingProvider->getRandomGreetingKey());
     }
 }

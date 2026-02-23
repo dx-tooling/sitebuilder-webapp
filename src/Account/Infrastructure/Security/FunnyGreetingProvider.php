@@ -7,7 +7,7 @@ namespace App\Account\Infrastructure\Security;
 final class FunnyGreetingProvider
 {
     /**
-     * @return list<string>
+     * @return non-empty-list<string>
      */
     public function getAvailableGreetingKeys(): array
     {
