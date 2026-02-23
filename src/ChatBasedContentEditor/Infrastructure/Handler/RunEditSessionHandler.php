@@ -310,6 +310,9 @@ final readonly class RunEditSessionHandler
         return mb_substr($message, 0, $maxLength - 3) . '...';
     }
 
+    /**
+     * @phpstan-impure
+     */
     private function isCancellationRequested(EditSession $session): bool
     {
         if ($session->getStatus() === EditSessionStatus::Cancelling) {
