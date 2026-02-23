@@ -46,6 +46,18 @@ After a successful authentication on the `main` firewall, the app shows one loca
 3. The listener stores the **translation key** in the flash bag under type `auth_greeting`.
 4. `base_appshell.html.twig` (`src/Common/Presentation/Resources/templates/base_appshell.html.twig`) renders that flash and translates it with Twig `trans`.
 
+### Runtime sequence (request lifecycle)
+
+1. A login authenticator succeeds (form login today; future authenticators can use the same firewall/event flow).
+2. Symfony dispatches `LoginSuccessEvent`.
+3. `LoginSuccessFunnyGreetingListener` evaluates guard conditions (firewall, token context, response type, request format, session capability).
+4. If allowed, the listener adds exactly one flash entry:
+   - type: `auth_greeting`
+   - value: one random key from `FunnyGreetingProvider` (for example `auth.greeting.3`)
+5. The authenticator redirects to the target page.
+6. The first rendered page reads flashes from the session and translates `auth_greeting` values in Twig.
+7. Symfony removes consumed flashes, so subsequent page loads do not show the greeting again.
+
 ### Guardrails
 
 The listener intentionally skips adding a greeting when:
@@ -56,6 +68,20 @@ The listener intentionally skips adding a greeting when:
 - there is no session/flash bag available,
 - the request is non-HTML (for example JSON/AJAX contexts).
 
+It also skips when an `auth_greeting` flash is already queued in the same request lifecycle. This protects against duplicate flashes if multiple success handlers/listeners run in one authentication path.
+
+### Guard matrix (technical)
+
+| Condition | Rationale | Result |
+|---|---|---|
+| Firewall is not `main` | Avoid side effects in non-app firewalls | Skip |
+| `previousToken` is present | Treat as token refresh/reload flow, not fresh interactive sign-in | Skip |
+| Event has non-redirect response | Respect custom success response semantics | Skip |
+| Request is XHR/JSON/non-HTML | Avoid polluting API/AJAX channels with UI-only flash data | Skip |
+| No session or no flash bag support | Cannot persist one-time page feedback safely | Skip |
+| Existing `auth_greeting` flash already present | Prevent duplicate greeting rendering | Skip |
+| None of the above | Fresh interactive web login | Add random greeting flash |
+
 ### Translation keys
 
 The greeting texts live in:
@@ -64,6 +90,23 @@ The greeting texts live in:
 - `translations/messages.de.yaml` under `auth.greeting.1` ... `auth.greeting.5`
 
 Because the flash stores keys (not pre-translated strings), rendering uses the active locale of the page shown after sign-in.
+
+### Testing strategy
+
+- Unit tests:
+  - `tests/Unit/Account/Infrastructure/Security/FunnyGreetingProviderTest.php`
+  - `tests/Unit/Account/Infrastructure/Security/LoginSuccessFunnyGreetingListenerTest.php`
+- Application test:
+  - `tests/Application/Account/SignInTest.php`
+- Covered behavior:
+  - random key is always selected from the configured key set
+  - greeting flash is added for successful main-firewall sign-in
+  - guard paths skip greeting in non-applicable contexts
+  - greeting renders localized and is consumed after first page view
+
+### Extending this feature safely
+
+If a new web authenticator (for example SSO) is introduced, keep it on the same firewall/event path to inherit greeting behavior automatically. If additional firewalls need this behavior, update the listener guard policy explicitly and add matching tests for each new authentication path.
 
 
 ## CSRF Protection: Stateless Tokens

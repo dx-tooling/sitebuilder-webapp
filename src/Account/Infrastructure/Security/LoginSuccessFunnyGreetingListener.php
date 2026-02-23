@@ -22,7 +22,7 @@ final readonly class LoginSuccessFunnyGreetingListener
 
     public function handle(LoginSuccessEvent $event): void
     {
-        if ($event->getFirewallName() !== self::MAIN_FIREWALL_NAME || $event->getPreviousToken() !== null) {
+        if (!$this->isHandledFirewallLogin($event)) {
             return;
         }
 
@@ -41,7 +41,23 @@ final readonly class LoginSuccessFunnyGreetingListener
             return;
         }
 
-        $session->getFlashBag()->add(FunnyGreetingProvider::FLASH_TYPE, $this->funnyGreetingProvider->getRandomGreetingKey());
+        $flashBag = $session->getFlashBag();
+        if ($flashBag->peek(FunnyGreetingProvider::FLASH_TYPE) !== []) {
+            return;
+        }
+
+        $flashBag->add(FunnyGreetingProvider::FLASH_TYPE, $this->funnyGreetingProvider->getRandomGreetingKey());
+    }
+
+    private function isHandledFirewallLogin(LoginSuccessEvent $event): bool
+    {
+        if ($event->getFirewallName() !== self::MAIN_FIREWALL_NAME) {
+            return false;
+        }
+
+        // Ignore token refresh/reload paths that can emit login-success events
+        // but should not display a second greeting flash.
+        return $event->getPreviousToken() === null;
     }
 
     private function isHtmlRequest(Request $request): bool

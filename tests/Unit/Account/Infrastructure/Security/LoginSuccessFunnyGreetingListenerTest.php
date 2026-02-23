@@ -119,6 +119,23 @@ final class LoginSuccessFunnyGreetingListenerTest extends TestCase
         self::assertSame([], $session->getFlashBag()->get(FunnyGreetingProvider::FLASH_TYPE));
     }
 
+    public function testHandleSkipsWhenGreetingAlreadyQueued(): void
+    {
+        $provider = new FunnyGreetingProvider();
+        $listener = new LoginSuccessFunnyGreetingListener($provider);
+        $request  = new Request();
+        $session  = new Session(new MockArraySessionStorage());
+        $request->setSession($session);
+        $session->getFlashBag()->add(FunnyGreetingProvider::FLASH_TYPE, 'auth.greeting.1');
+
+        $event = $this->createEvent($request);
+        $listener->handle($event);
+
+        $flashMessages = $session->getFlashBag()->peek(FunnyGreetingProvider::FLASH_TYPE);
+        self::assertCount(1, $flashMessages);
+        self::assertSame('auth.greeting.1', $flashMessages[0]);
+    }
+
     private function createEvent(
         Request         $request,
         string          $firewallName = 'main',
