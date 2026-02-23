@@ -124,14 +124,17 @@ interface WorkspaceMgmtFacadeInterface
     public function writeWorkspaceFile(string $workspaceId, string $relativePath, string $content): void;
 
     /**
-     * Run the build process (npm run build) in the workspace.
+     * Run the build process (npm run build) in the workspace via mise exec.
      *
      * This compiles source files (from /src) to distribution files (to /dist).
      * Used after manual HTML edits to update the dist folder.
+     * Executes directly using mise (no Docker socket required).
      *
      * @param string $workspaceId the workspace ID
      *
      * @return string the build output
+     *
+     * @throws \Symfony\Component\Process\Exception\ProcessFailedException if the build fails
      */
     public function runBuild(string $workspaceId): string;
 }

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\WorkspaceTooling\Infrastructure\Execution;
 
+use Psr\Log\LoggerInterface;
 use Symfony\Component\Process\Exception\ProcessTimedOutException;
 use Symfony\Component\Process\Process;
 
@@ -24,8 +25,9 @@ final class DockerExecutor
     private const int DEFAULT_TIMEOUT = 300; // 5 minutes
 
     public function __construct(
-        private readonly string $containerBasePath,
-        private readonly string $hostBasePath
+        private readonly string          $containerBasePath,
+        private readonly string          $hostBasePath,
+        private readonly LoggerInterface $logger,
     ) {
     }
 
@@ -39,6 +41,7 @@ final class DockerExecutor
      * @param int         $timeout          Timeout in seconds
      * @param bool        $allowNetwork     Whether to allow network access
      * @param string|null $containerName    Optional container name for identification
+     * @param bool        $throwOnFailure   When true, throw on ANY non-zero exit code (not just Docker errors >= 125)
      *
      * @return string Combined stdout and stderr output
      *
@@ -51,7 +54,8 @@ final class DockerExecutor
         string  $workingDirectory = '/workspace',
         int     $timeout = self::DEFAULT_TIMEOUT,
         bool    $allowNetwork = true,
-        ?string $containerName = null
+        ?string $containerName = null,
+        bool    $throwOnFailure = false
     ): string {
         $dockerCommand = $this->buildDockerCommand(
             $image,
@@ -64,6 +68,14 @@ final class DockerExecutor
 
         $process = new Process($dockerCommand);
         $process->setTimeout($timeout);
+
+        $this->logger->info('Executing Docker command', [
+            'command'       => implode(' ', $dockerCommand),
+            'image'         => $image,
+            'mountPath'     => $mountPath,
+            'hostBasePath'  => $this->hostBasePath,
+            'containerName' => $containerName,
+        ]);
 
         try {
             $process->run();
@@ -78,9 +90,15 @@ final class DockerExecutor
         $output = $process->getOutput() . $process->getErrorOutput();
 
         if (!$process->isSuccessful()) {
-            // Check for common Docker errors
             $exitCode    = $process->getExitCode();
             $errorOutput = $process->getErrorOutput();
+
+            $this->logger->error('Docker command failed', [
+                'exitCode' => $exitCode,
+                'stderr'   => $errorOutput,
+                'stdout'   => $process->getOutput(),
+                'command'  => implode(' ', $dockerCommand),
+            ]);
 
             if (str_contains($errorOutput, 'Unable to find image')) {
                 throw new DockerExecutionException(
@@ -92,6 +110,14 @@ final class DockerExecutor
             if (str_contains($errorOutput, 'permission denied')) {
                 throw new DockerExecutionException(
                     'Docker permission denied. Ensure the Docker socket is accessible.',
+                    $command
+                );
+            }
+
+            // In strict mode, throw on ANY non-zero exit code (used by HTML editor build etc.)
+            if ($throwOnFailure) {
+                throw new DockerExecutionException(
+                    sprintf('Command failed with exit code %d: %s', $exitCode ?? -1, $errorOutput),
                     $command
                 );
             }

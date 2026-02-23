@@ -9,11 +9,13 @@ use App\Account\Facade\Dto\AccountInfoDto;
 use App\ChatBasedContentEditor\Domain\Entity\Conversation;
 use App\ChatBasedContentEditor\Domain\Entity\EditSession;
 use App\ChatBasedContentEditor\Domain\Entity\EditSessionChunk;
+use App\ChatBasedContentEditor\Domain\Entity\HtmlEditorBuild;
 use App\ChatBasedContentEditor\Domain\Enum\ConversationStatus;
 use App\ChatBasedContentEditor\Domain\Enum\EditSessionStatus;
 use App\ChatBasedContentEditor\Domain\Service\ConversationService;
 use App\ChatBasedContentEditor\Infrastructure\Adapter\DistFileScannerInterface;
 use App\ChatBasedContentEditor\Infrastructure\Message\RunEditSessionMessage;
+use App\ChatBasedContentEditor\Infrastructure\Message\RunHtmlBuildMessage;
 use App\ChatBasedContentEditor\Presentation\Service\ConversationContextUsageService;
 use App\ChatBasedContentEditor\Presentation\Service\PromptSuggestionsService;
 use App\LlmContentEditor\Facade\Dto\AgentConfigDto;
@@ -24,6 +26,7 @@ use App\RemoteContentAssets\Facade\RemoteContentAssetsFacadeInterface;
 use App\WorkspaceMgmt\Facade\Enum\WorkspaceStatus;
 use App\WorkspaceMgmt\Facade\WorkspaceMgmtFacadeInterface;
 use Doctrine\ORM\EntityManagerInterface;
+use Psr\Log\LoggerInterface;
 use RuntimeException;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -60,6 +63,7 @@ final class ChatBasedContentEditorController extends AbstractController
         private readonly TranslatorInterface             $translator,
         private readonly PromptSuggestionsService        $promptSuggestionsService,
         private readonly LlmContentEditorFacadeInterface $llmContentEditorFacade,
+        private readonly LoggerInterface                 $logger,
     ) {
     }
 
@@ -818,23 +822,59 @@ final class ChatBasedContentEditorController extends AbstractController
             // Write the file to src/
             $this->workspaceMgmtFacade->writeWorkspaceFile($workspaceId, $sourcePath, $content);
 
-            // Run build to update dist/ from src/
-            $this->workspaceMgmtFacade->runBuild($workspaceId);
-
             // Get user email for commit author
             $accountInfo = $this->getAccountInfo($user);
 
-            // Commit and push the changes (now includes both src/ and rebuilt dist/)
-            $this->workspaceMgmtFacade->commitAndPush(
-                $workspaceId,
-                'Manual HTML edit: ' . $sourcePath,
-                $accountInfo->email
-            );
+            // Create a build record and dispatch async build via Messenger.
+            // The messenger container has Docker socket access required for
+            // running the build in the project's agent image.
+            $build = new HtmlEditorBuild($workspaceId, $sourcePath, $accountInfo->email);
+            $this->entityManager->persist($build);
+            $this->entityManager->flush();
 
-            return $this->json(['success' => true]);
+            $buildId = $build->getId();
+            if ($buildId === null) {
+                return $this->json(['error' => 'Failed to create build record.'], Response::HTTP_INTERNAL_SERVER_ERROR);
+            }
+
+            $this->messageBus->dispatch(new RunHtmlBuildMessage($buildId));
+
+            $this->logger->info('HTML editor build dispatched', [
+                'buildId'     => $buildId,
+                'workspaceId' => $workspaceId,
+                'sourcePath'  => $sourcePath,
+            ]);
+
+            return $this->json(['buildId' => $buildId], Response::HTTP_ACCEPTED);
         } catch (Throwable $e) {
+            $this->logger->error('HTML editor save failed', [
+                'workspaceId' => $workspaceId,
+                'sourcePath'  => $sourcePath,
+                'error'       => $e->getMessage(),
+            ]);
+
             return $this->json(['error' => 'Failed to save file: ' . $e->getMessage()], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
+    }
+
+    #[Route(
+        path: '/workspace/{workspaceId}/build-status/{buildId}',
+        name: 'chat_based_content_editor.presentation.build_status',
+        methods: [Request::METHOD_GET],
+        requirements: ['workspaceId' => '[a-f0-9-]{36}', 'buildId' => '[a-f0-9-]{36}']
+    )]
+    public function pollBuildStatus(string $workspaceId, string $buildId): Response
+    {
+        $build = $this->entityManager->find(HtmlEditorBuild::class, $buildId);
+
+        if ($build === null || $build->getWorkspaceId() !== $workspaceId) {
+            return $this->json(['error' => 'Build not found.'], Response::HTTP_NOT_FOUND);
+        }
+
+        return $this->json([
+            'status' => $build->getStatus()->value,
+            'error'  => $build->getErrorMessage(),
+        ]);
     }
 
     /**

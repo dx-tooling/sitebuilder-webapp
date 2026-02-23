@@ -14,11 +14,11 @@ use App\WorkspaceMgmt\Facade\Enum\WorkspaceStatus;
 use App\WorkspaceMgmt\Infrastructure\Adapter\FilesystemAdapterInterface;
 use App\WorkspaceMgmt\Infrastructure\Message\SetupWorkspaceMessage;
 use App\WorkspaceMgmt\Infrastructure\Service\GitHubUrlServiceInterface;
-use App\WorkspaceTooling\Facade\WorkspaceToolingServiceInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use RuntimeException;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\Messenger\MessageBusInterface;
+use Symfony\Component\Process\Process;
 use Throwable;
 
 use function str_starts_with;
@@ -31,16 +31,15 @@ final class WorkspaceMgmtFacade implements WorkspaceMgmtFacadeInterface
 {
     public function __construct(
         #[Autowire(param: 'workspace_mgmt.workspace_root')]
-        private readonly string                           $workspaceRoot,
-        private readonly WorkspaceService                 $workspaceService,
-        private readonly WorkspaceGitService              $gitService,
-        private readonly WorkspaceStatusGuard             $statusGuard,
-        private readonly ProjectMgmtFacadeInterface       $projectMgmtFacade,
-        private readonly EntityManagerInterface           $entityManager,
-        private readonly MessageBusInterface              $messageBus,
-        private readonly GitHubUrlServiceInterface        $gitHubUrlService,
-        private readonly FilesystemAdapterInterface       $filesystemAdapter,
-        private readonly WorkspaceToolingServiceInterface $workspaceToolingService,
+        private readonly string                     $workspaceRoot,
+        private readonly WorkspaceService           $workspaceService,
+        private readonly WorkspaceGitService        $gitService,
+        private readonly WorkspaceStatusGuard       $statusGuard,
+        private readonly ProjectMgmtFacadeInterface $projectMgmtFacade,
+        private readonly EntityManagerInterface     $entityManager,
+        private readonly MessageBusInterface        $messageBus,
+        private readonly GitHubUrlServiceInterface  $gitHubUrlService,
+        private readonly FilesystemAdapterInterface $filesystemAdapter,
     ) {
     }
 
@@ -242,14 +241,20 @@ final class WorkspaceMgmtFacade implements WorkspaceMgmtFacadeInterface
 
     public function runBuild(string $workspaceId): string
     {
-        $workspace = $this->getWorkspaceOrFail($workspaceId);
-
-        // Get project info to determine the agent image
-        $projectInfo = $this->projectMgmtFacade->getProjectInfo($workspace->getProjectId());
+        $this->getWorkspaceOrFail($workspaceId);
 
         $workspacePath = $this->workspaceRoot . '/' . $workspaceId;
 
-        return $this->workspaceToolingService->runBuildInWorkspace($workspacePath, $projectInfo->agentImage);
+        // Run build via mise exec (same approach as workspace setup).
+        // This executes directly in the app container using the Node.js
+        // version configured in the workspace's .mise.toml, without
+        // requiring Docker socket access.
+        $process = new Process(['mise', 'exec', '--', 'npm', 'run', 'build']);
+        $process->setWorkingDirectory($workspacePath);
+        $process->setTimeout(300);
+        $process->mustRun();
+
+        return $process->getOutput();
     }
 
     /**
