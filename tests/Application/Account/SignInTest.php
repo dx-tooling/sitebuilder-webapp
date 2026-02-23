@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace App\Tests\Application\Account;
 
 use App\Account\Domain\Service\AccountDomainService;
+use App\Account\Infrastructure\Security\FunnyGreetingProvider;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
+use Symfony\Contracts\Translation\TranslatorInterface;
 
 /**
  * Tests the sign-in flow to prevent regressions in form field configuration.
@@ -16,23 +18,10 @@ use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
  */
 final class SignInTest extends WebTestCase
 {
-    private const array EN_GREETINGS = [
-        'Welcome back! Your merge conflicts missed you.',
-        'Authentication successful. Coffee level: production-ready.',
-        'You are now logged in. May your tests stay green.',
-        'Access granted. Your stack traces are on vacation.',
-        'Session established. The CI pipeline salutes you.',
-    ];
-    private const array DE_GREETINGS = [
-        'Willkommen zurueck! Deine Merge-Konflikte haben dich vermisst.',
-        'Authentifizierung erfolgreich. Kaffeelevel: produktionsreif.',
-        'Du bist jetzt eingeloggt. Moegen deine Tests gruen bleiben.',
-        'Zugriff gewaehrt. Deine Stacktraces machen gerade Urlaub.',
-        'Sitzung hergestellt. Die CI-Pipeline gruesst dich.',
-    ];
-
     private KernelBrowser $client;
     private AccountDomainService $accountDomainService;
+    private FunnyGreetingProvider $funnyGreetingProvider;
+    private TranslatorInterface $translator;
 
     protected function setUp(): void
     {
@@ -42,6 +31,14 @@ final class SignInTest extends WebTestCase
         /** @var AccountDomainService $accountDomainService */
         $accountDomainService       = $container->get(AccountDomainService::class);
         $this->accountDomainService = $accountDomainService;
+
+        /** @var FunnyGreetingProvider $funnyGreetingProvider */
+        $funnyGreetingProvider       = $container->get(FunnyGreetingProvider::class);
+        $this->funnyGreetingProvider = $funnyGreetingProvider;
+
+        /** @var TranslatorInterface $translator */
+        $translator       = $container->get(TranslatorInterface::class);
+        $this->translator = $translator;
     }
 
     public function testSignInWithValidCredentialsRedirectsToProjects(): void
@@ -69,12 +66,12 @@ final class SignInTest extends WebTestCase
         $this->client->followRedirect();
         self::assertResponseIsSuccessful();
         self::assertSelectorTextContains('h1', 'Your projects');
-        $this->assertGreetingOccurrences(self::EN_GREETINGS, 1);
+        $this->assertGreetingOccurrences('en', 1);
 
         // Flash should only be shown on the first page after login.
         $this->client->request('GET', '/en/projects');
         self::assertResponseIsSuccessful();
-        $this->assertGreetingOccurrences(self::EN_GREETINGS, 0);
+        $this->assertGreetingOccurrences('en', 0);
     }
 
     public function testSignInWithInvalidCredentialsShowsError(): void
@@ -139,15 +136,13 @@ final class SignInTest extends WebTestCase
         $this->client->followRedirect();
         self::assertResponseIsSuccessful();
         self::assertSelectorTextContains('h1', 'Ihre Projekte');
-        $this->assertGreetingOccurrences(self::DE_GREETINGS, 1);
+        $this->assertGreetingOccurrences('de', 1);
     }
 
-    /**
-     * @param list<string> $expectedGreetings
-     */
-    private function assertGreetingOccurrences(array $expectedGreetings, int $expectedOccurrences): void
+    private function assertGreetingOccurrences(string $locale, int $expectedOccurrences): void
     {
-        $responseContent = $this->client->getResponse()->getContent();
+        $expectedGreetings = $this->getLocalizedGreetings($locale);
+        $responseContent   = $this->client->getResponse()->getContent();
         self::assertIsString($responseContent);
 
         $actualOccurrences = 0;
@@ -156,6 +151,20 @@ final class SignInTest extends WebTestCase
         }
 
         self::assertSame($expectedOccurrences, $actualOccurrences);
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function getLocalizedGreetings(string $locale): array
+    {
+        $greetingKeys       = $this->funnyGreetingProvider->getAvailableGreetingKeys();
+        $localizedGreetings = [];
+        foreach ($greetingKeys as $greetingKey) {
+            $localizedGreetings[] = $this->translator->trans($greetingKey, [], null, $locale);
+        }
+
+        return $localizedGreetings;
     }
 
     private function createTestUser(string $email, string $plainPassword): void

@@ -7,7 +7,9 @@ namespace App\Tests\Unit\Account\Infrastructure\Security;
 use App\Account\Infrastructure\Security\FunnyGreetingProvider;
 use App\Account\Infrastructure\Security\LoginSuccessFunnyGreetingListener;
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\Session\Session;
 use Symfony\Component\HttpFoundation\Session\Storage\MockArraySessionStorage;
 use Symfony\Component\Security\Core\Authentication\Token\TokenInterface;
@@ -29,7 +31,7 @@ final class LoginSuccessFunnyGreetingListenerTest extends TestCase
         $event = $this->createEvent($request);
         $listener->handle($event);
 
-        $flashMessages = $session->getFlashBag()->get('auth_greeting');
+        $flashMessages = $session->getFlashBag()->get(FunnyGreetingProvider::FLASH_TYPE);
         self::assertCount(1, $flashMessages);
         self::assertContains($flashMessages[0], $provider->getAvailableGreetingKeys());
     }
@@ -46,7 +48,35 @@ final class LoginSuccessFunnyGreetingListenerTest extends TestCase
         $event         = $this->createEvent($request, 'main', $previousToken);
         $listener->handle($event);
 
-        self::assertSame([], $session->getFlashBag()->get('auth_greeting'));
+        self::assertSame([], $session->getFlashBag()->get(FunnyGreetingProvider::FLASH_TYPE));
+    }
+
+    public function testHandleSkipsForNonMainFirewall(): void
+    {
+        $provider = new FunnyGreetingProvider();
+        $listener = new LoginSuccessFunnyGreetingListener($provider);
+        $request  = new Request();
+        $session  = new Session(new MockArraySessionStorage());
+        $request->setSession($session);
+
+        $event = $this->createEvent($request, 'admin');
+        $listener->handle($event);
+
+        self::assertSame([], $session->getFlashBag()->get(FunnyGreetingProvider::FLASH_TYPE));
+    }
+
+    public function testHandleSkipsForNonRedirectResponse(): void
+    {
+        $provider = new FunnyGreetingProvider();
+        $listener = new LoginSuccessFunnyGreetingListener($provider);
+        $request  = new Request();
+        $session  = new Session(new MockArraySessionStorage());
+        $request->setSession($session);
+
+        $event = $this->createEvent($request, 'main', null, new JsonResponse(['status' => 'ok']));
+        $listener->handle($event);
+
+        self::assertSame([], $session->getFlashBag()->get(FunnyGreetingProvider::FLASH_TYPE));
     }
 
     public function testHandleSkipsWhenRequestHasNoSession(): void
@@ -65,6 +95,7 @@ final class LoginSuccessFunnyGreetingListenerTest extends TestCase
         Request         $request,
         string          $firewallName = 'main',
         ?TokenInterface $previousToken = null,
+        ?Response       $response = null,
     ): LoginSuccessEvent {
         $authenticator     = $this->createMock(AuthenticatorInterface::class);
         $passport          = new SelfValidatingPassport(new UserBadge('test@example.com'));
@@ -75,7 +106,7 @@ final class LoginSuccessFunnyGreetingListenerTest extends TestCase
             $passport,
             $authenticatedUser,
             $request,
-            null,
+            $response,
             $firewallName,
             $previousToken
         );
