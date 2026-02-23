@@ -1,14 +1,13 @@
 #!/usr/bin/env bash
 set -e
 
-# Derive a short unique suffix from the workspace ID provided by ProductBuilder.
-# This ensures that concurrent agent sessions on the same project get fully
+# This ensures that concurrent ProductBuilder agent sessions on the same project get fully
 # isolated Docker Compose stacks (containers, volumes, networks).
-SUFFIX="${PB_WORKSPACE_ID:0:8}-prdbprj"
+SUFFIX="${PB_WORKSPACE_ID}-prdbprj"
 
 # Ensure Compose-managed container names (e.g. scaled messenger replicas) also
 # include the ProductBuilder project suffix for easier identification.
-export COMPOSE_PROJECT_NAME="${PB_WORKSPACE_ID}-prdbprj"
+export COMPOSE_PROJECT_NAME="${SUFFIX}"
 
 # Export ETFS_PROJECT_NAME as a real environment variable. Docker Compose uses
 # real env vars for variable substitution in docker-compose.yml (container_name,
