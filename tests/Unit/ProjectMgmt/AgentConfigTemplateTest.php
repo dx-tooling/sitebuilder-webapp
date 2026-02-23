@@ -45,6 +45,15 @@ final class AgentConfigTemplateTest extends TestCase
         self::assertStringContainsString('get_remote_asset_info', $template->backgroundInstructions);
     }
 
+    public function testDefaultTemplateContainsRemoteWebPagesSection(): void
+    {
+        $template = AgentConfigTemplate::forProjectType(ProjectType::DEFAULT);
+
+        self::assertStringContainsString('REMOTE WEB PAGES', $template->backgroundInstructions);
+        self::assertStringContainsString('fetch_remote_web_page', $template->backgroundInstructions);
+        self::assertStringContainsString('http/https', $template->backgroundInstructions);
+    }
+
     public function testDefaultTemplateContainsWorkspaceRulesSection(): void
     {
         $template = AgentConfigTemplate::forProjectType(ProjectType::DEFAULT);

@@ -15,6 +15,7 @@ use NeuronAI\Chat\Messages\ToolCallMessage;
 use NeuronAI\Chat\Messages\ToolCallResultMessage;
 use NeuronAI\Chat\Messages\UserMessage;
 use NeuronAI\Tools\Tool;
+use NeuronAI\Tools\ToolInterface;
 use PHPUnit\Framework\TestCase;
 use ReflectionMethod;
 
@@ -181,6 +182,28 @@ final class ContentEditorAgentTest extends TestCase
         $outputInstructions = $outputRef->invoke($agent);
 
         self::assertSame(['Custom output'], $outputInstructions);
+    }
+
+    public function testToolsContainFetchRemoteWebPageTool(): void
+    {
+        $agent = new ContentEditorAgent(
+            $this->createMockWorkspaceTooling(),
+            LlmModelName::defaultForContentEditor(),
+            'sk-test-key',
+            $this->createDefaultAgentConfig()
+        );
+        $ref = new ReflectionMethod(ContentEditorAgent::class, 'tools');
+        $ref->setAccessible(true);
+
+        /** @var list<ToolInterface> $tools */
+        $tools = $ref->invoke($agent);
+
+        $toolNames = array_map(
+            static fn (ToolInterface $tool): string => $tool->getName(),
+            $tools
+        );
+
+        self::assertContains('fetch_remote_web_page', $toolNames);
     }
 
     private function createMockWorkspaceTooling(): WorkspaceToolingServiceInterface

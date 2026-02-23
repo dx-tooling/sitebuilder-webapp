@@ -103,6 +103,19 @@ final class ProgressMessageResolverTest extends TestCase
         self::assertSame('Loading workspace rules', $resolver->messageForEvent($event, 'en'));
     }
 
+    public function testToolCallingFetchRemoteWebPageTranslates(): void
+    {
+        $translator = $this->createMock(TranslatorInterface::class);
+        $translator->method('trans')
+            ->with('fetching_remote_web_page', [], 'progress', 'en')
+            ->willReturn('Fetching remote web page');
+
+        $resolver = $this->createResolver($translator);
+        $event    = new AgentEventDto('tool_calling', 'fetch_remote_web_page');
+
+        self::assertSame('Fetching remote web page', $resolver->messageForEvent($event, 'en'));
+    }
+
     public function testInferenceStopReturnsNull(): void
     {
         $translator = $this->createMock(TranslatorInterface::class);

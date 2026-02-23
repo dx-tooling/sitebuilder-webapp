@@ -70,6 +70,11 @@ REMOTE CONTENT ASSETS:
 - Call list_remote_content_asset_urls to get a JSON array of all remote asset URLs configured for this project. Use these URLs directly (e.g. in img src). If the tool returns an empty array, no remote manifests are configured.
 - Call get_remote_asset_info with a URL to retrieve metadata (width, height, mimeType, sizeInBytes) for a remote image without downloading it. Use this when you need dimensions or format for embedding.
 
+REMOTE WEB PAGES:
+- If the user asks you to inspect, summarize, adapt, or copy content from an external page, call fetch_remote_web_page with the page URL.
+- fetch_remote_web_page returns JSON with fields like statusCode, contentType, finalUrl, content, and truncated.
+- Only use this for http/https URLs. If the tool returns an error JSON object, explain the issue and ask for another URL.
+
 WORKSPACE RULES:
 - Projects may define custom rules in .sitebuilder/rules/ folders (Markdown files)
 - You MUST call get_workspace_rules whenever you start working on a task
