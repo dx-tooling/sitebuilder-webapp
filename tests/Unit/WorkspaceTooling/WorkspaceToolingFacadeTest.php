@@ -446,6 +446,7 @@ final class WorkspaceToolingFacadeTest extends TestCase
         self::assertIsArray($decoded);
         self::assertSame('ftp://example.com/file.txt', $decoded['url']);
         self::assertArrayHasKey('error', $decoded);
+        self::assertIsString($decoded['error']);
         self::assertStringContainsString('Invalid URL', $decoded['error']);
     }
 
@@ -470,6 +471,7 @@ final class WorkspaceToolingFacadeTest extends TestCase
         self::assertIsArray($decoded);
         self::assertSame('https://no-such-host.invalid', $decoded['url']);
         self::assertArrayHasKey('error', $decoded);
+        self::assertIsString($decoded['error']);
         self::assertStringContainsString('metadata', strtolower($decoded['error']));
     }
 
@@ -494,6 +496,7 @@ final class WorkspaceToolingFacadeTest extends TestCase
         $decoded = json_decode($result, true, 512, JSON_THROW_ON_ERROR);
         self::assertIsArray($decoded);
         self::assertTrue($decoded['truncated']);
+        self::assertIsString($decoded['content']);
         self::assertSame(50_000, strlen($decoded['content']));
     }
 
