@@ -11,6 +11,9 @@ export default class extends Controller {
         "collapseButton",
         "expandCollapseWrapper",
         "suggestionList",
+        "searchInput",
+        "clearSearchButton",
+        "noResults",
         "formModal",
         "formInput",
         "formTitle",
@@ -49,6 +52,12 @@ export default class extends Controller {
 
     declare readonly hasSuggestionListTarget: boolean;
     declare readonly suggestionListTarget: HTMLElement;
+    declare readonly hasSearchInputTarget: boolean;
+    declare readonly searchInputTarget: HTMLInputElement;
+    declare readonly hasClearSearchButtonTarget: boolean;
+    declare readonly clearSearchButtonTarget: HTMLButtonElement;
+    declare readonly hasNoResultsTarget: boolean;
+    declare readonly noResultsTarget: HTMLElement;
     declare readonly hasFormModalTarget: boolean;
     declare readonly formModalTarget: HTMLElement;
     declare readonly hasFormInputTarget: boolean;
@@ -75,6 +84,10 @@ export default class extends Controller {
 
     /** Index of the suggestion pending deletion */
     deleteIndex: number | null = null;
+
+    connect(): void {
+        this.applySearchFilter();
+    }
 
     // ─── Display: insert, hover, expand/collapse ────────────────
 
@@ -114,8 +127,12 @@ export default class extends Controller {
      * Show all hidden suggestions and toggle expand/collapse buttons.
      */
     expand(): void {
+        if (this.hasActiveSearchQuery()) {
+            return;
+        }
+
         // Show all hidden suggestion rows (the parent wrapper divs)
-        this.suggestionTargets.forEach((button) => {
+        this.getSuggestionButtons().forEach((button) => {
             const row = button.closest("[data-index]") as HTMLElement | null;
             if (row) {
                 row.classList.remove("hidden");
@@ -134,7 +151,11 @@ export default class extends Controller {
      * Hide suggestions beyond maxVisible and toggle expand/collapse buttons.
      */
     collapse(): void {
-        this.suggestionTargets.forEach((button, index) => {
+        if (this.hasActiveSearchQuery()) {
+            return;
+        }
+
+        this.getSuggestionButtons().forEach((button, index) => {
             if (index >= this.maxVisibleValue) {
                 const row = button.closest("[data-index]") as HTMLElement | null;
                 if (row) {
@@ -149,6 +170,20 @@ export default class extends Controller {
         if (this.hasCollapseButtonTarget) {
             this.collapseButtonTarget.classList.add("hidden");
         }
+    }
+
+    handleSearchInput(): void {
+        this.applySearchFilter();
+    }
+
+    clearSearch(): void {
+        if (!this.hasSearchInputTarget) {
+            return;
+        }
+
+        this.searchInputTarget.value = "";
+        this.applySearchFilter();
+        this.searchInputTarget.focus();
     }
 
     // ─── Add / Edit modal ───────────────────────────────────────
@@ -375,7 +410,7 @@ export default class extends Controller {
             ].join(" ");
             button.className =
                 "prompt-suggestion flex-1 px-3 py-1.5 text-xs border border-dark-300 dark:border-dark-600 text-dark-600 dark:text-dark-400 hover:bg-dark-100 dark:hover:bg-dark-700 hover:text-dark-900 dark:hover:text-dark-100 cursor-pointer";
-            button.textContent = text;
+            this.setButtonTextWithHighlight(button, text, "");
 
             const actions = document.createElement("div");
             actions.className =
@@ -414,8 +449,7 @@ export default class extends Controller {
             container.appendChild(row);
         });
 
-        // Update expand/collapse buttons based on the new suggestion count
-        this.updateExpandCollapseState(suggestions.length);
+        this.applySearchFilter();
     }
 
     /**
@@ -447,6 +481,145 @@ export default class extends Controller {
         } else {
             this.expandCollapseWrapperTarget.classList.add("hidden");
         }
+    }
+
+    private applySearchFilter(): void {
+        const query = this.getSearchQuery();
+        const suggestionButtons = this.getSuggestionButtons();
+        let matchingCount = 0;
+
+        suggestionButtons.forEach((button, index) => {
+            const row = button.closest("[data-index]") as HTMLElement | null;
+            const text = button.dataset.text ?? "";
+
+            if (query === "") {
+                this.setButtonTextWithHighlight(button, text, "");
+                if (row) {
+                    row.classList.toggle("hidden", index >= this.maxVisibleValue);
+                }
+
+                return;
+            }
+
+            const isMatch = text.toLowerCase().includes(query);
+            this.setButtonTextWithHighlight(button, text, isMatch ? query : "");
+
+            if (row) {
+                row.classList.toggle("hidden", !isMatch);
+            }
+
+            if (isMatch) {
+                matchingCount++;
+            }
+        });
+
+        this.updateClearSearchButtonVisibility(query !== "");
+
+        if (query === "") {
+            this.showNoResults(false);
+            this.updateExpandCollapseState(suggestionButtons.length);
+
+            return;
+        }
+
+        this.hideExpandCollapseControlsWhileSearching();
+        this.showNoResults(matchingCount === 0);
+    }
+
+    private getSearchQuery(): string {
+        if (!this.hasSearchInputTarget) {
+            return "";
+        }
+
+        return this.searchInputTarget.value.trim().toLowerCase();
+    }
+
+    private hasActiveSearchQuery(): boolean {
+        return this.getSearchQuery() !== "";
+    }
+
+    private getSuggestionButtons(): HTMLButtonElement[] {
+        if (!this.hasSuggestionListTarget) {
+            return this.suggestionTargets;
+        }
+
+        const buttons = Array.from(
+            this.suggestionListTarget.querySelectorAll<HTMLButtonElement>(
+                '[data-prompt-suggestions-target="suggestion"]',
+            ),
+        );
+
+        if (buttons.length > 0 || this.suggestionListTarget.children.length === 0) {
+            return buttons;
+        }
+
+        return this.suggestionTargets;
+    }
+
+    private updateClearSearchButtonVisibility(show: boolean): void {
+        if (this.hasClearSearchButtonTarget) {
+            this.clearSearchButtonTarget.classList.toggle("hidden", !show);
+        }
+    }
+
+    private showNoResults(show: boolean): void {
+        if (this.hasNoResultsTarget) {
+            this.noResultsTarget.classList.toggle("hidden", !show);
+        }
+    }
+
+    private hideExpandCollapseControlsWhileSearching(): void {
+        if (this.hasExpandCollapseWrapperTarget) {
+            this.expandCollapseWrapperTarget.classList.add("hidden");
+        }
+
+        if (this.hasExpandButtonTarget) {
+            this.expandButtonTarget.classList.add("hidden");
+        }
+
+        if (this.hasCollapseButtonTarget) {
+            this.collapseButtonTarget.classList.add("hidden");
+        }
+    }
+
+    private setButtonTextWithHighlight(button: HTMLButtonElement, text: string, query: string): void {
+        if (query === "") {
+            button.textContent = text;
+
+            return;
+        }
+
+        const normalizedText = text.toLowerCase();
+        const normalizedQuery = query.toLowerCase();
+        const firstMatchIndex = normalizedText.indexOf(normalizedQuery);
+
+        if (firstMatchIndex === -1) {
+            button.textContent = text;
+
+            return;
+        }
+
+        const fragment = document.createDocumentFragment();
+        let cursor = 0;
+
+        while (cursor < text.length) {
+            const matchIndex = normalizedText.indexOf(normalizedQuery, cursor);
+            if (matchIndex === -1) {
+                fragment.append(document.createTextNode(text.slice(cursor)));
+                break;
+            }
+
+            if (matchIndex > cursor) {
+                fragment.append(document.createTextNode(text.slice(cursor, matchIndex)));
+            }
+
+            const mark = document.createElement("mark");
+            mark.textContent = text.slice(matchIndex, matchIndex + query.length);
+            fragment.append(mark);
+            cursor = matchIndex + query.length;
+        }
+
+        button.replaceChildren(fragment);
     }
 
     private sanitizeText(raw: string): string {

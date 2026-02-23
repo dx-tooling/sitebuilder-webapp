@@ -105,3 +105,11 @@
     white-space: normal;
     text-overflow: clip;
 }
+
+.prompt-suggestion-search-clear {
+    @apply absolute right-2 top-1/2 -translate-y-1/2 inline-flex items-center justify-center rounded text-dark-400 hover:text-dark-700 dark:hover:text-dark-200 transition-colors;
+}
+
+.prompt-suggestion mark {
+    @apply rounded-sm bg-yellow-200 px-0.5 text-dark-900 dark:bg-yellow-500/40 dark:text-yellow-100;
+}
