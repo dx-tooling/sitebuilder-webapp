@@ -6,6 +6,10 @@ set -e
 # isolated Docker Compose stacks (containers, volumes, networks).
 SUFFIX="${PB_WORKSPACE_ID:0:8}-prdbprj"
 
+# Ensure Compose-managed container names (e.g. scaled messenger replicas) also
+# include the ProductBuilder project suffix for easier identification.
+export COMPOSE_PROJECT_NAME="${PB_WORKSPACE_ID}-prdbprj"
+
 # Export ETFS_PROJECT_NAME as a real environment variable. Docker Compose uses
 # real env vars for variable substitution in docker-compose.yml (container_name,
 # volume names, network names). It does NOT read .env.local — only .env is loaded
