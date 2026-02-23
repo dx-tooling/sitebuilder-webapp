@@ -99,7 +99,7 @@ describe("ChatBasedContentEditorController", () => {
                 <input type="hidden" name="_csrf_token" value="csrf-123">
                 <textarea data-chat-based-content-editor-target="instruction"></textarea>
                 <button type="submit" data-chat-based-content-editor-target="submit">Make changes</button>
-                <button type="button" data-chat-based-content-editor-target="cancelButton" class="hidden">Stop</button>
+                <button type="button" data-chat-based-content-editor-target="cancelButton" data-action="click->chat-based-content-editor#handleCancel" class="hidden">Stop</button>
             </form>
         `;
 
@@ -276,6 +276,206 @@ describe("ChatBasedContentEditorController", () => {
                     headers: { "X-Requested-With": "XMLHttpRequest" },
                 }),
             );
+        });
+
+        it("stops immediately during polling and ignores late poll output", async () => {
+            const abortError = (): DOMException => new DOMException("The operation was aborted.", "AbortError");
+            const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+                const url = String(input);
+
+                if (url === "/api/context") {
+                    return Promise.resolve({
+                        ok: true,
+                        json: async () => ({ usedTokens: 100, maxTokens: 1000, totalCost: 0 }),
+                    });
+                }
+
+                if (url === "/api/run") {
+                    return Promise.resolve({
+                        ok: true,
+                        status: 200,
+                        json: async () => ({ sessionId: "sess-stop" }),
+                    });
+                }
+
+                if (url === "/api/poll/sess-stop?after=0") {
+                    return new Promise((resolve, reject) => {
+                        const signal = init?.signal as AbortSignal | undefined;
+                        if (signal?.aborted) {
+                            reject(abortError());
+                            return;
+                        }
+                        const timeoutId = setTimeout(() => {
+                            resolve({
+                                ok: true,
+                                status: 200,
+                                json: async () => ({
+                                    chunks: [
+                                        {
+                                            id: 1,
+                                            chunkType: "text",
+                                            payload: JSON.stringify({ content: "late output after stop" }),
+                                        },
+                                        { id: 2, chunkType: "done", payload: JSON.stringify({ success: true }) },
+                                    ],
+                                    lastId: 2,
+                                    status: "completed",
+                                }),
+                            });
+                        }, 75);
+
+                        signal?.addEventListener(
+                            "abort",
+                            () => {
+                                clearTimeout(timeoutId);
+                                reject(abortError());
+                            },
+                            { once: true },
+                        );
+                    });
+                }
+
+                if (url === "/api/cancel/sess-stop") {
+                    return Promise.resolve({
+                        ok: true,
+                        status: 200,
+                        json: async () => ({}),
+                    });
+                }
+
+                return Promise.resolve({
+                    ok: true,
+                    status: 200,
+                    json: async () => ({ chunks: [], lastId: 0, status: "completed" }),
+                });
+            });
+            vi.stubGlobal("fetch", fetchMock);
+
+            createChatEditorFixture();
+            await waitForController();
+
+            const textarea = document.querySelector(
+                "[data-chat-based-content-editor-target='instruction']",
+            ) as HTMLTextAreaElement;
+            textarea.value = "Please generate content";
+
+            const form = document.querySelector("form") as HTMLFormElement;
+            form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+
+            await vi.waitFor(() => {
+                expect(fetchMock).toHaveBeenCalledWith(
+                    "/api/poll/sess-stop?after=0",
+                    expect.objectContaining({
+                        headers: { "X-Requested-With": "XMLHttpRequest" },
+                    }),
+                );
+            });
+
+            const cancelButton = document.querySelector(
+                "[data-chat-based-content-editor-target='cancelButton']",
+            ) as HTMLButtonElement;
+            cancelButton.click();
+
+            await vi.waitFor(() => {
+                const messages = document.querySelector("[data-chat-based-content-editor-target='messages']");
+                expect(messages?.textContent).toContain("Cancelled");
+            });
+
+            await new Promise((resolve) => setTimeout(resolve, 120));
+
+            const messages = document.querySelector("[data-chat-based-content-editor-target='messages']");
+            expect(messages?.textContent).not.toContain("late output after stop");
+
+            const submitButton = document.querySelector(
+                "[data-chat-based-content-editor-target='submit']",
+            ) as HTMLButtonElement;
+            expect(submitButton.disabled).toBe(false);
+            expect(cancelButton.classList.contains("hidden")).toBe(true);
+
+            expect(fetchMock).toHaveBeenCalledWith(
+                "/api/cancel/sess-stop",
+                expect.objectContaining({
+                    method: "POST",
+                    headers: { "X-Requested-With": "XMLHttpRequest" },
+                }),
+            );
+        });
+
+        it("cancels cleanly when stop is clicked before run returns session id", async () => {
+            const abortError = (): DOMException => new DOMException("The operation was aborted.", "AbortError");
+            const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+                const url = String(input);
+
+                if (url === "/api/context") {
+                    return Promise.resolve({
+                        ok: true,
+                        json: async () => ({ usedTokens: 100, maxTokens: 1000, totalCost: 0 }),
+                    });
+                }
+
+                if (url === "/api/run") {
+                    return new Promise((resolve, reject) => {
+                        const signal = init?.signal as AbortSignal | undefined;
+                        if (signal?.aborted) {
+                            reject(abortError());
+                            return;
+                        }
+
+                        signal?.addEventListener(
+                            "abort",
+                            () => {
+                                reject(abortError());
+                            },
+                            { once: true },
+                        );
+
+                        setTimeout(() => {
+                            resolve({
+                                ok: true,
+                                status: 200,
+                                json: async () => ({ sessionId: "sess-too-late" }),
+                            });
+                        }, 2000);
+                    });
+                }
+
+                return Promise.resolve({
+                    ok: true,
+                    status: 200,
+                    json: async () => ({ chunks: [], lastId: 0, status: "completed" }),
+                });
+            });
+            vi.stubGlobal("fetch", fetchMock);
+
+            createChatEditorFixture();
+            await waitForController();
+
+            const textarea = document.querySelector(
+                "[data-chat-based-content-editor-target='instruction']",
+            ) as HTMLTextAreaElement;
+            textarea.value = "Start a task that I may cancel immediately";
+
+            const form = document.querySelector("form") as HTMLFormElement;
+            form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+
+            const cancelButton = document.querySelector(
+                "[data-chat-based-content-editor-target='cancelButton']",
+            ) as HTMLButtonElement;
+            cancelButton.click();
+
+            await vi.waitFor(() => {
+                const messages = document.querySelector("[data-chat-based-content-editor-target='messages']");
+                expect(messages?.textContent).toContain("Cancelled");
+            });
+
+            const submitButton = document.querySelector(
+                "[data-chat-based-content-editor-target='submit']",
+            ) as HTMLButtonElement;
+            expect(submitButton.disabled).toBe(false);
+            expect(cancelButton.classList.contains("hidden")).toBe(true);
+
+            const cancelCalls = fetchMock.mock.calls.filter(([input]) => String(input).includes("/api/cancel/"));
+            expect(cancelCalls).toHaveLength(0);
         });
     });
 });

@@ -23,6 +23,7 @@ use App\ProjectMgmt\Facade\ProjectMgmtFacadeInterface;
 use App\RemoteContentAssets\Facade\RemoteContentAssetsFacadeInterface;
 use App\WorkspaceMgmt\Facade\Enum\WorkspaceStatus;
 use App\WorkspaceMgmt\Facade\WorkspaceMgmtFacadeInterface;
+use App\WorkspaceTooling\Facade\WorkspaceToolingServiceInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use RuntimeException;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -49,17 +50,18 @@ use function json_decode;
 final class ChatBasedContentEditorController extends AbstractController
 {
     public function __construct(
-        private readonly ConversationService             $conversationService,
-        private readonly WorkspaceMgmtFacadeInterface    $workspaceMgmtFacade,
-        private readonly ProjectMgmtFacadeInterface      $projectMgmtFacade,
-        private readonly AccountFacadeInterface          $accountFacade,
-        private readonly EntityManagerInterface          $entityManager,
-        private readonly MessageBusInterface             $messageBus,
-        private readonly DistFileScannerInterface        $distFileScanner,
-        private readonly ConversationContextUsageService $contextUsageService,
-        private readonly TranslatorInterface             $translator,
-        private readonly PromptSuggestionsService        $promptSuggestionsService,
-        private readonly LlmContentEditorFacadeInterface $llmContentEditorFacade,
+        private readonly ConversationService              $conversationService,
+        private readonly WorkspaceMgmtFacadeInterface     $workspaceMgmtFacade,
+        private readonly ProjectMgmtFacadeInterface       $projectMgmtFacade,
+        private readonly AccountFacadeInterface           $accountFacade,
+        private readonly EntityManagerInterface           $entityManager,
+        private readonly MessageBusInterface              $messageBus,
+        private readonly DistFileScannerInterface         $distFileScanner,
+        private readonly ConversationContextUsageService  $contextUsageService,
+        private readonly TranslatorInterface              $translator,
+        private readonly PromptSuggestionsService         $promptSuggestionsService,
+        private readonly LlmContentEditorFacadeInterface  $llmContentEditorFacade,
+        private readonly WorkspaceToolingServiceInterface $workspaceToolingFacade,
     ) {
     }
 
@@ -655,6 +657,19 @@ final class ChatBasedContentEditorController extends AbstractController
         // Set to Cancelling so the handler can detect it cooperatively
         $session->setStatus(EditSessionStatus::Cancelling);
         $this->entityManager->flush();
+
+        $conversationId = $conversation->getId();
+        if ($conversationId !== null) {
+            try {
+                // Best-effort hard stop for long-running tool/runtime containers.
+                $this->workspaceToolingFacade->stopAgentContainersForConversation(
+                    $conversation->getWorkspaceId(),
+                    $conversationId
+                );
+            } catch (Throwable) {
+                // If runtime interruption fails, cooperative cancellation still applies.
+            }
+        }
 
         return $this->json(['success' => true]);
     }

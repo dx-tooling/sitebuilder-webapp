@@ -109,6 +109,11 @@ export default class extends Controller {
     private submitOnEnterEnabled: boolean = true;
     private isContextUsagePollingActive: boolean = false;
     private isPollingActive: boolean = false;
+    private currentResponseContainer: HTMLElement | null = null;
+    private isRunRequestActive: boolean = false;
+    private isCancellationRequested: boolean = false;
+    private runRequestAbortController: AbortController | null = null;
+    private pollRequestAbortController: AbortController | null = null;
 
     // Activity indicators state (Working/Thinking badges)
     private activityThinkingTimerId: ReturnType<typeof setInterval> | null = null;
@@ -147,6 +152,7 @@ export default class extends Controller {
 
     disconnect(): void {
         this.stopPolling();
+        this.stopRunRequest();
         this.stopContextUsagePolling();
     }
 
@@ -273,6 +279,10 @@ export default class extends Controller {
         this.scrollToBottom();
 
         this.setWorkingState();
+        this.currentResponseContainer = inner;
+        this.isCancellationRequested = false;
+        this.isRunRequestActive = true;
+        this.runRequestAbortController = new AbortController();
 
         const form = (event.target as HTMLElement).closest("form");
         const csrfInput = form?.querySelector('input[name="_csrf_token"]') as HTMLInputElement | null;
@@ -289,9 +299,20 @@ export default class extends Controller {
                 method: "POST",
                 headers: { "X-Requested-With": "XMLHttpRequest" },
                 body: formData,
+                signal: this.runRequestAbortController.signal,
             });
 
             const data = (await response.json()) as RunResponse;
+
+            if (this.isCancellationRequested) {
+                if (data.sessionId) {
+                    await this.sendCancelRequest(data.sessionId);
+                }
+                this.renderCancelledState(inner);
+                this.resetSubmitButton();
+
+                return;
+            }
 
             if (!response.ok || !data.sessionId) {
                 const t = this.translationsValue;
@@ -304,20 +325,28 @@ export default class extends Controller {
 
             this.startPolling(data.sessionId, inner);
         } catch (err) {
+            if (this.isAbortError(err)) {
+                return;
+            }
             const t = this.translationsValue;
             const msg = err instanceof Error ? err.message : t.networkError;
             this.appendError(inner, msg);
             this.resetSubmitButton();
+        } finally {
+            this.stopRunRequest();
         }
     }
 
     async handleCancel(): Promise<void> {
-        if (!this.currentPollingState || !this.cancelUrlTemplateValue) {
+        const pollingState = this.currentPollingState;
+        const sessionId = pollingState?.sessionId ?? null;
+        const container = pollingState?.container ?? this.currentResponseContainer;
+        if (!sessionId && !this.isRunRequestActive) {
             return;
         }
 
-        const cancelUrl = this.cancelUrlTemplateValue.replace("__SESSION_ID__", this.currentPollingState.sessionId);
         const t = this.translationsValue;
+        this.isCancellationRequested = true;
 
         // Disable immediately to prevent double-clicks
         if (this.hasCancelButtonTarget) {
@@ -325,27 +354,23 @@ export default class extends Controller {
             this.cancelButtonTarget.textContent = t.stopping;
         }
 
+        this.stopPolling();
+        this.stopRunRequest();
+
+        if (container) {
+            this.renderCancelledState(container);
+        }
+        this.resetSubmitButton();
+
+        if (!sessionId) {
+            return;
+        }
+
         try {
-            const csrfInput = document.querySelector('input[name="_csrf_token"]') as HTMLInputElement | null;
-
-            const formData = new FormData();
-            if (csrfInput) {
-                formData.append("_csrf_token", csrfInput.value);
-            }
-
-            await fetch(cancelUrl, {
-                method: "POST",
-                headers: { "X-Requested-With": "XMLHttpRequest" },
-                body: formData,
-            });
-
-            // Don't stop polling — let the polling loop detect the cancelled status
-            // and done chunk naturally, so all pre-cancellation output is displayed.
+            await this.sendCancelRequest(sessionId);
         } catch {
-            // If the cancel request fails, re-enable the button so the user can retry
-            if (this.hasCancelButtonTarget) {
-                this.cancelButtonTarget.disabled = false;
-                this.cancelButtonTarget.textContent = t.stop;
+            if (container) {
+                this.appendError(container, t.networkError);
             }
         }
     }
@@ -357,6 +382,7 @@ export default class extends Controller {
             lastId: startingLastId,
             pollUrl: this.pollUrlTemplateValue.replace("__SESSION_ID__", sessionId),
         };
+        this.currentResponseContainer = container;
         this.isPollingActive = true;
         this.pollSession();
     }
@@ -376,9 +402,12 @@ export default class extends Controller {
         const { container, pollUrl } = this.currentPollingState;
 
         try {
+            this.pollRequestAbortController = new AbortController();
             const response = await fetch(`${pollUrl}?after=${this.currentPollingState.lastId}`, {
                 headers: { "X-Requested-With": "XMLHttpRequest" },
+                signal: this.pollRequestAbortController.signal,
             });
+            this.pollRequestAbortController = null;
 
             if (!response.ok) {
                 const t = this.translationsValue;
@@ -391,7 +420,15 @@ export default class extends Controller {
 
             const data = (await response.json()) as PollResponse;
 
+            // Ignore any late poll payload after user requested cancellation.
+            if (this.isCancellationRequested) {
+                return;
+            }
+
             for (const chunk of data.chunks) {
+                if (this.isCancellationRequested) {
+                    return;
+                }
                 if (this.handleChunk(chunk, container)) {
                     this.stopPolling();
                     this.resetSubmitButton();
@@ -413,6 +450,9 @@ export default class extends Controller {
                 return;
             }
         } catch (err) {
+            if (this.isAbortError(err)) {
+                return;
+            }
             const t = this.translationsValue;
             const msg = err instanceof Error ? err.message : t.connectionRetry;
             this.appendError(container, msg);
@@ -430,11 +470,70 @@ export default class extends Controller {
 
     private stopPolling(): void {
         this.isPollingActive = false;
+        if (this.pollRequestAbortController !== null) {
+            this.pollRequestAbortController.abort();
+            this.pollRequestAbortController = null;
+        }
         if (this.pollingTimeoutId !== null) {
             clearTimeout(this.pollingTimeoutId);
             this.pollingTimeoutId = null;
         }
         this.currentPollingState = null;
+        this.currentResponseContainer = null;
+    }
+
+    private stopRunRequest(): void {
+        if (this.runRequestAbortController !== null) {
+            this.runRequestAbortController.abort();
+            this.runRequestAbortController = null;
+        }
+        this.isRunRequestActive = false;
+    }
+
+    private isAbortError(err: unknown): boolean {
+        return err instanceof DOMException && err.name === "AbortError";
+    }
+
+    private async sendCancelRequest(sessionId: string): Promise<void> {
+        if (!this.cancelUrlTemplateValue) {
+            return;
+        }
+
+        const cancelUrl = this.cancelUrlTemplateValue.replace("__SESSION_ID__", sessionId);
+        const csrfInput = document.querySelector('input[name="_csrf_token"]') as HTMLInputElement | null;
+        const formData = new FormData();
+        if (csrfInput) {
+            formData.append("_csrf_token", csrfInput.value);
+        }
+
+        const response = await fetch(cancelUrl, {
+            method: "POST",
+            headers: { "X-Requested-With": "XMLHttpRequest" },
+            body: formData,
+        });
+        if (!response.ok) {
+            throw new Error(`Cancel request failed (${response.status})`);
+        }
+    }
+
+    private renderCancelledState(container: HTMLElement): void {
+        this.appendCancelledMessage(container);
+        this.markTechnicalContainerComplete(container, true);
+        this.scrollToBottom();
+    }
+
+    private appendCancelledMessage(container: HTMLElement): void {
+        const existingCancelledMessage = container.querySelector<HTMLElement>('[data-cancelled-message="1"]');
+        if (existingCancelledMessage) {
+            return;
+        }
+
+        const t = this.translationsValue;
+        const cancelledEl = document.createElement("div");
+        cancelledEl.className = "whitespace-pre-wrap text-amber-600 dark:text-amber-400 italic";
+        cancelledEl.textContent = t.cancelled;
+        cancelledEl.dataset.cancelledMessage = "1";
+        container.appendChild(cancelledEl);
     }
 
     private resetSubmitButton(): void {
@@ -715,11 +814,7 @@ export default class extends Controller {
                 this.appendError(container, payload.errorMessage);
             }
             if (isCancellation) {
-                const t = this.translationsValue;
-                const cancelledEl = document.createElement("div");
-                cancelledEl.className = "whitespace-pre-wrap text-amber-600 dark:text-amber-400 italic";
-                cancelledEl.textContent = t.cancelled;
-                container.appendChild(cancelledEl);
+                this.appendCancelledMessage(container);
             }
             this.markTechnicalContainerComplete(container, isCancellation);
             this.scrollToBottom();
