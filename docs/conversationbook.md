@@ -263,9 +263,16 @@ Cancellation looks simple on the surface — set a flag, check it, stop — but 
 3. Controller validates ownership and checks the current status:
    - If already terminal (`Completed`, `Failed`, `Cancelled`): returns `{ success: true, alreadyFinished: true }`.
    - Otherwise: sets status to `Cancelling` and flushes.
-4. Frontend keeps polling — it does **not** stop immediately. This ensures all chunks produced before cancellation are displayed.
-5. The handler detects `Cancelling` at the next DBAL status check (see 6.2), performs history cleanup (see 6.3), writes a `Done` chunk with message "Cancelled by user.", sets status to `Cancelled`, and returns.
-6. Frontend's next poll receives the `done` chunk and/or `cancelled` status, stops polling, transitions the technical container to cancelled visual state (see 6.4), and resets the UI.
+4. Frontend performs an **immediate local hard stop**:
+   - sets `isCancellationRequested = true`
+   - aborts any in-flight run request (`AbortController`)
+   - aborts any in-flight poll request and clears scheduled polling timeout
+   - renders the cancelled state in the current response container
+   - resets submit/cancel controls back to idle
+5. Frontend sends the cancel request as best effort. If Stop is clicked before `run()` returns a `sessionId`, the frontend still marks the turn cancelled locally and, if a late `run()` response does arrive with a session ID, it sends cancel for that session before returning.
+6. Controller also triggers a best-effort runtime interruption via `WorkspaceToolingServiceInterface::stopAgentContainersForConversation(...)` so long-running tool/runtime containers are stopped quickly.
+7. The handler detects `Cancelling` at the next DBAL status check (see 6.2), performs history cleanup (see 6.3), writes a `Done` chunk with message "Cancelled by user.", sets status to `Cancelled`, and returns.
+8. Any late poll payload arriving after Stop is ignored by the frontend (`isCancellationRequested` guard), ensuring no further streamed tokens or tool thoughts are rendered after user cancellation.
 
 ### 6.2 Why Cooperative Cancellation? (And Why Not `refresh()`?)
 
@@ -319,9 +326,18 @@ Cancelled turns must be visually distinguishable from completed or failed turns.
 The technical container styling uses `getCancelledContainerStyle()` (amber/orange palette) instead of `getCompletedContainerStyle()` (green palette). This applies in two code paths:
 
 1. **Page reload** — `renderCompletedTurnsTechnicalContainers()` checks `turn.status === "cancelled"` and uses the amber style.
-2. **Live cancellation** — `handleChunk()` detects the cancellation done-chunk and passes `cancelled: true` to `markTechnicalContainerComplete()`.
+2. **Live cancellation** — `handleCancel()` immediately calls `renderCancelledState()`; any late chunk payload is ignored because cancellation has already been acknowledged locally.
 
 **CSS pitfall:** The technical container header has a shimmer animation (`@keyframes shimmer`) that gives a "working" effect. This animation is explicitly stopped via CSS selectors for completed (`from-green-50/80`) and failed (`from-red-50/80`) states. The amber cancelled state (`from-amber-50/80`) must also be included in this CSS stop-list, otherwise a cancelled container shows an active shimmer over a static amber background — misleadingly suggesting work is still happening.
+
+### 6.5 Faulty Prompt Inputs (e.g. Unresolved Placeholders)
+
+Prompts that contain unresolved placeholders (for example `FACEBOOK-PIXEL-ID`) can cause the agent to spend extra cycles in tool/inference loops while trying to resolve invalid state. The cancellation design above is intentionally resilient to this:
+
+1. **Immediate UI stop** prevents additional tokens/thoughts from being rendered after the user clicks Stop.
+2. **Backend cancel flag (`Cancelling`)** ensures the worker exits cooperatively at the next loop check.
+3. **Best-effort container interruption** reduces time spent in long-running runtime/tool execution after Stop.
+4. **Synthetic assistant cancellation message** keeps history well-formed so follow-up prompts do not get derailed by the interrupted turn.
 
 ---
 
