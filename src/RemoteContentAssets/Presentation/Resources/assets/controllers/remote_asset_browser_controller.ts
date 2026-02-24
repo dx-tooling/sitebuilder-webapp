@@ -13,7 +13,8 @@ import { Controller } from "@hotwired/stimulus";
  * - Clickable dropzone to open file dialog (supports multiple files)
  */
 export default class extends Controller {
-    private static readonly FETCH_RETRY_DELAYS_MS: number[] = [0, 1000, 2000, 4000];
+    static readonly MANIFEST_WAIT_POLL_INTERVAL_MS: number = 2000;
+    static readonly MANIFEST_WAIT_MAX_ATTEMPTS: number = 30;
 
     static values = {
         fetchUrl: String,
@@ -36,6 +37,7 @@ export default class extends Controller {
         "fileInput",
         "uploadProgress",
         "uploadProgressText",
+        "uploadProcessing",
         "uploadError",
         "uploadSuccess",
     ];
@@ -66,6 +68,8 @@ export default class extends Controller {
     declare readonly uploadProgressTarget: HTMLElement;
     declare readonly hasUploadProgressTextTarget: boolean;
     declare readonly uploadProgressTextTarget: HTMLElement;
+    declare readonly hasUploadProcessingTarget: boolean;
+    declare readonly uploadProcessingTarget: HTMLElement;
     declare readonly hasUploadErrorTarget: boolean;
     declare readonly uploadErrorTarget: HTMLElement;
     declare readonly hasUploadSuccessTarget: boolean;
@@ -76,8 +80,6 @@ export default class extends Controller {
     private itemHeight: number = 80;
     private isLoading: boolean = false;
     private isUploading: boolean = false;
-    private optimisticUploadedUrls: string[] = [];
-    private lastFetchedManifestUrls: string[] = [];
 
     connect(): void {
         this.fetchAssets();
@@ -188,15 +190,17 @@ export default class extends Controller {
         const total = files.length;
         let successCount = 0;
         let errorCount = 0;
+        const uploadedUrls: string[] = [];
 
         for (let i = 0; i < total; i++) {
             this.updateUploadProgressText(i + 1, total);
             this.showUploadStatus("progress");
 
             try {
-                const uploaded = await this.uploadSingleFile(files[i]);
-                if (uploaded) {
+                const uploadedUrl = await this.uploadSingleFile(files[i]);
+                if (uploadedUrl !== null) {
                     successCount++;
+                    uploadedUrls.push(uploadedUrl);
                 } else {
                     errorCount++;
                 }
@@ -205,19 +209,23 @@ export default class extends Controller {
             }
         }
 
-        // Re-fetch the asset list once after all uploads
+        // Wait until uploaded URLs become available via manifest-backed list.
         if (successCount > 0) {
-            await this.fetchAssetsWithRetry();
+            this.showUploadStatus("processing");
+            const waitSucceeded = await this.waitForManifestAvailability(uploadedUrls);
+            if (waitSucceeded) {
+                await this.fetchAssets();
+                this.showUploadStatus("success");
+                setTimeout(() => this.showUploadStatus("none"), 3000);
+            } else {
+                this.showUploadError("Upload completed. New images are still processing. Please try again shortly.");
+            }
         }
 
-        // Show final status
         if (errorCount > 0 && successCount === 0) {
             this.showUploadError("Upload failed. Please try again.");
         } else if (errorCount > 0) {
             this.showUploadError(`${errorCount} of ${total} uploads failed.`);
-        } else {
-            this.showUploadStatus("success");
-            setTimeout(() => this.showUploadStatus("none"), 3000);
         }
 
         this.isUploading = false;
@@ -226,7 +234,7 @@ export default class extends Controller {
     /**
      * Upload a single file to S3. Returns true on success.
      */
-    private async uploadSingleFile(file: File): Promise<boolean> {
+    private async uploadSingleFile(file: File): Promise<string | null> {
         const formData = new FormData();
         formData.append("file", file);
         formData.append("workspace_id", this.workspaceIdValue);
@@ -243,13 +251,12 @@ export default class extends Controller {
         const data = (await response.json()) as { success?: boolean; url?: string; error?: string };
 
         if (data.success && data.url) {
-            this.addOptimisticUrl(data.url);
             this.dispatch("uploadComplete", { detail: { url: data.url } });
 
-            return true;
+            return data.url;
         }
 
-        return false;
+        return null;
     }
 
     /**
@@ -270,9 +277,12 @@ export default class extends Controller {
     /**
      * Show upload status indicator.
      */
-    private showUploadStatus(which: "progress" | "success" | "error" | "none"): void {
+    private showUploadStatus(which: "progress" | "processing" | "success" | "error" | "none"): void {
         if (this.hasUploadProgressTarget) {
             this.uploadProgressTarget.classList.toggle("hidden", which !== "progress");
+        }
+        if (this.hasUploadProcessingTarget) {
+            this.uploadProcessingTarget.classList.toggle("hidden", which !== "processing");
         }
         if (this.hasUploadSuccessTarget) {
             this.uploadSuccessTarget.classList.toggle("hidden", which !== "success");
@@ -297,9 +307,9 @@ export default class extends Controller {
         setTimeout(() => this.showUploadStatus("none"), 5000);
     }
 
-    private async fetchAssets(): Promise<void> {
+    private async fetchAssets(): Promise<string[] | null> {
         if (this.isLoading || !this.fetchUrlValue) {
-            return;
+            return null;
         }
 
         this.isLoading = true;
@@ -316,15 +326,7 @@ export default class extends Controller {
 
             const data = (await response.json()) as { urls?: string[] };
             const manifestUrls = data.urls ?? [];
-            this.lastFetchedManifestUrls = manifestUrls;
-
-            // Keep optimistic URLs only until they are visible in the manifest response.
-            if (this.optimisticUploadedUrls.length > 0) {
-                const manifestSet = new Set(manifestUrls);
-                this.optimisticUploadedUrls = this.optimisticUploadedUrls.filter((url) => !manifestSet.has(url));
-            }
-
-            this.urls = this.mergeUrls(manifestUrls, this.optimisticUploadedUrls);
+            this.urls = manifestUrls;
 
             this.showLoading(false);
 
@@ -337,73 +339,85 @@ export default class extends Controller {
                 this.filter();
                 this.showEmpty(this.filteredUrls.length === 0);
             }
+            return manifestUrls;
         } catch {
             this.showLoading(false);
             this.showEmpty(true);
+            return null;
         } finally {
             this.isLoading = false;
         }
     }
 
-    private async fetchAssetsWithRetry(): Promise<void> {
-        for (const delayMs of this.getFetchRetryDelaysMs()) {
-            if (delayMs > 0) {
-                await this.sleep(delayMs);
+    private async waitForManifestAvailability(uploadedUrls: string[]): Promise<boolean> {
+        const pendingUrls = new Set(uploadedUrls);
+        const pendingFileNames = new Set(
+            uploadedUrls.map((url) => this.extractFilename(url)).filter((fileName) => fileName !== ""),
+        );
+        if (pendingUrls.size === 0) {
+            return true;
+        }
+
+        const pollIntervalMs = this.getManifestWaitPollIntervalMs();
+        const maxAttempts = this.getManifestWaitMaxAttempts();
+
+        for (let attempt = 0; attempt < maxAttempts; attempt++) {
+            const manifestUrls = await this.fetchManifestUrlsSilently();
+            if (manifestUrls !== null) {
+                const manifestUrlSet = new Set(manifestUrls);
+                const manifestFileNameSet = new Set(
+                    manifestUrls.map((url) => this.extractFilename(url)).filter((fileName) => fileName !== ""),
+                );
+                pendingUrls.forEach((url) => {
+                    const fileName = this.extractFilename(url);
+                    if (manifestUrlSet.has(url) || (fileName !== "" && manifestFileNameSet.has(fileName))) {
+                        pendingUrls.delete(url);
+                        if (fileName !== "") {
+                            pendingFileNames.delete(fileName);
+                        }
+                    }
+                });
+                if (pendingUrls.size === 0 || pendingFileNames.size === 0) {
+                    return true;
+                }
             }
 
-            await this.fetchAssets();
-
-            if (this.optimisticUploadedUrls.length === 0) {
-                break;
+            if (attempt < maxAttempts - 1) {
+                await this.sleep(pollIntervalMs);
             }
+        }
+
+        return false;
+    }
+
+    private async fetchManifestUrlsSilently(): Promise<string[] | null> {
+        if (!this.fetchUrlValue) {
+            return null;
+        }
+
+        try {
+            const response = await fetch(this.fetchUrlValue, {
+                headers: { "X-Requested-With": "XMLHttpRequest" },
+            });
+            if (!response.ok) {
+                return null;
+            }
+
+            const data = (await response.json()) as { urls?: string[] };
+            return data.urls ?? [];
+        } catch {
+            return null;
         }
     }
 
-    private getFetchRetryDelaysMs(): number[] {
-        const ctor = this.constructor as typeof Controller & { FETCH_RETRY_DELAYS_MS?: number[] };
-        return ctor.FETCH_RETRY_DELAYS_MS ?? [0];
+    private getManifestWaitPollIntervalMs(): number {
+        const ctor = this.constructor as typeof Controller & { MANIFEST_WAIT_POLL_INTERVAL_MS?: number };
+        return ctor.MANIFEST_WAIT_POLL_INTERVAL_MS ?? 2000;
     }
 
-    private addOptimisticUrl(url: string): void {
-        const alreadyInManifest = this.lastFetchedManifestUrls.includes(url);
-        const alreadyOptimistic = this.optimisticUploadedUrls.includes(url);
-
-        if (!alreadyInManifest && !alreadyOptimistic) {
-            this.optimisticUploadedUrls.unshift(url);
-        }
-
-        this.urls = this.mergeUrls(this.lastFetchedManifestUrls, this.optimisticUploadedUrls);
-        this.showLoading(false);
-
-        if (this.urls.length === 0) {
-            this.filteredUrls = [];
-            this.updateCount();
-            this.showEmpty(true);
-        } else {
-            this.filter();
-            this.showEmpty(this.filteredUrls.length === 0);
-        }
-    }
-
-    private mergeUrls(manifestUrls: string[], optimisticUrls: string[]): string[] {
-        const merged: string[] = [];
-        const seen = new Set<string>();
-
-        for (const url of optimisticUrls) {
-            if (!seen.has(url)) {
-                seen.add(url);
-                merged.push(url);
-            }
-        }
-
-        for (const url of manifestUrls) {
-            if (!seen.has(url)) {
-                seen.add(url);
-                merged.push(url);
-            }
-        }
-
-        return merged;
+    private getManifestWaitMaxAttempts(): number {
+        const ctor = this.constructor as typeof Controller & { MANIFEST_WAIT_MAX_ATTEMPTS?: number };
+        return ctor.MANIFEST_WAIT_MAX_ATTEMPTS ?? 30;
     }
 
     private async sleep(ms: number): Promise<void> {
