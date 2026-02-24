@@ -474,6 +474,10 @@ describe("RemoteAssetBrowserController", () => {
                      data-remote-asset-browser-upload-csrf-token-value="csrf-token-123"
                      data-remote-asset-browser-workspace-id-value="workspace-123"
                      data-remote-asset-browser-window-size-value="50">
+                    <input type="text"
+                           data-remote-asset-browser-target="search"
+                           data-action="input->remote-asset-browser#filter"
+                           placeholder="Search...">
                     <div data-remote-asset-browser-target="dropzone" class="dropzone"></div>
                     <div data-remote-asset-browser-target="uploadProgress" class="hidden">Uploading...</div>
                     <div data-remote-asset-browser-target="uploadSuccess" class="hidden">Success!</div>
@@ -635,6 +639,100 @@ describe("RemoteAssetBrowserController", () => {
 
             // 5 fetch calls: initial list + 3 uploads + re-fetch
             expect(mockFetch).toHaveBeenCalledTimes(5);
+        });
+
+        it("shows uploaded image immediately when manifest is still stale", async () => {
+            const uploadedUrl = "https://example.com/just-uploaded.jpg";
+            const mockFetch = vi
+                .fn()
+                // Initial asset list fetch
+                .mockResolvedValueOnce({
+                    ok: true,
+                    json: () => Promise.resolve({ urls: [] }),
+                })
+                // Upload response
+                .mockResolvedValueOnce({
+                    ok: true,
+                    json: () => Promise.resolve({ success: true, url: uploadedUrl }),
+                })
+                // First re-fetch: manifest still stale
+                .mockResolvedValueOnce({
+                    ok: true,
+                    json: () => Promise.resolve({ urls: [] }),
+                })
+                // Second re-fetch: manifest now updated
+                .mockResolvedValueOnce({
+                    ok: true,
+                    json: () => Promise.resolve({ urls: [uploadedUrl] }),
+                });
+            vi.stubGlobal("fetch", mockFetch);
+
+            await createControllerElementWithUpload();
+            await new Promise((resolve) => setTimeout(resolve, 100));
+
+            const dropzone = document.querySelector('[data-remote-asset-browser-target="dropzone"]') as HTMLElement;
+            const file = new File(["test"], "test.jpg", { type: "image/jpeg" });
+            const dropEvent = createMockDropEvent([file]);
+            dropzone.dispatchEvent(dropEvent);
+
+            // Before retry fetch catches up, optimistic URL must already be visible.
+            await new Promise((resolve) => setTimeout(resolve, 200));
+            const listEl = document.querySelector('[data-remote-asset-browser-target="list"]') as HTMLElement;
+            expect(listEl.querySelectorAll('button[title="Add to chat"]').length).toBe(1);
+
+            // Give retry enough time to fetch updated manifest once.
+            await new Promise((resolve) => setTimeout(resolve, 1200));
+
+            // Still only one row (no duplicate between optimistic + manifest URL).
+            expect(listEl.querySelectorAll('button[title="Add to chat"]').length).toBe(1);
+        });
+
+        it("retries list fetch until uploaded image appears in manifest", async () => {
+            const uploadedUrl = "https://example.com/retry-me.jpg";
+            const mockFetch = vi
+                .fn()
+                // Initial fetch
+                .mockResolvedValueOnce({
+                    ok: true,
+                    json: () => Promise.resolve({ urls: [] }),
+                })
+                // Upload response
+                .mockResolvedValueOnce({
+                    ok: true,
+                    json: () => Promise.resolve({ success: true, url: uploadedUrl }),
+                })
+                // Retry attempt 1: still stale
+                .mockResolvedValueOnce({
+                    ok: true,
+                    json: () => Promise.resolve({ urls: [] }),
+                })
+                // Retry attempt 2: still stale
+                .mockResolvedValueOnce({
+                    ok: true,
+                    json: () => Promise.resolve({ urls: [] }),
+                })
+                // Retry attempt 3: now available
+                .mockResolvedValueOnce({
+                    ok: true,
+                    json: () => Promise.resolve({ urls: [uploadedUrl] }),
+                });
+            vi.stubGlobal("fetch", mockFetch);
+
+            await createControllerElementWithUpload();
+            await new Promise((resolve) => setTimeout(resolve, 100));
+
+            const dropzone = document.querySelector('[data-remote-asset-browser-target="dropzone"]') as HTMLElement;
+            const file = new File(["test"], "retry.jpg", { type: "image/jpeg" });
+            const dropEvent = createMockDropEvent([file]);
+            dropzone.dispatchEvent(dropEvent);
+
+            // Wait for retry sequence 0s + 1s + 2s.
+            await new Promise((resolve) => setTimeout(resolve, 3600));
+
+            // initial + upload + 3 list retry fetches
+            expect(mockFetch).toHaveBeenCalledTimes(5);
+            const listEl = document.querySelector('[data-remote-asset-browser-target="list"]') as HTMLElement;
+            expect(listEl.querySelectorAll('button[title="Add to chat"]').length).toBe(1);
         });
 
         it("shows partial failure message when some uploads fail", async () => {

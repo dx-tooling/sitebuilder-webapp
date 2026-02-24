@@ -13,6 +13,8 @@ import { Controller } from "@hotwired/stimulus";
  * - Clickable dropzone to open file dialog (supports multiple files)
  */
 export default class extends Controller {
+    private static readonly FETCH_RETRY_DELAYS_MS: number[] = [0, 1000, 2000, 4000];
+
     static values = {
         fetchUrl: String,
         windowSize: { type: Number, default: 20 },
@@ -74,6 +76,8 @@ export default class extends Controller {
     private itemHeight: number = 80;
     private isLoading: boolean = false;
     private isUploading: boolean = false;
+    private optimisticUploadedUrls: string[] = [];
+    private lastFetchedManifestUrls: string[] = [];
 
     connect(): void {
         this.fetchAssets();
@@ -203,7 +207,7 @@ export default class extends Controller {
 
         // Re-fetch the asset list once after all uploads
         if (successCount > 0) {
-            await this.fetchAssets();
+            await this.fetchAssetsWithRetry();
         }
 
         // Show final status
@@ -239,6 +243,7 @@ export default class extends Controller {
         const data = (await response.json()) as { success?: boolean; url?: string; error?: string };
 
         if (data.success && data.url) {
+            this.addOptimisticUrl(data.url);
             this.dispatch("uploadComplete", { detail: { url: data.url } });
 
             return true;
@@ -310,7 +315,16 @@ export default class extends Controller {
             }
 
             const data = (await response.json()) as { urls?: string[] };
-            this.urls = data.urls ?? [];
+            const manifestUrls = data.urls ?? [];
+            this.lastFetchedManifestUrls = manifestUrls;
+
+            // Keep optimistic URLs only until they are visible in the manifest response.
+            if (this.optimisticUploadedUrls.length > 0) {
+                const manifestSet = new Set(manifestUrls);
+                this.optimisticUploadedUrls = this.optimisticUploadedUrls.filter((url) => !manifestSet.has(url));
+            }
+
+            this.urls = this.mergeUrls(manifestUrls, this.optimisticUploadedUrls);
 
             this.showLoading(false);
 
@@ -329,6 +343,71 @@ export default class extends Controller {
         } finally {
             this.isLoading = false;
         }
+    }
+
+    private async fetchAssetsWithRetry(): Promise<void> {
+        for (const delayMs of this.getFetchRetryDelaysMs()) {
+            if (delayMs > 0) {
+                await this.sleep(delayMs);
+            }
+
+            await this.fetchAssets();
+
+            if (this.optimisticUploadedUrls.length === 0) {
+                break;
+            }
+        }
+    }
+
+    private getFetchRetryDelaysMs(): number[] {
+        const ctor = this.constructor as typeof Controller & { FETCH_RETRY_DELAYS_MS?: number[] };
+        return ctor.FETCH_RETRY_DELAYS_MS ?? [0];
+    }
+
+    private addOptimisticUrl(url: string): void {
+        const alreadyInManifest = this.lastFetchedManifestUrls.includes(url);
+        const alreadyOptimistic = this.optimisticUploadedUrls.includes(url);
+
+        if (!alreadyInManifest && !alreadyOptimistic) {
+            this.optimisticUploadedUrls.unshift(url);
+        }
+
+        this.urls = this.mergeUrls(this.lastFetchedManifestUrls, this.optimisticUploadedUrls);
+        this.showLoading(false);
+
+        if (this.urls.length === 0) {
+            this.filteredUrls = [];
+            this.updateCount();
+            this.showEmpty(true);
+        } else {
+            this.filter();
+            this.showEmpty(this.filteredUrls.length === 0);
+        }
+    }
+
+    private mergeUrls(manifestUrls: string[], optimisticUrls: string[]): string[] {
+        const merged: string[] = [];
+        const seen = new Set<string>();
+
+        for (const url of optimisticUrls) {
+            if (!seen.has(url)) {
+                seen.add(url);
+                merged.push(url);
+            }
+        }
+
+        for (const url of manifestUrls) {
+            if (!seen.has(url)) {
+                seen.add(url);
+                merged.push(url);
+            }
+        }
+
+        return merged;
+    }
+
+    private async sleep(ms: number): Promise<void> {
+        await new Promise((resolve) => setTimeout(resolve, ms));
     }
 
     private showLoading(show: boolean): void {
