@@ -4,16 +4,30 @@ import RemoteAssetBrowserController from "../../../../src/RemoteContentAssets/Pr
 
 describe("RemoteAssetBrowserController", () => {
     let application: Application;
+    let originalBackgroundSyncInterval: number;
 
     beforeEach(() => {
         document.body.innerHTML = "";
         application = Application.start();
         application.register("remote-asset-browser", RemoteAssetBrowserController);
         vi.stubGlobal("fetch", vi.fn());
+
+        const ctor = RemoteAssetBrowserController as unknown as {
+            BACKGROUND_SYNC_INTERVAL_MS: number;
+        };
+        originalBackgroundSyncInterval = ctor.BACKGROUND_SYNC_INTERVAL_MS;
+        // Disable periodic polling by default to keep tests deterministic.
+        ctor.BACKGROUND_SYNC_INTERVAL_MS = 0;
     });
 
     afterEach(() => {
         application.stop();
+
+        const ctor = RemoteAssetBrowserController as unknown as {
+            BACKGROUND_SYNC_INTERVAL_MS: number;
+        };
+        ctor.BACKGROUND_SYNC_INTERVAL_MS = originalBackgroundSyncInterval;
+
         vi.restoreAllMocks();
     });
 
@@ -463,6 +477,105 @@ describe("RemoteAssetBrowserController", () => {
         expect(urlPrefixEl?.textContent).toContain(
             "https://content-assets.example.com/callven-corporate/uploads/20260129/",
         );
+    });
+
+    it("does not re-render list on focus when manifest is unchanged", async () => {
+        const ctor = RemoteAssetBrowserController as unknown as {
+            BACKGROUND_SYNC_INTERVAL_MS: number;
+        };
+        const originalInterval = ctor.BACKGROUND_SYNC_INTERVAL_MS;
+        ctor.BACKGROUND_SYNC_INTERVAL_MS = 60000;
+
+        const mockFetch = vi
+            .fn()
+            // Initial fetch in connect()
+            .mockResolvedValueOnce({
+                ok: true,
+                json: () => Promise.resolve({ urls: ["https://example.com/a.jpg"] }),
+            })
+            // Silent check on focus (same urls)
+            .mockResolvedValueOnce({
+                ok: true,
+                json: () => Promise.resolve({ urls: ["https://example.com/a.jpg"] }),
+            });
+        vi.stubGlobal("fetch", mockFetch);
+
+        await createControllerElement();
+        await new Promise((resolve) => setTimeout(resolve, 100));
+
+        window.dispatchEvent(new Event("focus"));
+        await new Promise((resolve) => setTimeout(resolve, 100));
+
+        expect(mockFetch).toHaveBeenCalledTimes(2);
+        const listEl = document.querySelector('[data-remote-asset-browser-target="list"]') as HTMLElement;
+        expect(listEl.querySelectorAll('button[title="Add to chat"]').length).toBe(1);
+
+        ctor.BACKGROUND_SYNC_INTERVAL_MS = originalInterval;
+    });
+
+    it("stops background polling on disconnect", async () => {
+        const ctor = RemoteAssetBrowserController as unknown as {
+            BACKGROUND_SYNC_INTERVAL_MS: number;
+        };
+        const originalInterval = ctor.BACKGROUND_SYNC_INTERVAL_MS;
+        ctor.BACKGROUND_SYNC_INTERVAL_MS = 50;
+
+        try {
+            const mockFetch = vi.fn().mockResolvedValue({
+                ok: true,
+                json: () => Promise.resolve({ urls: ["https://example.com/a.jpg"] }),
+            });
+            vi.stubGlobal("fetch", mockFetch);
+
+            await createControllerElement();
+            await new Promise((resolve) => setTimeout(resolve, 220));
+
+            const callsBeforeStop = mockFetch.mock.calls.length;
+            application.stop();
+            await new Promise((resolve) => setTimeout(resolve, 120));
+            const callsSoonAfterStop = mockFetch.mock.calls.length;
+            await new Promise((resolve) => setTimeout(resolve, 120));
+            const callsLaterAfterStop = mockFetch.mock.calls.length;
+
+            expect(callsSoonAfterStop).toBeGreaterThanOrEqual(callsBeforeStop);
+            expect(callsLaterAfterStop).toBeLessThanOrEqual(callsBeforeStop + 5);
+        } finally {
+            ctor.BACKGROUND_SYNC_INTERVAL_MS = originalInterval;
+        }
+    });
+
+    it("checks manifest when tab becomes visible", async () => {
+        const ctor = RemoteAssetBrowserController as unknown as {
+            BACKGROUND_SYNC_INTERVAL_MS: number;
+        };
+        const originalInterval = ctor.BACKGROUND_SYNC_INTERVAL_MS;
+        ctor.BACKGROUND_SYNC_INTERVAL_MS = 60000;
+
+        const mockFetch = vi
+            .fn()
+            // Initial fetch in connect()
+            .mockResolvedValueOnce({
+                ok: true,
+                json: () => Promise.resolve({ urls: ["https://example.com/a.jpg"] }),
+            })
+            // Silent check on visibilitychange
+            .mockResolvedValueOnce({
+                ok: true,
+                json: () => Promise.resolve({ urls: ["https://example.com/a.jpg"] }),
+            });
+        vi.stubGlobal("fetch", mockFetch);
+
+        await createControllerElement();
+        await new Promise((resolve) => setTimeout(resolve, 100));
+
+        const visibilitySpy = vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
+        document.dispatchEvent(new Event("visibilitychange"));
+        await new Promise((resolve) => setTimeout(resolve, 100));
+
+        expect(mockFetch.mock.calls.length).toBeGreaterThanOrEqual(2);
+        visibilitySpy.mockRestore();
+
+        ctor.BACKGROUND_SYNC_INTERVAL_MS = originalInterval;
     });
 
     describe("upload functionality", () => {

@@ -15,6 +15,7 @@ import { Controller } from "@hotwired/stimulus";
 export default class extends Controller {
     static readonly MANIFEST_WAIT_POLL_INTERVAL_MS: number = 2000;
     static readonly MANIFEST_WAIT_MAX_ATTEMPTS: number = 30;
+    static BACKGROUND_SYNC_INTERVAL_MS: number = 300000;
 
     static values = {
         fetchUrl: String,
@@ -80,10 +81,38 @@ export default class extends Controller {
     private itemHeight: number = 80;
     private isLoading: boolean = false;
     private isUploading: boolean = false;
+    private isConnected: boolean = false;
+    private backgroundSyncTimeoutId: ReturnType<typeof setTimeout> | null = null;
+    private latestManifestRevision: string | null = null;
+    private isBackgroundSyncEnabled: boolean = false;
+    private readonly focusHandler = (): void => {
+        void this.checkForManifestUpdates();
+    };
+    private readonly visibilityChangeHandler = (): void => {
+        if (document.visibilityState === "visible") {
+            void this.checkForManifestUpdates();
+        }
+    };
 
     connect(): void {
-        this.fetchAssets();
+        this.isConnected = true;
+        void this.fetchAssets();
         this.setupDropzone();
+        this.isBackgroundSyncEnabled = this.getBackgroundSyncIntervalMs() > 0;
+        if (this.isBackgroundSyncEnabled) {
+            this.startBackgroundSync();
+            window.addEventListener("focus", this.focusHandler);
+            document.addEventListener("visibilitychange", this.visibilityChangeHandler);
+        }
+    }
+
+    disconnect(): void {
+        this.isConnected = false;
+        this.stopBackgroundSync();
+        if (this.isBackgroundSyncEnabled) {
+            window.removeEventListener("focus", this.focusHandler);
+            document.removeEventListener("visibilitychange", this.visibilityChangeHandler);
+        }
     }
 
     /**
@@ -307,7 +336,7 @@ export default class extends Controller {
         setTimeout(() => this.showUploadStatus("none"), 5000);
     }
 
-    private async fetchAssets(): Promise<string[] | null> {
+    private async fetchAssets(): Promise<{ urls: string[]; revision: string } | null> {
         if (this.isLoading || !this.fetchUrlValue) {
             return null;
         }
@@ -324,9 +353,10 @@ export default class extends Controller {
                 throw new Error(`HTTP ${response.status}`);
             }
 
-            const data = (await response.json()) as { urls?: string[] };
-            const manifestUrls = data.urls ?? [];
-            this.urls = manifestUrls;
+            const data = (await response.json()) as { urls?: string[]; revision?: string };
+            const manifestData = this.normalizeManifestData(data);
+            this.urls = manifestData.urls;
+            this.latestManifestRevision = manifestData.revision;
 
             this.showLoading(false);
 
@@ -339,7 +369,7 @@ export default class extends Controller {
                 this.filter();
                 this.showEmpty(this.filteredUrls.length === 0);
             }
-            return manifestUrls;
+            return manifestData;
         } catch {
             this.showLoading(false);
             this.showEmpty(true);
@@ -362,11 +392,11 @@ export default class extends Controller {
         const maxAttempts = this.getManifestWaitMaxAttempts();
 
         for (let attempt = 0; attempt < maxAttempts; attempt++) {
-            const manifestUrls = await this.fetchManifestUrlsSilently();
-            if (manifestUrls !== null) {
-                const manifestUrlSet = new Set(manifestUrls);
+            const manifestData = await this.fetchManifestUrlsSilently();
+            if (manifestData !== null) {
+                const manifestUrlSet = new Set(manifestData.urls);
                 const manifestFileNameSet = new Set(
-                    manifestUrls.map((url) => this.extractFilename(url)).filter((fileName) => fileName !== ""),
+                    manifestData.urls.map((url) => this.extractFilename(url)).filter((fileName) => fileName !== ""),
                 );
                 pendingUrls.forEach((url) => {
                     const fileName = this.extractFilename(url);
@@ -390,7 +420,7 @@ export default class extends Controller {
         return false;
     }
 
-    private async fetchManifestUrlsSilently(): Promise<string[] | null> {
+    private async fetchManifestUrlsSilently(): Promise<{ urls: string[]; revision: string } | null> {
         if (!this.fetchUrlValue) {
             return null;
         }
@@ -403,11 +433,77 @@ export default class extends Controller {
                 return null;
             }
 
-            const data = (await response.json()) as { urls?: string[] };
-            return data.urls ?? [];
+            const data = (await response.json()) as { urls?: string[]; revision?: string };
+            return this.normalizeManifestData(data);
         } catch {
             return null;
         }
+    }
+
+    private startBackgroundSync(): void {
+        const intervalMs = this.getBackgroundSyncIntervalMs();
+        if (intervalMs <= 0) {
+            return;
+        }
+
+        this.stopBackgroundSync();
+        this.scheduleNextBackgroundSync(intervalMs);
+    }
+
+    private stopBackgroundSync(): void {
+        if (this.backgroundSyncTimeoutId !== null) {
+            clearTimeout(this.backgroundSyncTimeoutId);
+            this.backgroundSyncTimeoutId = null;
+        }
+    }
+
+    private scheduleNextBackgroundSync(intervalMs: number): void {
+        if (!this.isConnected) {
+            return;
+        }
+        this.backgroundSyncTimeoutId = setTimeout(() => {
+            void this.runBackgroundSyncTick();
+        }, intervalMs);
+    }
+
+    private async runBackgroundSyncTick(): Promise<void> {
+        await this.checkForManifestUpdates();
+        if (this.isConnected) {
+            this.scheduleNextBackgroundSync(this.getBackgroundSyncIntervalMs());
+        }
+    }
+
+    private async checkForManifestUpdates(): Promise<void> {
+        if (this.isUploading) {
+            return;
+        }
+
+        const currentRevision = this.latestManifestRevision;
+        const manifestData = await this.fetchManifestUrlsSilently();
+        if (manifestData === null) {
+            return;
+        }
+
+        if (currentRevision === null || manifestData.revision !== currentRevision) {
+            await this.fetchAssets();
+        }
+    }
+
+    private normalizeManifestData(data: { urls?: string[]; revision?: string }): { urls: string[]; revision: string } {
+        const urls = data.urls ?? [];
+        const revision = data.revision ?? this.computeManifestRevision(urls);
+
+        return { urls, revision };
+    }
+
+    private computeManifestRevision(urls: string[]): string {
+        const normalized = [...urls].sort((a, b) => a.localeCompare(b));
+        return normalized.join("|");
+    }
+
+    private getBackgroundSyncIntervalMs(): number {
+        const ctor = this.constructor as typeof Controller & { BACKGROUND_SYNC_INTERVAL_MS?: number };
+        return ctor.BACKGROUND_SYNC_INTERVAL_MS ?? 30000;
     }
 
     private getManifestWaitPollIntervalMs(): number {
