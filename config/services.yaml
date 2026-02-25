@@ -21,7 +21,8 @@ parameters:
     docker.host_base_path: "%env(default:docker.host_base_path_default:HOST_PROJECT_PATH)%"
 
     # PhotoBuilder image generation request timeouts (in seconds)
-    photo_builder.gemini_timeout_seconds: 120
+    photo_builder.gemini_timeout_seconds_default: 300
+    photo_builder.gemini_timeout_seconds: "%env(default:photo_builder.gemini_timeout_seconds_default:int:PHOTO_BUILDER_GEMINI_TIMEOUT_SECONDS)%"
     photo_builder.openai_timeout_seconds: 120
     llm_content_editor.simulate: "%env(bool:LLM_CONTENT_EDITOR_SIMULATE)%"
 
