@@ -108,7 +108,6 @@ class GeminiImageGenerator implements ImageGeneratorInterface
     {
         $generationConfig = [
             'responseModalities' => ['IMAGE', 'TEXT'],
-            'responseMimeType'   => 'application/json',
         ];
 
         if ($imageSize !== null) {

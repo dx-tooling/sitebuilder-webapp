@@ -134,6 +134,50 @@ final class GeminiImageGeneratorTest extends TestCase
         $generator->generateImage('A sunset', 'test-key', 'gemini-3-pro-image-preview');
     }
 
+    public function testDoesNotIncludeResponseMimeTypeInRequestBody(): void
+    {
+        $fakeImageData   = 'fake-png-image-bytes';
+        $fakeB64         = base64_encode($fakeImageData);
+        $responsePayload = json_encode([
+            'candidates' => [
+                [
+                    'content' => [
+                        'parts' => [
+                            ['inlineData' => ['data' => $fakeB64, 'mimeType' => 'image/png']],
+                        ],
+                    ],
+                ],
+            ],
+        ]);
+
+        $response = $this->createMock(ResponseInterface::class);
+        $response->method('getStatusCode')->willReturn(200);
+        $response->method('getContent')->willReturn($responsePayload);
+
+        $httpClient = $this->createMock(HttpClientInterface::class);
+        $httpClient->expects(self::once())
+            ->method('request')
+            ->with(
+                'POST',
+                self::anything(),
+                self::callback(static function (mixed $options): bool {
+                    if (!is_array($options)) {
+                        return false;
+                    }
+
+                    /** @var array{json: array{generationConfig: array<string, mixed>}} $opts */
+                    $opts             = $options;
+                    $generationConfig = $opts['json']['generationConfig'];
+
+                    return !array_key_exists('responseMimeType', $generationConfig);
+                })
+            )
+            ->willReturn($response);
+
+        $generator = new GeminiImageGenerator($httpClient);
+        $generator->generateImage('A sunset', 'test-key', 'gemini-2.5-flash-image');
+    }
+
     public function testThrowsExceptionOnNon200Status(): void
     {
         $response = $this->createMock(ResponseInterface::class);
