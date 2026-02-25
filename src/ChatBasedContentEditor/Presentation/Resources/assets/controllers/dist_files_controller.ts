@@ -208,6 +208,7 @@ export default class extends Controller {
             const link = document.createElement("a");
             link.href = this.photoBuilderUrlPatternValue.replace("__PAGE_PATH__", encodeURIComponent(file.path));
             link.title = this.photoBuilderLabelValue;
+            link.dataset.testClass = "photo-builder-page-link";
             link.className =
                 "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium " +
                 "bg-purple-50 text-purple-700 ring-1 ring-inset ring-purple-700/10 " +

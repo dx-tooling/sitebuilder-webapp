@@ -45,6 +45,7 @@ interface MockControllerState {
     hasRemoteAssetsValue: boolean;
     supportsResolutionToggleValue: boolean;
     embedPrefillMessageValue: string;
+    existingSessionIdValue: string;
     loadingOverlayTarget: HTMLElement;
     mainContentTarget: HTMLElement;
     userPromptTarget: HTMLTextAreaElement;
@@ -62,6 +63,7 @@ interface MockControllerState {
     loresButtonTarget: HTMLButtonElement;
     hasHiresButtonTarget: boolean;
     hiresButtonTarget: HTMLButtonElement;
+    startOverButtonTargets: HTMLElement[];
     sessionId: string | null;
     pollingTimeoutId: ReturnType<typeof setTimeout> | null;
     isActive: boolean;
@@ -133,6 +135,7 @@ const createController = (
     state.hasRemoteAssetsValue = false;
     state.supportsResolutionToggleValue = false;
     state.embedPrefillMessageValue = "Embed images %fileNames% into page %pagePath%";
+    state.existingSessionIdValue = "";
 
     state.loadingOverlayTarget = loadingOverlay;
     state.mainContentTarget = mainContent;
@@ -151,6 +154,7 @@ const createController = (
     state.loresButtonTarget = document.createElement("button");
     state.hasHiresButtonTarget = false;
     state.hiresButtonTarget = document.createElement("button");
+    state.startOverButtonTargets = [];
 
     state.sessionId = null;
     state.pollingTimeoutId = null;
@@ -266,6 +270,45 @@ describe("PhotoBuilderController", () => {
 
             const state = controller as unknown as MockControllerState;
             expect(state.isActive).toBe(true);
+
+            controller.disconnect();
+        });
+    });
+
+    describe("connect with existing session", () => {
+        it("should skip createSession and immediately poll when existingSessionId is set", async () => {
+            const { controller } = createController({ existingSessionIdValue: "existing-sess-uuid" });
+
+            const fetchSpy = vi
+                .spyOn(globalThis, "fetch")
+                .mockResolvedValueOnce(
+                    new Response(JSON.stringify({ status: "images_ready", images: [] }), { status: 200 }),
+                );
+
+            controller.connect();
+            await flushPromises();
+
+            expect(fetchSpy).not.toHaveBeenCalledWith(
+                "/api/photo-builder/sessions",
+                expect.objectContaining({ method: "POST" }),
+            );
+
+            expect(fetchSpy).toHaveBeenCalledWith(expect.stringContaining("existing-sess-uuid"), expect.anything());
+
+            controller.disconnect();
+        });
+
+        it("should set sessionId from existingSessionId", () => {
+            const { controller } = createController({ existingSessionIdValue: "existing-sess-uuid" });
+
+            vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+                new Response(JSON.stringify({ status: "images_ready", images: [] }), { status: 200 }),
+            );
+
+            controller.connect();
+
+            const state = controller as unknown as MockControllerState;
+            expect(state.sessionId).toBe("existing-sess-uuid");
 
             controller.disconnect();
         });
@@ -1620,6 +1663,63 @@ describe("PhotoBuilderController", () => {
 
             // Should still navigate even after timeout
             expect(hrefSetter).toHaveBeenCalled();
+        });
+    });
+
+    describe("startOver", () => {
+        it("should hide start-over buttons and call createSession", async () => {
+            const btn1 = document.createElement("button");
+            const btn2 = document.createElement("button");
+            btn1.classList.remove("hidden");
+            btn2.classList.remove("hidden");
+
+            const { controller } = createController({
+                existingSessionIdValue: "old-sess-uuid",
+                startOverButtonTargets: [btn1, btn2],
+                sessionId: "old-sess-uuid",
+            });
+
+            vi.spyOn(globalThis, "fetch").mockResolvedValue(
+                new Response(JSON.stringify({ sessionId: "new-sess-uuid", status: "generating_prompts" }), {
+                    status: 200,
+                }),
+            );
+
+            controller.startOver();
+
+            expect(btn1.classList.contains("hidden")).toBe(true);
+            expect(btn2.classList.contains("hidden")).toBe(true);
+
+            expect(globalThis.fetch).toHaveBeenCalledWith(
+                "/api/photo-builder/sessions",
+                expect.objectContaining({ method: "POST" }),
+            );
+
+            controller.disconnect();
+        });
+
+        it("should reset sessionId and start new session", async () => {
+            const btn1 = document.createElement("button");
+
+            const { controller } = createController({
+                existingSessionIdValue: "old-sess-uuid",
+                startOverButtonTargets: [btn1],
+                sessionId: "old-sess-uuid",
+            });
+
+            vi.spyOn(globalThis, "fetch").mockResolvedValue(
+                new Response(JSON.stringify({ sessionId: "new-sess-uuid", status: "generating_prompts" }), {
+                    status: 200,
+                }),
+            );
+
+            controller.startOver();
+            await flushPromises();
+
+            const state = controller as unknown as MockControllerState;
+            expect(state.sessionId).toBe("new-sess-uuid");
+
+            controller.disconnect();
         });
     });
 });

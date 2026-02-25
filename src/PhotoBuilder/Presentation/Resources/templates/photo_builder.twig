@@ -4,6 +4,7 @@
 
 {% block body %}
     <div class="max-w-7xl mx-auto"
+         data-test-id="photo-builder-page"
          {{ stimulus_controller('photo-builder', {
              createSessionUrl: path('photo_builder.presentation.create_session'),
              pollUrlPattern: path('photo_builder.presentation.poll_session', { sessionId: '00000000-0000-0000-0000-000000000000' }),
@@ -23,6 +24,7 @@
              hasRemoteAssets: hasRemoteAssets,
              supportsResolutionToggle: supportsResolutionToggle,
              embedPrefillMessage: 'photo_builder.embed_prefill_message'|trans,
+             existingSessionId: existingSessionId ?? '',
          })
          |stimulus_action('photo-builder', 'handlePromptEdited', 'photo-image:promptEdited')
          |stimulus_action('photo-builder', 'handleRegenerateImage', 'photo-image:regenerateRequested')
@@ -73,15 +75,25 @@
 
                 {# Loading overlay #}
                 <div {{ stimulus_target('photo-builder', 'loadingOverlay') }}
+                     data-test-id="photo-builder-loading-overlay"
                      class="flex flex-col items-center justify-center py-20 space-y-4">
                     <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
                     <p class="etfswui-text-small">
                         {{ 'photo_builder.generating_prompts'|trans }}
                     </p>
+                    <button {{ stimulus_target('photo-builder', 'startOverButton') }}
+                            {{ stimulus_action('photo-builder', 'startOver') }}
+                            data-test-id="photo-builder-start-over-button"
+                            type="button"
+                            class="hidden etfswui-button-secondary text-sm">
+                        {{ 'photo_builder.start_over'|trans }}
+                    </button>
                 </div>
 
                 {# Main content (hidden until prompts ready) #}
-                <div {{ stimulus_target('photo-builder', 'mainContent') }} class="hidden space-y-6 relative">
+                <div {{ stimulus_target('photo-builder', 'mainContent') }}
+                     data-test-id="photo-builder-main-content"
+                     class="hidden space-y-6 relative">
                     {# Regenerating prompts overlay: spinner + message while prompts are being regenerated #}
                     <div {{ stimulus_target('photo-builder', 'regeneratingPromptsOverlay') }}
                          class="hidden absolute inset-0 z-10 flex flex-col items-center justify-center rounded-lg bg-white/90 dark:bg-dark-900/90 backdrop-blur-sm">
@@ -167,6 +179,13 @@ For each image, call the deliver_image_prompt tool with:
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182"/>
                                     </svg>
                                     {{ 'photo_builder.regenerate_prompts'|trans }}
+                                </button>
+                                <button {{ stimulus_target('photo-builder', 'startOverButton') }}
+                                        {{ stimulus_action('photo-builder', 'startOver') }}
+                                        data-test-id="photo-builder-start-over-button"
+                                        type="button"
+                                        class="hidden etfswui-button-secondary gap-2">
+                                    {{ 'photo_builder.start_over'|trans }}
                                 </button>
                             </div>
                         </div>
