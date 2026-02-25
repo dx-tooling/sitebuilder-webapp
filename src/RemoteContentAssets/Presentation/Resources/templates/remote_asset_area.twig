@@ -57,7 +57,20 @@
                         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                         <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
-                    <span>Neue Bilder werden verarbeitet...</span>
+                    <span {{ stimulus_target('remote-asset-browser', 'uploadProcessingMessage') }}>Neue Bilder werden verarbeitet...</span>
+                    <div {{ stimulus_target('remote-asset-browser', 'uploadRefreshActions') }}
+                         class="hidden ml-2 flex items-center gap-2">
+                        <button type="button"
+                                {{ stimulus_action('remote-asset-browser', 'confirmRefresh', 'click') }}
+                                class="px-2 py-1 rounded bg-primary-600 text-white text-xs hover:bg-primary-700 focus:outline-none focus:ring-1 focus:ring-primary-500">
+                            Ja
+                        </button>
+                        <button type="button"
+                                {{ stimulus_action('remote-asset-browser', 'dismissRefresh', 'click') }}
+                                class="px-2 py-1 rounded border border-dark-300 dark:border-dark-600 text-dark-700 dark:text-dark-200 text-xs hover:bg-dark-100 dark:hover:bg-dark-700">
+                            Nein
+                        </button>
+                    </div>
                 </div>
                 {# Upload success message #}
                 <div {{ stimulus_target('remote-asset-browser', 'uploadSuccess') }}

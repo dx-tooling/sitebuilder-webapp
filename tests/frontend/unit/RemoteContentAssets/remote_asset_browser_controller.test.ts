@@ -593,7 +593,13 @@ describe("RemoteAssetBrowserController", () => {
                            placeholder="Search...">
                     <div data-remote-asset-browser-target="dropzone" class="dropzone"></div>
                     <div data-remote-asset-browser-target="uploadProgress" class="hidden">Uploading...</div>
-                    <div data-remote-asset-browser-target="uploadProcessing" class="hidden">Neue Bilder werden verarbeitet...</div>
+                    <div data-remote-asset-browser-target="uploadProcessing" class="hidden">
+                        <span data-remote-asset-browser-target="uploadProcessingMessage">Neue Bilder werden verarbeitet...</span>
+                        <div data-remote-asset-browser-target="uploadRefreshActions" class="hidden">
+                            <button type="button" data-action="click->remote-asset-browser#confirmRefresh">Ja</button>
+                            <button type="button" data-action="click->remote-asset-browser#dismissRefresh">Nein</button>
+                        </div>
+                    </div>
                     <div data-remote-asset-browser-target="uploadSuccess" class="hidden">Success!</div>
                     <div data-remote-asset-browser-target="uploadError" class="hidden"><span data-error-text></span></div>
                     <div data-remote-asset-browser-target="loading">Loading...</div>
@@ -637,11 +643,6 @@ describe("RemoteAssetBrowserController", () => {
                     json: () => Promise.resolve({ success: true, url: "https://example.com/uploaded.jpg" }),
                 })
                 // Re-fetch after upload
-                .mockResolvedValueOnce({
-                    ok: true,
-                    json: () => Promise.resolve({ urls: ["https://example.com/uploaded.jpg"] }),
-                })
-                // Final list refresh after manifest availability
                 .mockResolvedValueOnce({
                     ok: true,
                     json: () => Promise.resolve({ urls: ["https://example.com/uploaded.jpg"] }),
@@ -730,18 +731,6 @@ describe("RemoteAssetBrowserController", () => {
                                 "https://example.com/c.gif",
                             ],
                         }),
-                })
-                // Final list refresh after manifest availability
-                .mockResolvedValueOnce({
-                    ok: true,
-                    json: () =>
-                        Promise.resolve({
-                            urls: [
-                                "https://example.com/a.jpg",
-                                "https://example.com/b.png",
-                                "https://example.com/c.gif",
-                            ],
-                        }),
                 });
             vi.stubGlobal("fetch", mockFetch);
 
@@ -768,11 +757,11 @@ describe("RemoteAssetBrowserController", () => {
             expect((eventListener.mock.calls[1][0] as CustomEvent).detail.url).toBe("https://example.com/b.png");
             expect((eventListener.mock.calls[2][0] as CustomEvent).detail.url).toBe("https://example.com/c.gif");
 
-            // 6 fetch calls: initial list + 3 uploads + manifest check + final refresh
-            expect(mockFetch).toHaveBeenCalledTimes(6);
+            // 5 fetch calls: initial list + 3 uploads + manifest check
+            expect(mockFetch).toHaveBeenCalledTimes(5);
         });
 
-        it("shows processing message until manifest contains uploaded image", async () => {
+        it("shows refresh prompt after manifest contains uploaded image and reloads on confirmation", async () => {
             const uploadedUrl = "https://example.com/just-uploaded.jpg";
             const mockFetch = vi
                 .fn()
@@ -796,7 +785,7 @@ describe("RemoteAssetBrowserController", () => {
                     ok: true,
                     json: () => Promise.resolve({ urls: [uploadedUrl] }),
                 })
-                // Final list refresh after manifest availability
+                // Refresh after explicit confirmation
                 .mockResolvedValueOnce({
                     ok: true,
                     json: () => Promise.resolve({ urls: [uploadedUrl] }),
@@ -814,20 +803,32 @@ describe("RemoteAssetBrowserController", () => {
             const processingEl = document.querySelector(
                 '[data-remote-asset-browser-target="uploadProcessing"]',
             ) as HTMLElement;
+            const refreshActionsEl = document.querySelector(
+                '[data-remote-asset-browser-target="uploadRefreshActions"]',
+            ) as HTMLElement;
             const listEl = document.querySelector('[data-remote-asset-browser-target="list"]') as HTMLElement;
 
             // Processing message is shown while manifest is still stale.
             await new Promise((resolve) => setTimeout(resolve, 200));
             expect(processingEl.classList.contains("hidden")).toBe(false);
+            expect(refreshActionsEl.classList.contains("hidden")).toBe(true);
             expect(listEl.querySelectorAll('button[title="Add to chat"]').length).toBe(0);
 
             // After next retry fetch (~2s), manifest contains uploaded URL.
             await new Promise((resolve) => setTimeout(resolve, 2300));
+            expect(processingEl.classList.contains("hidden")).toBe(false);
+            expect(refreshActionsEl.classList.contains("hidden")).toBe(false);
+            expect(listEl.querySelectorAll('button[title="Add to chat"]').length).toBe(0);
+
+            const confirmButton = refreshActionsEl.querySelector("button") as HTMLButtonElement;
+            confirmButton.click();
+            await new Promise((resolve) => setTimeout(resolve, 200));
+
             expect(processingEl.classList.contains("hidden")).toBe(true);
             expect(listEl.querySelectorAll('button[title="Add to chat"]').length).toBe(1);
         });
 
-        it("retries list fetch until uploaded image appears in manifest", async () => {
+        it("retries manifest polling until uploaded image appears and waits for confirmation", async () => {
             const uploadedUrl = "https://example.com/retry-me.jpg";
             const mockFetch = vi
                 .fn()
@@ -856,7 +857,7 @@ describe("RemoteAssetBrowserController", () => {
                     ok: true,
                     json: () => Promise.resolve({ urls: [uploadedUrl] }),
                 })
-                // Final list refresh after manifest availability
+                // Refresh after explicit confirmation
                 .mockResolvedValueOnce({
                     ok: true,
                     json: () => Promise.resolve({ urls: [uploadedUrl] }),
@@ -875,10 +876,20 @@ describe("RemoteAssetBrowserController", () => {
             await new Promise((resolve) => setTimeout(resolve, 4600));
 
             const listEl = document.querySelector('[data-remote-asset-browser-target="list"]') as HTMLElement;
+            const refreshActionsEl = document.querySelector(
+                '[data-remote-asset-browser-target="uploadRefreshActions"]',
+            ) as HTMLElement;
+            expect(listEl.querySelectorAll('button[title="Add to chat"]').length).toBe(0);
+            expect(refreshActionsEl.classList.contains("hidden")).toBe(false);
+
+            const confirmButton = refreshActionsEl.querySelector("button") as HTMLButtonElement;
+            confirmButton.click();
+            await new Promise((resolve) => setTimeout(resolve, 200));
+
             expect(listEl.querySelectorAll('button[title="Add to chat"]').length).toBe(1);
         });
 
-        it("stops processing when manifest URL has same filename on different host", async () => {
+        it("shows refresh prompt when manifest URL has same filename on different host", async () => {
             const uploadUrl = "https://bucket.s3.eu-central-1.amazonaws.com/uploads/20260224/abc_photo.jpg";
             const manifestUrl = "https://cdn.example.com/uploads/20260224/abc_photo.jpg";
             const mockFetch = vi
@@ -898,7 +909,7 @@ describe("RemoteAssetBrowserController", () => {
                     ok: true,
                     json: () => Promise.resolve({ urls: [manifestUrl] }),
                 })
-                // Final list refresh after manifest availability
+                // Refresh after explicit confirmation
                 .mockResolvedValueOnce({
                     ok: true,
                     json: () => Promise.resolve({ urls: [manifestUrl] }),
@@ -918,9 +929,16 @@ describe("RemoteAssetBrowserController", () => {
             const processingEl = document.querySelector(
                 '[data-remote-asset-browser-target="uploadProcessing"]',
             ) as HTMLElement;
-            expect(processingEl.classList.contains("hidden")).toBe(true);
+            const refreshActionsEl = document.querySelector(
+                '[data-remote-asset-browser-target="uploadRefreshActions"]',
+            ) as HTMLElement;
+            expect(processingEl.classList.contains("hidden")).toBe(false);
+            expect(refreshActionsEl.classList.contains("hidden")).toBe(false);
 
             const listEl = document.querySelector('[data-remote-asset-browser-target="list"]') as HTMLElement;
+            const confirmButton = refreshActionsEl.querySelector("button") as HTMLButtonElement;
+            confirmButton.click();
+            await new Promise((resolve) => setTimeout(resolve, 200));
             expect(listEl.querySelectorAll('button[title="Add to chat"]').length).toBe(1);
         });
 
@@ -1012,14 +1030,6 @@ describe("RemoteAssetBrowserController", () => {
                         Promise.resolve({
                             urls: ["https://example.com/a.jpg", "https://example.com/c.gif"],
                         }),
-                })
-                // Final list refresh after manifest availability
-                .mockResolvedValueOnce({
-                    ok: true,
-                    json: () =>
-                        Promise.resolve({
-                            urls: ["https://example.com/a.jpg", "https://example.com/c.gif"],
-                        }),
                 });
             vi.stubGlobal("fetch", mockFetch);
 
@@ -1045,6 +1055,53 @@ describe("RemoteAssetBrowserController", () => {
             expect(errorText.textContent).toBe("1 of 3 uploads failed.");
         });
 
+        it("does not reload list when refresh prompt is dismissed", async () => {
+            const uploadedUrl = "https://example.com/no-reload.jpg";
+            const mockFetch = vi
+                .fn()
+                // Initial fetch
+                .mockResolvedValueOnce({
+                    ok: true,
+                    json: () => Promise.resolve({ urls: [] }),
+                })
+                // Upload response
+                .mockResolvedValueOnce({
+                    ok: true,
+                    json: () => Promise.resolve({ success: true, url: uploadedUrl }),
+                })
+                // Poll fetch containing uploaded URL
+                .mockResolvedValueOnce({
+                    ok: true,
+                    json: () => Promise.resolve({ urls: [uploadedUrl] }),
+                });
+            vi.stubGlobal("fetch", mockFetch);
+
+            await createControllerElementWithUpload();
+            await new Promise((resolve) => setTimeout(resolve, 100));
+
+            const dropzone = document.querySelector('[data-remote-asset-browser-target="dropzone"]') as HTMLElement;
+            const file = new File(["test"], "skip-refresh.jpg", { type: "image/jpeg" });
+            const dropEvent = createMockDropEvent([file]);
+            dropzone.dispatchEvent(dropEvent);
+
+            await new Promise((resolve) => setTimeout(resolve, 250));
+
+            const refreshActionsEl = document.querySelector(
+                '[data-remote-asset-browser-target="uploadRefreshActions"]',
+            ) as HTMLElement;
+            const listEl = document.querySelector('[data-remote-asset-browser-target="list"]') as HTMLElement;
+
+            expect(refreshActionsEl.classList.contains("hidden")).toBe(false);
+            expect(listEl.querySelectorAll('button[title="Add to chat"]').length).toBe(0);
+
+            const dismissButton = refreshActionsEl.querySelectorAll("button")[1] as HTMLButtonElement;
+            dismissButton.click();
+            await new Promise((resolve) => setTimeout(resolve, 100));
+
+            expect(listEl.querySelectorAll('button[title="Add to chat"]').length).toBe(0);
+            expect(mockFetch).toHaveBeenCalledTimes(3);
+        });
+
         it("opens file dialog when openFileDialog is called", async () => {
             const html = `
                 <div data-controller="remote-asset-browser"
@@ -1062,7 +1119,13 @@ describe("RemoteAssetBrowserController", () => {
                            data-action="change->remote-asset-browser#handleFileSelect"
                            class="hidden">
                     <div data-remote-asset-browser-target="uploadProgress" class="hidden">Uploading...</div>
-                    <div data-remote-asset-browser-target="uploadProcessing" class="hidden">Neue Bilder werden verarbeitet...</div>
+                    <div data-remote-asset-browser-target="uploadProcessing" class="hidden">
+                        <span data-remote-asset-browser-target="uploadProcessingMessage">Neue Bilder werden verarbeitet...</span>
+                        <div data-remote-asset-browser-target="uploadRefreshActions" class="hidden">
+                            <button type="button" data-action="click->remote-asset-browser#confirmRefresh">Ja</button>
+                            <button type="button" data-action="click->remote-asset-browser#dismissRefresh">Nein</button>
+                        </div>
+                    </div>
                     <div data-remote-asset-browser-target="uploadSuccess" class="hidden">Success!</div>
                     <div data-remote-asset-browser-target="uploadError" class="hidden"><span data-error-text></span></div>
                     <div data-remote-asset-browser-target="loading">Loading...</div>

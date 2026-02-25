@@ -39,6 +39,8 @@ export default class extends Controller {
         "uploadProgress",
         "uploadProgressText",
         "uploadProcessing",
+        "uploadProcessingMessage",
+        "uploadRefreshActions",
         "uploadError",
         "uploadSuccess",
     ];
@@ -71,6 +73,10 @@ export default class extends Controller {
     declare readonly uploadProgressTextTarget: HTMLElement;
     declare readonly hasUploadProcessingTarget: boolean;
     declare readonly uploadProcessingTarget: HTMLElement;
+    declare readonly hasUploadProcessingMessageTarget: boolean;
+    declare readonly uploadProcessingMessageTarget: HTMLElement;
+    declare readonly hasUploadRefreshActionsTarget: boolean;
+    declare readonly uploadRefreshActionsTarget: HTMLElement;
     declare readonly hasUploadErrorTarget: boolean;
     declare readonly uploadErrorTarget: HTMLElement;
     declare readonly hasUploadSuccessTarget: boolean;
@@ -82,6 +88,8 @@ export default class extends Controller {
     private isLoading: boolean = false;
     private isUploading: boolean = false;
     private isConnected: boolean = false;
+    private hasPendingRefresh: boolean = false;
+    private uploadProcessingMode: "processing" | "refreshPrompt" = "processing";
     private backgroundSyncTimeoutId: ReturnType<typeof setTimeout> | null = null;
     private latestManifestRevision: string | null = null;
     private isBackgroundSyncEnabled: boolean = false;
@@ -243,9 +251,7 @@ export default class extends Controller {
             this.showUploadStatus("processing");
             const waitSucceeded = await this.waitForManifestAvailability(uploadedUrls);
             if (waitSucceeded) {
-                await this.fetchAssets();
-                this.showUploadStatus("success");
-                setTimeout(() => this.showUploadStatus("none"), 3000);
+                this.markRefreshAvailable();
             } else {
                 this.showUploadError("Upload completed. New images are still processing. Please try again shortly.");
             }
@@ -258,6 +264,7 @@ export default class extends Controller {
         }
 
         this.isUploading = false;
+        this.showRefreshPromptIfPending();
     }
 
     /**
@@ -313,6 +320,7 @@ export default class extends Controller {
         if (this.hasUploadProcessingTarget) {
             this.uploadProcessingTarget.classList.toggle("hidden", which !== "processing");
         }
+        this.renderUploadProcessingState();
         if (this.hasUploadSuccessTarget) {
             this.uploadSuccessTarget.classList.toggle("hidden", which !== "success");
         }
@@ -333,7 +341,27 @@ export default class extends Controller {
         }
         this.showUploadStatus("error");
         // Auto-hide error message after 5 seconds
-        setTimeout(() => this.showUploadStatus("none"), 5000);
+        setTimeout(() => {
+            this.showUploadStatus("none");
+            this.showRefreshPromptIfPending();
+        }, 5000);
+    }
+
+    confirmRefresh(): void {
+        if (!this.hasPendingRefresh) {
+            return;
+        }
+
+        this.hasPendingRefresh = false;
+        this.uploadProcessingMode = "processing";
+        this.showUploadStatus("none");
+        void this.reloadAssetsAfterConfirmation();
+    }
+
+    dismissRefresh(): void {
+        this.hasPendingRefresh = false;
+        this.uploadProcessingMode = "processing";
+        this.showUploadStatus("none");
     }
 
     private async fetchAssets(): Promise<{ urls: string[]; revision: string } | null> {
@@ -485,8 +513,45 @@ export default class extends Controller {
         }
 
         if (currentRevision === null || manifestData.revision !== currentRevision) {
-            await this.fetchAssets();
+            this.latestManifestRevision = manifestData.revision;
+            this.markRefreshAvailable();
         }
+    }
+
+    private markRefreshAvailable(): void {
+        this.hasPendingRefresh = true;
+        this.uploadProcessingMode = "refreshPrompt";
+        this.showRefreshPromptIfPending();
+    }
+
+    private showRefreshPromptIfPending(): void {
+        if (!this.hasPendingRefresh || this.isUploading || this.isUploadErrorVisible()) {
+            return;
+        }
+        this.showUploadStatus("processing");
+    }
+
+    private isUploadErrorVisible(): boolean {
+        return this.hasUploadErrorTarget && !this.uploadErrorTarget.classList.contains("hidden");
+    }
+
+    private renderUploadProcessingState(): void {
+        if (this.hasUploadProcessingMessageTarget) {
+            this.uploadProcessingMessageTarget.textContent =
+                this.uploadProcessingMode === "refreshPrompt"
+                    ? "Neue Bilder sind verfügbar. Bildliste jetzt aktualisieren?"
+                    : "Neue Bilder werden verarbeitet...";
+        }
+
+        if (this.hasUploadRefreshActionsTarget) {
+            this.uploadRefreshActionsTarget.classList.toggle("hidden", this.uploadProcessingMode !== "refreshPrompt");
+        }
+    }
+
+    private async reloadAssetsAfterConfirmation(): Promise<void> {
+        await this.fetchAssets();
+        this.showUploadStatus("success");
+        setTimeout(() => this.showUploadStatus("none"), 3000);
     }
 
     private normalizeManifestData(data: { urls?: string[]; revision?: string }): { urls: string[]; revision: string } {
