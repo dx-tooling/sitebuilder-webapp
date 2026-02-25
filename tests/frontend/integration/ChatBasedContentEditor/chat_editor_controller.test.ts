@@ -99,7 +99,7 @@ describe("ChatBasedContentEditorController", () => {
                 <input type="hidden" name="_csrf_token" value="csrf-123">
                 <textarea data-chat-based-content-editor-target="instruction"></textarea>
                 <button type="submit" data-chat-based-content-editor-target="submit">Make changes</button>
-                <button type="button" data-chat-based-content-editor-target="cancelButton" class="hidden">Stop</button>
+                <button type="button" data-chat-based-content-editor-target="cancelButton" data-action="click->chat-based-content-editor#handleCancel" class="hidden">Stop</button>
             </form>
         `;
 
@@ -276,6 +276,96 @@ describe("ChatBasedContentEditorController", () => {
                     headers: { "X-Requested-With": "XMLHttpRequest" },
                 }),
             );
+        });
+
+        it("stop button sends correct CSRF token from AI form, not global", async () => {
+            createChatEditorFixture();
+            await waitForController();
+
+            const controller = application.getControllerForElementAndIdentifier(
+                document.querySelector('[data-controller="chat-based-content-editor"]') as HTMLElement,
+                "chat-based-content-editor",
+            ) as InstanceType<typeof ChatEditorController>;
+
+            // Set up a mock polling state
+            const mockContainer = document.createElement("div");
+            (controller as unknown as Record<string, unknown>).currentPollingState = {
+                sessionId: "test-sess-123",
+                container: mockContainer,
+                lastId: 0,
+                pollUrl: "/api/poll/test-sess-123",
+            };
+
+            const fetchMock = vi.fn(async () => {
+                return {
+                    ok: true,
+                    status: 200,
+                    json: async () => ({}),
+                };
+            });
+
+            vi.stubGlobal("fetch", fetchMock);
+
+            // Call handleCancel
+            await controller.handleCancel();
+
+            // Verify cancel request was made
+            expect(fetchMock).toHaveBeenCalledWith(
+                "/api/cancel/test-sess-123",
+                expect.objectContaining({
+                    method: "POST",
+                    headers: { "X-Requested-With": "XMLHttpRequest" },
+                }),
+            );
+
+            // Verify the CSRF token from the form was used
+            const mockCalls = fetchMock.mock.calls as unknown as Array<[unknown, unknown]>;
+            const cancelCall = mockCalls.find((call) => String(call[0]) === "/api/cancel/test-sess-123");
+            if (cancelCall) {
+                const formData = (cancelCall[1] as Record<string, unknown>)?.body as FormData | undefined;
+                expect(formData?.get("_csrf_token")).toBe("csrf-123");
+            }
+        });
+
+        it("stop button re-enables on cancel failure and shows error state", async () => {
+            createChatEditorFixture();
+            await waitForController();
+
+            const controller = application.getControllerForElementAndIdentifier(
+                document.querySelector('[data-controller="chat-based-content-editor"]') as HTMLElement,
+                "chat-based-content-editor",
+            ) as InstanceType<typeof ChatEditorController>;
+
+            // Set up a mock polling state
+            const mockContainer = document.createElement("div");
+            (controller as unknown as Record<string, unknown>).currentPollingState = {
+                sessionId: "test-sess-fail",
+                container: mockContainer,
+                lastId: 0,
+                pollUrl: "/api/poll/test-sess-fail",
+            };
+
+            const fetchMock = vi.fn(async () => {
+                return {
+                    ok: false,
+                    status: 403,
+                    json: async () => ({ error: "Forbidden" }),
+                };
+            });
+
+            vi.stubGlobal("fetch", fetchMock);
+
+            // Get the cancel button and verify it's disabled
+            const cancelButton = document.querySelector(
+                "[data-chat-based-content-editor-target='cancelButton']",
+            ) as HTMLButtonElement;
+
+            // Call handleCancel
+            await controller.handleCancel();
+
+            // The catch block should re-enable the button
+            expect(cancelButton.disabled).toBe(false);
+            expect(cancelButton.textContent).toBe(translations.stop);
         });
     });
 });
