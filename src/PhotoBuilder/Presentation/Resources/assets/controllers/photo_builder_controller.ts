@@ -98,6 +98,7 @@ export default class extends Controller {
         "resolutionToggle",
         "loresButton",
         "hiresButton",
+        "startOverButton",
     ];
 
     declare readonly createSessionUrlValue: string;
@@ -139,6 +140,7 @@ export default class extends Controller {
     declare readonly loresButtonTarget: HTMLButtonElement;
     declare readonly hasHiresButtonTarget: boolean;
     declare readonly hiresButtonTarget: HTMLButtonElement;
+    declare readonly startOverButtonTargets: HTMLElement[];
 
     private sessionId: string | null = null;
     private isRegeneratingPrompts = false;
@@ -159,6 +161,7 @@ export default class extends Controller {
         this.isActive = true;
         if (this.existingSessionIdValue) {
             this.sessionId = this.existingSessionIdValue;
+            this.showStartOverButtons();
             this.poll();
         } else {
             this.createSession();
@@ -383,6 +386,31 @@ export default class extends Controller {
         if (this.hasRegeneratingPromptsOverlayTarget) {
             this.regeneratingPromptsOverlayTarget.classList.add("hidden");
         }
+    }
+
+    private showStartOverButtons(): void {
+        for (const btn of this.startOverButtonTargets) {
+            btn.classList.remove("hidden");
+        }
+    }
+
+    private hideStartOverButtons(): void {
+        for (const btn of this.startOverButtonTargets) {
+            btn.classList.add("hidden");
+        }
+    }
+
+    startOver(): void {
+        this.hideStartOverButtons();
+        this.stopPolling();
+        this.sessionId = null;
+        this.lastImages = [];
+        this.lastPollStatus = null;
+        this.isRegeneratingPrompts = false;
+        this.anyGenerating = false;
+        this.loadingOverlayTarget.classList.remove("hidden");
+        this.mainContentTarget.classList.add("hidden");
+        void this.createSession();
     }
 
     /**

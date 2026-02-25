@@ -496,6 +496,7 @@ photo_builder:
     default_user_prompt: "Die generierten Bilder sollen Professionalität und Kompetenz vermitteln."
     prompt_placeholder: "Bildgenerierungs-Prompt..."
     generate_matching_images: "Passende Bilder generieren"
+    start_over: "Von vorne beginnen"
 
 # Language switcher
 language:
