@@ -58,3 +58,5 @@ public/workspaces/*
 
 # Generated conversation log viewer files (in project root)
 /conversation-log-*.html
+
+.claude
