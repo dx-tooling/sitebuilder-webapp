@@ -92,6 +92,30 @@ class PhotoBuilderService
     }
 
     /**
+     * Find the most recent resumable session for the given workspace and page.
+     * Returns null if no session exists or the latest session has Failed.
+     */
+    public function findLatestResumableSession(string $workspaceId, string $pagePath): ?PhotoSession
+    {
+        /** @var PhotoSession|null $result */
+        $result = $this->entityManager->createQueryBuilder()
+            ->select('s')
+            ->from(PhotoSession::class, 's')
+            ->where('s.workspaceId = :workspaceId')
+            ->andWhere('s.pagePath = :pagePath')
+            ->andWhere('s.status != :failedStatus')
+            ->setParameter('workspaceId', $workspaceId)
+            ->setParameter('pagePath', $pagePath)
+            ->setParameter('failedStatus', PhotoSessionStatus::Failed->value)
+            ->orderBy('s.createdAt', 'DESC')
+            ->setMaxResults(1)
+            ->getQuery()
+            ->getOneOrNullResult();
+
+        return $result;
+    }
+
+    /**
      * Transition session status to images_ready if all images are in terminal state,
      * or to failed if any image failed and all are terminal.
      */

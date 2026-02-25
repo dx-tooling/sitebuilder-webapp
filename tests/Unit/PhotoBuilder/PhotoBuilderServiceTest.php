@@ -11,6 +11,8 @@ use App\PhotoBuilder\Domain\Enum\PhotoImageStatus;
 use App\PhotoBuilder\Domain\Enum\PhotoSessionStatus;
 use App\PhotoBuilder\Domain\Service\PhotoBuilderService;
 use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\ORM\Query;
+use Doctrine\ORM\QueryBuilder;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
 
@@ -201,5 +203,85 @@ final class PhotoBuilderServiceTest extends TestCase
         $service->updateSessionStatusFromImages($session);
 
         self::assertSame(PhotoSessionStatus::ImagesReady, $session->getStatus());
+    }
+
+    public function testFindLatestResumableSessionReturnsExistingSession(): void
+    {
+        $expectedSession = new PhotoSession('ws-123', 'conv-456', 'index.html', 'prompt');
+
+        $query = $this->createMock(Query::class);
+        $query->method('getOneOrNullResult')->willReturn($expectedSession);
+
+        $qb = $this->createMock(QueryBuilder::class);
+        $qb->method('select')->willReturnSelf();
+        $qb->method('from')->willReturnSelf();
+        $qb->method('where')->willReturnSelf();
+        $qb->method('andWhere')->willReturnSelf();
+        $qb->method('setParameter')->willReturnSelf();
+        $qb->method('orderBy')->willReturnSelf();
+        $qb->method('setMaxResults')->willReturnSelf();
+        $qb->method('getQuery')->willReturn($query);
+
+        $em = $this->createMock(EntityManagerInterface::class);
+        $em->method('createQueryBuilder')->willReturn($qb);
+
+        $service = new PhotoBuilderService($em);
+        $result  = $service->findLatestResumableSession('ws-123', 'index.html');
+
+        self::assertSame($expectedSession, $result);
+    }
+
+    public function testFindLatestResumableSessionReturnsNullWhenNoSession(): void
+    {
+        $query = $this->createMock(Query::class);
+        $query->method('getOneOrNullResult')->willReturn(null);
+
+        $qb = $this->createMock(QueryBuilder::class);
+        $qb->method('select')->willReturnSelf();
+        $qb->method('from')->willReturnSelf();
+        $qb->method('where')->willReturnSelf();
+        $qb->method('andWhere')->willReturnSelf();
+        $qb->method('setParameter')->willReturnSelf();
+        $qb->method('orderBy')->willReturnSelf();
+        $qb->method('setMaxResults')->willReturnSelf();
+        $qb->method('getQuery')->willReturn($query);
+
+        $em = $this->createMock(EntityManagerInterface::class);
+        $em->method('createQueryBuilder')->willReturn($qb);
+
+        $service = new PhotoBuilderService($em);
+        $result  = $service->findLatestResumableSession('ws-123', 'index.html');
+
+        self::assertNull($result);
+    }
+
+    public function testFindLatestResumableSessionExcludesFailedSessions(): void
+    {
+        $query = $this->createMock(Query::class);
+        $query->method('getOneOrNullResult')->willReturn(null);
+
+        $setParameterCalls = [];
+        $qb                = $this->createMock(QueryBuilder::class);
+        $qb->method('select')->willReturnSelf();
+        $qb->method('from')->willReturnSelf();
+        $qb->method('where')->willReturnSelf();
+        $qb->method('andWhere')->willReturnSelf();
+        $qb->method('setParameter')
+            ->willReturnCallback(function (string $name, mixed $value) use ($qb, &$setParameterCalls): QueryBuilder {
+                $setParameterCalls[] = [$name, $value];
+
+                return $qb;
+            });
+        $qb->method('orderBy')->willReturnSelf();
+        $qb->method('setMaxResults')->willReturnSelf();
+        $qb->method('getQuery')->willReturn($query);
+
+        $em = $this->createMock(EntityManagerInterface::class);
+        $em->method('createQueryBuilder')->willReturn($qb);
+
+        $service = new PhotoBuilderService($em);
+        $service->findLatestResumableSession('ws-123', 'index.html');
+
+        self::assertContains(['failedStatus', 'failed'], $setParameterCalls);
     }
 }

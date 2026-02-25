@@ -109,6 +109,8 @@ final class PhotoBuilderController extends AbstractController
             throw $this->createNotFoundException('Missing required query parameters: page, conversationId');
         }
 
+        $existingSession = $this->photoBuilderService->findLatestResumableSession($workspaceId, $pagePath);
+
         $hasRemoteAssets = $project->hasS3UploadConfigured()
             && count($project->remoteContentAssetsManifestUrls) > 0;
 
@@ -125,6 +127,7 @@ final class PhotoBuilderController extends AbstractController
             'imagePromptModel'              => $effectiveProvider->imagePromptGenerationModel()->value,
             'imageGenerationModel'          => $effectiveProvider->imageGenerationModel()->value,
             'supportsResolutionToggle'      => $effectiveProvider === LlmModelProvider::Google,
+            'existingSessionId'             => $existingSession?->getId(),
         ]);
     }
 

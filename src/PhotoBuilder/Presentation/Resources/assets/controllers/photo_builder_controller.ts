@@ -82,6 +82,7 @@ export default class extends Controller {
         hasRemoteAssets: Boolean,
         supportsResolutionToggle: Boolean,
         embedPrefillMessage: { type: String, default: "Embed images %fileNames% into page %pagePath%" },
+        existingSessionId: { type: String, default: "" },
     };
 
     static targets = [
@@ -117,6 +118,7 @@ export default class extends Controller {
     declare readonly hasRemoteAssetsValue: boolean;
     declare readonly supportsResolutionToggleValue: boolean;
     declare readonly embedPrefillMessageValue: string;
+    declare readonly existingSessionIdValue: string;
 
     declare readonly loadingOverlayTarget: HTMLElement;
     declare readonly mainContentTarget: HTMLElement;
@@ -155,7 +157,12 @@ export default class extends Controller {
 
     connect(): void {
         this.isActive = true;
-        this.createSession();
+        if (this.existingSessionIdValue) {
+            this.sessionId = this.existingSessionIdValue;
+            this.poll();
+        } else {
+            this.createSession();
+        }
     }
 
     disconnect(): void {

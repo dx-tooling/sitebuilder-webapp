@@ -45,6 +45,7 @@ interface MockControllerState {
     hasRemoteAssetsValue: boolean;
     supportsResolutionToggleValue: boolean;
     embedPrefillMessageValue: string;
+    existingSessionIdValue: string;
     loadingOverlayTarget: HTMLElement;
     mainContentTarget: HTMLElement;
     userPromptTarget: HTMLTextAreaElement;
@@ -133,6 +134,7 @@ const createController = (
     state.hasRemoteAssetsValue = false;
     state.supportsResolutionToggleValue = false;
     state.embedPrefillMessageValue = "Embed images %fileNames% into page %pagePath%";
+    state.existingSessionIdValue = "";
 
     state.loadingOverlayTarget = loadingOverlay;
     state.mainContentTarget = mainContent;
@@ -266,6 +268,45 @@ describe("PhotoBuilderController", () => {
 
             const state = controller as unknown as MockControllerState;
             expect(state.isActive).toBe(true);
+
+            controller.disconnect();
+        });
+    });
+
+    describe("connect with existing session", () => {
+        it("should skip createSession and immediately poll when existingSessionId is set", async () => {
+            const { controller } = createController({ existingSessionIdValue: "existing-sess-uuid" });
+
+            const fetchSpy = vi
+                .spyOn(globalThis, "fetch")
+                .mockResolvedValueOnce(
+                    new Response(JSON.stringify({ status: "images_ready", images: [] }), { status: 200 }),
+                );
+
+            controller.connect();
+            await flushPromises();
+
+            expect(fetchSpy).not.toHaveBeenCalledWith(
+                "/api/photo-builder/sessions",
+                expect.objectContaining({ method: "POST" }),
+            );
+
+            expect(fetchSpy).toHaveBeenCalledWith(expect.stringContaining("existing-sess-uuid"), expect.anything());
+
+            controller.disconnect();
+        });
+
+        it("should set sessionId from existingSessionId", () => {
+            const { controller } = createController({ existingSessionIdValue: "existing-sess-uuid" });
+
+            vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+                new Response(JSON.stringify({ status: "images_ready", images: [] }), { status: 200 }),
+            );
+
+            controller.connect();
+
+            const state = controller as unknown as MockControllerState;
+            expect(state.sessionId).toBe("existing-sess-uuid");
 
             controller.disconnect();
         });

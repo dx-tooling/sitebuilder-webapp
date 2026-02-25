@@ -23,6 +23,7 @@
              hasRemoteAssets: hasRemoteAssets,
              supportsResolutionToggle: supportsResolutionToggle,
              embedPrefillMessage: 'photo_builder.embed_prefill_message'|trans,
+             existingSessionId: existingSessionId ?? '',
          })
          |stimulus_action('photo-builder', 'handlePromptEdited', 'photo-image:promptEdited')
          |stimulus_action('photo-builder', 'handleRegenerateImage', 'photo-image:regenerateRequested')
