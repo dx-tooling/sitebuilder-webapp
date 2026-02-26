@@ -1,5 +1,6 @@
 includes:
     - vendor/enterprise-tooling-for-symfony/shared-bundle/config/phpstan.app.dist.neon
+    - phpstan-baseline.neon
 
 parameters:
     # Use container cache directory for better performance in Docker

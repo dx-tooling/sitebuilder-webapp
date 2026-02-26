@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\WorkspaceMgmt\Infrastructure\Adapter;
 
+use App\WorkspaceMgmt\Infrastructure\Adapter\Dto\RawCommitDto;
+
 /**
  * Interface for git operations.
  * Implementations handle the actual git CLI commands.
@@ -70,4 +72,32 @@ interface GitAdapterInterface
      * @return bool true if the branch has commits that differ from the base branch, false otherwise
      */
     public function hasBranchDifferences(string $workspacePath, string $branchName, string $baseBranch = 'main'): bool;
+
+    /**
+     * Get the name of the currently checked-out branch.
+     *
+     * @param string $workspacePath the workspace directory
+     *
+     * @return string the current branch name
+     */
+    public function getCurrentBranch(string $workspacePath): string;
+
+    /**
+     * Get the N most recent commits on the current branch.
+     *
+     * @param string $workspacePath the workspace directory
+     * @param int    $limit         the maximum number of commits to return
+     *
+     * @return list<RawCommitDto>
+     */
+    public function getRecentCommits(string $workspacePath, int $limit = 10): array;
+
+    /**
+     * Get all local branch names.
+     *
+     * @param string $workspacePath the workspace directory
+     *
+     * @return list<string>
+     */
+    public function getBranches(string $workspacePath): array;
 }

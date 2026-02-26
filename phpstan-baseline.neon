@@ -1,0 +1,7 @@
+parameters:
+	ignoreErrors:
+		-
+			message: '#^Direct usage of DateTimeImmutable is not allowed\. Use DateAndTimeService\:\:getDateTimeImmutable\(\) instead\.$#'
+			identifier: noDirectDateTimeUsage
+			count: 1
+			path: src/WorkspaceMgmt/Domain/Service/WorkspaceGitService.php

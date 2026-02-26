@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\WorkspaceMgmt\Infrastructure\Adapter;
 
+use App\WorkspaceMgmt\Infrastructure\Adapter\Dto\RawCommitDto;
 use Symfony\Component\Process\Exception\ProcessFailedException;
 use Symfony\Component\Process\Process;
 
@@ -216,6 +217,91 @@ final class GitCliAdapter implements GitAdapterInterface
             $setUrlProcess->setTimeout(self::TIMEOUT_SECONDS);
             $this->runProcess($setUrlProcess, 'Failed to clean remote URL');
         }
+    }
+
+    public function getCurrentBranch(string $workspacePath): string
+    {
+        $process = new Process(['git', 'rev-parse', '--abbrev-ref', 'HEAD']);
+        $process->setWorkingDirectory($workspacePath);
+        $process->setTimeout(self::TIMEOUT_SECONDS);
+
+        $this->runProcess($process, 'Failed to get current branch');
+
+        return trim($process->getOutput());
+    }
+
+    public function getRecentCommits(string $workspacePath, int $limit = 10): array
+    {
+        // Use NUL byte (\x00) as field separator to safely handle multiline bodies
+        // Format: hash\x00subject\x00body\x00timestamp\x00
+        $process = new Process([
+            'git',
+            'log',
+            '-n', (string) $limit,
+            '--pretty=format:%H%x00%s%x00%b%x00%aI%x00',
+        ]);
+        $process->setWorkingDirectory($workspacePath);
+        $process->setTimeout(self::TIMEOUT_SECONDS);
+
+        $process->run();
+
+        // Return empty array if git log fails (e.g., no commits yet)
+        if (!$process->isSuccessful()) {
+            return [];
+        }
+
+        $output = $process->getOutput();
+        if (trim($output) === '') {
+            return [];
+        }
+
+        // Split by NUL+newline (git log adds newlines between commits by default)
+        $records = explode("\x00\n", rtrim($output, "\x00\n"));
+        $commits = [];
+
+        foreach ($records as $record) {
+            $fields = explode("\x00", $record);
+            if (count($fields) < 4) {
+                continue;
+            }
+
+            [$hash, $subject, $body, $timestamp] = $fields;
+
+            $commits[] = new RawCommitDto(
+                trim($hash),
+                trim($subject),
+                trim($body),
+                trim($timestamp)
+            );
+        }
+
+        return $commits;
+    }
+
+    public function getBranches(string $workspacePath): array
+    {
+        $process = new Process(['git', 'branch', '--format=%(refname:short)']);
+        $process->setWorkingDirectory($workspacePath);
+        $process->setTimeout(self::TIMEOUT_SECONDS);
+
+        $process->run();
+
+        // Return empty array if git branch fails (e.g., no commits yet)
+        if (!$process->isSuccessful()) {
+            return [];
+        }
+
+        $output = trim($process->getOutput());
+        if ($output === '') {
+            return [];
+        }
+
+        $branches = array_filter(
+            explode("\n", $output),
+            static fn (string $branch): bool => trim($branch) !== ''
+        );
+
+        return array_values(array_map('trim', $branches));
     }
 
     private function runProcess(Process $process, string $errorMessage): void

@@ -6,9 +6,13 @@ namespace App\WorkspaceMgmt\Domain\Service;
 
 use App\ProjectMgmt\Facade\ProjectMgmtFacadeInterface;
 use App\WorkspaceMgmt\Domain\Entity\Workspace;
+use App\WorkspaceMgmt\Facade\Dto\WorkspaceCommitDto;
+use App\WorkspaceMgmt\Facade\Dto\WorkspaceGitInfoDto;
+use App\WorkspaceMgmt\Infrastructure\Adapter\Dto\RawCommitDto;
 use App\WorkspaceMgmt\Infrastructure\Adapter\GitAdapterInterface;
 use App\WorkspaceMgmt\Infrastructure\Adapter\GitHubAdapterInterface;
 use App\WorkspaceMgmt\Infrastructure\Service\GitHubUrlServiceInterface;
+use DateTimeImmutable;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 use RuntimeException;
@@ -269,5 +273,33 @@ final class WorkspaceGitService
         $lines[] = '**Workspace ID:** ' . ($workspace->getId() ?? 'unknown');
 
         return implode("\n", $lines);
+    }
+
+    /**
+     * Get git context information for a workspace.
+     */
+    public function getGitInfo(Workspace $workspace, int $commitLimit = 10): WorkspaceGitInfoDto
+    {
+        $workspacePath = $this->getWorkspacePath($workspace);
+
+        $currentBranch = $this->gitAdapter->getCurrentBranch($workspacePath);
+        $rawCommits    = $this->gitAdapter->getRecentCommits($workspacePath, $commitLimit);
+        $branches      = $this->gitAdapter->getBranches($workspacePath);
+
+        $commits = array_map(
+            static function (RawCommitDto $raw): WorkspaceCommitDto {
+                $committedAt = new DateTimeImmutable($raw->timestamp);
+
+                return new WorkspaceCommitDto(
+                    $raw->hash,
+                    $raw->subject,
+                    $raw->body,
+                    $committedAt
+                );
+            },
+            $rawCommits
+        );
+
+        return new WorkspaceGitInfoDto($currentBranch, $commits, $branches);
     }
 }
