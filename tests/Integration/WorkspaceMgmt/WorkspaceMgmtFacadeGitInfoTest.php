@@ -225,11 +225,9 @@ final class WorkspaceMgmtFacadeGitInfoTest extends KernelTestCase
             $this->removeDirectory($targetPath);
         }
 
-        $renameResult = rename($this->testRepoPath, $targetPath);
-        if (!$renameResult) {
-            throw new \RuntimeException('Failed to rename ' . $this->testRepoPath . ' to ' . $targetPath);
-        }
-
+        // Copy instead of rename (rename may fail across filesystems)
+        $this->copyDirectory($this->testRepoPath, $targetPath);
+        $this->removeDirectory($this->testRepoPath);
         $this->testRepoPath = $targetPath;
 
         return $workspace;
@@ -241,6 +239,37 @@ final class WorkspaceMgmtFacadeGitInfoTest extends KernelTestCase
         $process->setWorkingDirectory($this->testRepoPath);
         $process->setTimeout(10);
         $process->mustRun();
+    }
+
+    private function copyDirectory(string $source, string $target): void
+    {
+        if (!is_dir($source)) {
+            throw new \RuntimeException('Source directory does not exist: ' . $source);
+        }
+
+        if (!is_dir($target)) {
+            mkdir($target, 0777, true);
+        }
+
+        $items = scandir($source);
+        if ($items === false) {
+            throw new \RuntimeException('Failed to scan source directory: ' . $source);
+        }
+
+        foreach ($items as $item) {
+            if ($item === '.' || $item === '..') {
+                continue;
+            }
+
+            $sourcePath = $source . '/' . $item;
+            $targetPath = $target . '/' . $item;
+
+            if (is_dir($sourcePath)) {
+                $this->copyDirectory($sourcePath, $targetPath);
+            } else {
+                copy($sourcePath, $targetPath);
+            }
+        }
     }
 
     private function removeDirectory(string $path): void
