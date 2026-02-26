@@ -74,6 +74,21 @@ final class SimulatedGitAdapter implements GitAdapterInterface
         return $this->realGitAdapter->hasBranchDifferences($workspacePath, $branchName, $baseBranch);
     }
 
+    public function getCurrentBranch(string $workspacePath): string
+    {
+        return $this->realGitAdapter->getCurrentBranch($workspacePath);
+    }
+
+    public function getRecentCommits(string $workspacePath, int $limit = 10): array
+    {
+        return $this->realGitAdapter->getRecentCommits($workspacePath, $limit);
+    }
+
+    public function getBranches(string $workspacePath): array
+    {
+        return $this->realGitAdapter->getBranches($workspacePath);
+    }
+
     private function copyDirectory(string $source, string $target): void
     {
         if (!is_dir($source)) {

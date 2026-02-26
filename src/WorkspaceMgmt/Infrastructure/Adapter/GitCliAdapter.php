@@ -218,6 +218,81 @@ final class GitCliAdapter implements GitAdapterInterface
         }
     }
 
+    public function getCurrentBranch(string $workspacePath): string
+    {
+        $process = new Process(['git', 'rev-parse', '--abbrev-ref', 'HEAD']);
+        $process->setWorkingDirectory($workspacePath);
+        $process->setTimeout(self::TIMEOUT_SECONDS);
+
+        $this->runProcess($process, 'Failed to get current branch');
+
+        return trim($process->getOutput());
+    }
+
+    public function getRecentCommits(string $workspacePath, int $limit = 10): array
+    {
+        // Use NUL byte (\x00) as field separator to safely handle multiline bodies
+        // Format: hash\x00subject\x00body\x00timestamp\x00
+        $process = new Process([
+            'git',
+            'log',
+            '-n', (string) $limit,
+            '--pretty=format:%H%x00%s%x00%b%x00%aI%x00',
+        ]);
+        $process->setWorkingDirectory($workspacePath);
+        $process->setTimeout(self::TIMEOUT_SECONDS);
+
+        $this->runProcess($process, 'Failed to get recent commits');
+
+        $output = $process->getOutput();
+        if (trim($output) === '') {
+            return [];
+        }
+
+        // Split by double NUL (end of each commit record)
+        $records = explode("\x00\x00", rtrim($output, "\x00"));
+        $commits = [];
+
+        foreach ($records as $record) {
+            $fields = explode("\x00", $record);
+            if (count($fields) < 4) {
+                continue;
+            }
+
+            [$hash, $subject, $body, $timestamp] = $fields;
+
+            $commits[] = [
+                'hash'      => trim($hash),
+                'subject'   => trim($subject),
+                'body'      => trim($body),
+                'timestamp' => trim($timestamp),
+            ];
+        }
+
+        return $commits;
+    }
+
+    public function getBranches(string $workspacePath): array
+    {
+        $process = new Process(['git', 'branch', '--format=%(refname:short)']);
+        $process->setWorkingDirectory($workspacePath);
+        $process->setTimeout(self::TIMEOUT_SECONDS);
+
+        $this->runProcess($process, 'Failed to get branches');
+
+        $output = trim($process->getOutput());
+        if ($output === '') {
+            return [];
+        }
+
+        $branches = array_filter(
+            explode("\n", $output),
+            static fn (string $branch): bool => trim($branch) !== ''
+        );
+
+        return array_values(array_map('trim', $branches));
+    }
+
     private function runProcess(Process $process, string $errorMessage): void
     {
         $process->run();

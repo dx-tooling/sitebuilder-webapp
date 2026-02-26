@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\WorkspaceTooling\Infrastructure\Execution;
 
+use App\WorkspaceMgmt\Facade\Dto\WorkspaceGitInfoDto;
 use App\WorkspaceTooling\Facade\AgentExecutionContextInterface;
 
 /**
@@ -33,6 +34,7 @@ final class AgentExecutionContext implements AgentExecutionContextInterface
     private ?string $projectName            = null;
     private ?string $agentImage             = null;
     private ?string $suggestedCommitMessage = null;
+    private ?WorkspaceGitInfoDto $gitInfo   = null;
 
     /**
      * @var list<string>|null
@@ -71,6 +73,7 @@ final class AgentExecutionContext implements AgentExecutionContextInterface
         $this->projectName                     = null;
         $this->agentImage                      = null;
         $this->suggestedCommitMessage          = null;
+        $this->gitInfo                         = null;
         $this->remoteContentAssetsManifestUrls = null;
     }
 
@@ -129,6 +132,16 @@ final class AgentExecutionContext implements AgentExecutionContextInterface
     public function getSuggestedCommitMessage(): ?string
     {
         return $this->suggestedCommitMessage;
+    }
+
+    public function setGitInfo(?WorkspaceGitInfoDto $gitInfo): void
+    {
+        $this->gitInfo = $gitInfo;
+    }
+
+    public function getGitInfo(): ?WorkspaceGitInfoDto
+    {
+        return $this->gitInfo;
     }
 
     /**

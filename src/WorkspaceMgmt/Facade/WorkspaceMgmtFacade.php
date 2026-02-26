@@ -9,6 +9,7 @@ use App\WorkspaceMgmt\Domain\Entity\Workspace;
 use App\WorkspaceMgmt\Domain\Service\WorkspaceGitService;
 use App\WorkspaceMgmt\Domain\Service\WorkspaceService;
 use App\WorkspaceMgmt\Domain\Service\WorkspaceStatusGuard;
+use App\WorkspaceMgmt\Facade\Dto\WorkspaceGitInfoDto;
 use App\WorkspaceMgmt\Facade\Dto\WorkspaceInfoDto;
 use App\WorkspaceMgmt\Facade\Enum\WorkspaceStatus;
 use App\WorkspaceMgmt\Infrastructure\Adapter\FilesystemAdapterInterface;
@@ -255,6 +256,13 @@ final class WorkspaceMgmtFacade implements WorkspaceMgmtFacadeInterface
         $process->mustRun();
 
         return $process->getOutput();
+    }
+
+    public function getGitInfo(string $workspaceId, int $commitLimit = 10): WorkspaceGitInfoDto
+    {
+        $workspace = $this->getWorkspaceOrFail($workspaceId);
+
+        return $this->gitService->getGitInfo($workspace, $commitLimit);
     }
 
     /**

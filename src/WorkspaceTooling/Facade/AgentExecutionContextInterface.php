@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\WorkspaceTooling\Facade;
 
+use App\WorkspaceMgmt\Facade\Dto\WorkspaceGitInfoDto;
+
 /**
  * Interface for setting agent execution context.
  *
@@ -67,4 +69,14 @@ interface AgentExecutionContextInterface
      * @return string|null The suggested message, or null if none was set
      */
     public function getSuggestedCommitMessage(): ?string;
+
+    /**
+     * Set git context information for the current agent run.
+     */
+    public function setGitInfo(?WorkspaceGitInfoDto $gitInfo): void;
+
+    /**
+     * Get git context information for the current agent run.
+     */
+    public function getGitInfo(): ?WorkspaceGitInfoDto;
 }

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\WorkspaceMgmt\Facade;
 
+use App\WorkspaceMgmt\Facade\Dto\WorkspaceGitInfoDto;
 use App\WorkspaceMgmt\Facade\Dto\WorkspaceInfoDto;
 
 /**
@@ -137,4 +138,15 @@ interface WorkspaceMgmtFacadeInterface
      * @throws \Symfony\Component\Process\Exception\ProcessFailedException if the build fails
      */
     public function runBuild(string $workspaceId): string;
+
+    /**
+     * Get git context information for a workspace.
+     *
+     * Returns the current branch name, recent commits (with hash, message, body, timestamp),
+     * and all local branches.
+     *
+     * @param string $workspaceId the workspace ID
+     * @param int    $commitLimit the maximum number of recent commits to return
+     */
+    public function getGitInfo(string $workspaceId, int $commitLimit = 10): WorkspaceGitInfoDto;
 }

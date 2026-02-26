@@ -241,4 +241,42 @@ final class WorkspaceToolingFacade extends BaseWorkspaceToolingFacade implements
             true
         );
     }
+
+    public function getGitContextInfo(): string
+    {
+        $gitInfo = $this->executionContext->getGitInfo();
+        if ($gitInfo === null) {
+            return '';
+        }
+
+        $lines = [];
+        $lines[] = '---';
+        $lines[] = 'GIT CONTEXT (active branch: ' . $gitInfo->currentBranch . ')';
+        $lines[] = '';
+
+        if ($gitInfo->recentCommits !== []) {
+            $lines[] = 'Recent commits:';
+            foreach ($gitInfo->recentCommits as $commit) {
+                $shortHash = substr($commit->hash, 0, 8);
+                $timestamp = $commit->committedAt->format('Y-m-d H:i:s T');
+                $lines[]   = '- ' . $shortHash . ' | ' . $commit->message . ' | ' . $timestamp;
+                if (trim($commit->body) !== '') {
+                    $bodyLines = explode("\n", trim($commit->body));
+                    foreach ($bodyLines as $bodyLine) {
+                        $lines[] = '  ' . $bodyLine;
+                    }
+                }
+            }
+            $lines[] = '';
+        }
+
+        if ($gitInfo->localBranches !== []) {
+            $lines[] = 'Available branches:';
+            foreach ($gitInfo->localBranches as $branch) {
+                $lines[] = '- ' . $branch;
+            }
+        }
+
+        return implode("\n", $lines);
+    }
 }
