@@ -22,6 +22,13 @@ export default class extends Controller {
         windowSize: { type: Number, default: 20 },
         addToChatLabel: { type: String, default: "Add to chat" },
         openInNewTabLabel: { type: String, default: "Open in new tab" },
+        uploadProcessingLabel: { type: String, default: "New images are being processed..." },
+        refreshPromptLabel: { type: String, default: "New images are available. Refresh the asset list now?" },
+        uploadProcessingDelayedErrorLabel: {
+            type: String,
+            default: "Upload completed. New images are still processing. Please try again shortly.",
+        },
+        uploadPartialFailureLabel: { type: String, default: "%errorCount% of %total% uploads failed." },
         // Upload configuration (optional - if not set, upload is disabled)
         uploadUrl: { type: String, default: "" },
         uploadCsrfToken: { type: String, default: "" },
@@ -49,6 +56,10 @@ export default class extends Controller {
     declare readonly windowSizeValue: number;
     declare readonly addToChatLabelValue: string;
     declare readonly openInNewTabLabelValue: string;
+    declare readonly uploadProcessingLabelValue: string;
+    declare readonly refreshPromptLabelValue: string;
+    declare readonly uploadProcessingDelayedErrorLabelValue: string;
+    declare readonly uploadPartialFailureLabelValue: string;
     declare readonly uploadUrlValue: string;
     declare readonly uploadCsrfTokenValue: string;
     declare readonly workspaceIdValue: string;
@@ -253,14 +264,14 @@ export default class extends Controller {
             if (waitSucceeded) {
                 this.markRefreshAvailable();
             } else {
-                this.showUploadError("Upload completed. New images are still processing. Please try again shortly.");
+                this.showUploadError(this.uploadProcessingDelayedErrorLabelValue);
             }
         }
 
         if (errorCount > 0 && successCount === 0) {
-            this.showUploadError("Upload failed. Please try again.");
+            this.showUploadError(this.getUploadErrorFallbackLabel());
         } else if (errorCount > 0) {
-            this.showUploadError(`${errorCount} of ${total} uploads failed.`);
+            this.showUploadError(this.formatUploadPartialFailureLabel(errorCount, total));
         }
 
         this.isUploading = false;
@@ -539,8 +550,8 @@ export default class extends Controller {
         if (this.hasUploadProcessingMessageTarget) {
             this.uploadProcessingMessageTarget.textContent =
                 this.uploadProcessingMode === "refreshPrompt"
-                    ? "Neue Bilder sind verfügbar. Bildliste jetzt aktualisieren?"
-                    : "Neue Bilder werden verarbeitet...";
+                    ? this.refreshPromptLabelValue
+                    : this.uploadProcessingLabelValue;
         }
 
         if (this.hasUploadRefreshActionsTarget) {
@@ -552,6 +563,22 @@ export default class extends Controller {
         await this.fetchAssets();
         this.showUploadStatus("success");
         setTimeout(() => this.showUploadStatus("none"), 3000);
+    }
+
+    private formatUploadPartialFailureLabel(errorCount: number, total: number): string {
+        return this.uploadPartialFailureLabelValue
+            .replaceAll("%errorCount%", String(errorCount))
+            .replaceAll("%total%", String(total));
+    }
+
+    private getUploadErrorFallbackLabel(): string {
+        if (this.hasUploadErrorTarget) {
+            const textEl = this.uploadErrorTarget.querySelector("[data-error-text]");
+            if (textEl && textEl.textContent !== null && textEl.textContent !== "") {
+                return textEl.textContent;
+            }
+        }
+        return "Upload failed. Please try again.";
     }
 
     private normalizeManifestData(data: { urls?: string[]; revision?: string }): { urls: string[]; revision: string } {

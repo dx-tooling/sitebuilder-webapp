@@ -6,6 +6,10 @@
              windowSize: remoteAssetBrowserWindowSize,
              addToChatLabel: 'remote_content_assets.browser_add_to_chat'|trans,
              openInNewTabLabel: 'remote_content_assets.browser_open_in_new_tab'|trans,
+             uploadProcessingLabel: 'remote_content_assets.browser_upload_processing'|trans,
+             refreshPromptLabel: 'remote_content_assets.browser_refresh_prompt'|trans,
+             uploadProcessingDelayedErrorLabel: 'remote_content_assets.browser_upload_processing_delayed'|trans,
+             uploadPartialFailureLabel: 'remote_content_assets.browser_upload_partial_failure'|trans,
              uploadUrl: project.hasS3UploadConfigured() ? path('remote_content_assets.presentation.upload', { projectId: project.id }) : '',
              uploadCsrfToken: project.hasS3UploadConfigured() ? csrf_token('remote_asset_upload') : '',
              workspaceId: workspace.id
@@ -57,18 +61,18 @@
                         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                         <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
-                    <span {{ stimulus_target('remote-asset-browser', 'uploadProcessingMessage') }}>Neue Bilder werden verarbeitet...</span>
+                    <span {{ stimulus_target('remote-asset-browser', 'uploadProcessingMessage') }}>{{ 'remote_content_assets.browser_upload_processing'|trans }}</span>
                     <div {{ stimulus_target('remote-asset-browser', 'uploadRefreshActions') }}
                          class="hidden ml-2 flex items-center gap-2">
                         <button type="button"
                                 {{ stimulus_action('remote-asset-browser', 'confirmRefresh', 'click') }}
                                 class="px-2 py-1 rounded bg-primary-600 text-white text-xs hover:bg-primary-700 focus:outline-none focus:ring-1 focus:ring-primary-500">
-                            Ja
+                            {{ 'remote_content_assets.browser_refresh_yes'|trans }}
                         </button>
                         <button type="button"
                                 {{ stimulus_action('remote-asset-browser', 'dismissRefresh', 'click') }}
                                 class="px-2 py-1 rounded border border-dark-300 dark:border-dark-600 text-dark-700 dark:text-dark-200 text-xs hover:bg-dark-100 dark:hover:bg-dark-700">
-                            Nein
+                            {{ 'remote_content_assets.browser_refresh_no'|trans }}
                         </button>
                     </div>
                 </div>

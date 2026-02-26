@@ -465,8 +465,14 @@ remote_content_assets:
     browser_upload_dropzone: "Drop images here or click to upload"
     browser_upload_hint: "Multiple files supported. JPEG, PNG, GIF, WebP, SVG, AVIF (max 10MB)"
     browser_uploading: "Uploading..."
-    browser_upload_success: "Upload complete. Refreshing asset list..."
+    browser_upload_success: "Upload complete."
     browser_upload_error: "Upload failed. Please try again."
+    browser_upload_processing: "New images are being processed..."
+    browser_refresh_prompt: "New images are available. Refresh the asset list now?"
+    browser_refresh_yes: "Yes"
+    browser_refresh_no: "No"
+    browser_upload_processing_delayed: "Upload completed. New images are still processing. Please try again shortly."
+    browser_upload_partial_failure: "%errorCount% of %total% uploads failed."
 
 # PhotoBuilder vertical
 photo_builder:
