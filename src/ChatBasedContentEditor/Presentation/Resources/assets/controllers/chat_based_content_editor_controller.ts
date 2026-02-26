@@ -326,18 +326,23 @@ export default class extends Controller {
         }
 
         try {
-            const csrfInput = document.querySelector('input[name="_csrf_token"]') as HTMLInputElement | null;
+            const form = this.cancelButtonTarget.closest("form");
+            const csrfInput = form?.querySelector<HTMLInputElement>('input[name="_csrf_token"]') ?? null;
 
             const formData = new FormData();
             if (csrfInput) {
                 formData.append("_csrf_token", csrfInput.value);
             }
 
-            await fetch(cancelUrl, {
+            const cancelResponse = await fetch(cancelUrl, {
                 method: "POST",
                 headers: { "X-Requested-With": "XMLHttpRequest" },
                 body: formData,
             });
+
+            if (!cancelResponse.ok) {
+                throw new Error(`Cancel request failed with status ${cancelResponse.status}`);
+            }
 
             // Don't stop polling — let the polling loop detect the cancelled status
             // and done chunk naturally, so all pre-cancellation output is displayed.
