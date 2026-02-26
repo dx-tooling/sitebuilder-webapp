@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\WorkspaceMgmt\Infrastructure\Adapter;
 
+use App\WorkspaceMgmt\Infrastructure\Adapter\Dto\RawCommitDto;
+
 /**
  * Interface for git operations.
  * Implementations handle the actual git CLI commands.
@@ -86,7 +88,7 @@ interface GitAdapterInterface
      * @param string $workspacePath the workspace directory
      * @param int    $limit         the maximum number of commits to return
      *
-     * @return list<array{hash: string, subject: string, body: string, timestamp: string}>
+     * @return list<RawCommitDto>
      */
     public function getRecentCommits(string $workspacePath, int $limit = 10): array;
 

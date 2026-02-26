@@ -8,7 +8,6 @@ use App\WorkspaceMgmt\Infrastructure\Adapter\GitCliAdapter;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Process\Process;
 
-use function count;
 use function is_dir;
 use function sys_get_temp_dir;
 use function uniqid;
@@ -57,12 +56,12 @@ final class GitCliAdapterTest extends TestCase
 
     protected function tearDown(): void
     {
-        parent::tearDown();
-
         // Clean up test repository
         if (is_dir($this->testRepoPath)) {
             $this->removeDirectory($this->testRepoPath);
         }
+
+        parent::tearDown();
     }
 
     public function testGetCurrentBranch(): void
@@ -88,22 +87,18 @@ final class GitCliAdapterTest extends TestCase
         self::assertCount(3, $commits);
 
         // Check first commit (most recent)
-        self::assertArrayHasKey('hash', $commits[0]);
-        self::assertArrayHasKey('subject', $commits[0]);
-        self::assertArrayHasKey('body', $commits[0]);
-        self::assertArrayHasKey('timestamp', $commits[0]);
-
-        self::assertSame('Third commit', $commits[0]['subject']);
-        self::assertStringContainsString('Body line 1', $commits[0]['body']);
-        self::assertStringContainsString('Body line 2', $commits[0]['body']);
+        self::assertNotEmpty($commits[0]->hash);
+        self::assertSame('Third commit', $commits[0]->subject);
+        self::assertStringContainsString('Body line 1', $commits[0]->body);
+        self::assertStringContainsString('Body line 2', $commits[0]->body);
 
         // Check second commit
-        self::assertSame('Second commit', $commits[1]['subject']);
-        self::assertStringContainsString('This is the body of the second commit', $commits[1]['body']);
+        self::assertSame('Second commit', $commits[1]->subject);
+        self::assertStringContainsString('This is the body of the second commit', $commits[1]->body);
 
         // Check third commit (oldest)
-        self::assertSame('First commit', $commits[2]['subject']);
-        self::assertSame('', $commits[2]['body']);
+        self::assertSame('First commit', $commits[2]->subject);
+        self::assertSame('', $commits[2]->body);
     }
 
     public function testGetRecentCommitsWithLimit(): void
@@ -111,8 +106,8 @@ final class GitCliAdapterTest extends TestCase
         $commits = $this->adapter->getRecentCommits($this->testRepoPath, 2);
 
         self::assertCount(2, $commits);
-        self::assertSame('Third commit', $commits[0]['subject']);
-        self::assertSame('Second commit', $commits[1]['subject']);
+        self::assertSame('Third commit', $commits[0]->subject);
+        self::assertSame('Second commit', $commits[1]->subject);
     }
 
     public function testGetRecentCommitsReturnsEmptyArrayForNewRepo(): void
@@ -165,9 +160,9 @@ final class GitCliAdapterTest extends TestCase
         $commits = $this->adapter->getRecentCommits($this->testRepoPath, 1);
 
         self::assertCount(1, $commits);
-        self::assertSame('Multiline commit', $commits[0]['subject']);
+        self::assertSame('Multiline commit', $commits[0]->subject);
 
-        $body = $commits[0]['body'];
+        $body = $commits[0]->body;
         self::assertStringContainsString('Line 1', $body);
         self::assertStringContainsString('Line 3', $body);
     }
@@ -179,7 +174,7 @@ final class GitCliAdapterTest extends TestCase
         self::assertCount(1, $commits);
 
         // Verify timestamp is in ISO 8601 format (e.g., 2024-01-01T12:00:00+00:00)
-        $timestamp = $commits[0]['timestamp'];
+        $timestamp = $commits[0]->timestamp;
         self::assertMatchesRegularExpression('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[+-]\d{2}:\d{2}$/', $timestamp);
     }
 

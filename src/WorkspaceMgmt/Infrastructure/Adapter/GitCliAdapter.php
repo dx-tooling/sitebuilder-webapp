@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\WorkspaceMgmt\Infrastructure\Adapter;
 
+use App\WorkspaceMgmt\Infrastructure\Adapter\Dto\RawCommitDto;
 use Symfony\Component\Process\Exception\ProcessFailedException;
 use Symfony\Component\Process\Process;
 
@@ -261,12 +262,12 @@ final class GitCliAdapter implements GitAdapterInterface
 
             [$hash, $subject, $body, $timestamp] = $fields;
 
-            $commits[] = [
-                'hash'      => trim($hash),
-                'subject'   => trim($subject),
-                'body'      => trim($body),
-                'timestamp' => trim($timestamp),
-            ];
+            $commits[] = new RawCommitDto(
+                trim($hash),
+                trim($subject),
+                trim($body),
+                trim($timestamp)
+            );
         }
 
         return $commits;

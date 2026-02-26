@@ -249,7 +249,7 @@ final class WorkspaceToolingFacade extends BaseWorkspaceToolingFacade implements
             return '';
         }
 
-        $lines = [];
+        $lines   = [];
         $lines[] = '---';
         $lines[] = 'GIT CONTEXT (active branch: ' . $gitInfo->currentBranch . ')';
         $lines[] = '';

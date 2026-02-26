@@ -11,7 +11,9 @@ use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\Process\Process;
 
+use function assert;
 use function is_dir;
+use function is_string;
 use function sys_get_temp_dir;
 use function uniqid;
 
@@ -24,7 +26,11 @@ final class WorkspaceGitServiceTest extends KernelTestCase
     private string $testRepoPath;
     private WorkspaceGitService $gitService;
     private EntityManagerInterface $entityManager;
-    private string $workspaceRoot;
+
+    /**
+     * @var string
+     */
+    private mixed $workspaceRoot;
 
     protected function setUp(): void
     {
@@ -39,7 +45,9 @@ final class WorkspaceGitServiceTest extends KernelTestCase
         $entityManager       = $container->get(EntityManagerInterface::class);
         $this->entityManager = $entityManager;
 
-        $this->workspaceRoot = $container->getParameter('workspace_mgmt.workspace_root');
+        $workspaceRoot = $container->getParameter('workspace_mgmt.workspace_root');
+        assert(is_string($workspaceRoot));
+        $this->workspaceRoot = $workspaceRoot;
 
         // Create a test git repository
         $this->testRepoPath = sys_get_temp_dir() . '/workspace-git-test-' . uniqid();
@@ -70,11 +78,11 @@ final class WorkspaceGitServiceTest extends KernelTestCase
 
     protected function tearDown(): void
     {
-        parent::tearDown();
-
         if (is_dir($this->testRepoPath)) {
             $this->removeDirectory($this->testRepoPath);
         }
+
+        parent::tearDown();
     }
 
     public function testGetGitInfoReturnsCompleteInformation(): void
@@ -96,7 +104,6 @@ final class WorkspaceGitServiceTest extends KernelTestCase
         self::assertStringContainsString('Implemented the main feature', $firstCommit->body);
         self::assertStringContainsString('Related to issue #123', $firstCommit->body);
         self::assertNotEmpty($firstCommit->hash);
-        self::assertInstanceOf(\DateTimeImmutable::class, $firstCommit->committedAt);
 
         $secondCommit = $gitInfo->recentCommits[1];
         self::assertSame('Initial commit', $secondCommit->message);

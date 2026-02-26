@@ -8,10 +8,13 @@ use App\WorkspaceMgmt\Domain\Entity\Workspace;
 use App\WorkspaceMgmt\Facade\Enum\WorkspaceStatus;
 use App\WorkspaceMgmt\Facade\WorkspaceMgmtFacadeInterface;
 use Doctrine\ORM\EntityManagerInterface;
+use EnterpriseToolingForSymfony\SharedBundle\DateAndTime\Service\DateAndTimeService;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\Process\Process;
 
+use function assert;
 use function is_dir;
+use function is_string;
 use function sys_get_temp_dir;
 use function uniqid;
 
@@ -24,7 +27,11 @@ final class WorkspaceMgmtFacadeGitInfoTest extends KernelTestCase
     private string $testRepoPath;
     private WorkspaceMgmtFacadeInterface $facade;
     private EntityManagerInterface $entityManager;
-    private string $workspaceRoot;
+
+    /**
+     * @var string
+     */
+    private mixed $workspaceRoot;
 
     protected function setUp(): void
     {
@@ -39,7 +46,9 @@ final class WorkspaceMgmtFacadeGitInfoTest extends KernelTestCase
         $entityManager       = $container->get(EntityManagerInterface::class);
         $this->entityManager = $entityManager;
 
-        $this->workspaceRoot = $container->getParameter('workspace_mgmt.workspace_root');
+        $workspaceRoot = $container->getParameter('workspace_mgmt.workspace_root');
+        assert(is_string($workspaceRoot));
+        $this->workspaceRoot = $workspaceRoot;
 
         // Create a test git repository
         $this->testRepoPath = sys_get_temp_dir() . '/facade-git-test-' . uniqid();
@@ -75,11 +84,11 @@ final class WorkspaceMgmtFacadeGitInfoTest extends KernelTestCase
 
     protected function tearDown(): void
     {
-        parent::tearDown();
-
         if (is_dir($this->testRepoPath)) {
             $this->removeDirectory($this->testRepoPath);
         }
+
+        parent::tearDown();
     }
 
     public function testGetGitInfoReturnsCompleteWorkspaceGitInfo(): void
@@ -103,7 +112,6 @@ final class WorkspaceMgmtFacadeGitInfoTest extends KernelTestCase
         self::assertSame('Add documentation', $latestCommit->message);
         self::assertSame('', $latestCommit->body);
         self::assertNotEmpty($latestCommit->hash);
-        self::assertInstanceOf(\DateTimeImmutable::class, $latestCommit->committedAt);
 
         // Check second commit (Add main feature with body)
         $secondCommit = $gitInfo->recentCommits[1];
@@ -184,12 +192,9 @@ final class WorkspaceMgmtFacadeGitInfoTest extends KernelTestCase
         // Act
         $gitInfo = $this->facade->getGitInfo($workspaceId);
 
-        // Assert: All timestamps are valid DateTimeImmutable instances
+        // Assert: All timestamps are recent (within last hour - tests should run fast)
         foreach ($gitInfo->recentCommits as $commit) {
-            self::assertInstanceOf(\DateTimeImmutable::class, $commit->committedAt);
-
-            // Check that timestamp is recent (within last hour - tests should run fast)
-            $now  = new \DateTimeImmutable();
+            $now  = DateAndTimeService::getDateTimeImmutable();
             $diff = $now->getTimestamp() - $commit->committedAt->getTimestamp();
             self::assertLessThan(3600, $diff, 'Commit timestamp should be recent');
         }

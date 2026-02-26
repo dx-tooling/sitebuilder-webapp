@@ -8,6 +8,7 @@ use App\ProjectMgmt\Facade\ProjectMgmtFacadeInterface;
 use App\WorkspaceMgmt\Domain\Entity\Workspace;
 use App\WorkspaceMgmt\Facade\Dto\WorkspaceCommitDto;
 use App\WorkspaceMgmt\Facade\Dto\WorkspaceGitInfoDto;
+use App\WorkspaceMgmt\Infrastructure\Adapter\Dto\RawCommitDto;
 use App\WorkspaceMgmt\Infrastructure\Adapter\GitAdapterInterface;
 use App\WorkspaceMgmt\Infrastructure\Adapter\GitHubAdapterInterface;
 use App\WorkspaceMgmt\Infrastructure\Service\GitHubUrlServiceInterface;
@@ -286,12 +287,16 @@ final class WorkspaceGitService
         $branches      = $this->gitAdapter->getBranches($workspacePath);
 
         $commits = array_map(
-            static fn (array $raw): WorkspaceCommitDto => new WorkspaceCommitDto(
-                $raw['hash'],
-                $raw['subject'],
-                $raw['body'],
-                new DateTimeImmutable($raw['timestamp'])
-            ),
+            static function (RawCommitDto $raw): WorkspaceCommitDto {
+                $committedAt = new DateTimeImmutable($raw->timestamp);
+
+                return new WorkspaceCommitDto(
+                    $raw->hash,
+                    $raw->subject,
+                    $raw->body,
+                    $committedAt
+                );
+            },
             $rawCommits
         );
 
