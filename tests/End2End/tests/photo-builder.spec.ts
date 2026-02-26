@@ -52,8 +52,10 @@ test.describe("photo builder session resumption", () => {
         // 6. Navigate away
         await page.goto("/en/projects");
 
-        // 7. Navigate back to the same photo builder URL
-        await page.goto(photoBuilderUrl!);
+        // 7. Navigate back to the same photo builder URL (cache-bust so we get fresh HTML with existingSessionId)
+        const revisitUrl =
+            photoBuilderUrl! + (photoBuilderUrl!.includes("?") ? "&" : "?") + "_=" + Date.now();
+        await page.goto(revisitUrl);
 
         // 8. "Start Over" buttons are visible (session was resumed)
         await expect(page.getByTestId("photo-builder-page")).toBeVisible();
