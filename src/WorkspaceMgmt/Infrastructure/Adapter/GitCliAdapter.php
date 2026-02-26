@@ -243,7 +243,12 @@ final class GitCliAdapter implements GitAdapterInterface
         $process->setWorkingDirectory($workspacePath);
         $process->setTimeout(self::TIMEOUT_SECONDS);
 
-        $this->runProcess($process, 'Failed to get recent commits');
+        $process->run();
+
+        // Return empty array if git log fails (e.g., no commits yet)
+        if (!$process->isSuccessful()) {
+            return [];
+        }
 
         $output = $process->getOutput();
         if (trim($output) === '') {
@@ -279,7 +284,12 @@ final class GitCliAdapter implements GitAdapterInterface
         $process->setWorkingDirectory($workspacePath);
         $process->setTimeout(self::TIMEOUT_SECONDS);
 
-        $this->runProcess($process, 'Failed to get branches');
+        $process->run();
+
+        // Return empty array if git branch fails (e.g., no commits yet)
+        if (!$process->isSuccessful()) {
+            return [];
+        }
 
         $output = trim($process->getOutput());
         if ($output === '') {
