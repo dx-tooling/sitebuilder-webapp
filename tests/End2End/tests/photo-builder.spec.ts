@@ -58,13 +58,14 @@ test.describe("photo builder session resumption", () => {
 
         // 8. "Start Over" buttons are visible (session was resumed)
         await expect(page.getByTestId("photo-builder-page")).toBeVisible();
-        await expect(page.locator('[data-test-id="photo-builder-start-over-button"]').first()).toBeVisible({
+        await expect(page.getByTestId("photo-builder-start-over-button-main")).toBeVisible({
             timeout: 10_000,
         });
 
         // 9. Click "Start Over" → loading overlay shown, Start Over buttons hidden
-        await page.locator('[data-test-id="photo-builder-start-over-button"]').first().click();
+        await page.getByTestId("photo-builder-start-over-button-main").click();
         await expect(page.getByTestId("photo-builder-loading-overlay")).toBeVisible();
-        await expect(page.locator('[data-test-id="photo-builder-start-over-button"]').first()).toBeHidden();
+        await expect(page.getByTestId("photo-builder-start-over-button-main")).toBeHidden();
+        await expect(page.getByTestId("photo-builder-start-over-button-overlay")).toBeHidden();
     });
 });

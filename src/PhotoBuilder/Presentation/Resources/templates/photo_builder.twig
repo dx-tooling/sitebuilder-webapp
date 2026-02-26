@@ -83,7 +83,7 @@
                     </p>
                     <button {{ stimulus_target('photo-builder', 'startOverButton') }}
                             {{ stimulus_action('photo-builder', 'startOver') }}
-                            data-test-id="photo-builder-start-over-button"
+                            data-test-id="photo-builder-start-over-button-overlay"
                             type="button"
                             class="hidden etfswui-button-secondary text-sm">
                         {{ 'photo_builder.start_over'|trans }}
@@ -182,7 +182,7 @@ For each image, call the deliver_image_prompt tool with:
                                 </button>
                                 <button {{ stimulus_target('photo-builder', 'startOverButton') }}
                                         {{ stimulus_action('photo-builder', 'startOver') }}
-                                        data-test-id="photo-builder-start-over-button"
+                                        data-test-id="photo-builder-start-over-button-main"
                                         type="button"
                                         class="hidden etfswui-button-secondary gap-2">
                                     {{ 'photo_builder.start_over'|trans }}
