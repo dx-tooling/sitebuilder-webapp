@@ -39,11 +39,11 @@ jobs:
                   push: true
                   tags: ${{ env.APP_IMAGE }}
                   cache-from: |
-                    type=gha
-                    type=registry,ref=${{ env.CACHE_REF }}
+                      type=gha
+                      type=registry,ref=${{ env.CACHE_REF }}
                   cache-to: |
-                    type=gha,mode=max
-                    type=registry,ref=${{ env.CACHE_REF }},mode=max
+                      type=gha,mode=max
+                      type=registry,ref=${{ env.CACHE_REF }},mode=max
 
     build-frontend:
         name: Frontend build
