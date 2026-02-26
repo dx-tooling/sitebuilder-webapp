@@ -36,6 +36,9 @@ final class GitCliAdapterTest extends TestCase
         $this->runGitCommand('add .');
         $this->runGitCommand('commit -m "First commit"');
 
+        // Ensure we're on a branch called 'main' (git init might create 'master' or no default branch)
+        $this->runGitCommand('branch -M main');
+
         file_put_contents($this->testRepoPath . '/file2.txt', 'Content 2');
         $this->runGitCommand('add .');
         $this->runGitCommand('commit -m "Second commit" -m "This is the body of the second commit"');
