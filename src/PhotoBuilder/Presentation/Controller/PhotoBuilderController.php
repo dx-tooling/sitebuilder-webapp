@@ -116,7 +116,7 @@ final class PhotoBuilderController extends AbstractController
 
         $effectiveProvider = $project->getEffectivePhotoBuilderLlmModelProvider();
 
-        return $this->render('@photo_builder.presentation/photo_builder.twig', [
+        $response = $this->render('@photo_builder.presentation/photo_builder.twig', [
             'workspace'                     => $workspace,
             'project'                       => $project,
             'pagePath'                      => $pagePath,
@@ -129,6 +129,9 @@ final class PhotoBuilderController extends AbstractController
             'supportsResolutionToggle'      => $effectiveProvider === LlmModelProvider::Google,
             'existingSessionId'             => $existingSession?->getId(),
         ]);
+        $response->headers->set('Cache-Control', 'no-store, no-cache, must-revalidate');
+
+        return $response;
     }
 
     /**
