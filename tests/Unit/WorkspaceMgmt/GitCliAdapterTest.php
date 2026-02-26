@@ -27,7 +27,7 @@ final class GitCliAdapterTest extends TestCase
         $this->testRepoPath = sys_get_temp_dir() . '/git-test-' . uniqid();
         mkdir($this->testRepoPath, 0777, true);
 
-        $this->runGitCommand('init');
+        $this->runGitCommand('init -b main');
         $this->runGitCommand('config user.name "Test User"');
         $this->runGitCommand('config user.email "test@example.com"');
 
@@ -35,9 +35,6 @@ final class GitCliAdapterTest extends TestCase
         file_put_contents($this->testRepoPath . '/file1.txt', 'Content 1');
         $this->runGitCommand('add .');
         $this->runGitCommand('commit -m "First commit"');
-
-        // Ensure we're on a branch called 'main' (git init might create 'master' or no default branch)
-        $this->runGitCommand('branch -M main');
 
         file_put_contents($this->testRepoPath . '/file2.txt', 'Content 2');
         $this->runGitCommand('add .');
