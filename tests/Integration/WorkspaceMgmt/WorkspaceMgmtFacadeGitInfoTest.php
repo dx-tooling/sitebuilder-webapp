@@ -214,14 +214,22 @@ final class WorkspaceMgmtFacadeGitInfoTest extends KernelTestCase
 
         // Move test repo to the workspace root location
         if (!is_dir($this->workspaceRoot)) {
-            mkdir($this->workspaceRoot, 0777, true);
+            $result = mkdir($this->workspaceRoot, 0777, true);
+            if (!$result) {
+                throw new \RuntimeException('Failed to create workspace root directory: ' . $this->workspaceRoot);
+            }
         }
 
         $targetPath = $this->workspaceRoot . '/' . $workspaceId;
         if (is_dir($targetPath)) {
             $this->removeDirectory($targetPath);
         }
-        rename($this->testRepoPath, $targetPath);
+
+        $renameResult = rename($this->testRepoPath, $targetPath);
+        if (!$renameResult) {
+            throw new \RuntimeException('Failed to rename ' . $this->testRepoPath . ' to ' . $targetPath);
+        }
+
         $this->testRepoPath = $targetPath;
 
         return $workspace;
