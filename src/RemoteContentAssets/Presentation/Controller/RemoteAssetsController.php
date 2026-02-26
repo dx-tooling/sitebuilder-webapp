@@ -68,7 +68,10 @@ final class RemoteAssetsController extends AbstractController
             $project->remoteContentAssetsManifestUrls
         );
 
-        return $this->json(['urls' => $urls]);
+        return $this->json([
+            'urls'     => $urls,
+            'revision' => $this->buildUrlsRevision($urls),
+        ]);
     }
 
     /**
@@ -163,5 +166,15 @@ final class RemoteAssetsController extends AbstractController
         } catch (Throwable $e) {
             return $this->json(['error' => 'Upload failed: ' . $e->getMessage()], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
+    }
+
+    /**
+     * @param list<string> $urls
+     */
+    private function buildUrlsRevision(array $urls): string
+    {
+        sort($urls, SORT_STRING);
+
+        return hash('sha256', implode("\n", $urls));
     }
 }

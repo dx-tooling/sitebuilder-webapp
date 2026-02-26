@@ -13,11 +13,22 @@ import { Controller } from "@hotwired/stimulus";
  * - Clickable dropzone to open file dialog (supports multiple files)
  */
 export default class extends Controller {
+    static readonly MANIFEST_WAIT_POLL_INTERVAL_MS: number = 2000;
+    static readonly MANIFEST_WAIT_MAX_ATTEMPTS: number = 30;
+    static BACKGROUND_SYNC_INTERVAL_MS: number = 300000;
+
     static values = {
         fetchUrl: String,
         windowSize: { type: Number, default: 20 },
         addToChatLabel: { type: String, default: "Add to chat" },
         openInNewTabLabel: { type: String, default: "Open in new tab" },
+        uploadProcessingLabel: { type: String, default: "New images are being processed..." },
+        refreshPromptLabel: { type: String, default: "New images are available. Refresh the asset list now?" },
+        uploadProcessingDelayedErrorLabel: {
+            type: String,
+            default: "Upload completed. New images are still processing. Please try again shortly.",
+        },
+        uploadPartialFailureLabel: { type: String, default: "%errorCount% of %total% uploads failed." },
         // Upload configuration (optional - if not set, upload is disabled)
         uploadUrl: { type: String, default: "" },
         uploadCsrfToken: { type: String, default: "" },
@@ -34,6 +45,9 @@ export default class extends Controller {
         "fileInput",
         "uploadProgress",
         "uploadProgressText",
+        "uploadProcessing",
+        "uploadProcessingMessage",
+        "uploadRefreshActions",
         "uploadError",
         "uploadSuccess",
     ];
@@ -42,6 +56,10 @@ export default class extends Controller {
     declare readonly windowSizeValue: number;
     declare readonly addToChatLabelValue: string;
     declare readonly openInNewTabLabelValue: string;
+    declare readonly uploadProcessingLabelValue: string;
+    declare readonly refreshPromptLabelValue: string;
+    declare readonly uploadProcessingDelayedErrorLabelValue: string;
+    declare readonly uploadPartialFailureLabelValue: string;
     declare readonly uploadUrlValue: string;
     declare readonly uploadCsrfTokenValue: string;
     declare readonly workspaceIdValue: string;
@@ -64,6 +82,12 @@ export default class extends Controller {
     declare readonly uploadProgressTarget: HTMLElement;
     declare readonly hasUploadProgressTextTarget: boolean;
     declare readonly uploadProgressTextTarget: HTMLElement;
+    declare readonly hasUploadProcessingTarget: boolean;
+    declare readonly uploadProcessingTarget: HTMLElement;
+    declare readonly hasUploadProcessingMessageTarget: boolean;
+    declare readonly uploadProcessingMessageTarget: HTMLElement;
+    declare readonly hasUploadRefreshActionsTarget: boolean;
+    declare readonly uploadRefreshActionsTarget: HTMLElement;
     declare readonly hasUploadErrorTarget: boolean;
     declare readonly uploadErrorTarget: HTMLElement;
     declare readonly hasUploadSuccessTarget: boolean;
@@ -74,10 +98,40 @@ export default class extends Controller {
     private itemHeight: number = 80;
     private isLoading: boolean = false;
     private isUploading: boolean = false;
+    private isConnected: boolean = false;
+    private hasPendingRefresh: boolean = false;
+    private uploadProcessingMode: "processing" | "refreshPrompt" = "processing";
+    private backgroundSyncTimeoutId: ReturnType<typeof setTimeout> | null = null;
+    private latestManifestRevision: string | null = null;
+    private isBackgroundSyncEnabled: boolean = false;
+    private readonly focusHandler = (): void => {
+        void this.checkForManifestUpdates();
+    };
+    private readonly visibilityChangeHandler = (): void => {
+        if (document.visibilityState === "visible") {
+            void this.checkForManifestUpdates();
+        }
+    };
 
     connect(): void {
-        this.fetchAssets();
+        this.isConnected = true;
+        void this.fetchAssets();
         this.setupDropzone();
+        this.isBackgroundSyncEnabled = this.getBackgroundSyncIntervalMs() > 0;
+        if (this.isBackgroundSyncEnabled) {
+            this.startBackgroundSync();
+            window.addEventListener("focus", this.focusHandler);
+            document.addEventListener("visibilitychange", this.visibilityChangeHandler);
+        }
+    }
+
+    disconnect(): void {
+        this.isConnected = false;
+        this.stopBackgroundSync();
+        if (this.isBackgroundSyncEnabled) {
+            window.removeEventListener("focus", this.focusHandler);
+            document.removeEventListener("visibilitychange", this.visibilityChangeHandler);
+        }
     }
 
     /**
@@ -184,15 +238,17 @@ export default class extends Controller {
         const total = files.length;
         let successCount = 0;
         let errorCount = 0;
+        const uploadedUrls: string[] = [];
 
         for (let i = 0; i < total; i++) {
             this.updateUploadProgressText(i + 1, total);
             this.showUploadStatus("progress");
 
             try {
-                const uploaded = await this.uploadSingleFile(files[i]);
-                if (uploaded) {
+                const uploadedUrl = await this.uploadSingleFile(files[i]);
+                if (uploadedUrl !== null) {
                     successCount++;
+                    uploadedUrls.push(uploadedUrl);
                 } else {
                     errorCount++;
                 }
@@ -201,28 +257,31 @@ export default class extends Controller {
             }
         }
 
-        // Re-fetch the asset list once after all uploads
+        // Wait until uploaded URLs become available via manifest-backed list.
         if (successCount > 0) {
-            await this.fetchAssets();
+            this.showUploadStatus("processing");
+            const waitSucceeded = await this.waitForManifestAvailability(uploadedUrls);
+            if (waitSucceeded) {
+                this.markRefreshAvailable();
+            } else {
+                this.showUploadError(this.uploadProcessingDelayedErrorLabelValue);
+            }
         }
 
-        // Show final status
         if (errorCount > 0 && successCount === 0) {
-            this.showUploadError("Upload failed. Please try again.");
+            this.showUploadError(this.getUploadErrorFallbackLabel());
         } else if (errorCount > 0) {
-            this.showUploadError(`${errorCount} of ${total} uploads failed.`);
-        } else {
-            this.showUploadStatus("success");
-            setTimeout(() => this.showUploadStatus("none"), 3000);
+            this.showUploadError(this.formatUploadPartialFailureLabel(errorCount, total));
         }
 
         this.isUploading = false;
+        this.showRefreshPromptIfPending();
     }
 
     /**
      * Upload a single file to S3. Returns true on success.
      */
-    private async uploadSingleFile(file: File): Promise<boolean> {
+    private async uploadSingleFile(file: File): Promise<string | null> {
         const formData = new FormData();
         formData.append("file", file);
         formData.append("workspace_id", this.workspaceIdValue);
@@ -241,10 +300,10 @@ export default class extends Controller {
         if (data.success && data.url) {
             this.dispatch("uploadComplete", { detail: { url: data.url } });
 
-            return true;
+            return data.url;
         }
 
-        return false;
+        return null;
     }
 
     /**
@@ -265,10 +324,14 @@ export default class extends Controller {
     /**
      * Show upload status indicator.
      */
-    private showUploadStatus(which: "progress" | "success" | "error" | "none"): void {
+    private showUploadStatus(which: "progress" | "processing" | "success" | "error" | "none"): void {
         if (this.hasUploadProgressTarget) {
             this.uploadProgressTarget.classList.toggle("hidden", which !== "progress");
         }
+        if (this.hasUploadProcessingTarget) {
+            this.uploadProcessingTarget.classList.toggle("hidden", which !== "processing");
+        }
+        this.renderUploadProcessingState();
         if (this.hasUploadSuccessTarget) {
             this.uploadSuccessTarget.classList.toggle("hidden", which !== "success");
         }
@@ -289,12 +352,32 @@ export default class extends Controller {
         }
         this.showUploadStatus("error");
         // Auto-hide error message after 5 seconds
-        setTimeout(() => this.showUploadStatus("none"), 5000);
+        setTimeout(() => {
+            this.showUploadStatus("none");
+            this.showRefreshPromptIfPending();
+        }, 5000);
     }
 
-    private async fetchAssets(): Promise<void> {
-        if (this.isLoading || !this.fetchUrlValue) {
+    confirmRefresh(): void {
+        if (!this.hasPendingRefresh) {
             return;
+        }
+
+        this.hasPendingRefresh = false;
+        this.uploadProcessingMode = "processing";
+        this.showUploadStatus("none");
+        void this.reloadAssetsAfterConfirmation();
+    }
+
+    dismissRefresh(): void {
+        this.hasPendingRefresh = false;
+        this.uploadProcessingMode = "processing";
+        this.showUploadStatus("none");
+    }
+
+    private async fetchAssets(): Promise<{ urls: string[]; revision: string } | null> {
+        if (this.isLoading || !this.fetchUrlValue) {
+            return null;
         }
 
         this.isLoading = true;
@@ -309,8 +392,10 @@ export default class extends Controller {
                 throw new Error(`HTTP ${response.status}`);
             }
 
-            const data = (await response.json()) as { urls?: string[] };
-            this.urls = data.urls ?? [];
+            const data = (await response.json()) as { urls?: string[]; revision?: string };
+            const manifestData = this.normalizeManifestData(data);
+            this.urls = manifestData.urls;
+            this.latestManifestRevision = manifestData.revision;
 
             this.showLoading(false);
 
@@ -323,12 +408,208 @@ export default class extends Controller {
                 this.filter();
                 this.showEmpty(this.filteredUrls.length === 0);
             }
+            return manifestData;
         } catch {
             this.showLoading(false);
             this.showEmpty(true);
+            return null;
         } finally {
             this.isLoading = false;
         }
+    }
+
+    private async waitForManifestAvailability(uploadedUrls: string[]): Promise<boolean> {
+        const pendingUrls = new Set(uploadedUrls);
+        const pendingFileNames = new Set(
+            uploadedUrls.map((url) => this.extractFilename(url)).filter((fileName) => fileName !== ""),
+        );
+        if (pendingUrls.size === 0) {
+            return true;
+        }
+
+        const pollIntervalMs = this.getManifestWaitPollIntervalMs();
+        const maxAttempts = this.getManifestWaitMaxAttempts();
+
+        for (let attempt = 0; attempt < maxAttempts; attempt++) {
+            const manifestData = await this.fetchManifestUrlsSilently();
+            if (manifestData !== null) {
+                const manifestUrlSet = new Set(manifestData.urls);
+                const manifestFileNameSet = new Set(
+                    manifestData.urls.map((url) => this.extractFilename(url)).filter((fileName) => fileName !== ""),
+                );
+                pendingUrls.forEach((url) => {
+                    const fileName = this.extractFilename(url);
+                    if (manifestUrlSet.has(url) || (fileName !== "" && manifestFileNameSet.has(fileName))) {
+                        pendingUrls.delete(url);
+                        if (fileName !== "") {
+                            pendingFileNames.delete(fileName);
+                        }
+                    }
+                });
+                if (pendingUrls.size === 0 || pendingFileNames.size === 0) {
+                    return true;
+                }
+            }
+
+            if (attempt < maxAttempts - 1) {
+                await this.sleep(pollIntervalMs);
+            }
+        }
+
+        return false;
+    }
+
+    private async fetchManifestUrlsSilently(): Promise<{ urls: string[]; revision: string } | null> {
+        if (!this.fetchUrlValue) {
+            return null;
+        }
+
+        try {
+            const response = await fetch(this.fetchUrlValue, {
+                headers: { "X-Requested-With": "XMLHttpRequest" },
+            });
+            if (!response.ok) {
+                return null;
+            }
+
+            const data = (await response.json()) as { urls?: string[]; revision?: string };
+            return this.normalizeManifestData(data);
+        } catch {
+            return null;
+        }
+    }
+
+    private startBackgroundSync(): void {
+        const intervalMs = this.getBackgroundSyncIntervalMs();
+        if (intervalMs <= 0) {
+            return;
+        }
+
+        this.stopBackgroundSync();
+        this.scheduleNextBackgroundSync(intervalMs);
+    }
+
+    private stopBackgroundSync(): void {
+        if (this.backgroundSyncTimeoutId !== null) {
+            clearTimeout(this.backgroundSyncTimeoutId);
+            this.backgroundSyncTimeoutId = null;
+        }
+    }
+
+    private scheduleNextBackgroundSync(intervalMs: number): void {
+        if (!this.isConnected) {
+            return;
+        }
+        this.backgroundSyncTimeoutId = setTimeout(() => {
+            void this.runBackgroundSyncTick();
+        }, intervalMs);
+    }
+
+    private async runBackgroundSyncTick(): Promise<void> {
+        await this.checkForManifestUpdates();
+        if (this.isConnected) {
+            this.scheduleNextBackgroundSync(this.getBackgroundSyncIntervalMs());
+        }
+    }
+
+    private async checkForManifestUpdates(): Promise<void> {
+        if (this.isUploading) {
+            return;
+        }
+
+        const currentRevision = this.latestManifestRevision;
+        const manifestData = await this.fetchManifestUrlsSilently();
+        if (manifestData === null) {
+            return;
+        }
+
+        if (currentRevision === null || manifestData.revision !== currentRevision) {
+            this.latestManifestRevision = manifestData.revision;
+            this.markRefreshAvailable();
+        }
+    }
+
+    private markRefreshAvailable(): void {
+        this.hasPendingRefresh = true;
+        this.uploadProcessingMode = "refreshPrompt";
+        this.showRefreshPromptIfPending();
+    }
+
+    private showRefreshPromptIfPending(): void {
+        if (!this.hasPendingRefresh || this.isUploading || this.isUploadErrorVisible()) {
+            return;
+        }
+        this.showUploadStatus("processing");
+    }
+
+    private isUploadErrorVisible(): boolean {
+        return this.hasUploadErrorTarget && !this.uploadErrorTarget.classList.contains("hidden");
+    }
+
+    private renderUploadProcessingState(): void {
+        if (this.hasUploadProcessingMessageTarget) {
+            this.uploadProcessingMessageTarget.textContent =
+                this.uploadProcessingMode === "refreshPrompt"
+                    ? this.refreshPromptLabelValue
+                    : this.uploadProcessingLabelValue;
+        }
+
+        if (this.hasUploadRefreshActionsTarget) {
+            this.uploadRefreshActionsTarget.classList.toggle("hidden", this.uploadProcessingMode !== "refreshPrompt");
+        }
+    }
+
+    private async reloadAssetsAfterConfirmation(): Promise<void> {
+        await this.fetchAssets();
+        this.showUploadStatus("success");
+        setTimeout(() => this.showUploadStatus("none"), 3000);
+    }
+
+    private formatUploadPartialFailureLabel(errorCount: number, total: number): string {
+        return this.uploadPartialFailureLabelValue
+            .replaceAll("%errorCount%", String(errorCount))
+            .replaceAll("%total%", String(total));
+    }
+
+    private getUploadErrorFallbackLabel(): string {
+        if (this.hasUploadErrorTarget) {
+            const textEl = this.uploadErrorTarget.querySelector("[data-error-text]");
+            if (textEl && textEl.textContent !== null && textEl.textContent !== "") {
+                return textEl.textContent;
+            }
+        }
+        return "Upload failed. Please try again.";
+    }
+
+    private normalizeManifestData(data: { urls?: string[]; revision?: string }): { urls: string[]; revision: string } {
+        const urls = data.urls ?? [];
+        const revision = data.revision ?? this.computeManifestRevision(urls);
+
+        return { urls, revision };
+    }
+
+    private computeManifestRevision(urls: string[]): string {
+        const normalized = [...urls].sort((a, b) => a.localeCompare(b));
+        return normalized.join("|");
+    }
+
+    private getBackgroundSyncIntervalMs(): number {
+        const ctor = this.constructor as typeof Controller & { BACKGROUND_SYNC_INTERVAL_MS?: number };
+        return ctor.BACKGROUND_SYNC_INTERVAL_MS ?? 30000;
+    }
+
+    private getManifestWaitPollIntervalMs(): number {
+        const ctor = this.constructor as typeof Controller & { MANIFEST_WAIT_POLL_INTERVAL_MS?: number };
+        return ctor.MANIFEST_WAIT_POLL_INTERVAL_MS ?? 2000;
+    }
+
+    private getManifestWaitMaxAttempts(): number {
+        const ctor = this.constructor as typeof Controller & { MANIFEST_WAIT_MAX_ATTEMPTS?: number };
+        return ctor.MANIFEST_WAIT_MAX_ATTEMPTS ?? 30;
+    }
+
+    private async sleep(ms: number): Promise<void> {
+        await new Promise((resolve) => setTimeout(resolve, ms));
     }
 
     private showLoading(show: boolean): void {
