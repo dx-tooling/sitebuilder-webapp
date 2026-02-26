@@ -9,8 +9,8 @@
         "ext-ctype": "*",
         "ext-iconv": "*",
         "ext-mbstring": "*",
-        "aws/aws-sdk-php": "^3.369.34",
-        "doctrine/dbal": "^4.4.1",
+        "aws/aws-sdk-php": "^3.371.1",
+        "doctrine/dbal": "^4.4.2",
         "doctrine/doctrine-bundle": "^3.2.2",
         "doctrine/doctrine-migrations-bundle": "^3.7.0",
         "doctrine/orm": "^3.6.2",
@@ -18,7 +18,7 @@
         "enterprise-tooling-for-symfony/shared-bundle": "dev-main",
         "enterprise-tooling-for-symfony/webui-bundle": "dev-main",
         "googleads/google-ads-php": "^25.0",
-        "neuron-core/neuron-ai": "^2.12.4",
+        "neuron-core/neuron-ai": "^2.13.0",
         "orhanerday/open-ai": "^5.3",
         "phpdocumentor/reflection-docblock": "^5.6.6",
         "sensiolabs/minify-bundle": "^0.9.5",
@@ -60,8 +60,8 @@
         "twig/twig": "^2.12|^3.23.0"
     },
     "require-dev": {
-        "pestphp/pest": "^4.3.2",
-        "phpunit/phpunit": "^12.5.8"
+        "pestphp/pest": "^4.4.1",
+        "phpunit/phpunit": "^12.5.12"
     },
     "config": {
         "allow-plugins": {
