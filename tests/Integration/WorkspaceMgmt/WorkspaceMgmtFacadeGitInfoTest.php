@@ -54,7 +54,7 @@ final class WorkspaceMgmtFacadeGitInfoTest extends KernelTestCase
         $this->testRepoPath = sys_get_temp_dir() . '/facade-git-test-' . uniqid();
         mkdir($this->testRepoPath, 0777, true);
 
-        $this->runGitCommand('init');
+        $this->runGitCommand('init -b main');
         $this->runGitCommand('config user.name "Test User"');
         $this->runGitCommand('config user.email "test@example.com"');
 
