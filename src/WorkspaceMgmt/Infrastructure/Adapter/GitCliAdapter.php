@@ -255,8 +255,8 @@ final class GitCliAdapter implements GitAdapterInterface
             return [];
         }
 
-        // Split by double NUL (end of each commit record)
-        $records = explode("\x00\x00", rtrim($output, "\x00"));
+        // Split by NUL+newline (git log adds newlines between commits by default)
+        $records = explode("\x00\n", rtrim($output, "\x00\n"));
         $commits = [];
 
         foreach ($records as $record) {
