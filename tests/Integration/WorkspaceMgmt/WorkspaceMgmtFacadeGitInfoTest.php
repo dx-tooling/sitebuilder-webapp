@@ -213,6 +213,10 @@ final class WorkspaceMgmtFacadeGitInfoTest extends KernelTestCase
         self::assertNotNull($workspaceId);
 
         // Move test repo to the workspace root location
+        if (!is_dir($this->workspaceRoot)) {
+            mkdir($this->workspaceRoot, 0777, true);
+        }
+
         $targetPath = $this->workspaceRoot . '/' . $workspaceId;
         if (is_dir($targetPath)) {
             $this->removeDirectory($targetPath);
