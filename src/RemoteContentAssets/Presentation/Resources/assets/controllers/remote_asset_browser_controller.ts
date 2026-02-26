@@ -104,6 +104,7 @@ export default class extends Controller {
     private backgroundSyncTimeoutId: ReturnType<typeof setTimeout> | null = null;
     private latestManifestRevision: string | null = null;
     private isBackgroundSyncEnabled: boolean = false;
+    private uploadErrorFallbackLabel: string = "Upload failed. Please try again.";
     private readonly focusHandler = (): void => {
         void this.checkForManifestUpdates();
     };
@@ -115,6 +116,13 @@ export default class extends Controller {
 
     connect(): void {
         this.isConnected = true;
+        if (this.hasUploadErrorTarget) {
+            const textEl = this.uploadErrorTarget.querySelector("[data-error-text]");
+            const initialText = textEl?.textContent?.trim();
+            if (initialText) {
+                this.uploadErrorFallbackLabel = initialText;
+            }
+        }
         void this.fetchAssets();
         this.setupDropzone();
         this.isBackgroundSyncEnabled = this.getBackgroundSyncIntervalMs() > 0;
@@ -513,7 +521,7 @@ export default class extends Controller {
     }
 
     private async checkForManifestUpdates(): Promise<void> {
-        if (this.isUploading) {
+        if (this.isUploading || this.isLoading) {
             return;
         }
 
@@ -560,7 +568,9 @@ export default class extends Controller {
     }
 
     private async reloadAssetsAfterConfirmation(): Promise<void> {
-        await this.fetchAssets();
+        if ((await this.fetchAssets()) === null) {
+            return;
+        }
         this.showUploadStatus("success");
         setTimeout(() => this.showUploadStatus("none"), 3000);
     }
@@ -572,13 +582,7 @@ export default class extends Controller {
     }
 
     private getUploadErrorFallbackLabel(): string {
-        if (this.hasUploadErrorTarget) {
-            const textEl = this.uploadErrorTarget.querySelector("[data-error-text]");
-            if (textEl && textEl.textContent !== null && textEl.textContent !== "") {
-                return textEl.textContent;
-            }
-        }
-        return "Upload failed. Please try again.";
+        return this.uploadErrorFallbackLabel;
     }
 
     private normalizeManifestData(data: { urls?: string[]; revision?: string }): { urls: string[]; revision: string } {
