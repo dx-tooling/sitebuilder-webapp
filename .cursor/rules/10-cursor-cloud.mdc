@@ -1,0 +1,37 @@
+---
+description: "Rules for handling this project in a Cursor Cloud environment."
+alwaysApply: false
+---
+
+
+## Cursor Cloud specific instructions
+
+### Architecture
+
+SiteBuilder is a Symfony 7.4 / PHP 8.4 web app with a TypeScript/Stimulus frontend. It runs inside Docker containers (app, mariadb, nginx, messenger). See `docs/archbook.md` for vertical architecture details and `docs/frontendbook.md` for frontend conventions.
+
+### Running the dev environment
+
+All commands go through `mise run` (see `.cursor/rules/07-workflow.mdc` for the full task list). Key commands:
+
+- `mise run setup` — idempotent full bootstrap (builds containers, installs deps, migrates DB, builds frontend, runs quality + tests)
+- `mise run quality` — lint/format checks (required before commit)
+- `mise run tests` — PHP tests (architecture, unit, integration, application)
+- `mise run tests:frontend` — Vitest frontend tests
+- `mise run frontend` — build frontend assets (Tailwind + TypeScript via SWC)
+
+### Docker-in-Docker (Cloud VM specific)
+
+The Cloud VM is itself a container inside a Firecracker VM. Docker must be installed with `fuse-overlayfs` storage driver and `iptables-legacy`. After installing Docker, run `sudo chmod 666 /var/run/docker.sock` so commands work without `sudo`. The update script handles starting `dockerd` if it's not already running.
+
+### Composer private repositories
+
+The `composer.json` references private GitHub VCS repos (`dx-tooling/etfs-*`). Composer needs a GitHub token: pass it via `COMPOSER_AUTH` env var or run `composer config --global github-oauth.github.com "$(gh auth token)"` inside the app container before `composer install`. The update script handles this automatically.
+
+### Nginx port
+
+The nginx container binds to a random host port (`127.0.0.1::80`). Find the assigned port with `docker compose ps` and look at the nginx PORTS column.
+
+### `.env.local`
+
+Must contain `HOST_PROJECT_PATH="/workspace"`. The setup script creates this if missing. This value is used by the messenger service for Docker-in-Docker volume mounts (not critical for basic dev).
