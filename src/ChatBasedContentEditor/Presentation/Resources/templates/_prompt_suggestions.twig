@@ -31,9 +31,12 @@
 
     {# Suggestions list #}
     <div {{ stimulus_target('prompt-suggestions', 'suggestionList') }}
+         id="prompt-suggestions-list-{{ conversation.id }}"
          class="flex flex-col gap-2">
         {% for suggestion in promptSuggestions %}
-            <div class="group flex items-start gap-1 {{ loop.index > 3 ? 'hidden' : '' }}" data-index="{{ loop.index0 }}">
+            <div {{ stimulus_target('prompt-suggestions', 'suggestionRow') }}
+                 class="group flex items-start gap-1 {{ loop.index > 3 ? 'hidden' : '' }}"
+                 data-index="{{ loop.index0 }}">
                 <button type="button"
                         {{ stimulus_target('prompt-suggestions', 'suggestion') }}
                         data-action="click->prompt-suggestions#insert mouseenter->prompt-suggestions#hoverStart mouseleave->prompt-suggestions#hoverEnd"
@@ -72,12 +75,16 @@
         <button type="button"
                 {{ stimulus_target('prompt-suggestions', 'expandButton') }}
                 {{ stimulus_action('prompt-suggestions', 'expand', 'click') }}
+                aria-controls="prompt-suggestions-list-{{ conversation.id }}"
+                aria-expanded="false"
                 class="text-xs text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 hover:underline">
             {{ 'editor.show_more_suggestions'|trans({'%count%': promptSuggestions|length - 3}) }}
         </button>
         <button type="button"
                 {{ stimulus_target('prompt-suggestions', 'collapseButton') }}
                 {{ stimulus_action('prompt-suggestions', 'collapse', 'click') }}
+                aria-controls="prompt-suggestions-list-{{ conversation.id }}"
+                aria-expanded="false"
                 class="hidden text-xs text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 hover:underline">
             {{ 'editor.hide_suggestions'|trans }}
         </button>
