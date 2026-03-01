@@ -79,6 +79,33 @@ final class ProjectService
         return $project;
     }
 
+    public function cloneProject(Project $sourceProject, string $name): Project
+    {
+        return $this->create(
+            $sourceProject->getOrganizationId(),
+            $name,
+            $sourceProject->getGitUrl(),
+            $sourceProject->getGithubToken(),
+            $sourceProject->getContentEditingLlmModelProvider(),
+            $sourceProject->getContentEditingLlmModelProviderApiKey(),
+            $sourceProject->getProjectType(),
+            $sourceProject->getAgentImage(),
+            $sourceProject->getAgentBackgroundInstructions(),
+            $sourceProject->getAgentStepInstructions(),
+            $sourceProject->getAgentOutputInstructions(),
+            $sourceProject->getRemoteContentAssetsManifestUrls(),
+            $sourceProject->getS3BucketName(),
+            $sourceProject->getS3Region(),
+            $sourceProject->getS3AccessKeyId(),
+            $sourceProject->getS3SecretAccessKey(),
+            $sourceProject->getS3IamRoleArn(),
+            $sourceProject->getS3KeyPrefix(),
+            $sourceProject->isKeysVisible(),
+            $sourceProject->getPhotoBuilderLlmModelProvider(),
+            $sourceProject->getPhotoBuilderLlmModelProviderApiKey(),
+        );
+    }
+
     /**
      * @param list<string>|null $remoteContentAssetsManifestUrls
      */

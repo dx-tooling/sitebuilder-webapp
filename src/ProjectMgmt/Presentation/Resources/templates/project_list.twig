@@ -114,6 +114,11 @@
                                    class="inline-flex items-center px-3 py-1.5 rounded-md border border-dark-300 dark:border-dark-600 text-dark-700 dark:text-dark-300 text-sm font-medium hover:bg-dark-100 dark:hover:bg-dark-700">
                                     {{ 'project.list.edit_details'|trans }}
                                 </a>
+                                <a href="{{ path('project_mgmt.presentation.clone', { id: item.project.id }) }}"
+                                   data-test-class="project-list-clone-link"
+                                   class="inline-flex items-center px-3 py-1.5 rounded-md border border-dark-300 dark:border-dark-600 text-dark-700 dark:text-dark-300 text-sm font-medium hover:bg-dark-100 dark:hover:bg-dark-700">
+                                    {{ 'project.list.clone_project'|trans }}
+                                </a>
                                 {% if item.workspace %}
                                     <form action="{{ path('project_mgmt.presentation.reset_workspace', { id: item.project.id }) }}"
                                           method="post"

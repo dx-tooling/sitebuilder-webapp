@@ -77,6 +77,7 @@ project:
         view_conversation: "Konversation ansehen"
         view_conversation_for_review: "Konversation wg. Review ansehen"
         edit_details: "Details bearbeiten"
+        clone_project: "Projekt klonen"
         reset_work_area: "Arbeitsbereich zurücksetzen"
         reset_confirm: "Arbeitsbereich zurücksetzen? Dies beendet alle aktiven Sitzungen und erstellt beim nächsten Mal einen neuen Arbeitsbereich."
         delete_confirm: "Dieses Projekt löschen? Es wird aus der Liste entfernt."
@@ -86,6 +87,15 @@ project:
         restore: "Wiederherstellen"
         delete_permanently: "Endgültig löschen"
         delete_permanently_confirm: "Dieses Projekt endgültig löschen? Diese Aktion kann nicht rückgängig gemacht werden und entfernt alle zugehörigen Daten."
+    clone:
+        title: "Projekt klonen"
+        heading: "Projekt klonen"
+        description: 'Erstellen Sie ein neues Projekt, indem Sie alle Einstellungen von "%name%" übernehmen.'
+        default_name: "Kopie von %name%"
+        project_name: "Neuer Projektname"
+        project_name_placeholder: "Kopie von Meine Website"
+        source_project: "Quellprojekt:"
+        submit: "Projekt klonen"
     form:
         title_add: "Projekt hinzufügen"
         title_edit: "Projekt bearbeiten"
@@ -377,6 +387,7 @@ flash:
     error:
         invalid_csrf: "Ungültiges CSRF-Token."
         all_fields_required: "Alle Felder sind erforderlich."
+        project_clone_name_required: "Bitte geben Sie einen Namen für das geklonte Projekt ein."
         select_llm_provider: "Bitte wählen Sie einen LLM-Modellanbieter."
         invalid_docker_image: "Ungültiges Docker-Image-Format. Erwartetes Format: name:tag"
         no_workspace: "Für dieses Projekt existiert kein Arbeitsbereich."
@@ -393,6 +404,7 @@ flash:
         workspace_busy: "%email% arbeitet gerade an diesem Arbeitsbereich."
     success:
         project_created: "Projekt erfolgreich erstellt."
+        project_cloned: 'Projekt "%name%" erfolgreich geklont.'
         project_updated: "Projekt erfolgreich aktualisiert."
         project_deleted: 'Projekt "%name%" erfolgreich gelöscht.'
         project_permanently_deleted: 'Projekt "%name%" endgültig gelöscht.'
