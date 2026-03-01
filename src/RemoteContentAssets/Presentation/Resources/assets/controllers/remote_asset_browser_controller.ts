@@ -567,8 +567,8 @@ export default class extends Controller {
 
     private formatUploadPartialFailureLabel(errorCount: number, total: number): string {
         return this.uploadPartialFailureLabelValue
-            .replaceAll("%errorCount%", String(errorCount))
-            .replaceAll("%total%", String(total));
+            .replace(/%errorCount%/g, String(errorCount))
+            .replace(/%total%/g, String(total));
     }
 
     private getUploadErrorFallbackLabel(): string {
