@@ -14,6 +14,9 @@ describe("PromptSuggestionsController", () => {
         formTitle: HTMLElement;
         formError: HTMLElement;
         deleteModal: HTMLElement;
+        searchInput: HTMLInputElement;
+        clearSearchButton: HTMLButtonElement;
+        noResults: HTMLElement;
     }
 
     const createController = (): ControllerFixture => {
@@ -33,6 +36,7 @@ describe("PromptSuggestionsController", () => {
 
             const btn = document.createElement("button");
             btn.dataset.text = `Suggestion ${i + 1}`;
+            btn.dataset.promptSuggestionsTarget = "suggestion";
             suggestionButtons.push(btn);
 
             const actions = document.createElement("div");
@@ -60,6 +64,12 @@ describe("PromptSuggestionsController", () => {
         formError.classList.add("hidden");
         const deleteModal = document.createElement("div");
         deleteModal.classList.add("hidden");
+        const searchInput = document.createElement("input");
+        searchInput.type = "text";
+        const clearSearchButton = document.createElement("button");
+        clearSearchButton.classList.add("hidden");
+        const noResults = document.createElement("div");
+        noResults.classList.add("hidden");
 
         // Set up controller state
         const state = controller as unknown as {
@@ -84,6 +94,12 @@ describe("PromptSuggestionsController", () => {
             formErrorTarget: HTMLElement;
             hasDeleteModalTarget: boolean;
             deleteModalTarget: HTMLElement;
+            hasSearchInputTarget: boolean;
+            searchInputTarget: HTMLInputElement;
+            hasClearSearchButtonTarget: boolean;
+            clearSearchButtonTarget: HTMLButtonElement;
+            hasNoResultsTarget: boolean;
+            noResultsTarget: HTMLElement;
             createUrlValue: string;
             updateUrlTemplateValue: string;
             deleteUrlTemplateValue: string;
@@ -116,6 +132,12 @@ describe("PromptSuggestionsController", () => {
         state.formErrorTarget = formError;
         state.hasDeleteModalTarget = true;
         state.deleteModalTarget = deleteModal;
+        state.hasSearchInputTarget = true;
+        state.searchInputTarget = searchInput;
+        state.hasClearSearchButtonTarget = true;
+        state.clearSearchButtonTarget = clearSearchButton;
+        state.hasNoResultsTarget = true;
+        state.noResultsTarget = noResults;
         state.createUrlValue = "/conversation/123/prompt-suggestions";
         state.updateUrlTemplateValue = "/conversation/123/prompt-suggestions/99999";
         state.deleteUrlTemplateValue = "/conversation/123/prompt-suggestions/99999";
@@ -138,6 +160,9 @@ describe("PromptSuggestionsController", () => {
             formTitle,
             formError,
             deleteModal,
+            searchInput,
+            clearSearchButton,
+            noResults,
         };
     };
 
@@ -253,6 +278,91 @@ describe("PromptSuggestionsController", () => {
 
             expect(expandButton.classList.contains("hidden")).toBe(false);
             expect(collapseButton.classList.contains("hidden")).toBe(true);
+        });
+    });
+
+    describe("search functionality", () => {
+        it("filters suggestions in real time with case-insensitive matching", () => {
+            const { controller, suggestionButtons, searchInput, clearSearchButton, noResults } = createController();
+
+            suggestionButtons[0].dataset.text = "Alpha prompt";
+            suggestionButtons[1].dataset.text = "beta idea";
+            suggestionButtons[2].dataset.text = "Gamma text";
+            suggestionButtons[3].dataset.text = "Delta note";
+            suggestionButtons[4].dataset.text = "Epsilon hint";
+
+            searchInput.value = "BeTa";
+            controller.handleSearchInput();
+
+            const rows = suggestionButtons.map((btn) => btn.closest("[data-index]") as HTMLElement);
+            expect(rows[0].classList.contains("hidden")).toBe(true);
+            expect(rows[1].classList.contains("hidden")).toBe(false);
+            expect(rows[2].classList.contains("hidden")).toBe(true);
+            expect(clearSearchButton.classList.contains("hidden")).toBe(false);
+            expect(noResults.classList.contains("hidden")).toBe(true);
+
+            const mark = suggestionButtons[1].querySelector("mark");
+            expect(mark?.textContent?.toLowerCase()).toBe("beta");
+        });
+
+        it("shows no-results state when nothing matches", () => {
+            const { controller, suggestionButtons, searchInput, noResults, expandCollapseWrapper } = createController();
+
+            searchInput.value = "does-not-match";
+            controller.handleSearchInput();
+
+            suggestionButtons.forEach((btn) => {
+                const row = btn.closest("[data-index]") as HTMLElement;
+                expect(row.classList.contains("hidden")).toBe(true);
+            });
+            expect(noResults.classList.contains("hidden")).toBe(false);
+            expect(expandCollapseWrapper.classList.contains("hidden")).toBe(true);
+        });
+
+        it("clearSearch resets input and restores collapsed default list", () => {
+            const { controller, suggestionButtons, searchInput, clearSearchButton, noResults, expandCollapseWrapper } =
+                createController();
+
+            searchInput.value = "Suggestion";
+            controller.handleSearchInput();
+            controller.clearSearch();
+
+            const rows = suggestionButtons.map((btn) => btn.closest("[data-index]") as HTMLElement);
+            expect(searchInput.value).toBe("");
+            expect(rows[0].classList.contains("hidden")).toBe(false);
+            expect(rows[1].classList.contains("hidden")).toBe(false);
+            expect(rows[2].classList.contains("hidden")).toBe(false);
+            expect(rows[3].classList.contains("hidden")).toBe(true);
+            expect(rows[4].classList.contains("hidden")).toBe(true);
+            expect(clearSearchButton.classList.contains("hidden")).toBe(true);
+            expect(noResults.classList.contains("hidden")).toBe(true);
+            expect(expandCollapseWrapper.classList.contains("hidden")).toBe(false);
+        });
+
+        it("highlights all query occurrences in matching suggestions", () => {
+            const { controller, suggestionList, searchInput } = createController();
+
+            controller.refreshSuggestionsList(["Alpha alpha ALPHA"]);
+            searchInput.value = "alpha";
+            controller.handleSearchInput();
+
+            const marks = suggestionList.querySelectorAll("mark");
+            expect(marks.length).toBe(3);
+        });
+
+        it("keeps active filtering after refreshing suggestions", () => {
+            const { controller, suggestionList, searchInput, noResults } = createController();
+
+            searchInput.value = "alpha";
+            controller.handleSearchInput();
+            controller.refreshSuggestionsList(["Alpha one", "Beta two", "Another ALPHA"]);
+
+            const rows = Array.from(suggestionList.children) as HTMLElement[];
+            expect(rows[0].classList.contains("hidden")).toBe(false);
+            expect(rows[1].classList.contains("hidden")).toBe(true);
+            expect(rows[2].classList.contains("hidden")).toBe(false);
+            expect(noResults.classList.contains("hidden")).toBe(true);
+            expect(suggestionList.querySelectorAll("mark").length).toBe(2);
         });
     });
 
