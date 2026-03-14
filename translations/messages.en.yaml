@@ -372,6 +372,15 @@ workflow_docs:
         manual_2: "Notifying SiteBuilder when a PR is merged (reviewer action)"
         manual_3: "Closing orphaned PRs after workspace reset"
 
+# Authentication greetings
+auth:
+    greeting:
+        1: "Welcome back! Your merge conflicts missed you."
+        2: "Authentication successful. Coffee level: production-ready."
+        3: "You are now logged in. May your tests stay green."
+        4: "Access granted. Your stack traces are on vacation."
+        5: "Session established. The CI pipeline salutes you."
+
 # Flash messages
 flash:
     error:
