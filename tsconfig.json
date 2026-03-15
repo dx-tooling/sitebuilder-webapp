@@ -2,7 +2,7 @@
     "compilerOptions": {
         "noEmit": true,
         "allowImportingTsExtensions": true,
-        "lib": ["dom", "es2020"],
+        "lib": ["dom", "es2021"],
         "types": ["vitest/globals", "node"],
         "baseUrl": ".",
         "paths": {
