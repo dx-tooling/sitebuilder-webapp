@@ -77,6 +77,7 @@ project:
         view_conversation: "View conversation"
         view_conversation_for_review: "Review conversation"
         edit_details: "Edit details"
+        clone_project: "Clone project"
         reset_work_area: "Reset work area"
         reset_confirm: "Reset this work area? This will end any active sessions and create a fresh work area next time."
         delete_confirm: "Delete this project? It will be removed from the list."
@@ -86,6 +87,15 @@ project:
         restore: "Restore"
         delete_permanently: "Delete permanently"
         delete_permanently_confirm: "Permanently delete this project? This action cannot be undone and will remove all associated data."
+    clone:
+        title: "Clone project"
+        heading: "Clone project"
+        description: 'Create a new project by copying all settings from "%name%".'
+        default_name: "Copy of %name%"
+        project_name: "New project name"
+        project_name_placeholder: "Copy of My Website"
+        source_project: "Source project:"
+        submit: "Clone project"
     form:
         title_add: "Add project"
         title_edit: "Edit project"
@@ -377,6 +387,7 @@ flash:
     error:
         invalid_csrf: "Invalid CSRF token."
         all_fields_required: "All fields are required."
+        project_clone_name_required: "Please enter a name for the cloned project."
         select_llm_provider: "Please select an LLM model provider."
         invalid_docker_image: "Invalid Docker image format. Expected format: name:tag"
         no_workspace: "No workspace exists for this project."
@@ -393,6 +404,7 @@ flash:
         workspace_busy: "%email% is currently working on this workspace."
     success:
         project_created: "Project created successfully."
+        project_cloned: 'Project "%name%" cloned successfully.'
         project_updated: "Project updated successfully."
         project_deleted: 'Project "%name%" deleted successfully.'
         project_permanently_deleted: 'Project "%name%" permanently deleted.'

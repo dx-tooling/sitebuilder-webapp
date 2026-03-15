@@ -8,6 +8,7 @@ use App\Account\Facade\AccountFacadeInterface;
 use App\ChatBasedContentEditor\Facade\ChatBasedContentEditorFacadeInterface;
 use App\LlmContentEditor\Facade\Enum\LlmModelProvider;
 use App\LlmContentEditor\Facade\LlmContentEditorFacadeInterface;
+use App\ProjectMgmt\Domain\Entity\Project;
 use App\ProjectMgmt\Domain\Service\ProjectService;
 use App\ProjectMgmt\Facade\Dto\ExistingLlmApiKeyDto;
 use App\ProjectMgmt\Facade\Enum\ProjectType;
@@ -229,6 +230,65 @@ final class ProjectController extends AbstractController
             $photoBuilderApiKey,
         );
         $this->addFlash('success', $this->translator->trans('flash.success.project_created'));
+
+        return $this->redirectToRoute('project_mgmt.presentation.list');
+    }
+
+    #[Route(
+        path: '/projects/{id}/clone',
+        name: 'project_mgmt.presentation.clone',
+        methods: [Request::METHOD_GET],
+        requirements: ['id' => '[a-f0-9-]{36}']
+    )]
+    public function showCloneForm(string $id): Response
+    {
+        $organizationId = $this->getActiveOrganizationId();
+        if ($organizationId === null) {
+            $this->addFlash('error', $this->translator->trans('flash.error.no_organization'));
+
+            return $this->redirectToRoute('account.presentation.dashboard');
+        }
+
+        $sourceProject = $this->getAccessibleProjectOrThrowNotFound($id, $organizationId);
+
+        return $this->render('@project_mgmt.presentation/project_clone_form.twig', [
+            'sourceProject'        => $sourceProject,
+            'suggestedProjectName' => $this->buildCloneProjectName($sourceProject->getName()),
+        ]);
+    }
+
+    #[Route(
+        path: '/projects/{id}/clone',
+        name: 'project_mgmt.presentation.clone_submit',
+        methods: [Request::METHOD_POST],
+        requirements: ['id' => '[a-f0-9-]{36}']
+    )]
+    public function cloneSubmit(string $id, Request $request): Response
+    {
+        $organizationId = $this->getActiveOrganizationId();
+        if ($organizationId === null) {
+            $this->addFlash('error', $this->translator->trans('flash.error.no_organization'));
+
+            return $this->redirectToRoute('account.presentation.dashboard');
+        }
+
+        $sourceProject = $this->getAccessibleProjectOrThrowNotFound($id, $organizationId);
+
+        if (!$this->isCsrfTokenValid('project_clone_' . $id, $request->request->getString('_csrf_token'))) {
+            $this->addFlash('error', $this->translator->trans('flash.error.invalid_csrf'));
+
+            return $this->redirectToRoute('project_mgmt.presentation.clone', ['id' => $id]);
+        }
+
+        $name = trim($request->request->getString('name'));
+        if ($name === '') {
+            $this->addFlash('error', $this->translator->trans('flash.error.project_clone_name_required'));
+
+            return $this->redirectToRoute('project_mgmt.presentation.clone', ['id' => $id]);
+        }
+
+        $clonedProject = $this->projectService->cloneProject($sourceProject, $name);
+        $this->addFlash('success', $this->translator->trans('flash.success.project_cloned', ['%name%' => $clonedProject->getName()]));
 
         return $this->redirectToRoute('project_mgmt.presentation.list');
     }
@@ -685,6 +745,22 @@ final class ProjectController extends AbstractController
     private function nullIfEmpty(string $value): ?string
     {
         return $value === '' ? null : $value;
+    }
+
+    private function buildCloneProjectName(string $sourceProjectName): string
+    {
+        return $this->translator->trans('project.clone.default_name', ['%name%' => $sourceProjectName]);
+    }
+
+    private function getAccessibleProjectOrThrowNotFound(string $projectId, string $organizationId): Project
+    {
+        $project = $this->projectService->findById($projectId);
+
+        if ($project === null || $project->isDeleted() || $project->getOrganizationId() !== $organizationId) {
+            throw $this->createNotFoundException('Project not found.');
+        }
+
+        return $project;
     }
 
     /**
