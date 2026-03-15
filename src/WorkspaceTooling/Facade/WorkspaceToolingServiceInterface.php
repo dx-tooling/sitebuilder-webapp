@@ -87,4 +87,14 @@ interface WorkspaceToolingServiceInterface extends BaseWorkspaceToolingFacadeInt
      * @return string the build output
      */
     public function runBuildInWorkspace(string $workspacePath, string $agentImage): string;
+
+    /**
+     * Get git context information formatted for the agent's system prompt.
+     *
+     * Returns a formatted string with current branch, recent commits (with hash, subject, body, timestamp),
+     * and all local branches. Returns empty string if no git info is available.
+     *
+     * @return string formatted git context, or empty string if not available
+     */
+    public function getGitContextInfo(): string;
 }

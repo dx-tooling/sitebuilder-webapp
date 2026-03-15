@@ -70,6 +70,11 @@ class ContentEditorAgent extends BaseCodingAgent
             $base .= "\n\nWORKING FOLDER (use for all path-based tools): " . $this->agentConfig->workingFolderPath;
         }
 
+        $gitContextInfo = $this->sitebuilderFacade->getGitContextInfo();
+        if ($gitContextInfo !== '') {
+            $base .= "\n\n" . $gitContextInfo;
+        }
+
         $history = $this->resolveChatHistory();
         if ($history instanceof TurnActivityProviderInterface) {
             $summary = $history->getTurnActivitySummary();

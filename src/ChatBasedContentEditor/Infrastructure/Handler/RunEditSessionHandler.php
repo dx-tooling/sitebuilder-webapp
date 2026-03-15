@@ -101,6 +101,18 @@ final readonly class RunEditSessionHandler
                 $project->remoteContentAssetsManifestUrls
             );
 
+            // Set git context info for the agent
+            try {
+                $gitInfo = $this->workspaceMgmtFacade->getGitInfo($conversation->getWorkspaceId());
+                $this->executionContext->setGitInfo($gitInfo);
+            } catch (Throwable $e) {
+                // Log but don't fail the session - git info is nice-to-have
+                $this->logger->debug('Failed to get git info for agent', [
+                    'workspaceId' => $conversation->getWorkspaceId(),
+                    'error'       => $e->getMessage(),
+                ]);
+            }
+
             // Build agent configuration from project settings (#79).
             $agentConfig = new AgentConfigDto(
                 $project->agentBackgroundInstructions,
