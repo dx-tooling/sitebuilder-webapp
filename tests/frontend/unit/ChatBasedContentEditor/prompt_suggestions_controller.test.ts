@@ -1,10 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { Application } from "@hotwired/stimulus";
 import PromptSuggestionsController from "../../../../src/ChatBasedContentEditor/Presentation/Resources/assets/controllers/prompt_suggestions_controller.ts";
 
 describe("PromptSuggestionsController", () => {
     interface ControllerFixture {
         controller: PromptSuggestionsController;
         suggestionButtons: HTMLButtonElement[];
+        suggestionRows: HTMLElement[];
         expandButton: HTMLButtonElement;
         collapseButton: HTMLButtonElement;
         expandCollapseWrapper: HTMLElement;
@@ -22,9 +24,11 @@ describe("PromptSuggestionsController", () => {
         // Create suggestion buttons wrapped in row divs
         const suggestionList = document.createElement("div");
         const suggestionButtons: HTMLButtonElement[] = [];
+        const suggestionRows: HTMLElement[] = [];
         for (let i = 0; i < 5; i++) {
             const row = document.createElement("div");
             row.dataset.index = String(i);
+            row.dataset.promptSuggestionsTarget = "suggestionRow";
             row.className = "group flex items-start gap-1";
 
             if (i >= 3) {
@@ -41,6 +45,7 @@ describe("PromptSuggestionsController", () => {
             row.appendChild(btn);
             row.appendChild(actions);
             suggestionList.appendChild(row);
+            suggestionRows.push(row);
         }
 
         // Create expand/collapse buttons wrapped in a container
@@ -64,6 +69,7 @@ describe("PromptSuggestionsController", () => {
         // Set up controller state
         const state = controller as unknown as {
             suggestionTargets: HTMLButtonElement[];
+            suggestionRowTargets: HTMLElement[];
             hasExpandButtonTarget: boolean;
             expandButtonTarget: HTMLButtonElement;
             hasCollapseButtonTarget: boolean;
@@ -96,6 +102,7 @@ describe("PromptSuggestionsController", () => {
         };
 
         state.suggestionTargets = suggestionButtons;
+        state.suggestionRowTargets = suggestionRows;
         state.hasExpandButtonTarget = true;
         state.expandButtonTarget = expandButton;
         state.hasCollapseButtonTarget = true;
@@ -129,6 +136,7 @@ describe("PromptSuggestionsController", () => {
         return {
             controller,
             suggestionButtons,
+            suggestionRows,
             expandButton,
             collapseButton,
             expandCollapseWrapper,
@@ -777,6 +785,157 @@ describe("PromptSuggestionsController", () => {
             controller.refreshSuggestionsList([]);
 
             expect(expandCollapseWrapper.classList.contains("hidden")).toBe(true);
+        });
+    });
+});
+
+describe("PromptSuggestionsController click integration", () => {
+    let application: Application;
+
+    const flushMicrotasks = async (): Promise<void> => {
+        await Promise.resolve();
+        await Promise.resolve();
+    };
+
+    const buildControllerHtml = (count: number): string => {
+        const rows = Array.from({ length: count })
+            .map((_, index) => {
+                const hiddenClass = index >= 3 ? "hidden" : "";
+                return `
+                    <div data-prompt-suggestions-target="suggestionRow"
+                         data-index="${index}"
+                         class="group flex items-start gap-1 ${hiddenClass}">
+                        <button type="button"
+                                data-prompt-suggestions-target="suggestion"
+                                data-action="click->prompt-suggestions#insert"
+                                data-text="Suggestion ${index + 1}">
+                            Suggestion ${index + 1}
+                        </button>
+                    </div>
+                `;
+            })
+            .join("");
+
+        const hiddenCount = Math.max(count - 3, 0);
+
+        return `
+            <div data-controller="prompt-suggestions"
+                 data-prompt-suggestions-max-visible-value="3"
+                 data-prompt-suggestions-show-more-template-value="+{count} more"
+                 data-prompt-suggestions-show-less-label-value="Show less">
+                <div data-prompt-suggestions-target="suggestionList" id="prompt-suggestions-list-test">
+                    ${rows}
+                </div>
+                <div data-prompt-suggestions-target="expandCollapseWrapper" class="${count > 3 ? "" : "hidden"}">
+                    <button type="button"
+                            data-prompt-suggestions-target="expandButton"
+                            data-action="click->prompt-suggestions#expand"
+                            aria-controls="prompt-suggestions-list-test"
+                            aria-expanded="false">
+                        +${hiddenCount} more
+                    </button>
+                    <button type="button"
+                            data-prompt-suggestions-target="collapseButton"
+                            data-action="click->prompt-suggestions#collapse"
+                            class="hidden"
+                            aria-controls="prompt-suggestions-list-test"
+                            aria-expanded="false">
+                        Show less
+                    </button>
+                </div>
+            </div>
+        `;
+    };
+
+    beforeEach(() => {
+        document.body.innerHTML = "";
+        application = Application.start();
+        application.register("prompt-suggestions", PromptSuggestionsController);
+    });
+
+    afterEach(() => {
+        application.stop();
+        vi.restoreAllMocks();
+    });
+
+    it("clicking +X more reveals hidden suggestions and toggles buttons", async () => {
+        document.body.innerHTML = buildControllerHtml(5);
+        await flushMicrotasks();
+
+        const expandButton = document.querySelector(
+            '[data-prompt-suggestions-target="expandButton"]',
+        ) as HTMLButtonElement;
+        const collapseButton = document.querySelector(
+            '[data-prompt-suggestions-target="collapseButton"]',
+        ) as HTMLButtonElement;
+        const rows = Array.from(
+            document.querySelectorAll('[data-prompt-suggestions-target="suggestionRow"]'),
+        ) as HTMLElement[];
+
+        expect(rows[3].classList.contains("hidden")).toBe(true);
+        expect(rows[4].classList.contains("hidden")).toBe(true);
+
+        expandButton.click();
+        await flushMicrotasks();
+
+        rows.forEach((row) => {
+            expect(row.classList.contains("hidden")).toBe(false);
+        });
+        expect(expandButton.classList.contains("hidden")).toBe(true);
+        expect(collapseButton.classList.contains("hidden")).toBe(false);
+        expect(expandButton.getAttribute("aria-expanded")).toBe("true");
+        expect(collapseButton.getAttribute("aria-expanded")).toBe("true");
+    });
+
+    it("clicking Show less restores collapsed state after expansion", async () => {
+        document.body.innerHTML = buildControllerHtml(5);
+        await flushMicrotasks();
+
+        const expandButton = document.querySelector(
+            '[data-prompt-suggestions-target="expandButton"]',
+        ) as HTMLButtonElement;
+        const collapseButton = document.querySelector(
+            '[data-prompt-suggestions-target="collapseButton"]',
+        ) as HTMLButtonElement;
+        const rows = Array.from(
+            document.querySelectorAll('[data-prompt-suggestions-target="suggestionRow"]'),
+        ) as HTMLElement[];
+
+        expandButton.click();
+        await flushMicrotasks();
+        collapseButton.click();
+        await flushMicrotasks();
+
+        expect(rows[0].classList.contains("hidden")).toBe(false);
+        expect(rows[1].classList.contains("hidden")).toBe(false);
+        expect(rows[2].classList.contains("hidden")).toBe(false);
+        expect(rows[3].classList.contains("hidden")).toBe(true);
+        expect(rows[4].classList.contains("hidden")).toBe(true);
+        expect(expandButton.classList.contains("hidden")).toBe(false);
+        expect(collapseButton.classList.contains("hidden")).toBe(true);
+        expect(expandButton.getAttribute("aria-expanded")).toBe("false");
+        expect(collapseButton.getAttribute("aria-expanded")).toBe("false");
+    });
+
+    it("renders the correct +X more label for larger suggestion lists", async () => {
+        document.body.innerHTML = buildControllerHtml(8);
+        await flushMicrotasks();
+
+        const expandButton = document.querySelector(
+            '[data-prompt-suggestions-target="expandButton"]',
+        ) as HTMLButtonElement;
+        const rows = Array.from(
+            document.querySelectorAll('[data-prompt-suggestions-target="suggestionRow"]'),
+        ) as HTMLElement[];
+
+        expect(expandButton.textContent?.trim()).toBe("+5 more");
+        expect(rows[7].classList.contains("hidden")).toBe(true);
+
+        expandButton.click();
+        await flushMicrotasks();
+
+        rows.forEach((row) => {
+            expect(row.classList.contains("hidden")).toBe(false);
         });
     });
 });
