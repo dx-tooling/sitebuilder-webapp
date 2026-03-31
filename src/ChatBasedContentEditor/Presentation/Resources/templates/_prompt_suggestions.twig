@@ -29,6 +29,24 @@
         </button>
     </div>
 
+    <div class="relative mb-2">
+        <input type="text"
+               {{ stimulus_target('prompt-suggestions', 'searchInput') }}
+               {{ stimulus_action('prompt-suggestions', 'handleSearchInput', 'input') }}
+               placeholder="{{ 'editor.prompt_suggestion_search_placeholder'|trans }}"
+               class="w-full px-3 py-1.5 pr-8 text-xs border border-dark-300 dark:border-dark-600 rounded-md bg-white dark:bg-dark-800 text-dark-900 dark:text-dark-100 placeholder-dark-400 dark:placeholder-dark-500 focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500">
+        <button type="button"
+                {{ stimulus_target('prompt-suggestions', 'clearSearchButton') }}
+                {{ stimulus_action('prompt-suggestions', 'clearSearch', 'click') }}
+                class="prompt-suggestion-search-clear hidden"
+                aria-label="{{ 'editor.prompt_suggestion_search_clear'|trans }}"
+                title="{{ 'editor.prompt_suggestion_search_clear'|trans }}">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-3.5 h-3.5">
+                <path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" />
+            </svg>
+        </button>
+    </div>
+
     {# Suggestions list #}
     <div {{ stimulus_target('prompt-suggestions', 'suggestionList') }}
          class="flex flex-col gap-2">
@@ -65,6 +83,11 @@
                 </div>
             </div>
         {% endfor %}
+    </div>
+
+    <div {{ stimulus_target('prompt-suggestions', 'noResults') }}
+         class="hidden py-2 text-xs text-dark-500 dark:text-dark-400">
+        {{ 'editor.prompt_suggestion_no_results'|trans }}
     </div>
 
     <div {{ stimulus_target('prompt-suggestions', 'expandCollapseWrapper') }}
