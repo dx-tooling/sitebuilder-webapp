@@ -147,24 +147,41 @@ final readonly class RunEditSessionHandler
                     return;
                 }
 
-                if ($chunk->chunkType === EditStreamChunkType::Text && $chunk->content !== null) {
-                    EditSessionChunk::createTextChunk($session, $chunk->content);
-                } elseif ($chunk->chunkType === EditStreamChunkType::Event && $chunk->event !== null) {
-                    $eventJson    = $this->serializeEvent($chunk->event);
-                    $contextBytes = ($chunk->event->inputBytes ?? 0) + ($chunk->event->resultBytes ?? 0);
-                    EditSessionChunk::createEventChunk($session, $eventJson, $contextBytes > 0 ? $contextBytes : null);
-                } elseif ($chunk->chunkType === EditStreamChunkType::Progress && $chunk->content !== null) {
-                    EditSessionChunk::createProgressChunk($session, $chunk->content);
-                } elseif ($chunk->chunkType === EditStreamChunkType::Message && $chunk->message !== null) {
-                    // Persist new conversation messages
-                    $this->persistConversationMessage($conversation, $chunk->message);
-                } elseif ($chunk->chunkType === EditStreamChunkType::Done) {
-                    $streamEndedWithFailure = ($chunk->success ?? false) !== true;
-                    EditSessionChunk::createDoneChunk(
-                        $session,
-                        $chunk->success ?? false,
-                        $chunk->errorMessage
-                    );
+                switch ($chunk->chunkType) {
+                    case EditStreamChunkType::Text:
+                        if ($chunk->content !== null) {
+                            EditSessionChunk::createTextChunk($session, $chunk->content);
+                        }
+
+                        break;
+                    case EditStreamChunkType::Event:
+                        if ($chunk->event !== null) {
+                            $eventJson    = $this->serializeEvent($chunk->event);
+                            $contextBytes = ($chunk->event->inputBytes ?? 0) + ($chunk->event->resultBytes ?? 0);
+                            EditSessionChunk::createEventChunk($session, $eventJson, $contextBytes > 0 ? $contextBytes : null);
+                        }
+
+                        break;
+                    case EditStreamChunkType::Progress:
+                        if ($chunk->content !== null) {
+                            EditSessionChunk::createProgressChunk($session, $chunk->content);
+                        }
+
+                        break;
+                    case EditStreamChunkType::Message:
+                        if ($chunk->message !== null) {
+                            // Persist new conversation messages
+                            $this->persistConversationMessage($conversation, $chunk->message);
+                        }
+
+                        break;
+                    case EditStreamChunkType::Done:
+                        $streamEndedWithFailure = ($chunk->success ?? false) !== true;
+                        EditSessionChunk::createDoneChunk(
+                            $session,
+                            $chunk->success ?? false,
+                            $chunk->errorMessage
+                        );
                 }
 
                 $this->entityManager->flush();
